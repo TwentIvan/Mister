@@ -1,0 +1,35 @@
+Bene, openapi.yaml è completo, i 18 flag sono già esposti, il codegen è fresco. Il problema è solo nella UI di apps/mister-web/src/pages/federation.tsx (o equivalente: la pagina del Regolamento Federazione che si raggiunge da /leagues/<id>/regolamento).
+
+Micro-task: rifattorizza SOLO il pannello "Feature flag" della pagina Regolamento. Niente altro. Non toccare la dashboard, non toccare il template manager, non toccare la sidebar, non tradurre altre pagine. Solo quel pannello.
+
+Specifica esatta (riprende DESIGN_SYSTEM.md sezione 11):
+
+1) ESPONI TUTTI I 18 FLAG, non 14. Quelli che oggi MANCANO sono i 4 a valore numerico:
+   - max_contract_length (int, in stagioni)
+   - carryover_percentage (float, 0-100, percentuale)
+   - clause_default_factor (float, 0-2, moltiplicatore)
+   - rescission_recovery_pct (float, 0-100, percentuale)
+   Renderizzali come <input type="number"> accanto al toggle padre quando il padre è ON (vedi punto 4 sotto), NON come toggle.
+
+2) RAGGRUPPA IN 5 SEZIONI con header h3. Usa esattamente l'ordine e le label di lib/db/src/flags.ts (FLAG_CATEGORIES_ORDERED + FLAG_CATEGORY_LABELS):
+   - Contratti: multi_season_contracts, max_contract_length, contract_renewal, preemption_right
+   - Mercato: repair_auction_january, free_agent_pool, direct_trades, always_on_markets
+   - Economia: carryover_budget, carryover_percentage, player_value_dynamic, amortization, release_clauses, clause_default_factor, rescission_penalty, rescission_recovery_pct
+   - Tattica: no_schema_tactics
+   - Scouting: scouting_enabled
+   Ogni sezione è una <section class="card"> separata (vedi DESIGN_SYSTEM.md sezione 11 per il markup canonico).
+
+3) Ogni flag deve mostrare la sua label italiana (campo `label` in flags.ts) e la sua `description` come sub-text. Non inventare testi: usa esattamente quelli del catalogo.
+
+4) PROGRESSIVE DISCLOSURE: quando un flag toggle padre è OFF, i suoi flag figli devono essere visivamente disabilitati (opacity 0.4, pointer-events: none). Le dipendenze padre→figli sono:
+   - multi_season_contracts OFF → disabilita max_contract_length, contract_renewal, preemption_right
+   - carryover_budget OFF → disabilita carryover_percentage
+   - release_clauses OFF → disabilita clause_default_factor, rescission_penalty, rescission_recovery_pct
+
+5) NON toccare il payload di Salva regolamento: il backend già accetta tutti i 18 flag. Verifica solo che il form invii i 4 nuovi campi numerici nel body.
+
+6) NON cambiare la lingua del resto della pagina: lavora solo sulla sezione "Feature flag — tutti i 18".
+
+7) Quando hai finito: typecheck, build, e fermati. Niente screenshot fatti da te, niente "tested in browser": sarà Ivan a validare visivamente.
+
+Procedi.
