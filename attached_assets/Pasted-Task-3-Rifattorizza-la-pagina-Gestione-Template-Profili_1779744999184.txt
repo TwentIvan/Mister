@@ -1,0 +1,35 @@
+Task 3 — Rifattorizza la pagina Gestione Template (Profili) secondo DESIGN_SYSTEM.md sezione 12
+Tocca solo questi file:
+
+app/superadmin/templates/page.tsx (o equivalente; cerca la pagina che renderizza /superadmin/templates)
+il componente TemplateCard e il modal di creazione/modifica
+nessun altro file
+
+Requisiti, tutti obbligatori:
+
+Etichette in italiano: rinomina il titolo H1 della pagina da "Gestione Template" a "Profili di gioco". Sottotitolo: "Modelli pre-confezionati che la Federazione può clonare in regolamento.". Bottone in alto a destra: "Nuovo profilo".
+Card per ciascun profilo seguendo lo schema template-card di DESIGN_SYSTEM.md sezione 12:
+
+Header: nome del profilo in Fraunces serif, badge is_system se applicabile (badge cream "DI SISTEMA")
+Sottotitolo: complessità (1/2/3) e tempo settimanale stimato, in JetBrains Mono uppercase micro-label
+Descrizione breve
+Chips dei flag attivi: per ciascun flag a true o numerico non-default nel flags_json del template, mostra una chip con la label corta da flags.ts catalog. Le chip vanno raggruppate per categoria con un piccolo header monospace (CONTRATTI, MERCATO, etc.). Massimo 8 chip visibili, poi "+N altri".
+Footer (template-foot): conteggi suggeriti — N competizioni · M mercati · K voci di regolamento attive. Numeri in JetBrains Mono.
+Azioni (template-actions) in fondo alla card: bottoni Duplica, Modifica, Disattiva, Elimina. Le ultime tre disabilitate se is_system === true, con tooltip "I profili di sistema non si modificano".
+
+
+Modal "Nuovo profilo" e "Modifica profilo": stessa struttura. Deve esporre tutti i campi dello schema Drizzle template_profiles, non solo i 5 attuali. In particolare deve includere:
+
+Nome
+Descrizione (textarea)
+Complessità (select 1/2/3)
+Tempo settimanale stimato (input number, minuti)
+Editor dei 18 flag identico a quello del Regolamento (5 sezioni Contratti/Mercato/Economia/Tattica/Scouting con toggle e numerici), riutilizzando lo stesso componente se esiste, altrimenti estraendolo in components/FlagsEditor.tsx
+is_system non editabile lato UI (sempre false per i nuovi)
+
+
+Design system stretto: Fraunces per H1/H2, JetBrains Mono per tutti i numeri e i micro-label uppercase, Inter per body. Card su sfondo cream, contorno sottile #d9cdb5. Niente sans generico per i numeri.
+Niente regressioni: non toccare Dashboard, Lista Leghe, Regolamento, Sidebar.
+Typecheck pulito prima di dichiarare completo.
+
+Quando hai finito, dichiara solo: "fatto, typecheck pulito" e fermati. Niente "ho anche sistemato X". Niente "ho semplificato per chiarezza".
