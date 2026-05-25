@@ -1,5 +1,7 @@
 import app from "./app";
 import { logger } from "./lib/logger";
+import { db } from "@workspace/db";
+import { seedSystemTemplates } from "@workspace/db/seeds";
 
 const rawPort = process.env["PORT"];
 
@@ -15,11 +17,21 @@ if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
 }
 
-app.listen(port, (err) => {
-  if (err) {
-    logger.error({ err }, "Error listening on port");
-    process.exit(1);
+async function start() {
+  try {
+    await seedSystemTemplates(db);
+    logger.info("Seed template di sistema completato");
+  } catch (err) {
+    logger.warn({ err }, "Seed template di sistema fallito (non bloccante)");
   }
 
-  logger.info({ port }, "Server listening");
-});
+  app.listen(port, (err) => {
+    if (err) {
+      logger.error({ err }, "Error listening on port");
+      process.exit(1);
+    }
+    logger.info({ port }, "Server listening");
+  });
+}
+
+start();

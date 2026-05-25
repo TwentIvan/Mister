@@ -7,18 +7,17 @@
  */
 import type { FeatureFlags } from './featureFlags';
 import type { FederationMode } from './federationMode';
-import type { FederationVotoSource } from './federationVotoSource';
+import type { FederationRules } from './federationRules';
 
 export interface Federation {
   id: string;
   name: string;
   description?: string;
-  league_id: string;
   /** @nullable */
   template_id?: string | null;
   mode: FederationMode;
-  voto_source: FederationVotoSource;
   feature_flags: FeatureFlags;
+  rules: FederationRules;
   created_at: Date;
   updated_at: Date;
 }

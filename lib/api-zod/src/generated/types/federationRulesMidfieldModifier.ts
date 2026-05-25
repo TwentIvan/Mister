@@ -7,6 +7,6 @@
  */
 
 /**
- * Regole specifiche per tipo (JSON)
+ * Modificatore centrocampo
  */
-export type MarketEventSettings = { [key: string]: unknown };
+export type FederationRulesMidfieldModifier = { [key: string]: unknown };

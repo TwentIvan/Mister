@@ -3,12 +3,15 @@ import { eq, count } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { db } from "@workspace/db";
 import {
-  leaguesTable,
-  federationsTable,
-  competitionsTable,
-  marketEventsTable,
-  fantaTeamsTable,
-  contractsTable,
+  leagues,
+  federations,
+  competitions,
+  marketEvents,
+  fantaTeams,
+  contracts,
+  templateProfiles,
+  DEFAULT_RULES,
+  DEFAULT_LEAGUE_CONFIG,
 } from "@workspace/db";
 import {
   ListLeaguesQueryParams,
@@ -35,8 +38,8 @@ router.get("/leagues", async (req, res): Promise<void> => {
   }
   const { admin_user_id } = parsed.data;
   const rows = admin_user_id
-    ? await db.select().from(leaguesTable).where(eq(leaguesTable.adminUserId, admin_user_id))
-    : await db.select().from(leaguesTable);
+    ? await db.select().from(leagues).where(eq(leagues.adminUserId, admin_user_id))
+    : await db.select().from(leagues);
   res.json(ListLeaguesResponse.parse(rows.map(mapLeague)));
 });
 
@@ -46,26 +49,41 @@ router.post("/leagues", async (req, res): Promise<void> => {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
+  const d = parsed.data;
   const leagueId = nanoid();
   const fedId = nanoid();
-  await db.insert(federationsTable).values({
+
+  let featureFlags = {};
+  if (d.template_id) {
+    const [tmpl] = await db
+      .select()
+      .from(templateProfiles)
+      .where(eq(templateProfiles.id, d.template_id));
+    if (tmpl) {
+      featureFlags = tmpl.featureFlags ?? {};
+    }
+  }
+
+  await db.insert(federations).values({
     id: fedId,
-    name: parsed.data.name + " - Regolamento",
-    leagueId,
-    featureFlags: {},
+    name: d.name + " — Regolamento",
+    templateId: d.template_id ?? null,
+    featureFlags,
+    rules: DEFAULT_RULES,
   });
-  const d = parsed.data;
+
   const [row] = await db
-    .insert(leaguesTable)
+    .insert(leagues)
     .values({
       id: leagueId,
       federationId: fedId,
       name: d.name,
-      templateId: d.template_id,
+      templateId: d.template_id ?? null,
       adminUserId: d.admin_user_id,
       season: d.season,
       maxManagers: d.max_managers ?? 10,
       visibility: d.visibility ?? "private",
+      config: DEFAULT_LEAGUE_CONFIG,
     })
     .returning();
   res.status(201).json(GetLeagueResponse.parse(mapLeague(row)));
@@ -79,10 +97,10 @@ router.get("/leagues/:id", async (req, res): Promise<void> => {
   }
   const [row] = await db
     .select()
-    .from(leaguesTable)
-    .where(eq(leaguesTable.id, params.data.id));
+    .from(leagues)
+    .where(eq(leagues.id, params.data.id));
   if (!row) {
-    res.status(404).json({ error: "League not found" });
+    res.status(404).json({ error: "Lega non trovata" });
     return;
   }
   res.json(GetLeagueResponse.parse(mapLeague(row)));
@@ -101,17 +119,21 @@ router.patch("/leagues/:id", async (req, res): Promise<void> => {
   }
   const d = parsed.data;
   const [row] = await db
-    .update(leaguesTable)
+    .update(leagues)
     .set({
       ...(d.name !== undefined && { name: d.name }),
       ...(d.max_managers !== undefined && { maxManagers: d.max_managers }),
       ...(d.visibility !== undefined && { visibility: d.visibility }),
       ...(d.started !== undefined && { started: d.started }),
+      ...(d.lineup_visibility !== undefined && { lineupVisibility: d.lineup_visibility }),
+      ...(d.roster_visibility !== undefined && { rosterVisibility: d.roster_visibility }),
+      ...(d.notify_email !== undefined && { notifyEmail: d.notify_email }),
+      ...(d.notify_push !== undefined && { notifyPush: d.notify_push }),
     })
-    .where(eq(leaguesTable.id, params.data.id))
+    .where(eq(leagues.id, params.data.id))
     .returning();
   if (!row) {
-    res.status(404).json({ error: "League not found" });
+    res.status(404).json({ error: "Lega non trovata" });
     return;
   }
   res.json(UpdateLeagueResponse.parse(mapLeague(row)));
@@ -124,11 +146,11 @@ router.delete("/leagues/:id", async (req, res): Promise<void> => {
     return;
   }
   const [row] = await db
-    .delete(leaguesTable)
-    .where(eq(leaguesTable.id, params.data.id))
+    .delete(leagues)
+    .where(eq(leagues.id, params.data.id))
     .returning();
   if (!row) {
-    res.status(404).json({ error: "League not found" });
+    res.status(404).json({ error: "Lega non trovata" });
     return;
   }
   res.sendStatus(204);
@@ -143,26 +165,27 @@ router.get("/leagues/:id/stats", async (req, res): Promise<void> => {
   const { id } = params.data;
   const [teams] = await db
     .select({ count: count() })
-    .from(fantaTeamsTable)
-    .where(eq(fantaTeamsTable.leagueId, id));
-  const [competitions] = await db
+    .from(fantaTeams)
+    .where(eq(fantaTeams.leagueId, id));
+  const [comps] = await db
     .select({ count: count() })
-    .from(competitionsTable)
-    .where(eq(competitionsTable.leagueId, id));
+    .from(competitions)
+    .where(eq(competitions.leagueId, id));
   const [markets] = await db
     .select({ count: count() })
-    .from(marketEventsTable)
-    .where(eq(marketEventsTable.leagueId, id));
-  const [contracts] = await db
+    .from(marketEvents)
+    .where(eq(marketEvents.leagueId, id));
+  const [conts] = await db
     .select({ count: count() })
-    .from(contractsTable)
-    .where(eq(contractsTable.leagueId, id));
+    .from(contracts)
+    .where(eq(contracts.leagueId, id));
   res.json(
     GetLeagueStatsResponse.parse({
+      league_id: id,
       team_count: Number(teams?.count ?? 0),
-      competition_count: Number(competitions?.count ?? 0),
+      competition_count: Number(comps?.count ?? 0),
       active_market_count: Number(markets?.count ?? 0),
-      contract_count: Number(contracts?.count ?? 0),
+      contract_count: Number(conts?.count ?? 0),
     }),
   );
 });

@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { eq } from "drizzle-orm";
 import { db } from "@workspace/db";
-import { federationsTable } from "@workspace/db";
+import { federations, leagues } from "@workspace/db";
 import {
   GetFederationParams,
   GetFederationResponse,
@@ -10,6 +10,7 @@ import {
   UpdateFederationResponse,
 } from "@workspace/api-zod";
 import { mapFederation } from "../lib/mappers";
+import type { FederationRules } from "@workspace/db";
 
 const router: IRouter = Router();
 
@@ -19,12 +20,20 @@ router.get("/leagues/:leagueId/federation", async (req, res): Promise<void> => {
     res.status(400).json({ error: params.error.message });
     return;
   }
+  const [leagueRow] = await db
+    .select()
+    .from(leagues)
+    .where(eq(leagues.id, params.data.leagueId));
+  if (!leagueRow) {
+    res.status(404).json({ error: "Lega non trovata" });
+    return;
+  }
   const [row] = await db
     .select()
-    .from(federationsTable)
-    .where(eq(federationsTable.leagueId, params.data.leagueId));
+    .from(federations)
+    .where(eq(federations.id, leagueRow.federationId));
   if (!row) {
-    res.status(404).json({ error: "Federation not found" });
+    res.status(404).json({ error: "Regolamento non trovato" });
     return;
   }
   res.json(GetFederationResponse.parse(mapFederation(row)));
@@ -41,19 +50,29 @@ router.patch("/leagues/:leagueId/federation", async (req, res): Promise<void> =>
     res.status(400).json({ error: parsed.error.message });
     return;
   }
+  const [leagueRow] = await db
+    .select()
+    .from(leagues)
+    .where(eq(leagues.id, params.data.leagueId));
+  if (!leagueRow) {
+    res.status(404).json({ error: "Lega non trovata" });
+    return;
+  }
   const d = parsed.data;
   const [row] = await db
-    .update(federationsTable)
+    .update(federations)
     .set({
       ...(d.name !== undefined && { name: d.name }),
+      ...(d.description !== undefined && { description: d.description }),
       ...(d.mode !== undefined && { mode: d.mode }),
-      ...(d.voto_source !== undefined && { votoSource: d.voto_source }),
       ...(d.feature_flags !== undefined && { featureFlags: d.feature_flags }),
+      ...(d.rules !== undefined && { rules: d.rules as unknown as FederationRules }),
+      updatedAt: new Date(),
     })
-    .where(eq(federationsTable.leagueId, params.data.leagueId))
+    .where(eq(federations.id, leagueRow.federationId))
     .returning();
   if (!row) {
-    res.status(404).json({ error: "Federation not found" });
+    res.status(404).json({ error: "Regolamento non trovato" });
     return;
   }
   res.json(UpdateFederationResponse.parse(mapFederation(row)));

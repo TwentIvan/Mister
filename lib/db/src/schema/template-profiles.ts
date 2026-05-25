@@ -35,7 +35,7 @@ export interface MarketEventTemplate {
   /** Sub-modalità: opzionale, dipende dal type */
   mode?: "live" | "async" | "blind" | "token" | "open";
   /** Suggerimento testuale per l'admin, es. "metà agosto" o "30 gen - 2 feb" */
-  windowHint: string;
+  windowHint?: string;
   description: string;
 }
 

@@ -124,12 +124,14 @@ paths:
     delete:
       operationId: deleteTemplate
       tags: [templates]
-      summary: Elimina template (superadmin)
+      summary: Elimina template custom (superadmin — solo non-system)
       parameters:
         - $ref: "#/components/parameters/StringId"
       responses:
         "204":
           description: Deleted
+        "403":
+          description: Template di sistema non eliminabile
         "404":
           description: Not found
 
@@ -713,65 +715,130 @@ components:
     # ─── FEATURE FLAGS ────────────────────────────────────────
     FeatureFlags:
       type: object
-      description: Feature flags copiati dal template al momento della creazione della lega
+      description: I 18 feature flag copiati dal template al momento della creazione della lega
       properties:
         multi_season_contracts:
           type: boolean
+          description: Contratti pluriennali (>1 stagione)
         max_contract_length:
           type: integer
+          description: Durata massima contratto in stagioni (1-10)
         contract_renewal:
           type: boolean
+          description: Flusso esplicito di rinnovo contrattuale
         preemption_right:
           type: boolean
+          description: Diritto di pareggio in asta per il detentore uscente
         repair_auction_january:
           type: boolean
+          description: Asta di riparazione invernale di gennaio
         free_agent_pool:
           type: boolean
+          description: Pool svincolati permanente disponibile
         direct_trades:
           type: boolean
+          description: Scambi diretti 1-a-1 tra manager
         always_on_markets:
           type: boolean
+          description: Mercati e scambi sempre attivi in stagione
         carryover_budget:
           type: boolean
+          description: Budget residuo portato alla stagione successiva
         carryover_percentage:
           type: number
+          description: Percentuale di budget residuo mantenuta (0-100)
         player_value_dynamic:
           type: boolean
+          description: Valore di mercato del giocatore aggiornato dinamicamente
         amortization:
           type: boolean
+          description: Ammortamento del prezzo d'acquisto sugli anni di contratto
         release_clauses:
           type: boolean
+          description: Clausole rescissorie attive
         clause_default_factor:
           type: number
+          description: Moltiplicatore residuo per clausola di default (0.5-1.0)
         rescission_penalty:
           type: boolean
+          description: Penale se il manager svincola prima della scadenza
         rescission_recovery_pct:
           type: number
+          description: Percentuale crediti recuperata sullo svincolo (0-100)
         no_schema_tactics:
           type: boolean
+          description: Formazione senza vincoli di modulo predefinito
         scouting_enabled:
           type: boolean
+          description: Sistema di scouting giocatori giovani/emergenti
+
+    # ─── MARKET EVENT SUGGESTION (nel template) ───────────────
+    MarketEventSuggestion:
+      type: object
+      required: [name, type, description]
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+          enum: [auction, trade, release, free_agent]
+        mode:
+          type: string
+          enum: [live, async, blind, token, open]
+        window_hint:
+          type: string
+        description:
+          type: string
+
+    # ─── COMPETITION SUGGESTION (nel template) ────────────────
+    CompetitionSuggestion:
+      type: object
+      required: [name, type, description]
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+          enum: [campionato, coppa, battle_royale, sprint_race, formula_uno, punteggio_assoluto]
+        description:
+          type: string
 
     # ─── TEMPLATE PROFILE ─────────────────────────────────────
     TemplateProfile:
       type: object
-      required: [id, name, slug, complexity_label, minutes_per_week, feature_flags, active, created_at, updated_at]
+      required: [id, name, tagline, description, complexity_level, estimated_weekly_minutes, icon, feature_flags, suggested_markets, suggested_competitions, is_system, is_active, created_at, updated_at]
       properties:
         id:
           type: string
         name:
           type: string
-        slug:
+        tagline:
           type: string
         description:
           type: string
-        complexity_label:
-          type: string
-        minutes_per_week:
+        complexity_level:
           type: integer
+          description: "1 = base, 2 = intermedio, 3 = avanzato"
+        estimated_weekly_minutes:
+          type: integer
+          description: Tempo stimato di gestione settimanale in minuti
+        icon:
+          type: string
         feature_flags:
           $ref: "#/components/schemas/FeatureFlags"
-        active:
+        suggested_markets:
+          type: array
+          items:
+            $ref: "#/components/schemas/MarketEventSuggestion"
+        suggested_competitions:
+          type: array
+          items:
+            $ref: "#/components/schemas/CompetitionSuggestion"
+        author_user_id:
+          type: ["string", "null"]
+        is_system:
+          type: boolean
+        is_active:
           type: boolean
         created_at:
           type: string
@@ -782,21 +849,31 @@ components:
 
     TemplateInput:
       type: object
-      required: [name, slug, complexity_label, minutes_per_week, feature_flags]
+      required: [name, complexity_level, estimated_weekly_minutes, feature_flags]
       properties:
         name:
           type: string
-        slug:
+        tagline:
           type: string
         description:
           type: string
-        complexity_label:
-          type: string
-        minutes_per_week:
+        complexity_level:
           type: integer
+        estimated_weekly_minutes:
+          type: integer
+        icon:
+          type: string
         feature_flags:
           $ref: "#/components/schemas/FeatureFlags"
-        active:
+        suggested_markets:
+          type: array
+          items:
+            $ref: "#/components/schemas/MarketEventSuggestion"
+        suggested_competitions:
+          type: array
+          items:
+            $ref: "#/components/schemas/CompetitionSuggestion"
+        is_active:
           type: boolean
 
     TemplateUpdate:
@@ -804,15 +881,27 @@ components:
       properties:
         name:
           type: string
+        tagline:
+          type: string
         description:
           type: string
-        complexity_label:
-          type: string
-        minutes_per_week:
+        complexity_level:
           type: integer
+        estimated_weekly_minutes:
+          type: integer
+        icon:
+          type: string
         feature_flags:
           $ref: "#/components/schemas/FeatureFlags"
-        active:
+        suggested_markets:
+          type: array
+          items:
+            $ref: "#/components/schemas/MarketEventSuggestion"
+        suggested_competitions:
+          type: array
+          items:
+            $ref: "#/components/schemas/CompetitionSuggestion"
+        is_active:
           type: boolean
 
     # ─── LEAGUE ───────────────────────────────────────────────
@@ -915,10 +1004,34 @@ components:
         contract_count:
           type: integer
 
+    # ─── FEDERATION RULES ─────────────────────────────────────
+    FederationRules:
+      type: object
+      description: Regole di calcolo del punteggio fanta (bonus/malus, soglie, modificatori)
+      properties:
+        bonusMalus:
+          type: object
+          description: Bonus e malus per evento (gol, assist, ammonizioni, ecc.)
+        goalThresholds:
+          type: object
+          description: Conversione punteggio squadra in fanta-gol
+        defenseModifier:
+          type: object
+          description: Modificatore difesa
+        midfieldModifier:
+          type: object
+          description: Modificatore centrocampo
+        homeAdvantage:
+          type: object
+          description: Bonus padrone di casa
+        substitutions:
+          type: object
+          description: Regole sostituzioni automatiche
+
     # ─── FEDERATION ───────────────────────────────────────────
     Federation:
       type: object
-      required: [id, name, league_id, mode, voto_source, feature_flags, created_at, updated_at]
+      required: [id, name, mode, feature_flags, rules, created_at, updated_at]
       properties:
         id:
           type: string
@@ -926,18 +1039,15 @@ components:
           type: string
         description:
           type: string
-        league_id:
-          type: string
         template_id:
           type: ["string", "null"]
         mode:
           type: string
           enum: [classic, mantra]
-        voto_source:
-          type: string
-          enum: [gazzetta, italia, fantacalcio_it, consensus]
         feature_flags:
           $ref: "#/components/schemas/FeatureFlags"
+        rules:
+          $ref: "#/components/schemas/FederationRules"
         created_at:
           type: string
           format: date-time
@@ -955,16 +1065,15 @@ components:
         mode:
           type: string
           enum: [classic, mantra]
-        voto_source:
-          type: string
-          enum: [gazzetta, italia, fantacalcio_it, consensus]
         feature_flags:
           $ref: "#/components/schemas/FeatureFlags"
+        rules:
+          $ref: "#/components/schemas/FederationRules"
 
     # ─── COMPETITION ──────────────────────────────────────────
     Competition:
       type: object
-      required: [id, league_id, name, type, season, start_giornata, end_giornata, active, completed, created_at]
+      required: [id, league_id, name, type, season, start_giornata, end_giornata, config, active, completed, created_at]
       properties:
         id:
           type: string
@@ -983,17 +1092,9 @@ components:
           type: integer
         end_giornata:
           type: integer
-        participant_team_ids:
-          type: array
-          items:
-            type: string
-        tiebreakers:
-          type: array
-          items:
-            type: string
-        settings:
+        config:
           type: object
-          description: Configurazione specifica per tipo di competizione (JSON)
+          description: Configurazione specifica per tipo + tiebreaker + premi + partecipanti
         active:
           type: boolean
         completed:
@@ -1047,14 +1148,6 @@ components:
           type: integer
         end_giornata:
           type: integer
-        participant_team_ids:
-          type: array
-          items:
-            type: string
-        tiebreakers:
-          type: array
-          items:
-            type: string
         settings:
           type: object
         active:
@@ -1065,7 +1158,7 @@ components:
     # ─── MARKET EVENT ─────────────────────────────────────────
     MarketEvent:
       type: object
-      required: [id, league_id, name, type, status, window_starts_at, window_ends_at, created_at]
+      required: [id, league_id, name, type, status, starts_at, ends_at, config, created_at]
       properties:
         id:
           type: string
@@ -1078,20 +1171,19 @@ components:
         type:
           type: string
           enum: [auction, trade, release, free_agent]
+          description: "auction = asta (sub-mode in config), trade = scambi, release = svincoli, free_agent = pool svincolati"
         status:
           type: string
           enum: [scheduled, active, completed, cancelled]
-        window_starts_at:
+        starts_at:
           type: string
           format: date-time
-        window_ends_at:
+        ends_at:
           type: string
           format: date-time
-        settings:
+        config:
           type: object
-          description: Regole specifiche per tipo (JSON)
-        label_color:
-          type: string
+          description: "Configurazione specifica per tipo: AuctionRules / TradeRules / ReleaseRules / FreeAgentRules + labelColor"
         created_at:
           type: string
           format: date-time
@@ -1136,8 +1228,6 @@ components:
           format: date-time
         settings:
           type: object
-        label_color:
-          type: string
 
     # ─── FANTA TEAM ───────────────────────────────────────────
     FantaTeam:

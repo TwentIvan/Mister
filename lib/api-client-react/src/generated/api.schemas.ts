@@ -10,59 +10,139 @@ export interface HealthStatus {
 }
 
 /**
- * Feature flags copiati dal template al momento della creazione della lega
+ * I 18 feature flag copiati dal template al momento della creazione della lega
  */
 export interface FeatureFlags {
+  /** Contratti pluriennali (>1 stagione) */
   multi_season_contracts?: boolean;
+  /** Durata massima contratto in stagioni (1-10) */
   max_contract_length?: number;
+  /** Flusso esplicito di rinnovo contrattuale */
   contract_renewal?: boolean;
+  /** Diritto di pareggio in asta per il detentore uscente */
   preemption_right?: boolean;
+  /** Asta di riparazione invernale di gennaio */
   repair_auction_january?: boolean;
+  /** Pool svincolati permanente disponibile */
   free_agent_pool?: boolean;
+  /** Scambi diretti 1-a-1 tra manager */
   direct_trades?: boolean;
+  /** Mercati e scambi sempre attivi in stagione */
   always_on_markets?: boolean;
+  /** Budget residuo portato alla stagione successiva */
   carryover_budget?: boolean;
+  /** Percentuale di budget residuo mantenuta (0-100) */
   carryover_percentage?: number;
+  /** Valore di mercato del giocatore aggiornato dinamicamente */
   player_value_dynamic?: boolean;
+  /** Ammortamento del prezzo d'acquisto sugli anni di contratto */
   amortization?: boolean;
+  /** Clausole rescissorie attive */
   release_clauses?: boolean;
+  /** Moltiplicatore residuo per clausola di default (0.5-1.0) */
   clause_default_factor?: number;
+  /** Penale se il manager svincola prima della scadenza */
   rescission_penalty?: boolean;
+  /** Percentuale crediti recuperata sullo svincolo (0-100) */
   rescission_recovery_pct?: number;
+  /** Formazione senza vincoli di modulo predefinito */
   no_schema_tactics?: boolean;
+  /** Sistema di scouting giocatori giovani/emergenti */
   scouting_enabled?: boolean;
+}
+
+export type MarketEventSuggestionType = typeof MarketEventSuggestionType[keyof typeof MarketEventSuggestionType];
+
+
+export const MarketEventSuggestionType = {
+  auction: 'auction',
+  trade: 'trade',
+  release: 'release',
+  free_agent: 'free_agent',
+} as const;
+
+export type MarketEventSuggestionMode = typeof MarketEventSuggestionMode[keyof typeof MarketEventSuggestionMode];
+
+
+export const MarketEventSuggestionMode = {
+  live: 'live',
+  async: 'async',
+  blind: 'blind',
+  token: 'token',
+  open: 'open',
+} as const;
+
+export interface MarketEventSuggestion {
+  name: string;
+  type: MarketEventSuggestionType;
+  mode?: MarketEventSuggestionMode;
+  window_hint?: string;
+  description: string;
+}
+
+export type CompetitionSuggestionType = typeof CompetitionSuggestionType[keyof typeof CompetitionSuggestionType];
+
+
+export const CompetitionSuggestionType = {
+  campionato: 'campionato',
+  coppa: 'coppa',
+  battle_royale: 'battle_royale',
+  sprint_race: 'sprint_race',
+  formula_uno: 'formula_uno',
+  punteggio_assoluto: 'punteggio_assoluto',
+} as const;
+
+export interface CompetitionSuggestion {
+  name: string;
+  type: CompetitionSuggestionType;
+  description: string;
 }
 
 export interface TemplateProfile {
   id: string;
   name: string;
-  slug: string;
-  description?: string;
-  complexity_label: string;
-  minutes_per_week: number;
+  tagline: string;
+  description: string;
+  /** 1 = base, 2 = intermedio, 3 = avanzato */
+  complexity_level: number;
+  /** Tempo stimato di gestione settimanale in minuti */
+  estimated_weekly_minutes: number;
+  icon: string;
   feature_flags: FeatureFlags;
-  active: boolean;
+  suggested_markets: MarketEventSuggestion[];
+  suggested_competitions: CompetitionSuggestion[];
+  /** @nullable */
+  author_user_id?: string | null;
+  is_system: boolean;
+  is_active: boolean;
   created_at: string;
   updated_at: string;
 }
 
 export interface TemplateInput {
   name: string;
-  slug: string;
+  tagline?: string;
   description?: string;
-  complexity_label: string;
-  minutes_per_week: number;
+  complexity_level: number;
+  estimated_weekly_minutes: number;
+  icon?: string;
   feature_flags: FeatureFlags;
-  active?: boolean;
+  suggested_markets?: MarketEventSuggestion[];
+  suggested_competitions?: CompetitionSuggestion[];
+  is_active?: boolean;
 }
 
 export interface TemplateUpdate {
   name?: string;
+  tagline?: string;
   description?: string;
-  complexity_label?: string;
-  minutes_per_week?: number;
+  complexity_level?: number;
+  estimated_weekly_minutes?: number;
+  icon?: string;
   feature_flags?: FeatureFlags;
-  active?: boolean;
+  suggested_markets?: MarketEventSuggestion[];
+  suggested_competitions?: CompetitionSuggestion[];
+  is_active?: boolean;
 }
 
 export type LeagueVisibility = typeof LeagueVisibility[keyof typeof LeagueVisibility];
@@ -177,6 +257,54 @@ export interface LeagueStats {
   contract_count: number;
 }
 
+/**
+ * Bonus e malus per evento (gol, assist, ammonizioni, ecc.)
+ */
+export type FederationRulesBonusMalus = { [key: string]: unknown };
+
+/**
+ * Conversione punteggio squadra in fanta-gol
+ */
+export type FederationRulesGoalThresholds = { [key: string]: unknown };
+
+/**
+ * Modificatore difesa
+ */
+export type FederationRulesDefenseModifier = { [key: string]: unknown };
+
+/**
+ * Modificatore centrocampo
+ */
+export type FederationRulesMidfieldModifier = { [key: string]: unknown };
+
+/**
+ * Bonus padrone di casa
+ */
+export type FederationRulesHomeAdvantage = { [key: string]: unknown };
+
+/**
+ * Regole sostituzioni automatiche
+ */
+export type FederationRulesSubstitutions = { [key: string]: unknown };
+
+/**
+ * Regole di calcolo del punteggio fanta (bonus/malus, soglie, modificatori)
+ */
+export interface FederationRules {
+  /** Bonus e malus per evento (gol, assist, ammonizioni, ecc.) */
+  bonusMalus?: FederationRulesBonusMalus;
+  /** Conversione punteggio squadra in fanta-gol */
+  goalThresholds?: FederationRulesGoalThresholds;
+  /** Modificatore difesa */
+  defenseModifier?: FederationRulesDefenseModifier;
+  /** Modificatore centrocampo */
+  midfieldModifier?: FederationRulesMidfieldModifier;
+  /** Bonus padrone di casa */
+  homeAdvantage?: FederationRulesHomeAdvantage;
+  /** Regole sostituzioni automatiche */
+  substitutions?: FederationRulesSubstitutions;
+}
+
 export type FederationMode = typeof FederationMode[keyof typeof FederationMode];
 
 
@@ -185,26 +313,15 @@ export const FederationMode = {
   mantra: 'mantra',
 } as const;
 
-export type FederationVotoSource = typeof FederationVotoSource[keyof typeof FederationVotoSource];
-
-
-export const FederationVotoSource = {
-  gazzetta: 'gazzetta',
-  italia: 'italia',
-  fantacalcio_it: 'fantacalcio_it',
-  consensus: 'consensus',
-} as const;
-
 export interface Federation {
   id: string;
   name: string;
   description?: string;
-  league_id: string;
   /** @nullable */
   template_id?: string | null;
   mode: FederationMode;
-  voto_source: FederationVotoSource;
   feature_flags: FeatureFlags;
+  rules: FederationRules;
   created_at: string;
   updated_at: string;
 }
@@ -217,22 +334,12 @@ export const FederationUpdateMode = {
   mantra: 'mantra',
 } as const;
 
-export type FederationUpdateVotoSource = typeof FederationUpdateVotoSource[keyof typeof FederationUpdateVotoSource];
-
-
-export const FederationUpdateVotoSource = {
-  gazzetta: 'gazzetta',
-  italia: 'italia',
-  fantacalcio_it: 'fantacalcio_it',
-  consensus: 'consensus',
-} as const;
-
 export interface FederationUpdate {
   name?: string;
   description?: string;
   mode?: FederationUpdateMode;
-  voto_source?: FederationUpdateVotoSource;
   feature_flags?: FeatureFlags;
+  rules?: FederationRules;
 }
 
 export type CompetitionType = typeof CompetitionType[keyof typeof CompetitionType];
@@ -248,9 +355,9 @@ export const CompetitionType = {
 } as const;
 
 /**
- * Configurazione specifica per tipo di competizione (JSON)
+ * Configurazione specifica per tipo + tiebreaker + premi + partecipanti
  */
-export type CompetitionSettings = { [key: string]: unknown };
+export type CompetitionConfig = { [key: string]: unknown };
 
 export interface Competition {
   id: string;
@@ -261,10 +368,8 @@ export interface Competition {
   season: number;
   start_giornata: number;
   end_giornata: number;
-  participant_team_ids?: string[];
-  tiebreakers?: string[];
-  /** Configurazione specifica per tipo di competizione (JSON) */
-  settings?: CompetitionSettings;
+  /** Configurazione specifica per tipo + tiebreaker + premi + partecipanti */
+  config: CompetitionConfig;
   active: boolean;
   completed: boolean;
   /** @nullable */
@@ -307,13 +412,14 @@ export interface CompetitionUpdate {
   description?: string;
   start_giornata?: number;
   end_giornata?: number;
-  participant_team_ids?: string[];
-  tiebreakers?: string[];
   settings?: CompetitionUpdateSettings;
   active?: boolean;
   completed?: boolean;
 }
 
+/**
+ * auction = asta (sub-mode in config), trade = scambi, release = svincoli, free_agent = pool svincolati
+ */
 export type MarketEventType = typeof MarketEventType[keyof typeof MarketEventType];
 
 
@@ -335,22 +441,22 @@ export const MarketEventStatus = {
 } as const;
 
 /**
- * Regole specifiche per tipo (JSON)
+ * Configurazione specifica per tipo: AuctionRules / TradeRules / ReleaseRules / FreeAgentRules + labelColor
  */
-export type MarketEventSettings = { [key: string]: unknown };
+export type MarketEventConfig = { [key: string]: unknown };
 
 export interface MarketEvent {
   id: string;
   league_id: string;
   name: string;
   description?: string;
+  /** auction = asta (sub-mode in config), trade = scambi, release = svincoli, free_agent = pool svincolati */
   type: MarketEventType;
   status: MarketEventStatus;
-  window_starts_at: string;
-  window_ends_at: string;
-  /** Regole specifiche per tipo (JSON) */
-  settings?: MarketEventSettings;
-  label_color?: string;
+  starts_at: string;
+  ends_at: string;
+  /** Configurazione specifica per tipo: AuctionRules / TradeRules / ReleaseRules / FreeAgentRules + labelColor */
+  config: MarketEventConfig;
   created_at: string;
 }
 
@@ -395,7 +501,6 @@ export interface MarketEventUpdate {
   window_starts_at?: string;
   window_ends_at?: string;
   settings?: MarketEventUpdateSettings;
-  label_color?: string;
 }
 
 export interface FantaTeam {

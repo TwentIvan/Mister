@@ -136,7 +136,7 @@ export default function Dashboard() {
                         </Badge>
                       </div>
                       <span className="text-xs text-sidebar-foreground/60 font-mono">
-                        Ends {new Date(market.window_ends_at).toLocaleDateString()}
+                        Fine {new Date(market.ends_at).toLocaleDateString("it-IT")}
                       </span>
                     </div>
                   ))}

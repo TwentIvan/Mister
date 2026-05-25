@@ -289,7 +289,8 @@ export const DEFAULT_TEMPLATE_ID = "classico";
  *     (utile dopo un deploy che aggiorna i preset)
  */
 export async function seedSystemTemplates(
-  db: NodePgDatabase,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  db: NodePgDatabase<any>,
   options: { forceOverwrite?: boolean } = {},
 ): Promise<void> {
   const { forceOverwrite = false } = options;

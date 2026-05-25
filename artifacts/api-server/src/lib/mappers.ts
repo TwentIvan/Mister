@@ -30,16 +30,45 @@ export function mapLeague(l: League) {
   };
 }
 
+function toSnakeMarket(m: Record<string, unknown>) {
+  return {
+    name: m["name"] ?? m["name"],
+    type: m["type"],
+    mode: m["mode"],
+    window_hint: m["window_hint"] ?? m["windowHint"],
+    description: m["description"],
+  };
+}
+
+function toSnakeCompetition(c: Record<string, unknown>) {
+  return {
+    name: c["name"],
+    type: c["type"],
+    description: c["description"],
+  };
+}
+
 export function mapTemplate(t: TemplateProfile) {
+  const suggestedMarkets = Array.isArray(t.suggestedMarkets)
+    ? (t.suggestedMarkets as unknown as Record<string, unknown>[]).map(toSnakeMarket)
+    : [];
+  const suggestedCompetitions = Array.isArray(t.suggestedCompetitions)
+    ? (t.suggestedCompetitions as unknown as Record<string, unknown>[]).map(toSnakeCompetition)
+    : [];
   return {
     id: t.id,
     name: t.name,
-    slug: t.slug,
+    tagline: t.tagline,
     description: t.description,
-    complexity_label: t.complexityLabel,
-    minutes_per_week: t.minutesPerWeek,
+    complexity_level: t.complexityLevel,
+    estimated_weekly_minutes: t.estimatedWeeklyMinutes,
+    icon: t.icon,
     feature_flags: t.featureFlags,
-    active: t.active,
+    suggested_markets: suggestedMarkets,
+    suggested_competitions: suggestedCompetitions,
+    author_user_id: t.authorUserId ?? null,
+    is_system: t.isSystem,
+    is_active: t.isActive,
     created_at: t.createdAt,
     updated_at: t.updatedAt,
   };
@@ -50,11 +79,10 @@ export function mapFederation(f: Federation) {
     id: f.id,
     name: f.name,
     description: f.description,
-    league_id: f.leagueId,
     template_id: f.templateId ?? null,
     mode: f.mode,
-    voto_source: f.votoSource,
     feature_flags: f.featureFlags,
+    rules: f.rules,
     created_at: f.createdAt,
     updated_at: f.updatedAt,
   };
@@ -70,9 +98,7 @@ export function mapCompetition(c: Competition) {
     season: c.season,
     start_giornata: c.startGiornata,
     end_giornata: c.endGiornata,
-    participant_team_ids: c.participantTeamIds,
-    tiebreakers: c.tiebreakers,
-    settings: c.settings ?? {},
+    config: c.config ?? {},
     active: c.active,
     completed: c.completed,
     starts_at: c.startsAt ?? null,
@@ -89,10 +115,9 @@ export function mapMarket(m: MarketEvent) {
     description: m.description,
     type: m.type,
     status: m.status,
-    window_starts_at: m.windowStartsAt,
-    window_ends_at: m.windowEndsAt,
-    settings: m.settings ?? {},
-    label_color: m.labelColor,
+    starts_at: m.startsAt,
+    ends_at: m.endsAt,
+    config: m.config ?? {},
     created_at: m.createdAt,
   };
 }
@@ -120,7 +145,7 @@ export function mapPlayer(p: Player) {
     birth_date: p.birthDate ?? null,
     nationality: p.nationality ?? null,
     height_cm: p.heightCm ?? null,
-    weight_kg: p.weightKg ?? null,
+    weight_kg: null,
     foot: p.foot ?? null,
     role_classic: p.roleClassic,
     roles_mantra: p.rolesMantra,

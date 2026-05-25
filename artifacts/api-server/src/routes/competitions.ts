@@ -2,7 +2,7 @@ import { Router, type IRouter } from "express";
 import { eq, and } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { db } from "@workspace/db";
-import { competitionsTable } from "@workspace/db";
+import { competitions } from "@workspace/db";
 import {
   ListCompetitionsParams,
   ListCompetitionsResponse,
@@ -16,6 +16,7 @@ import {
   DeleteCompetitionParams,
 } from "@workspace/api-zod";
 import { mapCompetition } from "../lib/mappers";
+import type { CompetitionConfig } from "@workspace/db";
 
 const router: IRouter = Router();
 
@@ -27,8 +28,8 @@ router.get("/leagues/:leagueId/competitions", async (req, res): Promise<void> =>
   }
   const rows = await db
     .select()
-    .from(competitionsTable)
-    .where(eq(competitionsTable.leagueId, params.data.leagueId));
+    .from(competitions)
+    .where(eq(competitions.leagueId, params.data.leagueId));
   res.json(ListCompetitionsResponse.parse(rows.map(mapCompetition)));
 });
 
@@ -44,8 +45,15 @@ router.post("/leagues/:leagueId/competitions", async (req, res): Promise<void> =
     return;
   }
   const d = parsed.data;
+  const config: CompetitionConfig = {
+    participantTeamIds: d.participant_team_ids ?? [],
+    tiebreakers: d.tiebreakers ?? [],
+    scoring: { win: 3, draw: 1, loss: 0 },
+    prizes: {},
+    ...(d.settings ?? {}),
+  } as CompetitionConfig;
   const [row] = await db
-    .insert(competitionsTable)
+    .insert(competitions)
     .values({
       id: nanoid(),
       leagueId: params.data.leagueId,
@@ -55,9 +63,7 @@ router.post("/leagues/:leagueId/competitions", async (req, res): Promise<void> =
       season: d.season,
       startGiornata: d.start_giornata,
       endGiornata: d.end_giornata,
-      participantTeamIds: d.participant_team_ids ?? [],
-      tiebreakers: d.tiebreakers ?? [],
-      settings: d.settings ?? null,
+      config,
     })
     .returning();
   res.status(201).json(GetCompetitionResponse.parse(mapCompetition(row)));
@@ -71,10 +77,10 @@ router.get("/leagues/:leagueId/competitions/:id", async (req, res): Promise<void
   }
   const [row] = await db
     .select()
-    .from(competitionsTable)
-    .where(and(eq(competitionsTable.leagueId, p.data.leagueId), eq(competitionsTable.id, p.data.id)));
+    .from(competitions)
+    .where(and(eq(competitions.leagueId, p.data.leagueId), eq(competitions.id, p.data.id)));
   if (!row) {
-    res.status(404).json({ error: "Competition not found" });
+    res.status(404).json({ error: "Competizione non trovata" });
     return;
   }
   res.json(GetCompetitionResponse.parse(mapCompetition(row)));
@@ -93,18 +99,20 @@ router.patch("/leagues/:leagueId/competitions/:id", async (req, res): Promise<vo
   }
   const d = parsed.data;
   const [row] = await db
-    .update(competitionsTable)
+    .update(competitions)
     .set({
       ...(d.name !== undefined && { name: d.name }),
+      ...(d.description !== undefined && { description: d.description }),
       ...(d.active !== undefined && { active: d.active }),
       ...(d.completed !== undefined && { completed: d.completed }),
       ...(d.start_giornata !== undefined && { startGiornata: d.start_giornata }),
       ...(d.end_giornata !== undefined && { endGiornata: d.end_giornata }),
+      ...(d.settings !== undefined && { config: d.settings as unknown as CompetitionConfig }),
     })
-    .where(and(eq(competitionsTable.leagueId, p.data.leagueId), eq(competitionsTable.id, p.data.id)))
+    .where(and(eq(competitions.leagueId, p.data.leagueId), eq(competitions.id, p.data.id)))
     .returning();
   if (!row) {
-    res.status(404).json({ error: "Competition not found" });
+    res.status(404).json({ error: "Competizione non trovata" });
     return;
   }
   res.json(UpdateCompetitionResponse.parse(mapCompetition(row)));
@@ -117,11 +125,11 @@ router.delete("/leagues/:leagueId/competitions/:id", async (req, res): Promise<v
     return;
   }
   const [row] = await db
-    .delete(competitionsTable)
-    .where(and(eq(competitionsTable.leagueId, p.data.leagueId), eq(competitionsTable.id, p.data.id)))
+    .delete(competitions)
+    .where(and(eq(competitions.leagueId, p.data.leagueId), eq(competitions.id, p.data.id)))
     .returning();
   if (!row) {
-    res.status(404).json({ error: "Competition not found" });
+    res.status(404).json({ error: "Competizione non trovata" });
     return;
   }
   res.sendStatus(204);

@@ -5,14 +5,19 @@
  * Mister — il fantacalcio manageriale
  * OpenAPI spec version: 0.1.0
  */
+import type { CompetitionSuggestion } from './competitionSuggestion';
 import type { FeatureFlags } from './featureFlags';
+import type { MarketEventSuggestion } from './marketEventSuggestion';
 
 export interface TemplateInput {
   name: string;
-  slug: string;
+  tagline?: string;
   description?: string;
-  complexity_label: string;
-  minutes_per_week: number;
+  complexity_level: number;
+  estimated_weekly_minutes: number;
+  icon?: string;
   feature_flags: FeatureFlags;
-  active?: boolean;
+  suggested_markets?: MarketEventSuggestion[];
+  suggested_competitions?: CompetitionSuggestion[];
+  is_active?: boolean;
 }

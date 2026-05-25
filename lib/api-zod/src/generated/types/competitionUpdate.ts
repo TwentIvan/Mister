@@ -12,8 +12,6 @@ export interface CompetitionUpdate {
   description?: string;
   start_giornata?: number;
   end_giornata?: number;
-  participant_team_ids?: string[];
-  tiebreakers?: string[];
   settings?: CompetitionUpdateSettings;
   active?: boolean;
   completed?: boolean;

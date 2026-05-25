@@ -7,6 +7,6 @@
  */
 
 /**
- * Configurazione specifica per tipo di competizione (JSON)
+ * Bonus padrone di casa
  */
-export type CompetitionSettings = { [key: string]: unknown };
+export type FederationRulesHomeAdvantage = { [key: string]: unknown };

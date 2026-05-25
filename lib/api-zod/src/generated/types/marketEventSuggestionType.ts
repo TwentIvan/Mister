@@ -6,13 +6,10 @@
  * OpenAPI spec version: 0.1.0
  */
 
-/**
- * auction = asta (sub-mode in config), trade = scambi, release = svincoli, free_agent = pool svincolati
- */
-export type MarketEventType = typeof MarketEventType[keyof typeof MarketEventType];
+export type MarketEventSuggestionType = typeof MarketEventSuggestionType[keyof typeof MarketEventSuggestionType];
 
 
-export const MarketEventType = {
+export const MarketEventSuggestionType = {
   auction: 'auction',
   trade: 'trade',
   release: 'release',

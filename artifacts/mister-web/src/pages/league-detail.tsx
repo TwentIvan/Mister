@@ -2,16 +2,15 @@ import {
   useGetLeague, getGetLeagueQueryKey,
   useGetLeagueStats, getGetLeagueStatsQueryKey,
   useListCompetitions, getListCompetitionsQueryKey,
-  useGetLeagueMarkets, getGetLeagueMarketsQueryKey,
   useListFantaTeams, getListFantaTeamsQueryKey
 } from "@workspace/api-client-react";
 import { useParams, Link } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Tabs, TabsContent, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Shield, Trophy, Users, Calendar, Activity, BookOpen } from "lucide-react";
+import { Trophy, Users, Calendar, Activity, BookOpen } from "lucide-react";
 
 export default function LeagueDetail() {
   const { id } = useParams<{ id: string }>();
@@ -21,19 +20,19 @@ export default function LeagueDetail() {
     { query: { enabled: !!id, queryKey: getGetLeagueQueryKey(id) } }
   );
 
-  const { data: stats, isLoading: isLoadingStats } = useGetLeagueStats(
+  const { data: stats } = useGetLeagueStats(
     id,
     { query: { enabled: !!id, queryKey: getGetLeagueStatsQueryKey(id) } }
   );
 
   const { data: teams, isLoading: isLoadingTeams } = useListFantaTeams(
-    { league_id: id },
-    { query: { enabled: !!id, queryKey: getListFantaTeamsQueryKey({ league_id: id }) } }
+    id,
+    { query: { enabled: !!id, queryKey: getListFantaTeamsQueryKey(id) } }
   );
 
   const { data: competitions, isLoading: isLoadingComps } = useListCompetitions(
-    { league_id: id },
-    { query: { enabled: !!id, queryKey: getListCompetitionsQueryKey({ league_id: id }) } }
+    id,
+    { query: { enabled: !!id, queryKey: getListCompetitionsQueryKey(id) } }
   );
 
   if (isLoadingLeague) {
@@ -52,7 +51,7 @@ export default function LeagueDetail() {
   }
 
   if (!league) {
-    return <div className="text-destructive">League not found</div>;
+    return <div className="text-destructive">Lega non trovata</div>;
   }
 
   return (
@@ -61,10 +60,10 @@ export default function LeagueDetail() {
         <div>
           <div className="flex items-center gap-3 mb-2">
             <Badge variant="outline" className="font-mono text-primary border-primary/20 bg-primary/5">
-              Season {league.season}
+              Stagione {league.season}
             </Badge>
             <Badge variant={league.started ? "default" : "secondary"}>
-              {league.started ? "Active" : "Registration"}
+              {league.started ? "In corso" : "Iscrizioni"}
             </Badge>
             <Badge variant="outline" className="capitalize">{league.visibility}</Badge>
           </div>
@@ -77,13 +76,13 @@ export default function LeagueDetail() {
             <Link href={`/leagues/${league.id}/federation`}>
               <Button variant="outline" className="gap-2 border-primary/20 text-primary">
                 <BookOpen className="h-4 w-4" />
-                Federation Rules
+                Regolamento
               </Button>
             </Link>
           )}
           <Button className="gap-2">
             <Trophy className="h-4 w-4" />
-            My Team
+            La mia squadra
           </Button>
         </div>
       </div>
@@ -91,7 +90,7 @@ export default function LeagueDetail() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card className="bg-card">
           <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Managers</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Manager</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -103,7 +102,7 @@ export default function LeagueDetail() {
         
         <Card className="bg-card">
           <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Competitions</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Competizioni</CardTitle>
             <Trophy className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -115,7 +114,7 @@ export default function LeagueDetail() {
 
         <Card className="bg-card">
           <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Active Contracts</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Contratti attivi</CardTitle>
             <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -127,7 +126,7 @@ export default function LeagueDetail() {
 
         <Card className="bg-card border-primary/20">
           <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
-            <CardTitle className="text-sm font-medium text-primary">Active Markets</CardTitle>
+            <CardTitle className="text-sm font-medium text-primary">Mercati attivi</CardTitle>
             <Calendar className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
@@ -142,23 +141,23 @@ export default function LeagueDetail() {
         <div className="col-span-1 lg:col-span-2 space-y-8">
           <Card>
             <CardHeader>
-              <CardTitle>Roster Squadre</CardTitle>
-              <CardDescription>All participating managers and their teams</CardDescription>
+              <CardTitle>Squadre iscritte</CardTitle>
+              <CardDescription>Manager partecipanti e crediti residui</CardDescription>
             </CardHeader>
             <CardContent>
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Team</TableHead>
+                    <TableHead>Squadra</TableHead>
                     <TableHead>Manager</TableHead>
-                    <TableHead className="text-right">Credits</TableHead>
+                    <TableHead className="text-right">Crediti</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {isLoadingTeams ? (
                     <TableRow><TableCell colSpan={3}><Skeleton className="h-8 w-full" /></TableCell></TableRow>
                   ) : teams?.length === 0 ? (
-                    <TableRow><TableCell colSpan={3} className="text-center text-muted-foreground py-6">No teams registered yet.</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={3} className="text-center text-muted-foreground py-6">Nessuna squadra registrata.</TableCell></TableRow>
                   ) : teams?.map((team) => (
                     <TableRow key={team.id}>
                       <TableCell className="font-medium">{team.name}</TableCell>
@@ -176,8 +175,8 @@ export default function LeagueDetail() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <div>
-                <CardTitle>Competitions</CardTitle>
-                <CardDescription>Active tournaments</CardDescription>
+                <CardTitle>Competizioni</CardTitle>
+                <CardDescription>Tornei attivi</CardDescription>
               </div>
             </CardHeader>
             <CardContent>
@@ -185,16 +184,16 @@ export default function LeagueDetail() {
                 {isLoadingComps ? (
                   <Skeleton className="h-16 w-full" />
                 ) : competitions?.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No competitions created.</p>
+                  <p className="text-sm text-muted-foreground">Nessuna competizione creata.</p>
                 ) : competitions?.map((comp) => (
                   <Link key={comp.id} href={`/leagues/${league.id}/competitions/${comp.id}`}>
                     <div className="p-3 border rounded-lg hover:border-primary/50 hover:bg-muted/30 cursor-pointer transition-colors group">
                       <div className="flex justify-between items-start mb-1">
                         <span className="font-semibold group-hover:text-primary transition-colors">{comp.name}</span>
-                        <Badge variant="outline" className="text-[10px] uppercase">{comp.type.replace('_', ' ')}</Badge>
+                        <Badge variant="outline" className="text-[10px] uppercase">{comp.type.replace(/_/g, ' ')}</Badge>
                       </div>
-                      <div className="text-xs text-muted-foreground">
-                        Giornate: {comp.start_giornata} - {comp.end_giornata}
+                      <div className="text-xs text-muted-foreground font-mono">
+                        Giornate {comp.start_giornata}–{comp.end_giornata}
                       </div>
                     </div>
                   </Link>

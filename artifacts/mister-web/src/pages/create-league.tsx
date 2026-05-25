@@ -1,8 +1,7 @@
 import { useListTemplates, getListTemplatesQueryKey, useCreateLeague, LeagueInputVisibility } from "@workspace/api-client-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -15,11 +14,17 @@ import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 
 const formSchema = z.object({
-  name: z.string().min(3, "League name must be at least 3 characters").max(50),
-  template_id: z.string().min(1, "Please select a template"),
+  name: z.string().min(3, "Il nome deve avere almeno 3 caratteri").max(50),
+  template_id: z.string().min(1, "Seleziona un template"),
   max_managers: z.coerce.number().min(2).max(20).default(8),
   visibility: z.nativeEnum(LeagueInputVisibility).default(LeagueInputVisibility.private),
 });
+
+const complexityLabel = (level: number) => {
+  if (level === 1) return "Base";
+  if (level === 2) return "Intermedio";
+  return "Avanzato";
+};
 
 export default function CreateLeague() {
   const [, setLocation] = useLocation();
@@ -49,22 +54,22 @@ export default function CreateLeague() {
         template_id: values.template_id,
         max_managers: values.max_managers,
         visibility: values.visibility,
-        admin_user_id: "demo-user", // Hardcoded for demo
+        admin_user_id: "demo-user",
         season: new Date().getFullYear(),
       }
     }, {
       onSuccess: (league) => {
         toast({
-          title: "League created successfully",
-          description: "Welcome to your new cockpit.",
+          title: "Lega creata",
+          description: "Benvenuto nel tuo cockpit.",
         });
         setLocation(`/leagues/${league.id}`);
       },
-      onError: (error) => {
+      onError: () => {
         toast({
           variant: "destructive",
-          title: "Failed to create league",
-          description: "An error occurred while setting up the league.",
+          title: "Creazione fallita",
+          description: "Si è verificato un errore durante la configurazione della lega.",
         });
       }
     });
@@ -74,10 +79,10 @@ export default function CreateLeague() {
     <div className="max-w-3xl mx-auto space-y-8 animate-in fade-in duration-500">
       <div>
         <h1 className="text-3xl font-bold font-serif text-primary tracking-tight" data-testid="text-create-league-title">
-          Create New League
+          Crea nuova lega
         </h1>
         <p className="text-muted-foreground mt-1">
-          Select a template and configure your fantasy league parameters.
+          Scegli un template e configura i parametri della tua lega fantacalcio.
         </p>
       </div>
 
@@ -87,7 +92,7 @@ export default function CreateLeague() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <ShieldCheck className="h-5 w-5 text-primary" />
-                Basic Information
+                Informazioni base
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -96,9 +101,9 @@ export default function CreateLeague() {
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>League Name</FormLabel>
+                    <FormLabel>Nome lega</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g. Serie A Fantastica" {...field} data-testid="input-league-name" className="max-w-md" />
+                      <Input placeholder="es. Serie A Fantastica" {...field} data-testid="input-league-name" className="max-w-md" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -111,7 +116,7 @@ export default function CreateLeague() {
                   name="max_managers"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Max Managers</FormLabel>
+                      <FormLabel>Manager massimi</FormLabel>
                       <FormControl>
                         <Input type="number" {...field} data-testid="input-league-max-managers" />
                       </FormControl>
@@ -125,17 +130,17 @@ export default function CreateLeague() {
                   name="visibility"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Visibility</FormLabel>
+                      <FormLabel>Visibilità</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
                           <SelectTrigger data-testid="select-league-visibility">
-                            <SelectValue placeholder="Select visibility" />
+                            <SelectValue placeholder="Scegli visibilità" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value={LeagueInputVisibility.private}>Private</SelectItem>
-                          <SelectItem value={LeagueInputVisibility.public}>Public</SelectItem>
-                          <SelectItem value={LeagueInputVisibility.unlisted}>Unlisted</SelectItem>
+                          <SelectItem value={LeagueInputVisibility.private}>Privata</SelectItem>
+                          <SelectItem value={LeagueInputVisibility.public}>Pubblica</SelectItem>
+                          <SelectItem value={LeagueInputVisibility.unlisted}>Non in elenco</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -149,10 +154,10 @@ export default function CreateLeague() {
           <div className="space-y-4">
             <h3 className="text-lg font-semibold flex items-center gap-2">
               <Trophy className="h-5 w-5 text-primary" />
-              Select Template
+              Scegli il template
             </h3>
             <FormDescription>
-              Templates dictate the rules, market mechanics, and complexity of your league.
+              Il template definisce regole, meccaniche di mercato e complessità della lega.
             </FormDescription>
             
             <FormField
@@ -173,28 +178,28 @@ export default function CreateLeague() {
                           key={template.id}
                           className={`cursor-pointer transition-all border-2 ${field.value === template.id ? 'border-primary ring-2 ring-primary/20 bg-primary/5' : 'border-border hover:border-primary/50'}`}
                           onClick={() => field.onChange(template.id)}
-                          data-testid={`card-template-${template.slug}`}
+                          data-testid={`card-template-${template.id}`}
                         >
                           <CardHeader className="pb-2">
                             <div className="flex justify-between items-start">
                               <CardTitle className="text-lg">{template.name}</CardTitle>
                               <Badge variant={field.value === template.id ? "default" : "secondary"}>
-                                {template.complexity_label}
+                                {complexityLabel(template.complexity_level)}
                               </Badge>
                             </div>
-                            <CardDescription className="line-clamp-2 min-h-[40px]">
-                              {template.description || "A standard fantasy league setup."}
+                            <CardDescription className="line-clamp-2 min-h-[40px] italic text-xs">
+                              {template.tagline || template.description || "Template di lega fantacalcio."}
                             </CardDescription>
                           </CardHeader>
                           <CardContent className="pb-4">
                             <div className="flex flex-col gap-2 text-sm text-muted-foreground">
                               <div className="flex items-center gap-2">
                                 <Clock className="h-4 w-4" />
-                                <span>~{template.minutes_per_week} mins/week</span>
+                                <span>~{template.estimated_weekly_minutes} min/sett</span>
                               </div>
                               <div className="flex items-center gap-2">
                                 <Zap className="h-4 w-4" />
-                                <span>{Object.keys(template.feature_flags).length} Advanced Rules</span>
+                                <span>{Object.keys(template.feature_flags).length} regole avanzate</span>
                               </div>
                             </div>
                           </CardContent>
@@ -216,7 +221,7 @@ export default function CreateLeague() {
               disabled={createLeagueMutation.isPending}
               data-testid="button-submit-league"
             >
-              {createLeagueMutation.isPending ? "Creating..." : "Initialize League"}
+              {createLeagueMutation.isPending ? "Creazione..." : "Inizializza lega"}
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </div>

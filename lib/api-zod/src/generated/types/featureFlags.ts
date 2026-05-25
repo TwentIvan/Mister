@@ -7,25 +7,43 @@
  */
 
 /**
- * Feature flags copiati dal template al momento della creazione della lega
+ * I 18 feature flag copiati dal template al momento della creazione della lega
  */
 export interface FeatureFlags {
+  /** Contratti pluriennali (>1 stagione) */
   multi_season_contracts?: boolean;
+  /** Durata massima contratto in stagioni (1-10) */
   max_contract_length?: number;
+  /** Flusso esplicito di rinnovo contrattuale */
   contract_renewal?: boolean;
+  /** Diritto di pareggio in asta per il detentore uscente */
   preemption_right?: boolean;
+  /** Asta di riparazione invernale di gennaio */
   repair_auction_january?: boolean;
+  /** Pool svincolati permanente disponibile */
   free_agent_pool?: boolean;
+  /** Scambi diretti 1-a-1 tra manager */
   direct_trades?: boolean;
+  /** Mercati e scambi sempre attivi in stagione */
   always_on_markets?: boolean;
+  /** Budget residuo portato alla stagione successiva */
   carryover_budget?: boolean;
+  /** Percentuale di budget residuo mantenuta (0-100) */
   carryover_percentage?: number;
+  /** Valore di mercato del giocatore aggiornato dinamicamente */
   player_value_dynamic?: boolean;
+  /** Ammortamento del prezzo d'acquisto sugli anni di contratto */
   amortization?: boolean;
+  /** Clausole rescissorie attive */
   release_clauses?: boolean;
+  /** Moltiplicatore residuo per clausola di default (0.5-1.0) */
   clause_default_factor?: number;
+  /** Penale se il manager svincola prima della scadenza */
   rescission_penalty?: boolean;
+  /** Percentuale crediti recuperata sullo svincolo (0-100) */
   rescission_recovery_pct?: number;
+  /** Formazione senza vincoli di modulo predefinito */
   no_schema_tactics?: boolean;
+  /** Sistema di scouting giocatori giovani/emergenti */
   scouting_enabled?: boolean;
 }

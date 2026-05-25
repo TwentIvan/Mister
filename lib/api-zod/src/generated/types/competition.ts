@@ -5,7 +5,7 @@
  * Mister — il fantacalcio manageriale
  * OpenAPI spec version: 0.1.0
  */
-import type { CompetitionSettings } from './competitionSettings';
+import type { CompetitionConfig } from './competitionConfig';
 import type { CompetitionType } from './competitionType';
 
 export interface Competition {
@@ -17,10 +17,8 @@ export interface Competition {
   season: number;
   start_giornata: number;
   end_giornata: number;
-  participant_team_ids?: string[];
-  tiebreakers?: string[];
-  /** Configurazione specifica per tipo di competizione (JSON) */
-  settings?: CompetitionSettings;
+  /** Configurazione specifica per tipo + tiebreaker + premi + partecipanti */
+  config: CompetitionConfig;
   active: boolean;
   completed: boolean;
   /** @nullable */

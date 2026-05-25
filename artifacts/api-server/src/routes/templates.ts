@@ -2,7 +2,7 @@ import { Router, type IRouter } from "express";
 import { eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { db } from "@workspace/db";
-import { templateProfilesTable } from "@workspace/db";
+import { templateProfiles } from "@workspace/db";
 import {
   ListTemplatesQueryParams,
   ListTemplatesResponse,
@@ -25,14 +25,14 @@ router.get("/templates", async (req, res): Promise<void> => {
     return;
   }
   const { active_only } = parsed.data;
-  const query = db.select().from(templateProfilesTable);
+  const query = db.select().from(templateProfiles);
   const rows = active_only
-    ? await query.where(eq(templateProfilesTable.active, true))
+    ? await query.where(eq(templateProfiles.isActive, true))
     : await query;
   res.json(ListTemplatesResponse.parse(rows.map(mapTemplate)));
 });
 
-router.post("/templates", async (req, res): Promise<void> => {
+router.post("/superadmin/templates", async (req, res): Promise<void> => {
   const parsed = CreateTemplateBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -40,16 +40,20 @@ router.post("/templates", async (req, res): Promise<void> => {
   }
   const d = parsed.data;
   const [row] = await db
-    .insert(templateProfilesTable)
+    .insert(templateProfiles)
     .values({
       id: nanoid(),
       name: d.name,
-      slug: d.slug,
+      tagline: d.tagline ?? "",
       description: d.description ?? "",
-      complexityLabel: d.complexity_label,
-      minutesPerWeek: d.minutes_per_week,
+      complexityLevel: d.complexity_level,
+      estimatedWeeklyMinutes: d.estimated_weekly_minutes,
+      icon: d.icon ?? "",
       featureFlags: d.feature_flags,
-      active: d.active ?? true,
+      suggestedMarkets: d.suggested_markets ?? [],
+      suggestedCompetitions: d.suggested_competitions ?? [],
+      isSystem: false,
+      isActive: d.is_active ?? true,
     })
     .returning();
   res.status(201).json(GetTemplateResponse.parse(mapTemplate(row)));
@@ -63,16 +67,16 @@ router.get("/templates/:id", async (req, res): Promise<void> => {
   }
   const [row] = await db
     .select()
-    .from(templateProfilesTable)
-    .where(eq(templateProfilesTable.id, params.data.id));
+    .from(templateProfiles)
+    .where(eq(templateProfiles.id, params.data.id));
   if (!row) {
-    res.status(404).json({ error: "Template not found" });
+    res.status(404).json({ error: "Template non trovato" });
     return;
   }
   res.json(GetTemplateResponse.parse(mapTemplate(row)));
 });
 
-router.patch("/templates/:id", async (req, res): Promise<void> => {
+router.patch("/superadmin/templates/:id", async (req, res): Promise<void> => {
   const params = UpdateTemplateParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -85,38 +89,48 @@ router.patch("/templates/:id", async (req, res): Promise<void> => {
   }
   const d = parsed.data;
   const [row] = await db
-    .update(templateProfilesTable)
+    .update(templateProfiles)
     .set({
       ...(d.name !== undefined && { name: d.name }),
+      ...(d.tagline !== undefined && { tagline: d.tagline }),
       ...(d.description !== undefined && { description: d.description }),
-      ...(d.complexity_label !== undefined && { complexityLabel: d.complexity_label }),
-      ...(d.minutes_per_week !== undefined && { minutesPerWeek: d.minutes_per_week }),
+      ...(d.complexity_level !== undefined && { complexityLevel: d.complexity_level }),
+      ...(d.estimated_weekly_minutes !== undefined && { estimatedWeeklyMinutes: d.estimated_weekly_minutes }),
+      ...(d.icon !== undefined && { icon: d.icon }),
       ...(d.feature_flags !== undefined && { featureFlags: d.feature_flags }),
-      ...(d.active !== undefined && { active: d.active }),
+      ...(d.suggested_markets !== undefined && { suggestedMarkets: d.suggested_markets }),
+      ...(d.suggested_competitions !== undefined && { suggestedCompetitions: d.suggested_competitions }),
+      ...(d.is_active !== undefined && { isActive: d.is_active }),
+      updatedAt: new Date(),
     })
-    .where(eq(templateProfilesTable.id, params.data.id))
+    .where(eq(templateProfiles.id, params.data.id))
     .returning();
   if (!row) {
-    res.status(404).json({ error: "Template not found" });
+    res.status(404).json({ error: "Template non trovato" });
     return;
   }
   res.json(UpdateTemplateResponse.parse(mapTemplate(row)));
 });
 
-router.delete("/templates/:id", async (req, res): Promise<void> => {
+router.delete("/superadmin/templates/:id", async (req, res): Promise<void> => {
   const params = DeleteTemplateParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
     return;
   }
   const [row] = await db
-    .delete(templateProfilesTable)
-    .where(eq(templateProfilesTable.id, params.data.id))
-    .returning();
+    .select()
+    .from(templateProfiles)
+    .where(eq(templateProfiles.id, params.data.id));
   if (!row) {
-    res.status(404).json({ error: "Template not found" });
+    res.status(404).json({ error: "Template non trovato" });
     return;
   }
+  if (row.isSystem) {
+    res.status(403).json({ error: "I template di sistema non possono essere eliminati. Disattivali usando is_active=false." });
+    return;
+  }
+  await db.delete(templateProfiles).where(eq(templateProfiles.id, params.data.id));
   res.sendStatus(204);
 });
 

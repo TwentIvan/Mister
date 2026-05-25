@@ -2,7 +2,7 @@ import { Router, type IRouter } from "express";
 import { eq, and } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { db } from "@workspace/db";
-import { fantaTeamsTable } from "@workspace/db";
+import { fantaTeams } from "@workspace/db";
 import {
   ListFantaTeamsParams,
   ListFantaTeamsResponse,
@@ -14,6 +14,7 @@ import {
   UpdateFantaTeamBody,
   UpdateFantaTeamResponse,
 } from "@workspace/api-zod";
+import type { RosterSnapshot } from "@workspace/db";
 import { mapFantaTeam } from "../lib/mappers";
 
 const router: IRouter = Router();
@@ -26,8 +27,8 @@ router.get("/leagues/:leagueId/teams", async (req, res): Promise<void> => {
   }
   const rows = await db
     .select()
-    .from(fantaTeamsTable)
-    .where(eq(fantaTeamsTable.leagueId, params.data.leagueId));
+    .from(fantaTeams)
+    .where(eq(fantaTeams.leagueId, params.data.leagueId));
   res.json(ListFantaTeamsResponse.parse(rows.map(mapFantaTeam)));
 });
 
@@ -43,8 +44,9 @@ router.post("/leagues/:leagueId/teams", async (req, res): Promise<void> => {
     return;
   }
   const d = parsed.data;
+  const emptyRoster: RosterSnapshot = { gk: [], def: [], mid: [], att: [] };
   const [row] = await db
-    .insert(fantaTeamsTable)
+    .insert(fantaTeams)
     .values({
       id: nanoid(),
       leagueId: params.data.leagueId,
@@ -52,6 +54,7 @@ router.post("/leagues/:leagueId/teams", async (req, res): Promise<void> => {
       name: d.name,
       nameAuction: d.name_auction ?? null,
       logoUrl: d.logo_url ?? null,
+      roster: emptyRoster,
     })
     .returning();
   res.status(201).json(GetFantaTeamResponse.parse(mapFantaTeam(row)));
@@ -65,10 +68,10 @@ router.get("/leagues/:leagueId/teams/:id", async (req, res): Promise<void> => {
   }
   const [row] = await db
     .select()
-    .from(fantaTeamsTable)
-    .where(and(eq(fantaTeamsTable.leagueId, p.data.leagueId), eq(fantaTeamsTable.id, p.data.id)));
+    .from(fantaTeams)
+    .where(and(eq(fantaTeams.leagueId, p.data.leagueId), eq(fantaTeams.id, p.data.id)));
   if (!row) {
-    res.status(404).json({ error: "FantaTeam not found" });
+    res.status(404).json({ error: "Squadra non trovata" });
     return;
   }
   res.json(GetFantaTeamResponse.parse(mapFantaTeam(row)));
@@ -87,17 +90,17 @@ router.patch("/leagues/:leagueId/teams/:id", async (req, res): Promise<void> => 
   }
   const d = parsed.data;
   const [row] = await db
-    .update(fantaTeamsTable)
+    .update(fantaTeams)
     .set({
       ...(d.name !== undefined && { name: d.name }),
       ...(d.name_auction !== undefined && { nameAuction: d.name_auction }),
       ...(d.logo_url !== undefined && { logoUrl: d.logo_url }),
       ...(d.credits_remaining !== undefined && { creditsRemaining: d.credits_remaining }),
     })
-    .where(and(eq(fantaTeamsTable.leagueId, p.data.leagueId), eq(fantaTeamsTable.id, p.data.id)))
+    .where(and(eq(fantaTeams.leagueId, p.data.leagueId), eq(fantaTeams.id, p.data.id)))
     .returning();
   if (!row) {
-    res.status(404).json({ error: "FantaTeam not found" });
+    res.status(404).json({ error: "Squadra non trovata" });
     return;
   }
   res.json(UpdateFantaTeamResponse.parse(mapFantaTeam(row)));

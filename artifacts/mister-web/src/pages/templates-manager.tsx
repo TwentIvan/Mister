@@ -14,18 +14,18 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useToast } from "@/hooks/use-toast";
-import { Clock, Plus, Zap, Settings, ShieldAlert, Trash2 } from "lucide-react";
+import { Clock, Plus, Zap, Settings2, ShieldAlert, Trash2, Star } from "lucide-react";
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Switch } from "@/components/ui/switch";
 
 const templateSchema = z.object({
-  name: z.string().min(1),
-  slug: z.string().min(1),
+  name: z.string().min(1, "Il nome è obbligatorio"),
+  tagline: z.string().optional(),
   description: z.string().optional(),
-  complexity_label: z.string().min(1),
-  minutes_per_week: z.coerce.number().min(0),
-  active: z.boolean().default(true),
+  complexity_level: z.coerce.number().int().min(1).max(3).default(1),
+  estimated_weekly_minutes: z.coerce.number().min(0).default(60),
+  is_active: z.boolean().default(true),
 });
 
 export default function TemplatesManager() {
@@ -46,55 +46,86 @@ export default function TemplatesManager() {
     resolver: zodResolver(templateSchema),
     defaultValues: {
       name: "",
-      slug: "",
+      tagline: "",
       description: "",
-      complexity_label: "Medium",
-      minutes_per_week: 60,
-      active: true,
+      complexity_level: 1,
+      estimated_weekly_minutes: 60,
+      is_active: true,
     }
   });
 
   const onCreate = (values: z.infer<typeof templateSchema>) => {
     createMutation.mutate({
       data: {
-        ...values,
+        name: values.name,
+        tagline: values.tagline ?? "",
+        description: values.description ?? "",
+        complexity_level: values.complexity_level,
+        estimated_weekly_minutes: values.estimated_weekly_minutes,
+        is_active: values.is_active,
         feature_flags: {
           multi_season_contracts: false,
-          free_agent_pool: true
+          max_contract_length: 1,
+          contract_renewal: false,
+          preemption_right: false,
+          repair_auction_january: true,
+          free_agent_pool: true,
+          direct_trades: false,
+          always_on_markets: false,
+          carryover_budget: false,
+          carryover_percentage: 0,
+          player_value_dynamic: false,
+          amortization: false,
+          release_clauses: false,
+          clause_default_factor: 0.8,
+          rescission_penalty: false,
+          rescission_recovery_pct: 50,
+          no_schema_tactics: false,
+          scouting_enabled: false,
         }
       }
     }, {
       onSuccess: () => {
-        toast({ title: "Template created" });
+        toast({ title: "Template creato" });
         setIsCreateOpen(false);
         queryClient.invalidateQueries({ queryKey: getListTemplatesQueryKey({}) });
         form.reset();
       },
-      onError: () => toast({ variant: "destructive", title: "Creation failed" })
+      onError: () => toast({ variant: "destructive", title: "Creazione fallita" })
     });
   };
 
-  const handleToggleActive = (id: string, active: boolean) => {
+  const handleToggleActive = (id: string, is_active: boolean) => {
     updateMutation.mutate({
       id,
-      data: { active }
+      data: { is_active }
     }, {
       onSuccess: () => {
-        toast({ title: "Status updated" });
+        toast({ title: "Stato aggiornato" });
         queryClient.invalidateQueries({ queryKey: getListTemplatesQueryKey({}) });
       }
     });
   };
 
-  const handleDelete = (id: string) => {
-    if (confirm("Are you sure? This may break leagues using this template.")) {
+  const handleDelete = (id: string, isSystem: boolean) => {
+    if (isSystem) {
+      toast({ variant: "destructive", title: "I template di sistema non si eliminano. Disattivali." });
+      return;
+    }
+    if (confirm("Eliminare questo template? Le leghe già create non verranno influenzate.")) {
       deleteMutation.mutate({ id }, {
         onSuccess: () => {
-          toast({ title: "Template deleted" });
+          toast({ title: "Template eliminato" });
           queryClient.invalidateQueries({ queryKey: getListTemplatesQueryKey({}) });
         }
       });
     }
+  };
+
+  const complexityLabel = (level: number) => {
+    if (level === 1) return "Base";
+    if (level === 2) return "Intermedio";
+    return "Avanzato";
   };
 
   return (
@@ -103,22 +134,22 @@ export default function TemplatesManager() {
         <div>
           <h1 className="text-3xl font-bold font-serif text-primary flex items-center gap-3">
             <ShieldAlert className="h-8 w-8 text-destructive" />
-            Template Manager
+            Gestione Template
           </h1>
           <p className="text-muted-foreground mt-1">
-            System administration for league templates
+            Amministrazione dei template di onboarding lega
           </p>
         </div>
         
         <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
           <DialogTrigger asChild>
             <Button className="gap-2">
-              <Plus className="h-4 w-4" /> New Template
+              <Plus className="h-4 w-4" /> Nuovo template
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-2xl">
             <DialogHeader>
-              <DialogTitle>Create System Template</DialogTitle>
+              <DialogTitle>Crea template custom</DialogTitle>
             </DialogHeader>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onCreate)} className="space-y-4">
@@ -128,7 +159,7 @@ export default function TemplatesManager() {
                     name="name"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Name</FormLabel>
+                        <FormLabel>Nome</FormLabel>
                         <FormControl><Input {...field} /></FormControl>
                         <FormMessage />
                       </FormItem>
@@ -136,57 +167,56 @@ export default function TemplatesManager() {
                   />
                   <FormField
                     control={form.control}
-                    name="slug"
+                    name="complexity_level"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Slug</FormLabel>
-                        <FormControl><Input {...field} /></FormControl>
+                        <FormLabel>Complessità (1-3)</FormLabel>
+                        <FormControl><Input type="number" min={1} max={3} {...field} /></FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
                 </div>
+
+                <FormField
+                  control={form.control}
+                  name="tagline"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Tagline</FormLabel>
+                      <FormControl><Input {...field} placeholder="Una frase breve che sintetizza il template" /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
                 
                 <FormField
                   control={form.control}
                   name="description"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Description</FormLabel>
+                      <FormLabel>Descrizione</FormLabel>
                       <FormControl><Textarea {...field} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
 
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="complexity_label"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Complexity Label</FormLabel>
-                        <FormControl><Input {...field} /></FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="minutes_per_week"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Minutes / Week</FormLabel>
-                        <FormControl><Input type="number" {...field} /></FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
+                <FormField
+                  control={form.control}
+                  name="estimated_weekly_minutes"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Minuti stimati / settimana</FormLabel>
+                      <FormControl><Input type="number" {...field} /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
                 <div className="flex justify-end pt-4">
                   <Button type="submit" disabled={createMutation.isPending}>
-                    {createMutation.isPending ? "Creating..." : "Create Template"}
+                    {createMutation.isPending ? "Creazione..." : "Crea template"}
                   </Button>
                 </div>
               </form>
@@ -202,19 +232,22 @@ export default function TemplatesManager() {
             <Skeleton className="h-[300px] rounded-xl" />
           </>
         ) : templates?.map((template) => (
-          <Card key={template.id} className={`border-2 ${template.active ? 'border-primary/20' : 'border-muted opacity-60'}`}>
+          <Card key={template.id} className={`border-2 ${template.is_active ? 'border-primary/20' : 'border-muted opacity-60'}`}>
             <CardHeader className="pb-3 border-b bg-muted/20">
               <div className="flex justify-between items-start">
                 <div>
-                  <CardTitle className="text-xl">{template.name}</CardTitle>
-                  <CardDescription className="font-mono text-xs mt-1">{template.slug}</CardDescription>
+                  <CardTitle className="text-xl flex items-center gap-2">
+                    {template.name}
+                    {template.is_system && <Star className="h-4 w-4 text-amber-500 fill-amber-500" />}
+                  </CardTitle>
+                  <CardDescription className="text-xs mt-1 italic">{template.tagline}</CardDescription>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Badge variant={template.active ? "default" : "secondary"}>
-                    {template.active ? "Active" : "Draft"}
+                  <Badge variant={template.is_active ? "default" : "secondary"}>
+                    {template.is_active ? "Attivo" : "Disattivo"}
                   </Badge>
                   <Switch 
-                    checked={template.active} 
+                    checked={template.is_active} 
                     onCheckedChange={(checked) => handleToggleActive(template.id, checked)} 
                   />
                 </div>
@@ -225,23 +258,25 @@ export default function TemplatesManager() {
               
               <div className="flex flex-wrap gap-4 text-sm text-muted-foreground bg-muted/10 p-3 rounded-md border">
                 <div className="flex items-center gap-2">
-                  <Settings className="h-4 w-4" />
-                  <span className="font-medium">Complexity:</span> {template.complexity_label}
+                  <Settings2 className="h-4 w-4" />
+                  <span className="font-medium">Complessità:</span> {complexityLabel(template.complexity_level)}
                 </div>
                 <div className="flex items-center gap-2">
                   <Clock className="h-4 w-4" />
-                  <span className="font-medium">Time:</span> ~{template.minutes_per_week}m/w
+                  <span className="font-medium">Tempo:</span> ~{template.estimated_weekly_minutes} min/sett
                 </div>
                 <div className="flex items-center gap-2">
                   <Zap className="h-4 w-4" />
-                  <span className="font-medium">Features:</span> {Object.keys(template.feature_flags || {}).length}
+                  <span className="font-medium">Flag:</span> {Object.keys(template.feature_flags || {}).length}/18
                 </div>
               </div>
 
               <div className="flex justify-end pt-2">
-                <Button variant="ghost" size="sm" className="text-destructive hover:bg-destructive/10" onClick={() => handleDelete(template.id)}>
-                  <Trash2 className="h-4 w-4 mr-2" /> Delete
-                </Button>
+                {!template.is_system && (
+                  <Button variant="ghost" size="sm" className="text-destructive hover:bg-destructive/10" onClick={() => handleDelete(template.id, template.is_system)}>
+                    <Trash2 className="h-4 w-4 mr-2" /> Elimina
+                  </Button>
+                )}
               </div>
             </CardContent>
           </Card>

@@ -15,5 +15,4 @@ export interface MarketEventUpdate {
   window_starts_at?: Date;
   window_ends_at?: Date;
   settings?: MarketEventUpdateSettings;
-  label_color?: string;
 }

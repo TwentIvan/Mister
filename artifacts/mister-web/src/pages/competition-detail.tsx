@@ -22,7 +22,7 @@ import { Badge } from "@/components/ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 const compSchema = z.object({
-  name: z.string().min(1, "Name is required"),
+  name: z.string().min(1, "Il nome è obbligatorio"),
   description: z.string().optional(),
   start_giornata: z.coerce.number().min(1).max(38),
   end_giornata: z.coerce.number().min(1).max(38),
@@ -37,8 +37,9 @@ export default function CompetitionDetail() {
   const queryClient = useQueryClient();
 
   const { data: competition, isLoading } = useGetCompetition(
+    leagueId,
     id,
-    { query: { enabled: !!id, queryKey: getGetCompetitionQueryKey(id) } }
+    { query: { enabled: !!(leagueId && id), queryKey: getGetCompetitionQueryKey(leagueId, id) } }
   );
 
   const updateMutation = useUpdateCompetition();
@@ -63,10 +64,10 @@ export default function CompetitionDetail() {
       form.reset({
         name: competition.name,
         description: competition.description || "",
-        start_giornata: competition.start_giornata,
-        end_giornata: competition.end_giornata,
-        active: competition.active,
-        completed: competition.completed
+        start_giornata: competition.start_giornata ?? 1,
+        end_giornata: competition.end_giornata ?? 38,
+        active: competition.active ?? true,
+        completed: competition.completed ?? false
       });
       isInitialized.current = true;
     }
@@ -74,27 +75,28 @@ export default function CompetitionDetail() {
 
   const onSubmit = (values: z.infer<typeof compSchema>) => {
     updateMutation.mutate({
+      leagueId,
       id,
       data: values
     }, {
       onSuccess: (updated) => {
-        toast({ title: "Competition updated" });
-        queryClient.setQueryData(getGetCompetitionQueryKey(id), updated);
+        toast({ title: "Competizione aggiornata" });
+        queryClient.setQueryData(getGetCompetitionQueryKey(leagueId, id), updated);
       },
       onError: () => {
-        toast({ variant: "destructive", title: "Failed to update competition" });
+        toast({ variant: "destructive", title: "Aggiornamento fallito" });
       }
     });
   };
 
   const handleDelete = () => {
-    deleteMutation.mutate({ id }, {
+    deleteMutation.mutate({ leagueId, id }, {
       onSuccess: () => {
-        toast({ title: "Competition deleted" });
+        toast({ title: "Competizione eliminata" });
         setLocation(`/leagues/${leagueId}`);
       },
       onError: () => {
-        toast({ variant: "destructive", title: "Failed to delete competition" });
+        toast({ variant: "destructive", title: "Eliminazione fallita" });
       }
     });
   };
@@ -104,21 +106,21 @@ export default function CompetitionDetail() {
   }
 
   if (!competition) {
-    return <div className="text-destructive">Competition not found</div>;
+    return <div className="text-destructive">Competizione non trovata</div>;
   }
 
   return (
     <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in duration-500">
       <Button variant="ghost" className="mb-4 -ml-4" onClick={() => setLocation(`/leagues/${leagueId}`)}>
-        <ArrowLeft className="mr-2 h-4 w-4" /> Back to League
+        <ArrowLeft className="mr-2 h-4 w-4" /> Torna alla lega
       </Button>
       
       <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
         <div>
           <div className="flex items-center gap-3 mb-2">
-            <Badge variant="outline" className="uppercase font-mono tracking-wider">{competition.type.replace('_', ' ')}</Badge>
+            <Badge variant="outline" className="uppercase font-mono tracking-wider">{competition.type.replace(/_/g, ' ')}</Badge>
             <Badge variant={competition.active ? "default" : "secondary"}>
-              {competition.active ? "Active" : "Inactive"}
+              {competition.active ? "Attiva" : "Inattiva"}
             </Badge>
           </div>
           <h1 className="text-3xl font-bold font-serif text-primary tracking-tight">
@@ -129,20 +131,20 @@ export default function CompetitionDetail() {
         <AlertDialog>
           <AlertDialogTrigger asChild>
             <Button variant="destructive" size="sm" className="gap-2">
-              <Trash2 className="h-4 w-4" /> Delete
+              <Trash2 className="h-4 w-4" /> Elimina
             </Button>
           </AlertDialogTrigger>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Delete Competition</AlertDialogTitle>
+              <AlertDialogTitle>Elimina competizione</AlertDialogTitle>
               <AlertDialogDescription>
-                Are you sure you want to delete this competition? This action cannot be undone and will remove all associated matches and standings.
+                Sei sicuro di voler eliminare questa competizione? L'azione non è reversibile.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogCancel>Annulla</AlertDialogCancel>
               <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                {deleteMutation.isPending ? "Deleting..." : "Delete"}
+                {deleteMutation.isPending ? "Eliminazione..." : "Elimina"}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
@@ -153,7 +155,7 @@ export default function CompetitionDetail() {
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
           <Card>
             <CardHeader>
-              <CardTitle>Configuration</CardTitle>
+              <CardTitle>Configurazione</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
               <FormField
@@ -161,7 +163,7 @@ export default function CompetitionDetail() {
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Name</FormLabel>
+                    <FormLabel>Nome</FormLabel>
                     <FormControl>
                       <Input {...field} data-testid="input-comp-name" />
                     </FormControl>
@@ -175,7 +177,7 @@ export default function CompetitionDetail() {
                 name="description"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Description</FormLabel>
+                    <FormLabel>Descrizione</FormLabel>
                     <FormControl>
                       <Textarea {...field} className="min-h-[100px]" data-testid="input-comp-desc" />
                     </FormControl>
@@ -190,7 +192,7 @@ export default function CompetitionDetail() {
                   name="start_giornata"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Start Giornata</FormLabel>
+                      <FormLabel>Giornata iniziale</FormLabel>
                       <FormControl>
                         <Input type="number" {...field} data-testid="input-comp-start" />
                       </FormControl>
@@ -204,7 +206,7 @@ export default function CompetitionDetail() {
                   name="end_giornata"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>End Giornata</FormLabel>
+                      <FormLabel>Giornata finale</FormLabel>
                       <FormControl>
                         <Input type="number" {...field} data-testid="input-comp-end" />
                       </FormControl>
@@ -221,8 +223,8 @@ export default function CompetitionDetail() {
                   render={({ field }) => (
                     <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
                       <div className="space-y-0.5">
-                        <FormLabel>Active Status</FormLabel>
-                        <CardDescription>Is this competition currently running?</CardDescription>
+                        <FormLabel>Stato attivo</FormLabel>
+                        <CardDescription>La competizione è in corso?</CardDescription>
                       </div>
                       <FormControl>
                         <Switch checked={field.value} onCheckedChange={field.onChange} />
@@ -237,8 +239,8 @@ export default function CompetitionDetail() {
                   render={({ field }) => (
                     <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
                       <div className="space-y-0.5">
-                        <FormLabel>Completed</FormLabel>
-                        <CardDescription>Has this competition finished?</CardDescription>
+                        <FormLabel>Conclusa</FormLabel>
+                        <CardDescription>La competizione è terminata?</CardDescription>
                       </div>
                       <FormControl>
                         <Switch checked={field.value} onCheckedChange={field.onChange} />
@@ -252,7 +254,7 @@ export default function CompetitionDetail() {
 
           <div className="flex justify-end">
             <Button type="submit" disabled={updateMutation.isPending} data-testid="button-save-comp">
-              {updateMutation.isPending ? "Saving..." : "Save Changes"}
+              {updateMutation.isPending ? "Salvataggio..." : "Salva modifiche"}
               <Save className="ml-2 h-4 w-4" />
             </Button>
           </div>

@@ -1,6 +1,6 @@
 import { 
   useGetFederation, getGetFederationQueryKey,
-  useUpdateFederation, FederationUpdateMode, FederationUpdateVotoSource
+  useUpdateFederation, FederationUpdateMode
 } from "@workspace/api-client-react";
 import { useParams } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -19,12 +19,28 @@ import { BookOpen, Shield, Save } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
+const ALL_FLAGS = [
+  { key: "multi_season_contracts", label: "Contratti pluriennali", desc: "Contratti che durano più di una stagione" },
+  { key: "contract_renewal", label: "Rinnovo contratto", desc: "Flusso esplicito di rinnovo a scadenza" },
+  { key: "preemption_right", label: "Diritto di pareggio", desc: "Il detentore può pareggiare in tempo reale all'asta" },
+  { key: "repair_auction_january", label: "Asta riparazione gennaio", desc: "Asta sui nuovi acquisti di mercato invernale" },
+  { key: "free_agent_pool", label: "Pool svincolati", desc: "Giocatori non assegnati disponibili tutto l'anno" },
+  { key: "direct_trades", label: "Scambi diretti", desc: "Trattative 1-a-1 tra manager" },
+  { key: "always_on_markets", label: "Mercati sempre attivi", desc: "Mercato aperto durante tutta la stagione" },
+  { key: "carryover_budget", label: "Carryover budget", desc: "Crediti residui portati alla stagione successiva" },
+  { key: "player_value_dynamic", label: "Valore dinamico", desc: "Quotazione aggiornata in base alle prestazioni" },
+  { key: "amortization", label: "Ammortamento", desc: "Prezzo d'acquisto suddiviso sugli anni di contratto" },
+  { key: "release_clauses", label: "Clausole rescissorie", desc: "Buyout attivabile da altri manager" },
+  { key: "rescission_penalty", label: "Penale rescissione", desc: "Penale se il manager svincola prima della scadenza" },
+  { key: "no_schema_tactics", label: "Tattiche libere", desc: "Formazione senza vincoli di modulo predefinito" },
+  { key: "scouting_enabled", label: "Scouting", desc: "Sistema di scoperta giocatori emergenti" },
+];
+
 const federationSchema = z.object({
-  name: z.string().min(1, "Name is required"),
+  name: z.string().min(1, "Il nome è obbligatorio"),
   description: z.string().optional(),
   mode: z.nativeEnum(FederationUpdateMode),
-  voto_source: z.nativeEnum(FederationUpdateVotoSource),
-  feature_flags: z.record(z.boolean().or(z.number())).optional()
+  feature_flags: z.record(z.union([z.boolean(), z.number()])).optional()
 });
 
 export default function FederationRules() {
@@ -32,7 +48,6 @@ export default function FederationRules() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Get federation for the given league
   const { data: federation, isLoading } = useGetFederation(
     id,
     { query: { enabled: !!id, queryKey: getGetFederationQueryKey(id) } }
@@ -46,7 +61,6 @@ export default function FederationRules() {
       name: "",
       description: "",
       mode: FederationUpdateMode.classic,
-      voto_source: FederationUpdateVotoSource.italia,
       feature_flags: {}
     }
   });
@@ -59,7 +73,6 @@ export default function FederationRules() {
         name: federation.name,
         description: federation.description || "",
         mode: federation.mode as FederationUpdateMode,
-        voto_source: federation.voto_source as FederationUpdateVotoSource,
         feature_flags: federation.feature_flags as Record<string, boolean | number>
       });
       isInitialized.current = true;
@@ -70,15 +83,15 @@ export default function FederationRules() {
     if (!federation) return;
 
     updateMutation.mutate({
-      id: federation.id,
+      leagueId: id,
       data: values
     }, {
       onSuccess: (updated) => {
-        toast({ title: "Federation updated" });
+        toast({ title: "Regolamento aggiornato" });
         queryClient.setQueryData(getGetFederationQueryKey(id), updated);
       },
       onError: () => {
-        toast({ variant: "destructive", title: "Failed to update federation" });
+        toast({ variant: "destructive", title: "Aggiornamento fallito" });
       }
     });
   };
@@ -88,27 +101,25 @@ export default function FederationRules() {
   }
 
   if (!federation) {
-    return <div className="text-destructive">Federation not found</div>;
+    return <div className="text-destructive">Regolamento non trovato</div>;
   }
-
-  const featureFlags = form.watch("feature_flags") || {};
 
   return (
     <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in duration-500">
       <div>
         <h1 className="text-3xl font-bold font-serif text-primary flex items-center gap-3">
           <BookOpen className="h-8 w-8" />
-          Federation Rules
+          Regolamento Federazione
         </h1>
-        <p className="text-muted-foreground mt-1">Configure league regulations and mechanics</p>
+        <p className="text-muted-foreground mt-1">Configura le regole e le meccaniche della lega</p>
       </div>
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
           <Card>
             <CardHeader>
-              <CardTitle>General Settings</CardTitle>
-              <CardDescription>Core properties of your federation</CardDescription>
+              <CardTitle>Impostazioni generali</CardTitle>
+              <CardDescription>Proprietà base del regolamento</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -117,7 +128,7 @@ export default function FederationRules() {
                   name="name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Federation Name</FormLabel>
+                      <FormLabel>Nome regolamento</FormLabel>
                       <FormControl>
                         <Input {...field} data-testid="input-fed-name" />
                       </FormControl>
@@ -125,29 +136,13 @@ export default function FederationRules() {
                     </FormItem>
                   )}
                 />
-              </div>
 
-              <FormField
-                control={form.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Description</FormLabel>
-                    <FormControl>
-                      <Textarea {...field} className="min-h-[100px]" data-testid="input-fed-desc" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
                   name="mode"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Game Mode</FormLabel>
+                      <FormLabel>Modalità di gioco</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger data-testid="select-fed-mode">
@@ -163,31 +158,21 @@ export default function FederationRules() {
                     </FormItem>
                   )}
                 />
-
-                <FormField
-                  control={form.control}
-                  name="voto_source"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Voto Source</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger data-testid="select-fed-voto">
-                            <SelectValue />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value={FederationUpdateVotoSource.italia}>Italia</SelectItem>
-                          <SelectItem value={FederationUpdateVotoSource.gazzetta}>Gazzetta</SelectItem>
-                          <SelectItem value={FederationUpdateVotoSource.fantacalcio_it}>Fantacalcio.it</SelectItem>
-                          <SelectItem value={FederationUpdateVotoSource.consensus}>Consensus</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
               </div>
+
+              <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Descrizione</FormLabel>
+                    <FormControl>
+                      <Textarea {...field} className="min-h-[100px]" data-testid="input-fed-desc" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </CardContent>
           </Card>
 
@@ -195,20 +180,13 @@ export default function FederationRules() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Shield className="h-5 w-5 text-primary" />
-                Advanced Mechanics
+                Feature flag — tutti i 18
               </CardTitle>
-              <CardDescription>Toggle specific features for this federation</CardDescription>
+              <CardDescription>Attiva o disattiva le meccaniche avanzate di questa lega</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {[
-                  { key: "multi_season_contracts", label: "Multi-season Contracts", desc: "Allow contracts that span multiple seasons" },
-                  { key: "free_agent_pool", label: "Free Agent Pool", desc: "Enable signing unassigned players at any time" },
-                  { key: "direct_trades", label: "Direct Trades", desc: "Managers can trade directly with each other" },
-                  { key: "carryover_budget", label: "Carryover Budget", desc: "Unspent credits carry over to next season" },
-                  { key: "scouting_enabled", label: "Scouting System", desc: "Enable advanced player discovery features" },
-                  { key: "release_clauses", label: "Release Clauses", desc: "Contracts can include buyout clauses" }
-                ].map(({ key, label, desc }) => (
+                {ALL_FLAGS.map(({ key, label, desc }) => (
                   <FormField
                     key={key}
                     control={form.control}
@@ -236,7 +214,7 @@ export default function FederationRules() {
 
           <div className="flex justify-end">
             <Button type="submit" disabled={updateMutation.isPending} data-testid="button-save-fed">
-              {updateMutation.isPending ? "Saving..." : "Save Federation Rules"}
+              {updateMutation.isPending ? "Salvataggio..." : "Salva regolamento"}
               <Save className="ml-2 h-4 w-4" />
             </Button>
           </div>

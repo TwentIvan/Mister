@@ -5,7 +5,7 @@
  * Mister — il fantacalcio manageriale
  * OpenAPI spec version: 0.1.0
  */
-import type { MarketEventSettings } from './marketEventSettings';
+import type { MarketEventConfig } from './marketEventConfig';
 import type { MarketEventStatus } from './marketEventStatus';
 import type { MarketEventType } from './marketEventType';
 
@@ -14,12 +14,12 @@ export interface MarketEvent {
   league_id: string;
   name: string;
   description?: string;
+  /** auction = asta (sub-mode in config), trade = scambi, release = svincoli, free_agent = pool svincolati */
   type: MarketEventType;
   status: MarketEventStatus;
-  window_starts_at: Date;
-  window_ends_at: Date;
-  /** Regole specifiche per tipo (JSON) */
-  settings?: MarketEventSettings;
-  label_color?: string;
+  starts_at: Date;
+  ends_at: Date;
+  /** Configurazione specifica per tipo: AuctionRules / TradeRules / ReleaseRules / FreeAgentRules + labelColor */
+  config: MarketEventConfig;
   created_at: Date;
 }

@@ -26,31 +26,46 @@ export const ListTemplatesQueryParams = zod.object({
 export const ListTemplatesResponseItem = zod.object({
   "id": zod.string(),
   "name": zod.string(),
-  "slug": zod.string(),
-  "description": zod.string().optional(),
-  "complexity_label": zod.string(),
-  "minutes_per_week": zod.number(),
+  "tagline": zod.string(),
+  "description": zod.string(),
+  "complexity_level": zod.number().describe('1 = base, 2 = intermedio, 3 = avanzato'),
+  "estimated_weekly_minutes": zod.number().describe('Tempo stimato di gestione settimanale in minuti'),
+  "icon": zod.string(),
   "feature_flags": zod.object({
-  "multi_season_contracts": zod.boolean().optional(),
-  "max_contract_length": zod.number().optional(),
-  "contract_renewal": zod.boolean().optional(),
-  "preemption_right": zod.boolean().optional(),
-  "repair_auction_january": zod.boolean().optional(),
-  "free_agent_pool": zod.boolean().optional(),
-  "direct_trades": zod.boolean().optional(),
-  "always_on_markets": zod.boolean().optional(),
-  "carryover_budget": zod.boolean().optional(),
-  "carryover_percentage": zod.number().optional(),
-  "player_value_dynamic": zod.boolean().optional(),
-  "amortization": zod.boolean().optional(),
-  "release_clauses": zod.boolean().optional(),
-  "clause_default_factor": zod.number().optional(),
-  "rescission_penalty": zod.boolean().optional(),
-  "rescission_recovery_pct": zod.number().optional(),
-  "no_schema_tactics": zod.boolean().optional(),
-  "scouting_enabled": zod.boolean().optional()
-}).describe('Feature flags copiati dal template al momento della creazione della lega'),
-  "active": zod.boolean(),
+  "multi_season_contracts": zod.boolean().optional().describe('Contratti pluriennali (>1 stagione)'),
+  "max_contract_length": zod.number().optional().describe('Durata massima contratto in stagioni (1-10)'),
+  "contract_renewal": zod.boolean().optional().describe('Flusso esplicito di rinnovo contrattuale'),
+  "preemption_right": zod.boolean().optional().describe('Diritto di pareggio in asta per il detentore uscente'),
+  "repair_auction_january": zod.boolean().optional().describe('Asta di riparazione invernale di gennaio'),
+  "free_agent_pool": zod.boolean().optional().describe('Pool svincolati permanente disponibile'),
+  "direct_trades": zod.boolean().optional().describe('Scambi diretti 1-a-1 tra manager'),
+  "always_on_markets": zod.boolean().optional().describe('Mercati e scambi sempre attivi in stagione'),
+  "carryover_budget": zod.boolean().optional().describe('Budget residuo portato alla stagione successiva'),
+  "carryover_percentage": zod.number().optional().describe('Percentuale di budget residuo mantenuta (0-100)'),
+  "player_value_dynamic": zod.boolean().optional().describe('Valore di mercato del giocatore aggiornato dinamicamente'),
+  "amortization": zod.boolean().optional().describe('Ammortamento del prezzo d\'acquisto sugli anni di contratto'),
+  "release_clauses": zod.boolean().optional().describe('Clausole rescissorie attive'),
+  "clause_default_factor": zod.number().optional().describe('Moltiplicatore residuo per clausola di default (0.5-1.0)'),
+  "rescission_penalty": zod.boolean().optional().describe('Penale se il manager svincola prima della scadenza'),
+  "rescission_recovery_pct": zod.number().optional().describe('Percentuale crediti recuperata sullo svincolo (0-100)'),
+  "no_schema_tactics": zod.boolean().optional().describe('Formazione senza vincoli di modulo predefinito'),
+  "scouting_enabled": zod.boolean().optional().describe('Sistema di scouting giocatori giovani\/emergenti')
+}).describe('I 18 feature flag copiati dal template al momento della creazione della lega'),
+  "suggested_markets": zod.array(zod.object({
+  "name": zod.string(),
+  "type": zod.enum(['auction', 'trade', 'release', 'free_agent']),
+  "mode": zod.enum(['live', 'async', 'blind', 'token', 'open']).optional(),
+  "window_hint": zod.string().optional(),
+  "description": zod.string()
+})),
+  "suggested_competitions": zod.array(zod.object({
+  "name": zod.string(),
+  "type": zod.enum(['campionato', 'coppa', 'battle_royale', 'sprint_race', 'formula_uno', 'punteggio_assoluto']),
+  "description": zod.string()
+})),
+  "author_user_id": zod.string().nullish(),
+  "is_system": zod.boolean(),
+  "is_active": zod.boolean(),
   "created_at": zod.coerce.date(),
   "updated_at": zod.coerce.date()
 })
@@ -67,31 +82,46 @@ export const GetTemplateParams = zod.object({
 export const GetTemplateResponse = zod.object({
   "id": zod.string(),
   "name": zod.string(),
-  "slug": zod.string(),
-  "description": zod.string().optional(),
-  "complexity_label": zod.string(),
-  "minutes_per_week": zod.number(),
+  "tagline": zod.string(),
+  "description": zod.string(),
+  "complexity_level": zod.number().describe('1 = base, 2 = intermedio, 3 = avanzato'),
+  "estimated_weekly_minutes": zod.number().describe('Tempo stimato di gestione settimanale in minuti'),
+  "icon": zod.string(),
   "feature_flags": zod.object({
-  "multi_season_contracts": zod.boolean().optional(),
-  "max_contract_length": zod.number().optional(),
-  "contract_renewal": zod.boolean().optional(),
-  "preemption_right": zod.boolean().optional(),
-  "repair_auction_january": zod.boolean().optional(),
-  "free_agent_pool": zod.boolean().optional(),
-  "direct_trades": zod.boolean().optional(),
-  "always_on_markets": zod.boolean().optional(),
-  "carryover_budget": zod.boolean().optional(),
-  "carryover_percentage": zod.number().optional(),
-  "player_value_dynamic": zod.boolean().optional(),
-  "amortization": zod.boolean().optional(),
-  "release_clauses": zod.boolean().optional(),
-  "clause_default_factor": zod.number().optional(),
-  "rescission_penalty": zod.boolean().optional(),
-  "rescission_recovery_pct": zod.number().optional(),
-  "no_schema_tactics": zod.boolean().optional(),
-  "scouting_enabled": zod.boolean().optional()
-}).describe('Feature flags copiati dal template al momento della creazione della lega'),
-  "active": zod.boolean(),
+  "multi_season_contracts": zod.boolean().optional().describe('Contratti pluriennali (>1 stagione)'),
+  "max_contract_length": zod.number().optional().describe('Durata massima contratto in stagioni (1-10)'),
+  "contract_renewal": zod.boolean().optional().describe('Flusso esplicito di rinnovo contrattuale'),
+  "preemption_right": zod.boolean().optional().describe('Diritto di pareggio in asta per il detentore uscente'),
+  "repair_auction_january": zod.boolean().optional().describe('Asta di riparazione invernale di gennaio'),
+  "free_agent_pool": zod.boolean().optional().describe('Pool svincolati permanente disponibile'),
+  "direct_trades": zod.boolean().optional().describe('Scambi diretti 1-a-1 tra manager'),
+  "always_on_markets": zod.boolean().optional().describe('Mercati e scambi sempre attivi in stagione'),
+  "carryover_budget": zod.boolean().optional().describe('Budget residuo portato alla stagione successiva'),
+  "carryover_percentage": zod.number().optional().describe('Percentuale di budget residuo mantenuta (0-100)'),
+  "player_value_dynamic": zod.boolean().optional().describe('Valore di mercato del giocatore aggiornato dinamicamente'),
+  "amortization": zod.boolean().optional().describe('Ammortamento del prezzo d\'acquisto sugli anni di contratto'),
+  "release_clauses": zod.boolean().optional().describe('Clausole rescissorie attive'),
+  "clause_default_factor": zod.number().optional().describe('Moltiplicatore residuo per clausola di default (0.5-1.0)'),
+  "rescission_penalty": zod.boolean().optional().describe('Penale se il manager svincola prima della scadenza'),
+  "rescission_recovery_pct": zod.number().optional().describe('Percentuale crediti recuperata sullo svincolo (0-100)'),
+  "no_schema_tactics": zod.boolean().optional().describe('Formazione senza vincoli di modulo predefinito'),
+  "scouting_enabled": zod.boolean().optional().describe('Sistema di scouting giocatori giovani\/emergenti')
+}).describe('I 18 feature flag copiati dal template al momento della creazione della lega'),
+  "suggested_markets": zod.array(zod.object({
+  "name": zod.string(),
+  "type": zod.enum(['auction', 'trade', 'release', 'free_agent']),
+  "mode": zod.enum(['live', 'async', 'blind', 'token', 'open']).optional(),
+  "window_hint": zod.string().optional(),
+  "description": zod.string()
+})),
+  "suggested_competitions": zod.array(zod.object({
+  "name": zod.string(),
+  "type": zod.enum(['campionato', 'coppa', 'battle_royale', 'sprint_race', 'formula_uno', 'punteggio_assoluto']),
+  "description": zod.string()
+})),
+  "author_user_id": zod.string().nullish(),
+  "is_system": zod.boolean(),
+  "is_active": zod.boolean(),
   "created_at": zod.coerce.date(),
   "updated_at": zod.coerce.date()
 })
@@ -102,31 +132,44 @@ export const GetTemplateResponse = zod.object({
  */
 export const CreateTemplateBody = zod.object({
   "name": zod.string(),
-  "slug": zod.string(),
+  "tagline": zod.string().optional(),
   "description": zod.string().optional(),
-  "complexity_label": zod.string(),
-  "minutes_per_week": zod.number(),
+  "complexity_level": zod.number(),
+  "estimated_weekly_minutes": zod.number(),
+  "icon": zod.string().optional(),
   "feature_flags": zod.object({
-  "multi_season_contracts": zod.boolean().optional(),
-  "max_contract_length": zod.number().optional(),
-  "contract_renewal": zod.boolean().optional(),
-  "preemption_right": zod.boolean().optional(),
-  "repair_auction_january": zod.boolean().optional(),
-  "free_agent_pool": zod.boolean().optional(),
-  "direct_trades": zod.boolean().optional(),
-  "always_on_markets": zod.boolean().optional(),
-  "carryover_budget": zod.boolean().optional(),
-  "carryover_percentage": zod.number().optional(),
-  "player_value_dynamic": zod.boolean().optional(),
-  "amortization": zod.boolean().optional(),
-  "release_clauses": zod.boolean().optional(),
-  "clause_default_factor": zod.number().optional(),
-  "rescission_penalty": zod.boolean().optional(),
-  "rescission_recovery_pct": zod.number().optional(),
-  "no_schema_tactics": zod.boolean().optional(),
-  "scouting_enabled": zod.boolean().optional()
-}).describe('Feature flags copiati dal template al momento della creazione della lega'),
-  "active": zod.boolean().optional()
+  "multi_season_contracts": zod.boolean().optional().describe('Contratti pluriennali (>1 stagione)'),
+  "max_contract_length": zod.number().optional().describe('Durata massima contratto in stagioni (1-10)'),
+  "contract_renewal": zod.boolean().optional().describe('Flusso esplicito di rinnovo contrattuale'),
+  "preemption_right": zod.boolean().optional().describe('Diritto di pareggio in asta per il detentore uscente'),
+  "repair_auction_january": zod.boolean().optional().describe('Asta di riparazione invernale di gennaio'),
+  "free_agent_pool": zod.boolean().optional().describe('Pool svincolati permanente disponibile'),
+  "direct_trades": zod.boolean().optional().describe('Scambi diretti 1-a-1 tra manager'),
+  "always_on_markets": zod.boolean().optional().describe('Mercati e scambi sempre attivi in stagione'),
+  "carryover_budget": zod.boolean().optional().describe('Budget residuo portato alla stagione successiva'),
+  "carryover_percentage": zod.number().optional().describe('Percentuale di budget residuo mantenuta (0-100)'),
+  "player_value_dynamic": zod.boolean().optional().describe('Valore di mercato del giocatore aggiornato dinamicamente'),
+  "amortization": zod.boolean().optional().describe('Ammortamento del prezzo d\'acquisto sugli anni di contratto'),
+  "release_clauses": zod.boolean().optional().describe('Clausole rescissorie attive'),
+  "clause_default_factor": zod.number().optional().describe('Moltiplicatore residuo per clausola di default (0.5-1.0)'),
+  "rescission_penalty": zod.boolean().optional().describe('Penale se il manager svincola prima della scadenza'),
+  "rescission_recovery_pct": zod.number().optional().describe('Percentuale crediti recuperata sullo svincolo (0-100)'),
+  "no_schema_tactics": zod.boolean().optional().describe('Formazione senza vincoli di modulo predefinito'),
+  "scouting_enabled": zod.boolean().optional().describe('Sistema di scouting giocatori giovani\/emergenti')
+}).describe('I 18 feature flag copiati dal template al momento della creazione della lega'),
+  "suggested_markets": zod.array(zod.object({
+  "name": zod.string(),
+  "type": zod.enum(['auction', 'trade', 'release', 'free_agent']),
+  "mode": zod.enum(['live', 'async', 'blind', 'token', 'open']).optional(),
+  "window_hint": zod.string().optional(),
+  "description": zod.string()
+})).optional(),
+  "suggested_competitions": zod.array(zod.object({
+  "name": zod.string(),
+  "type": zod.enum(['campionato', 'coppa', 'battle_royale', 'sprint_race', 'formula_uno', 'punteggio_assoluto']),
+  "description": zod.string()
+})).optional(),
+  "is_active": zod.boolean().optional()
 })
 
 
@@ -139,67 +182,96 @@ export const UpdateTemplateParams = zod.object({
 
 export const UpdateTemplateBody = zod.object({
   "name": zod.string().optional(),
+  "tagline": zod.string().optional(),
   "description": zod.string().optional(),
-  "complexity_label": zod.string().optional(),
-  "minutes_per_week": zod.number().optional(),
+  "complexity_level": zod.number().optional(),
+  "estimated_weekly_minutes": zod.number().optional(),
+  "icon": zod.string().optional(),
   "feature_flags": zod.object({
-  "multi_season_contracts": zod.boolean().optional(),
-  "max_contract_length": zod.number().optional(),
-  "contract_renewal": zod.boolean().optional(),
-  "preemption_right": zod.boolean().optional(),
-  "repair_auction_january": zod.boolean().optional(),
-  "free_agent_pool": zod.boolean().optional(),
-  "direct_trades": zod.boolean().optional(),
-  "always_on_markets": zod.boolean().optional(),
-  "carryover_budget": zod.boolean().optional(),
-  "carryover_percentage": zod.number().optional(),
-  "player_value_dynamic": zod.boolean().optional(),
-  "amortization": zod.boolean().optional(),
-  "release_clauses": zod.boolean().optional(),
-  "clause_default_factor": zod.number().optional(),
-  "rescission_penalty": zod.boolean().optional(),
-  "rescission_recovery_pct": zod.number().optional(),
-  "no_schema_tactics": zod.boolean().optional(),
-  "scouting_enabled": zod.boolean().optional()
-}).optional().describe('Feature flags copiati dal template al momento della creazione della lega'),
-  "active": zod.boolean().optional()
+  "multi_season_contracts": zod.boolean().optional().describe('Contratti pluriennali (>1 stagione)'),
+  "max_contract_length": zod.number().optional().describe('Durata massima contratto in stagioni (1-10)'),
+  "contract_renewal": zod.boolean().optional().describe('Flusso esplicito di rinnovo contrattuale'),
+  "preemption_right": zod.boolean().optional().describe('Diritto di pareggio in asta per il detentore uscente'),
+  "repair_auction_january": zod.boolean().optional().describe('Asta di riparazione invernale di gennaio'),
+  "free_agent_pool": zod.boolean().optional().describe('Pool svincolati permanente disponibile'),
+  "direct_trades": zod.boolean().optional().describe('Scambi diretti 1-a-1 tra manager'),
+  "always_on_markets": zod.boolean().optional().describe('Mercati e scambi sempre attivi in stagione'),
+  "carryover_budget": zod.boolean().optional().describe('Budget residuo portato alla stagione successiva'),
+  "carryover_percentage": zod.number().optional().describe('Percentuale di budget residuo mantenuta (0-100)'),
+  "player_value_dynamic": zod.boolean().optional().describe('Valore di mercato del giocatore aggiornato dinamicamente'),
+  "amortization": zod.boolean().optional().describe('Ammortamento del prezzo d\'acquisto sugli anni di contratto'),
+  "release_clauses": zod.boolean().optional().describe('Clausole rescissorie attive'),
+  "clause_default_factor": zod.number().optional().describe('Moltiplicatore residuo per clausola di default (0.5-1.0)'),
+  "rescission_penalty": zod.boolean().optional().describe('Penale se il manager svincola prima della scadenza'),
+  "rescission_recovery_pct": zod.number().optional().describe('Percentuale crediti recuperata sullo svincolo (0-100)'),
+  "no_schema_tactics": zod.boolean().optional().describe('Formazione senza vincoli di modulo predefinito'),
+  "scouting_enabled": zod.boolean().optional().describe('Sistema di scouting giocatori giovani\/emergenti')
+}).optional().describe('I 18 feature flag copiati dal template al momento della creazione della lega'),
+  "suggested_markets": zod.array(zod.object({
+  "name": zod.string(),
+  "type": zod.enum(['auction', 'trade', 'release', 'free_agent']),
+  "mode": zod.enum(['live', 'async', 'blind', 'token', 'open']).optional(),
+  "window_hint": zod.string().optional(),
+  "description": zod.string()
+})).optional(),
+  "suggested_competitions": zod.array(zod.object({
+  "name": zod.string(),
+  "type": zod.enum(['campionato', 'coppa', 'battle_royale', 'sprint_race', 'formula_uno', 'punteggio_assoluto']),
+  "description": zod.string()
+})).optional(),
+  "is_active": zod.boolean().optional()
 })
 
 export const UpdateTemplateResponse = zod.object({
   "id": zod.string(),
   "name": zod.string(),
-  "slug": zod.string(),
-  "description": zod.string().optional(),
-  "complexity_label": zod.string(),
-  "minutes_per_week": zod.number(),
+  "tagline": zod.string(),
+  "description": zod.string(),
+  "complexity_level": zod.number().describe('1 = base, 2 = intermedio, 3 = avanzato'),
+  "estimated_weekly_minutes": zod.number().describe('Tempo stimato di gestione settimanale in minuti'),
+  "icon": zod.string(),
   "feature_flags": zod.object({
-  "multi_season_contracts": zod.boolean().optional(),
-  "max_contract_length": zod.number().optional(),
-  "contract_renewal": zod.boolean().optional(),
-  "preemption_right": zod.boolean().optional(),
-  "repair_auction_january": zod.boolean().optional(),
-  "free_agent_pool": zod.boolean().optional(),
-  "direct_trades": zod.boolean().optional(),
-  "always_on_markets": zod.boolean().optional(),
-  "carryover_budget": zod.boolean().optional(),
-  "carryover_percentage": zod.number().optional(),
-  "player_value_dynamic": zod.boolean().optional(),
-  "amortization": zod.boolean().optional(),
-  "release_clauses": zod.boolean().optional(),
-  "clause_default_factor": zod.number().optional(),
-  "rescission_penalty": zod.boolean().optional(),
-  "rescission_recovery_pct": zod.number().optional(),
-  "no_schema_tactics": zod.boolean().optional(),
-  "scouting_enabled": zod.boolean().optional()
-}).describe('Feature flags copiati dal template al momento della creazione della lega'),
-  "active": zod.boolean(),
+  "multi_season_contracts": zod.boolean().optional().describe('Contratti pluriennali (>1 stagione)'),
+  "max_contract_length": zod.number().optional().describe('Durata massima contratto in stagioni (1-10)'),
+  "contract_renewal": zod.boolean().optional().describe('Flusso esplicito di rinnovo contrattuale'),
+  "preemption_right": zod.boolean().optional().describe('Diritto di pareggio in asta per il detentore uscente'),
+  "repair_auction_january": zod.boolean().optional().describe('Asta di riparazione invernale di gennaio'),
+  "free_agent_pool": zod.boolean().optional().describe('Pool svincolati permanente disponibile'),
+  "direct_trades": zod.boolean().optional().describe('Scambi diretti 1-a-1 tra manager'),
+  "always_on_markets": zod.boolean().optional().describe('Mercati e scambi sempre attivi in stagione'),
+  "carryover_budget": zod.boolean().optional().describe('Budget residuo portato alla stagione successiva'),
+  "carryover_percentage": zod.number().optional().describe('Percentuale di budget residuo mantenuta (0-100)'),
+  "player_value_dynamic": zod.boolean().optional().describe('Valore di mercato del giocatore aggiornato dinamicamente'),
+  "amortization": zod.boolean().optional().describe('Ammortamento del prezzo d\'acquisto sugli anni di contratto'),
+  "release_clauses": zod.boolean().optional().describe('Clausole rescissorie attive'),
+  "clause_default_factor": zod.number().optional().describe('Moltiplicatore residuo per clausola di default (0.5-1.0)'),
+  "rescission_penalty": zod.boolean().optional().describe('Penale se il manager svincola prima della scadenza'),
+  "rescission_recovery_pct": zod.number().optional().describe('Percentuale crediti recuperata sullo svincolo (0-100)'),
+  "no_schema_tactics": zod.boolean().optional().describe('Formazione senza vincoli di modulo predefinito'),
+  "scouting_enabled": zod.boolean().optional().describe('Sistema di scouting giocatori giovani\/emergenti')
+}).describe('I 18 feature flag copiati dal template al momento della creazione della lega'),
+  "suggested_markets": zod.array(zod.object({
+  "name": zod.string(),
+  "type": zod.enum(['auction', 'trade', 'release', 'free_agent']),
+  "mode": zod.enum(['live', 'async', 'blind', 'token', 'open']).optional(),
+  "window_hint": zod.string().optional(),
+  "description": zod.string()
+})),
+  "suggested_competitions": zod.array(zod.object({
+  "name": zod.string(),
+  "type": zod.enum(['campionato', 'coppa', 'battle_royale', 'sprint_race', 'formula_uno', 'punteggio_assoluto']),
+  "description": zod.string()
+})),
+  "author_user_id": zod.string().nullish(),
+  "is_system": zod.boolean(),
+  "is_active": zod.boolean(),
   "created_at": zod.coerce.date(),
   "updated_at": zod.coerce.date()
 })
 
 
 /**
- * @summary Elimina template (superadmin)
+ * @summary Elimina template custom (superadmin — solo non-system)
  */
 export const DeleteTemplateParams = zod.object({
   "id": zod.coerce.string()
@@ -347,30 +419,48 @@ export const GetFederationResponse = zod.object({
   "id": zod.string(),
   "name": zod.string(),
   "description": zod.string().optional(),
-  "league_id": zod.string(),
   "template_id": zod.string().nullish(),
   "mode": zod.enum(['classic', 'mantra']),
-  "voto_source": zod.enum(['gazzetta', 'italia', 'fantacalcio_it', 'consensus']),
   "feature_flags": zod.object({
-  "multi_season_contracts": zod.boolean().optional(),
-  "max_contract_length": zod.number().optional(),
-  "contract_renewal": zod.boolean().optional(),
-  "preemption_right": zod.boolean().optional(),
-  "repair_auction_january": zod.boolean().optional(),
-  "free_agent_pool": zod.boolean().optional(),
-  "direct_trades": zod.boolean().optional(),
-  "always_on_markets": zod.boolean().optional(),
-  "carryover_budget": zod.boolean().optional(),
-  "carryover_percentage": zod.number().optional(),
-  "player_value_dynamic": zod.boolean().optional(),
-  "amortization": zod.boolean().optional(),
-  "release_clauses": zod.boolean().optional(),
-  "clause_default_factor": zod.number().optional(),
-  "rescission_penalty": zod.boolean().optional(),
-  "rescission_recovery_pct": zod.number().optional(),
-  "no_schema_tactics": zod.boolean().optional(),
-  "scouting_enabled": zod.boolean().optional()
-}).describe('Feature flags copiati dal template al momento della creazione della lega'),
+  "multi_season_contracts": zod.boolean().optional().describe('Contratti pluriennali (>1 stagione)'),
+  "max_contract_length": zod.number().optional().describe('Durata massima contratto in stagioni (1-10)'),
+  "contract_renewal": zod.boolean().optional().describe('Flusso esplicito di rinnovo contrattuale'),
+  "preemption_right": zod.boolean().optional().describe('Diritto di pareggio in asta per il detentore uscente'),
+  "repair_auction_january": zod.boolean().optional().describe('Asta di riparazione invernale di gennaio'),
+  "free_agent_pool": zod.boolean().optional().describe('Pool svincolati permanente disponibile'),
+  "direct_trades": zod.boolean().optional().describe('Scambi diretti 1-a-1 tra manager'),
+  "always_on_markets": zod.boolean().optional().describe('Mercati e scambi sempre attivi in stagione'),
+  "carryover_budget": zod.boolean().optional().describe('Budget residuo portato alla stagione successiva'),
+  "carryover_percentage": zod.number().optional().describe('Percentuale di budget residuo mantenuta (0-100)'),
+  "player_value_dynamic": zod.boolean().optional().describe('Valore di mercato del giocatore aggiornato dinamicamente'),
+  "amortization": zod.boolean().optional().describe('Ammortamento del prezzo d\'acquisto sugli anni di contratto'),
+  "release_clauses": zod.boolean().optional().describe('Clausole rescissorie attive'),
+  "clause_default_factor": zod.number().optional().describe('Moltiplicatore residuo per clausola di default (0.5-1.0)'),
+  "rescission_penalty": zod.boolean().optional().describe('Penale se il manager svincola prima della scadenza'),
+  "rescission_recovery_pct": zod.number().optional().describe('Percentuale crediti recuperata sullo svincolo (0-100)'),
+  "no_schema_tactics": zod.boolean().optional().describe('Formazione senza vincoli di modulo predefinito'),
+  "scouting_enabled": zod.boolean().optional().describe('Sistema di scouting giocatori giovani\/emergenti')
+}).describe('I 18 feature flag copiati dal template al momento della creazione della lega'),
+  "rules": zod.object({
+  "bonusMalus": zod.object({
+
+}).passthrough().optional().describe('Bonus e malus per evento (gol, assist, ammonizioni, ecc.)'),
+  "goalThresholds": zod.object({
+
+}).passthrough().optional().describe('Conversione punteggio squadra in fanta-gol'),
+  "defenseModifier": zod.object({
+
+}).passthrough().optional().describe('Modificatore difesa'),
+  "midfieldModifier": zod.object({
+
+}).passthrough().optional().describe('Modificatore centrocampo'),
+  "homeAdvantage": zod.object({
+
+}).passthrough().optional().describe('Bonus padrone di casa'),
+  "substitutions": zod.object({
+
+}).passthrough().optional().describe('Regole sostituzioni automatiche')
+}).describe('Regole di calcolo del punteggio fanta (bonus\/malus, soglie, modificatori)'),
   "created_at": zod.coerce.date(),
   "updated_at": zod.coerce.date()
 })
@@ -387,57 +477,94 @@ export const UpdateFederationBody = zod.object({
   "name": zod.string().optional(),
   "description": zod.string().optional(),
   "mode": zod.enum(['classic', 'mantra']).optional(),
-  "voto_source": zod.enum(['gazzetta', 'italia', 'fantacalcio_it', 'consensus']).optional(),
   "feature_flags": zod.object({
-  "multi_season_contracts": zod.boolean().optional(),
-  "max_contract_length": zod.number().optional(),
-  "contract_renewal": zod.boolean().optional(),
-  "preemption_right": zod.boolean().optional(),
-  "repair_auction_january": zod.boolean().optional(),
-  "free_agent_pool": zod.boolean().optional(),
-  "direct_trades": zod.boolean().optional(),
-  "always_on_markets": zod.boolean().optional(),
-  "carryover_budget": zod.boolean().optional(),
-  "carryover_percentage": zod.number().optional(),
-  "player_value_dynamic": zod.boolean().optional(),
-  "amortization": zod.boolean().optional(),
-  "release_clauses": zod.boolean().optional(),
-  "clause_default_factor": zod.number().optional(),
-  "rescission_penalty": zod.boolean().optional(),
-  "rescission_recovery_pct": zod.number().optional(),
-  "no_schema_tactics": zod.boolean().optional(),
-  "scouting_enabled": zod.boolean().optional()
-}).optional().describe('Feature flags copiati dal template al momento della creazione della lega')
+  "multi_season_contracts": zod.boolean().optional().describe('Contratti pluriennali (>1 stagione)'),
+  "max_contract_length": zod.number().optional().describe('Durata massima contratto in stagioni (1-10)'),
+  "contract_renewal": zod.boolean().optional().describe('Flusso esplicito di rinnovo contrattuale'),
+  "preemption_right": zod.boolean().optional().describe('Diritto di pareggio in asta per il detentore uscente'),
+  "repair_auction_january": zod.boolean().optional().describe('Asta di riparazione invernale di gennaio'),
+  "free_agent_pool": zod.boolean().optional().describe('Pool svincolati permanente disponibile'),
+  "direct_trades": zod.boolean().optional().describe('Scambi diretti 1-a-1 tra manager'),
+  "always_on_markets": zod.boolean().optional().describe('Mercati e scambi sempre attivi in stagione'),
+  "carryover_budget": zod.boolean().optional().describe('Budget residuo portato alla stagione successiva'),
+  "carryover_percentage": zod.number().optional().describe('Percentuale di budget residuo mantenuta (0-100)'),
+  "player_value_dynamic": zod.boolean().optional().describe('Valore di mercato del giocatore aggiornato dinamicamente'),
+  "amortization": zod.boolean().optional().describe('Ammortamento del prezzo d\'acquisto sugli anni di contratto'),
+  "release_clauses": zod.boolean().optional().describe('Clausole rescissorie attive'),
+  "clause_default_factor": zod.number().optional().describe('Moltiplicatore residuo per clausola di default (0.5-1.0)'),
+  "rescission_penalty": zod.boolean().optional().describe('Penale se il manager svincola prima della scadenza'),
+  "rescission_recovery_pct": zod.number().optional().describe('Percentuale crediti recuperata sullo svincolo (0-100)'),
+  "no_schema_tactics": zod.boolean().optional().describe('Formazione senza vincoli di modulo predefinito'),
+  "scouting_enabled": zod.boolean().optional().describe('Sistema di scouting giocatori giovani\/emergenti')
+}).optional().describe('I 18 feature flag copiati dal template al momento della creazione della lega'),
+  "rules": zod.object({
+  "bonusMalus": zod.object({
+
+}).passthrough().optional().describe('Bonus e malus per evento (gol, assist, ammonizioni, ecc.)'),
+  "goalThresholds": zod.object({
+
+}).passthrough().optional().describe('Conversione punteggio squadra in fanta-gol'),
+  "defenseModifier": zod.object({
+
+}).passthrough().optional().describe('Modificatore difesa'),
+  "midfieldModifier": zod.object({
+
+}).passthrough().optional().describe('Modificatore centrocampo'),
+  "homeAdvantage": zod.object({
+
+}).passthrough().optional().describe('Bonus padrone di casa'),
+  "substitutions": zod.object({
+
+}).passthrough().optional().describe('Regole sostituzioni automatiche')
+}).optional().describe('Regole di calcolo del punteggio fanta (bonus\/malus, soglie, modificatori)')
 })
 
 export const UpdateFederationResponse = zod.object({
   "id": zod.string(),
   "name": zod.string(),
   "description": zod.string().optional(),
-  "league_id": zod.string(),
   "template_id": zod.string().nullish(),
   "mode": zod.enum(['classic', 'mantra']),
-  "voto_source": zod.enum(['gazzetta', 'italia', 'fantacalcio_it', 'consensus']),
   "feature_flags": zod.object({
-  "multi_season_contracts": zod.boolean().optional(),
-  "max_contract_length": zod.number().optional(),
-  "contract_renewal": zod.boolean().optional(),
-  "preemption_right": zod.boolean().optional(),
-  "repair_auction_january": zod.boolean().optional(),
-  "free_agent_pool": zod.boolean().optional(),
-  "direct_trades": zod.boolean().optional(),
-  "always_on_markets": zod.boolean().optional(),
-  "carryover_budget": zod.boolean().optional(),
-  "carryover_percentage": zod.number().optional(),
-  "player_value_dynamic": zod.boolean().optional(),
-  "amortization": zod.boolean().optional(),
-  "release_clauses": zod.boolean().optional(),
-  "clause_default_factor": zod.number().optional(),
-  "rescission_penalty": zod.boolean().optional(),
-  "rescission_recovery_pct": zod.number().optional(),
-  "no_schema_tactics": zod.boolean().optional(),
-  "scouting_enabled": zod.boolean().optional()
-}).describe('Feature flags copiati dal template al momento della creazione della lega'),
+  "multi_season_contracts": zod.boolean().optional().describe('Contratti pluriennali (>1 stagione)'),
+  "max_contract_length": zod.number().optional().describe('Durata massima contratto in stagioni (1-10)'),
+  "contract_renewal": zod.boolean().optional().describe('Flusso esplicito di rinnovo contrattuale'),
+  "preemption_right": zod.boolean().optional().describe('Diritto di pareggio in asta per il detentore uscente'),
+  "repair_auction_january": zod.boolean().optional().describe('Asta di riparazione invernale di gennaio'),
+  "free_agent_pool": zod.boolean().optional().describe('Pool svincolati permanente disponibile'),
+  "direct_trades": zod.boolean().optional().describe('Scambi diretti 1-a-1 tra manager'),
+  "always_on_markets": zod.boolean().optional().describe('Mercati e scambi sempre attivi in stagione'),
+  "carryover_budget": zod.boolean().optional().describe('Budget residuo portato alla stagione successiva'),
+  "carryover_percentage": zod.number().optional().describe('Percentuale di budget residuo mantenuta (0-100)'),
+  "player_value_dynamic": zod.boolean().optional().describe('Valore di mercato del giocatore aggiornato dinamicamente'),
+  "amortization": zod.boolean().optional().describe('Ammortamento del prezzo d\'acquisto sugli anni di contratto'),
+  "release_clauses": zod.boolean().optional().describe('Clausole rescissorie attive'),
+  "clause_default_factor": zod.number().optional().describe('Moltiplicatore residuo per clausola di default (0.5-1.0)'),
+  "rescission_penalty": zod.boolean().optional().describe('Penale se il manager svincola prima della scadenza'),
+  "rescission_recovery_pct": zod.number().optional().describe('Percentuale crediti recuperata sullo svincolo (0-100)'),
+  "no_schema_tactics": zod.boolean().optional().describe('Formazione senza vincoli di modulo predefinito'),
+  "scouting_enabled": zod.boolean().optional().describe('Sistema di scouting giocatori giovani\/emergenti')
+}).describe('I 18 feature flag copiati dal template al momento della creazione della lega'),
+  "rules": zod.object({
+  "bonusMalus": zod.object({
+
+}).passthrough().optional().describe('Bonus e malus per evento (gol, assist, ammonizioni, ecc.)'),
+  "goalThresholds": zod.object({
+
+}).passthrough().optional().describe('Conversione punteggio squadra in fanta-gol'),
+  "defenseModifier": zod.object({
+
+}).passthrough().optional().describe('Modificatore difesa'),
+  "midfieldModifier": zod.object({
+
+}).passthrough().optional().describe('Modificatore centrocampo'),
+  "homeAdvantage": zod.object({
+
+}).passthrough().optional().describe('Bonus padrone di casa'),
+  "substitutions": zod.object({
+
+}).passthrough().optional().describe('Regole sostituzioni automatiche')
+}).describe('Regole di calcolo del punteggio fanta (bonus\/malus, soglie, modificatori)'),
   "created_at": zod.coerce.date(),
   "updated_at": zod.coerce.date()
 })
@@ -459,11 +586,9 @@ export const ListCompetitionsResponseItem = zod.object({
   "season": zod.number(),
   "start_giornata": zod.number(),
   "end_giornata": zod.number(),
-  "participant_team_ids": zod.array(zod.string()).optional(),
-  "tiebreakers": zod.array(zod.string()).optional(),
-  "settings": zod.object({
+  "config": zod.object({
 
-}).passthrough().optional().describe('Configurazione specifica per tipo di competizione (JSON)'),
+}).passthrough().describe('Configurazione specifica per tipo + tiebreaker + premi + partecipanti'),
   "active": zod.boolean(),
   "completed": zod.boolean(),
   "starts_at": zod.coerce.date().nullish(),
@@ -512,11 +637,9 @@ export const GetCompetitionResponse = zod.object({
   "season": zod.number(),
   "start_giornata": zod.number(),
   "end_giornata": zod.number(),
-  "participant_team_ids": zod.array(zod.string()).optional(),
-  "tiebreakers": zod.array(zod.string()).optional(),
-  "settings": zod.object({
+  "config": zod.object({
 
-}).passthrough().optional().describe('Configurazione specifica per tipo di competizione (JSON)'),
+}).passthrough().describe('Configurazione specifica per tipo + tiebreaker + premi + partecipanti'),
   "active": zod.boolean(),
   "completed": zod.boolean(),
   "starts_at": zod.coerce.date().nullish(),
@@ -538,8 +661,6 @@ export const UpdateCompetitionBody = zod.object({
   "description": zod.string().optional(),
   "start_giornata": zod.number().optional(),
   "end_giornata": zod.number().optional(),
-  "participant_team_ids": zod.array(zod.string()).optional(),
-  "tiebreakers": zod.array(zod.string()).optional(),
   "settings": zod.object({
 
 }).passthrough().optional(),
@@ -556,11 +677,9 @@ export const UpdateCompetitionResponse = zod.object({
   "season": zod.number(),
   "start_giornata": zod.number(),
   "end_giornata": zod.number(),
-  "participant_team_ids": zod.array(zod.string()).optional(),
-  "tiebreakers": zod.array(zod.string()).optional(),
-  "settings": zod.object({
+  "config": zod.object({
 
-}).passthrough().optional().describe('Configurazione specifica per tipo di competizione (JSON)'),
+}).passthrough().describe('Configurazione specifica per tipo + tiebreaker + premi + partecipanti'),
   "active": zod.boolean(),
   "completed": zod.boolean(),
   "starts_at": zod.coerce.date().nullish(),
@@ -590,14 +709,13 @@ export const GetLeagueMarketsResponseItem = zod.object({
   "league_id": zod.string(),
   "name": zod.string(),
   "description": zod.string().optional(),
-  "type": zod.enum(['auction', 'trade', 'release', 'free_agent']),
+  "type": zod.enum(['auction', 'trade', 'release', 'free_agent']).describe('auction = asta (sub-mode in config), trade = scambi, release = svincoli, free_agent = pool svincolati'),
   "status": zod.enum(['scheduled', 'active', 'completed', 'cancelled']),
-  "window_starts_at": zod.coerce.date(),
-  "window_ends_at": zod.coerce.date(),
-  "settings": zod.object({
+  "starts_at": zod.coerce.date(),
+  "ends_at": zod.coerce.date(),
+  "config": zod.object({
 
-}).passthrough().optional().describe('Regole specifiche per tipo (JSON)'),
-  "label_color": zod.string().optional(),
+}).passthrough().describe('Configurazione specifica per tipo: AuctionRules \/ TradeRules \/ ReleaseRules \/ FreeAgentRules + labelColor'),
   "created_at": zod.coerce.date()
 })
 export const GetLeagueMarketsResponse = zod.array(GetLeagueMarketsResponseItem)
@@ -636,14 +754,13 @@ export const GetMarketEventResponse = zod.object({
   "league_id": zod.string(),
   "name": zod.string(),
   "description": zod.string().optional(),
-  "type": zod.enum(['auction', 'trade', 'release', 'free_agent']),
+  "type": zod.enum(['auction', 'trade', 'release', 'free_agent']).describe('auction = asta (sub-mode in config), trade = scambi, release = svincoli, free_agent = pool svincolati'),
   "status": zod.enum(['scheduled', 'active', 'completed', 'cancelled']),
-  "window_starts_at": zod.coerce.date(),
-  "window_ends_at": zod.coerce.date(),
-  "settings": zod.object({
+  "starts_at": zod.coerce.date(),
+  "ends_at": zod.coerce.date(),
+  "config": zod.object({
 
-}).passthrough().optional().describe('Regole specifiche per tipo (JSON)'),
-  "label_color": zod.string().optional(),
+}).passthrough().describe('Configurazione specifica per tipo: AuctionRules \/ TradeRules \/ ReleaseRules \/ FreeAgentRules + labelColor'),
   "created_at": zod.coerce.date()
 })
 
@@ -664,8 +781,7 @@ export const UpdateMarketEventBody = zod.object({
   "window_ends_at": zod.coerce.date().optional(),
   "settings": zod.object({
 
-}).passthrough().optional(),
-  "label_color": zod.string().optional()
+}).passthrough().optional()
 })
 
 export const UpdateMarketEventResponse = zod.object({
@@ -673,14 +789,13 @@ export const UpdateMarketEventResponse = zod.object({
   "league_id": zod.string(),
   "name": zod.string(),
   "description": zod.string().optional(),
-  "type": zod.enum(['auction', 'trade', 'release', 'free_agent']),
+  "type": zod.enum(['auction', 'trade', 'release', 'free_agent']).describe('auction = asta (sub-mode in config), trade = scambi, release = svincoli, free_agent = pool svincolati'),
   "status": zod.enum(['scheduled', 'active', 'completed', 'cancelled']),
-  "window_starts_at": zod.coerce.date(),
-  "window_ends_at": zod.coerce.date(),
-  "settings": zod.object({
+  "starts_at": zod.coerce.date(),
+  "ends_at": zod.coerce.date(),
+  "config": zod.object({
 
-}).passthrough().optional().describe('Regole specifiche per tipo (JSON)'),
-  "label_color": zod.string().optional(),
+}).passthrough().describe('Configurazione specifica per tipo: AuctionRules \/ TradeRules \/ ReleaseRules \/ FreeAgentRules + labelColor'),
   "created_at": zod.coerce.date()
 })
 
@@ -969,14 +1084,13 @@ export const GetDashboardResponse = zod.object({
   "league_id": zod.string(),
   "name": zod.string(),
   "description": zod.string().optional(),
-  "type": zod.enum(['auction', 'trade', 'release', 'free_agent']),
+  "type": zod.enum(['auction', 'trade', 'release', 'free_agent']).describe('auction = asta (sub-mode in config), trade = scambi, release = svincoli, free_agent = pool svincolati'),
   "status": zod.enum(['scheduled', 'active', 'completed', 'cancelled']),
-  "window_starts_at": zod.coerce.date(),
-  "window_ends_at": zod.coerce.date(),
-  "settings": zod.object({
+  "starts_at": zod.coerce.date(),
+  "ends_at": zod.coerce.date(),
+  "config": zod.object({
 
-}).passthrough().optional().describe('Regole specifiche per tipo (JSON)'),
-  "label_color": zod.string().optional(),
+}).passthrough().describe('Configurazione specifica per tipo: AuctionRules \/ TradeRules \/ ReleaseRules \/ FreeAgentRules + labelColor'),
   "created_at": zod.coerce.date()
 })),
   "recent_competitions": zod.array(zod.object({
@@ -988,11 +1102,9 @@ export const GetDashboardResponse = zod.object({
   "season": zod.number(),
   "start_giornata": zod.number(),
   "end_giornata": zod.number(),
-  "participant_team_ids": zod.array(zod.string()).optional(),
-  "tiebreakers": zod.array(zod.string()).optional(),
-  "settings": zod.object({
+  "config": zod.object({
 
-}).passthrough().optional().describe('Configurazione specifica per tipo di competizione (JSON)'),
+}).passthrough().describe('Configurazione specifica per tipo + tiebreaker + premi + partecipanti'),
   "active": zod.boolean(),
   "completed": zod.boolean(),
   "starts_at": zod.coerce.date().nullish(),

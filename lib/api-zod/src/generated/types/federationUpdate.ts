@@ -6,13 +6,13 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { FeatureFlags } from './featureFlags';
+import type { FederationRules } from './federationRules';
 import type { FederationUpdateMode } from './federationUpdateMode';
-import type { FederationUpdateVotoSource } from './federationUpdateVotoSource';
 
 export interface FederationUpdate {
   name?: string;
   description?: string;
   mode?: FederationUpdateMode;
-  voto_source?: FederationUpdateVotoSource;
   feature_flags?: FeatureFlags;
+  rules?: FederationRules;
 }

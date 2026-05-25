@@ -2,7 +2,7 @@ import { Router, type IRouter } from "express";
 import { eq, and } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { db } from "@workspace/db";
-import { contractsTable } from "@workspace/db";
+import { contracts } from "@workspace/db";
 import {
   GetLeagueContractsParams,
   GetLeagueContractsResponse,
@@ -26,8 +26,8 @@ router.get("/leagues/:leagueId/contracts", async (req, res): Promise<void> => {
   }
   const rows = await db
     .select()
-    .from(contractsTable)
-    .where(eq(contractsTable.leagueId, params.data.leagueId));
+    .from(contracts)
+    .where(eq(contracts.leagueId, params.data.leagueId));
   res.json(GetLeagueContractsResponse.parse(rows.map(mapContract)));
 });
 
@@ -44,7 +44,7 @@ router.post("/leagues/:leagueId/contracts", async (req, res): Promise<void> => {
   }
   const d = parsed.data;
   const [row] = await db
-    .insert(contractsTable)
+    .insert(contracts)
     .values({
       id: nanoid(),
       leagueId: params.data.leagueId,
@@ -68,10 +68,10 @@ router.get("/leagues/:leagueId/contracts/:id", async (req, res): Promise<void> =
   }
   const [row] = await db
     .select()
-    .from(contractsTable)
-    .where(and(eq(contractsTable.leagueId, p.data.leagueId), eq(contractsTable.id, p.data.id)));
+    .from(contracts)
+    .where(and(eq(contracts.leagueId, p.data.leagueId), eq(contracts.id, p.data.id)));
   if (!row) {
-    res.status(404).json({ error: "Contract not found" });
+    res.status(404).json({ error: "Contratto non trovato" });
     return;
   }
   res.json(GetContractResponse.parse(mapContract(row)));
@@ -90,14 +90,17 @@ router.patch("/leagues/:leagueId/contracts/:id", async (req, res): Promise<void>
   }
   const d = parsed.data;
   const [row] = await db
-    .update(contractsTable)
+    .update(contracts)
     .set({
       ...(d.state !== undefined && { state: d.state }),
+      ...(d.clause_investment !== undefined && { clauseInvestment: d.clause_investment }),
+      ...(d.notes !== undefined && { notes: d.notes }),
+      ...(d.closed_at !== undefined && { closedAt: d.closed_at ? new Date(d.closed_at) : null }),
     })
-    .where(and(eq(contractsTable.leagueId, p.data.leagueId), eq(contractsTable.id, p.data.id)))
+    .where(and(eq(contracts.leagueId, p.data.leagueId), eq(contracts.id, p.data.id)))
     .returning();
   if (!row) {
-    res.status(404).json({ error: "Contract not found" });
+    res.status(404).json({ error: "Contratto non trovato" });
     return;
   }
   res.json(UpdateContractResponse.parse(mapContract(row)));

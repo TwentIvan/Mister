@@ -2,7 +2,7 @@ import { Router, type IRouter } from "express";
 import { eq, and } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { db } from "@workspace/db";
-import { marketEventsTable } from "@workspace/db";
+import { marketEvents } from "@workspace/db";
 import {
   GetLeagueMarketsParams,
   GetLeagueMarketsResponse,
@@ -16,6 +16,7 @@ import {
   DeleteMarketEventParams,
 } from "@workspace/api-zod";
 import { mapMarket } from "../lib/mappers";
+import type { MarketEventConfig } from "@workspace/db";
 
 const router: IRouter = Router();
 
@@ -27,8 +28,8 @@ router.get("/leagues/:leagueId/markets", async (req, res): Promise<void> => {
   }
   const rows = await db
     .select()
-    .from(marketEventsTable)
-    .where(eq(marketEventsTable.leagueId, params.data.leagueId));
+    .from(marketEvents)
+    .where(eq(marketEvents.leagueId, params.data.leagueId));
   res.json(GetLeagueMarketsResponse.parse(rows.map(mapMarket)));
 });
 
@@ -44,18 +45,21 @@ router.post("/leagues/:leagueId/markets", async (req, res): Promise<void> => {
     return;
   }
   const d = parsed.data;
+  const config: MarketEventConfig = {
+    labelColor: d.label_color ?? "#1f4733",
+    ...(d.settings ?? {}),
+  } as MarketEventConfig;
   const [row] = await db
-    .insert(marketEventsTable)
+    .insert(marketEvents)
     .values({
       id: nanoid(),
       leagueId: params.data.leagueId,
       name: d.name,
       description: d.description ?? "",
       type: d.type,
-      windowStartsAt: d.window_starts_at,
-      windowEndsAt: d.window_ends_at,
-      settings: d.settings ?? null,
-      labelColor: d.label_color ?? "#1f4733",
+      startsAt: new Date(d.window_starts_at),
+      endsAt: new Date(d.window_ends_at),
+      config,
     })
     .returning();
   res.status(201).json(GetMarketEventResponse.parse(mapMarket(row)));
@@ -69,10 +73,10 @@ router.get("/leagues/:leagueId/markets/:id", async (req, res): Promise<void> => 
   }
   const [row] = await db
     .select()
-    .from(marketEventsTable)
-    .where(and(eq(marketEventsTable.leagueId, p.data.leagueId), eq(marketEventsTable.id, p.data.id)));
+    .from(marketEvents)
+    .where(and(eq(marketEvents.leagueId, p.data.leagueId), eq(marketEvents.id, p.data.id)));
   if (!row) {
-    res.status(404).json({ error: "Market event not found" });
+    res.status(404).json({ error: "Evento mercato non trovato" });
     return;
   }
   res.json(GetMarketEventResponse.parse(mapMarket(row)));
@@ -91,17 +95,18 @@ router.patch("/leagues/:leagueId/markets/:id", async (req, res): Promise<void> =
   }
   const d = parsed.data;
   const [row] = await db
-    .update(marketEventsTable)
+    .update(marketEvents)
     .set({
       ...(d.name !== undefined && { name: d.name }),
       ...(d.status !== undefined && { status: d.status }),
-      ...(d.window_starts_at !== undefined && { windowStartsAt: d.window_starts_at }),
-      ...(d.window_ends_at !== undefined && { windowEndsAt: d.window_ends_at }),
+      ...(d.window_starts_at !== undefined && { startsAt: new Date(d.window_starts_at) }),
+      ...(d.window_ends_at !== undefined && { endsAt: new Date(d.window_ends_at) }),
+      ...(d.settings !== undefined && { config: d.settings as unknown as MarketEventConfig }),
     })
-    .where(and(eq(marketEventsTable.leagueId, p.data.leagueId), eq(marketEventsTable.id, p.data.id)))
+    .where(and(eq(marketEvents.leagueId, p.data.leagueId), eq(marketEvents.id, p.data.id)))
     .returning();
   if (!row) {
-    res.status(404).json({ error: "Market event not found" });
+    res.status(404).json({ error: "Evento mercato non trovato" });
     return;
   }
   res.json(UpdateMarketEventResponse.parse(mapMarket(row)));
@@ -114,11 +119,11 @@ router.delete("/leagues/:leagueId/markets/:id", async (req, res): Promise<void> 
     return;
   }
   const [row] = await db
-    .delete(marketEventsTable)
-    .where(and(eq(marketEventsTable.leagueId, p.data.leagueId), eq(marketEventsTable.id, p.data.id)))
+    .delete(marketEvents)
+    .where(and(eq(marketEvents.leagueId, p.data.leagueId), eq(marketEvents.id, p.data.id)))
     .returning();
   if (!row) {
-    res.status(404).json({ error: "Market event not found" });
+    res.status(404).json({ error: "Evento mercato non trovato" });
     return;
   }
   res.sendStatus(204);

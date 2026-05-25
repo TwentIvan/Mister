@@ -453,7 +453,7 @@ export const getDeleteTemplateUrl = (id: string,) => {
 }
 
 /**
- * @summary Elimina template (superadmin)
+ * @summary Elimina template custom (superadmin — solo non-system)
  */
 export const deleteTemplate = async (id: string, options?: RequestInit): Promise<void> => {
 
@@ -501,7 +501,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type DeleteTemplateMutationError = ErrorType<void>
 
     /**
- * @summary Elimina template (superadmin)
+ * @summary Elimina template custom (superadmin — solo non-system)
  */
 export const useDeleteTemplate = <TError = ErrorType<void>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteTemplate>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
