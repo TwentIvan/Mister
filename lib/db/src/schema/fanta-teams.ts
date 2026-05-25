@@ -1,19 +1,83 @@
-import { pgTable, text, integer, jsonb, timestamp } from "drizzle-orm/pg-core";
-import { createInsertSchema } from "drizzle-zod";
-import { z } from "zod/v4";
+/**
+ * FantaTeam — la squadra di UN manager dentro UNA Lega.
+ *
+ * Una FantaTeam contiene la rosa di giocatori (riferimenti via Contract o
+ * via roster snapshot) e i crediti residui del manager.
+ */
 
-export const fantaTeamsTable = pgTable("fanta_teams", {
+import {
+  pgTable,
+  text,
+  integer,
+  jsonb,
+  timestamp,
+} from "drizzle-orm/pg-core";
+import { leagues } from "./leagues";
+
+// ============================================================
+// TIPI DI SUPPORTO
+// ============================================================
+
+/** Maglia personalizzata del manager (colori, dettagli). */
+export interface JerseyConfig {
+  primaryColor: string;
+  secondaryColor: string;
+  pattern: "solid" | "stripes_vertical" | "stripes_horizontal" | "halved" | "checkered";
+  /** Sponsor testuale opzionale sul petto */
+  sponsor?: string;
+}
+
+/**
+ * Rosa attuale (snapshot).
+ * Per leghe Manageriale, la verità è nei Contract attivi; questo è cache UI.
+ * Per leghe Classico, questo è la fonte primaria.
+ */
+export interface RosterSnapshot {
+  /** Liste di player_id per ruolo Classico */
+  gk: number[];
+  def: number[];
+  mid: number[];
+  att: number[];
+  /** ID del capitano scelto per la prossima giornata */
+  captainPlayerId?: number;
+  vicePlayerId?: number;
+}
+
+// ============================================================
+// TABELLA
+// ============================================================
+
+export const fantaTeams = pgTable("fanta_teams", {
   id: text("id").primaryKey(),
-  leagueId: text("league_id").notNull(),
+  leagueId: text("league_id")
+    .notNull()
+    .references(() => leagues.id, { onDelete: "cascade" }),
   managerUserId: text("manager_user_id").notNull(),
+
+  /** Nome ufficiale della squadra */
   name: text("name").notNull(),
+  /**
+   * Nome usato dal battitore in asta (può essere diverso per ragioni di
+   * pronuncia, es. "Bar Roma" invece di "Champions del Bar Roma 2025").
+   */
   nameAuction: text("name_auction"),
+
+  /** URL del logo della squadra (caricato dal manager). */
   logoUrl: text("logo_url"),
-  creditsRemaining: integer("credits_remaining").notNull().default(500),
-  roster: jsonb("roster").notNull().$type<number[]>().default([]),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+
+  /** Configurazione visuale della maglia. */
+  jersey: jsonb("jersey").$type<JerseyConfig>(),
+
+  /** Crediti disponibili in questo momento. */
+  creditsRemaining: integer("credits_remaining").notNull().default(0),
+
+  /** Snapshot della rosa attuale. */
+  roster: jsonb("roster").$type<RosterSnapshot>().notNull(),
+
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
 });
 
-export const insertFantaTeamSchema = createInsertSchema(fantaTeamsTable).omit({ createdAt: true });
-export type InsertFantaTeam = z.infer<typeof insertFantaTeamSchema>;
-export type FantaTeam = typeof fantaTeamsTable.$inferSelect;
+export type FantaTeam = typeof fantaTeams.$inferSelect;
+export type NewFantaTeam = typeof fantaTeams.$inferInsert;
