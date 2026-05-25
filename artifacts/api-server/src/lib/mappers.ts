@@ -1,0 +1,148 @@
+import type {
+  League,
+  TemplateProfile,
+  Federation,
+  Competition,
+  MarketEvent,
+  FantaTeam,
+  Player,
+  Contract,
+} from "@workspace/db";
+
+export function mapLeague(l: League) {
+  return {
+    id: l.id,
+    name: l.name,
+    federation_id: l.federationId,
+    template_id: l.templateId ?? null,
+    admin_user_id: l.adminUserId,
+    co_admin_user_ids: l.coAdminUserIds,
+    max_managers: l.maxManagers,
+    season: l.season,
+    visibility: l.visibility,
+    invitation_code: l.invitationCode ?? null,
+    lineup_visibility: l.lineupVisibility,
+    roster_visibility: l.rosterVisibility,
+    started: l.started,
+    notify_email: l.notifyEmail,
+    notify_push: l.notifyPush,
+    created_at: l.createdAt,
+  };
+}
+
+export function mapTemplate(t: TemplateProfile) {
+  return {
+    id: t.id,
+    name: t.name,
+    slug: t.slug,
+    description: t.description,
+    complexity_label: t.complexityLabel,
+    minutes_per_week: t.minutesPerWeek,
+    feature_flags: t.featureFlags,
+    active: t.active,
+    created_at: t.createdAt,
+    updated_at: t.updatedAt,
+  };
+}
+
+export function mapFederation(f: Federation) {
+  return {
+    id: f.id,
+    name: f.name,
+    description: f.description,
+    league_id: f.leagueId,
+    template_id: f.templateId ?? null,
+    mode: f.mode,
+    voto_source: f.votoSource,
+    feature_flags: f.featureFlags,
+    created_at: f.createdAt,
+    updated_at: f.updatedAt,
+  };
+}
+
+export function mapCompetition(c: Competition) {
+  return {
+    id: c.id,
+    league_id: c.leagueId,
+    name: c.name,
+    description: c.description,
+    type: c.type,
+    season: c.season,
+    start_giornata: c.startGiornata,
+    end_giornata: c.endGiornata,
+    participant_team_ids: c.participantTeamIds,
+    tiebreakers: c.tiebreakers,
+    settings: c.settings ?? {},
+    active: c.active,
+    completed: c.completed,
+    starts_at: c.startsAt ?? null,
+    ends_at: c.endsAt ?? null,
+    created_at: c.createdAt,
+  };
+}
+
+export function mapMarket(m: MarketEvent) {
+  return {
+    id: m.id,
+    league_id: m.leagueId,
+    name: m.name,
+    description: m.description,
+    type: m.type,
+    status: m.status,
+    window_starts_at: m.windowStartsAt,
+    window_ends_at: m.windowEndsAt,
+    settings: m.settings ?? {},
+    label_color: m.labelColor,
+    created_at: m.createdAt,
+  };
+}
+
+export function mapFantaTeam(t: FantaTeam) {
+  return {
+    id: t.id,
+    league_id: t.leagueId,
+    manager_user_id: t.managerUserId,
+    name: t.name,
+    name_auction: t.nameAuction ?? null,
+    logo_url: t.logoUrl ?? null,
+    credits_remaining: t.creditsRemaining,
+    roster: t.roster,
+    created_at: t.createdAt,
+  };
+}
+
+export function mapPlayer(p: Player) {
+  return {
+    id: p.id,
+    name: p.name,
+    full_name: p.fullName,
+    real_team: p.realTeam,
+    birth_date: p.birthDate ?? null,
+    nationality: p.nationality ?? null,
+    height_cm: p.heightCm ?? null,
+    weight_kg: p.weightKg ?? null,
+    foot: p.foot ?? null,
+    role_classic: p.roleClassic,
+    roles_mantra: p.rolesMantra,
+    injured: p.injured,
+    photo_url: p.photoUrl ?? null,
+  };
+}
+
+export function mapContract(c: Contract) {
+  return {
+    id: c.id,
+    league_id: c.leagueId,
+    fanta_team_id: c.fantaTeamId,
+    player_id: c.playerId,
+    season_start: c.seasonStart,
+    duration_seasons: c.durationSeasons,
+    purchase_price: c.purchasePrice,
+    clause_default: c.clauseDefault,
+    clause_investment: c.clauseInvestment,
+    state: c.state,
+    notes: c.notes,
+    created_at: c.createdAt,
+    closed_at: c.closedAt ?? null,
+  };
+}

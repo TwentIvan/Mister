@@ -3,20 +3,36 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Mister — il fantacalcio manageriale
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: templates
+    description: Template profili (Classico/Esploratore/Manageriale)
+  - name: leagues
+    description: Leghe fantacalcio
+  - name: federations
+    description: Regolamenti e feature flags delle leghe
+  - name: competitions
+    description: Competizioni dentro una lega
+  - name: markets
+    description: Eventi di mercato
+  - name: teams
+    description: Squadre fantacalcio dei manager
+  - name: players
+    description: Giocatori Serie A
+  - name: contracts
+    description: Contratti pluriennali
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,13 +40,1298 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  # ─── TEMPLATES ───────────────────────────────────────────────
+  /templates:
+    get:
+      operationId: listTemplates
+      tags: [templates]
+      summary: Lista template attivi
+      parameters:
+        - in: query
+          name: active_only
+          schema:
+            type: boolean
+          required: false
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TemplateProfile"
+
+  /templates/{id}:
+    get:
+      operationId: getTemplate
+      tags: [templates]
+      summary: Dettaglio template
+      parameters:
+        - $ref: "#/components/parameters/StringId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TemplateProfile"
+        "404":
+          description: Not found
+
+  /superadmin/templates:
+    post:
+      operationId: createTemplate
+      tags: [templates]
+      summary: Crea nuovo template (superadmin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TemplateInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TemplateProfile"
+
+  /superadmin/templates/{id}:
+    patch:
+      operationId: updateTemplate
+      tags: [templates]
+      summary: Aggiorna template (superadmin)
+      parameters:
+        - $ref: "#/components/parameters/StringId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TemplateUpdate"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TemplateProfile"
+        "404":
+          description: Not found
+    delete:
+      operationId: deleteTemplate
+      tags: [templates]
+      summary: Elimina template (superadmin)
+      parameters:
+        - $ref: "#/components/parameters/StringId"
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+
+  # ─── LEAGUES ─────────────────────────────────────────────────
+  /leagues:
+    get:
+      operationId: listLeagues
+      tags: [leagues]
+      summary: Lista leghe
+      parameters:
+        - in: query
+          name: admin_user_id
+          schema:
+            type: string
+          required: false
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/League"
+    post:
+      operationId: createLeague
+      tags: [leagues]
+      summary: Crea una lega da template
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LeagueInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/League"
+
+  /leagues/{id}:
+    get:
+      operationId: getLeague
+      tags: [leagues]
+      summary: Dettaglio lega
+      parameters:
+        - $ref: "#/components/parameters/StringId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/League"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateLeague
+      tags: [leagues]
+      summary: Aggiorna lega
+      parameters:
+        - $ref: "#/components/parameters/StringId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LeagueUpdate"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/League"
+        "404":
+          description: Not found
+    delete:
+      operationId: deleteLeague
+      tags: [leagues]
+      summary: Elimina lega
+      parameters:
+        - $ref: "#/components/parameters/StringId"
+      responses:
+        "204":
+          description: Deleted
+
+  /leagues/{id}/stats:
+    get:
+      operationId: getLeagueStats
+      tags: [leagues]
+      summary: Statistiche aggregate della lega
+      parameters:
+        - $ref: "#/components/parameters/StringId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LeagueStats"
+        "404":
+          description: Not found
+
+  # ─── FEDERATIONS ─────────────────────────────────────────────
+  /leagues/{leagueId}/federation:
+    get:
+      operationId: getFederation
+      tags: [federations]
+      summary: Regolamento della lega
+      parameters:
+        - $ref: "#/components/parameters/LeagueId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Federation"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateFederation
+      tags: [federations]
+      summary: Aggiorna regolamento (admin lega)
+      parameters:
+        - $ref: "#/components/parameters/LeagueId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FederationUpdate"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Federation"
+        "404":
+          description: Not found
+
+  # ─── COMPETITIONS ─────────────────────────────────────────────
+  /leagues/{leagueId}/competitions:
+    get:
+      operationId: listCompetitions
+      tags: [competitions]
+      summary: Lista competizioni della lega
+      parameters:
+        - $ref: "#/components/parameters/LeagueId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Competition"
+    post:
+      operationId: createCompetition
+      tags: [competitions]
+      summary: Crea competizione
+      parameters:
+        - $ref: "#/components/parameters/LeagueId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CompetitionInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Competition"
+
+  /leagues/{leagueId}/competitions/{id}:
+    get:
+      operationId: getCompetition
+      tags: [competitions]
+      summary: Dettaglio competizione
+      parameters:
+        - $ref: "#/components/parameters/LeagueId"
+        - $ref: "#/components/parameters/StringId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Competition"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateCompetition
+      tags: [competitions]
+      summary: Aggiorna competizione
+      parameters:
+        - $ref: "#/components/parameters/LeagueId"
+        - $ref: "#/components/parameters/StringId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CompetitionUpdate"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Competition"
+        "404":
+          description: Not found
+    delete:
+      operationId: deleteCompetition
+      tags: [competitions]
+      summary: Elimina competizione
+      parameters:
+        - $ref: "#/components/parameters/LeagueId"
+        - $ref: "#/components/parameters/StringId"
+      responses:
+        "204":
+          description: Deleted
+
+  # ─── MARKETS ─────────────────────────────────────────────────
+  /leagues/{leagueId}/markets:
+    get:
+      operationId: getLeagueMarkets
+      tags: [markets]
+      summary: Lista eventi di mercato
+      parameters:
+        - $ref: "#/components/parameters/LeagueId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MarketEvent"
+    post:
+      operationId: createMarketEvent
+      tags: [markets]
+      summary: Crea evento di mercato
+      parameters:
+        - $ref: "#/components/parameters/LeagueId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MarketEventInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MarketEvent"
+
+  /leagues/{leagueId}/markets/{id}:
+    get:
+      operationId: getMarketEvent
+      tags: [markets]
+      summary: Dettaglio evento mercato
+      parameters:
+        - $ref: "#/components/parameters/LeagueId"
+        - $ref: "#/components/parameters/StringId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MarketEvent"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateMarketEvent
+      tags: [markets]
+      summary: Aggiorna evento mercato
+      parameters:
+        - $ref: "#/components/parameters/LeagueId"
+        - $ref: "#/components/parameters/StringId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MarketEventUpdate"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MarketEvent"
+        "404":
+          description: Not found
+    delete:
+      operationId: deleteMarketEvent
+      tags: [markets]
+      summary: Elimina evento mercato
+      parameters:
+        - $ref: "#/components/parameters/LeagueId"
+        - $ref: "#/components/parameters/StringId"
+      responses:
+        "204":
+          description: Deleted
+
+  # ─── FANTA TEAMS ─────────────────────────────────────────────
+  /leagues/{leagueId}/teams:
+    get:
+      operationId: listFantaTeams
+      tags: [teams]
+      summary: Lista squadre della lega
+      parameters:
+        - $ref: "#/components/parameters/LeagueId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FantaTeam"
+    post:
+      operationId: createFantaTeam
+      tags: [teams]
+      summary: Crea squadra
+      parameters:
+        - $ref: "#/components/parameters/LeagueId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FantaTeamInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FantaTeam"
+
+  /leagues/{leagueId}/teams/{id}:
+    get:
+      operationId: getFantaTeam
+      tags: [teams]
+      summary: Dettaglio squadra
+      parameters:
+        - $ref: "#/components/parameters/LeagueId"
+        - $ref: "#/components/parameters/StringId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FantaTeam"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateFantaTeam
+      tags: [teams]
+      summary: Aggiorna squadra
+      parameters:
+        - $ref: "#/components/parameters/LeagueId"
+        - $ref: "#/components/parameters/StringId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FantaTeamUpdate"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FantaTeam"
+        "404":
+          description: Not found
+
+  # ─── PLAYERS ─────────────────────────────────────────────────
+  /players:
+    get:
+      operationId: listPlayers
+      tags: [players]
+      summary: Lista giocatori Serie A
+      parameters:
+        - in: query
+          name: role
+          schema:
+            type: string
+            enum: [GK, DEF, MID, ATT]
+          required: false
+        - in: query
+          name: team
+          schema:
+            type: string
+          required: false
+        - in: query
+          name: search
+          schema:
+            type: string
+          required: false
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 50
+          required: false
+        - in: query
+          name: offset
+          schema:
+            type: integer
+            default: 0
+          required: false
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlayerList"
+
+  /players/{id}:
+    get:
+      operationId: getPlayer
+      tags: [players]
+      summary: Dettaglio giocatore
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Player"
+        "404":
+          description: Not found
+
+  # ─── CONTRACTS ───────────────────────────────────────────────
+  /leagues/{leagueId}/contracts:
+    get:
+      operationId: getLeagueContracts
+      tags: [contracts]
+      summary: Lista contratti della lega
+      parameters:
+        - $ref: "#/components/parameters/LeagueId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Contract"
+    post:
+      operationId: createContract
+      tags: [contracts]
+      summary: Crea contratto (post-asta)
+      parameters:
+        - $ref: "#/components/parameters/LeagueId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ContractInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Contract"
+
+  /leagues/{leagueId}/contracts/{id}:
+    get:
+      operationId: getContract
+      tags: [contracts]
+      summary: Dettaglio contratto
+      parameters:
+        - $ref: "#/components/parameters/LeagueId"
+        - $ref: "#/components/parameters/StringId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Contract"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateContract
+      tags: [contracts]
+      summary: Aggiorna stato contratto (rescissione, clausola pagata, ecc.)
+      parameters:
+        - $ref: "#/components/parameters/LeagueId"
+        - $ref: "#/components/parameters/StringId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ContractUpdate"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Contract"
+        "404":
+          description: Not found
+
+  # ─── DASHBOARD (wow endpoint) ─────────────────────────────────
+  /dashboard:
+    get:
+      operationId: getDashboard
+      tags: [leagues]
+      summary: Riepilogo globale per un utente (leghe, competizioni attive, mercati aperti)
+      parameters:
+        - in: query
+          name: user_id
+          schema:
+            type: string
+          required: false
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+
 components:
+  parameters:
+    StringId:
+      in: path
+      name: id
+      required: true
+      schema:
+        type: string
+    LeagueId:
+      in: path
+      name: leagueId
+      required: true
+      schema:
+        type: string
+
   schemas:
     HealthStatus:
       type: object
+      required: [status]
       properties:
         status:
           type: string
-      required:
-        - status
 
+    # ─── FEATURE FLAGS ────────────────────────────────────────
+    FeatureFlags:
+      type: object
+      description: Feature flags copiati dal template al momento della creazione della lega
+      properties:
+        multi_season_contracts:
+          type: boolean
+        max_contract_length:
+          type: integer
+        contract_renewal:
+          type: boolean
+        preemption_right:
+          type: boolean
+        repair_auction_january:
+          type: boolean
+        free_agent_pool:
+          type: boolean
+        direct_trades:
+          type: boolean
+        always_on_markets:
+          type: boolean
+        carryover_budget:
+          type: boolean
+        carryover_percentage:
+          type: number
+        player_value_dynamic:
+          type: boolean
+        amortization:
+          type: boolean
+        release_clauses:
+          type: boolean
+        clause_default_factor:
+          type: number
+        rescission_penalty:
+          type: boolean
+        rescission_recovery_pct:
+          type: number
+        no_schema_tactics:
+          type: boolean
+        scouting_enabled:
+          type: boolean
+
+    # ─── TEMPLATE PROFILE ─────────────────────────────────────
+    TemplateProfile:
+      type: object
+      required: [id, name, slug, complexity_label, minutes_per_week, feature_flags, active, created_at, updated_at]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        slug:
+          type: string
+        description:
+          type: string
+        complexity_label:
+          type: string
+        minutes_per_week:
+          type: integer
+        feature_flags:
+          $ref: "#/components/schemas/FeatureFlags"
+        active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    TemplateInput:
+      type: object
+      required: [name, slug, complexity_label, minutes_per_week, feature_flags]
+      properties:
+        name:
+          type: string
+        slug:
+          type: string
+        description:
+          type: string
+        complexity_label:
+          type: string
+        minutes_per_week:
+          type: integer
+        feature_flags:
+          $ref: "#/components/schemas/FeatureFlags"
+        active:
+          type: boolean
+
+    TemplateUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        complexity_label:
+          type: string
+        minutes_per_week:
+          type: integer
+        feature_flags:
+          $ref: "#/components/schemas/FeatureFlags"
+        active:
+          type: boolean
+
+    # ─── LEAGUE ───────────────────────────────────────────────
+    League:
+      type: object
+      required: [id, name, federation_id, admin_user_id, max_managers, season, visibility, started, created_at]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        federation_id:
+          type: string
+        template_id:
+          type: ["string", "null"]
+        admin_user_id:
+          type: string
+        co_admin_user_ids:
+          type: array
+          items:
+            type: string
+        max_managers:
+          type: integer
+        season:
+          type: integer
+        visibility:
+          type: string
+          enum: [private, public, unlisted]
+        invitation_code:
+          type: ["string", "null"]
+        lineup_visibility:
+          type: string
+          enum: [always, after_deadline, hidden_all_season]
+        roster_visibility:
+          type: string
+          enum: [always, after_deadline, hidden_all_season]
+        started:
+          type: boolean
+        notify_email:
+          type: boolean
+        notify_push:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+
+    LeagueInput:
+      type: object
+      required: [name, template_id, admin_user_id, season]
+      properties:
+        name:
+          type: string
+        template_id:
+          type: string
+        admin_user_id:
+          type: string
+        season:
+          type: integer
+        max_managers:
+          type: integer
+        visibility:
+          type: string
+          enum: [private, public, unlisted]
+
+    LeagueUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        max_managers:
+          type: integer
+        visibility:
+          type: string
+          enum: [private, public, unlisted]
+        lineup_visibility:
+          type: string
+          enum: [always, after_deadline, hidden_all_season]
+        roster_visibility:
+          type: string
+          enum: [always, after_deadline, hidden_all_season]
+        started:
+          type: boolean
+        notify_email:
+          type: boolean
+        notify_push:
+          type: boolean
+
+    LeagueStats:
+      type: object
+      required: [league_id, team_count, competition_count, active_market_count, contract_count]
+      properties:
+        league_id:
+          type: string
+        team_count:
+          type: integer
+        competition_count:
+          type: integer
+        active_market_count:
+          type: integer
+        contract_count:
+          type: integer
+
+    # ─── FEDERATION ───────────────────────────────────────────
+    Federation:
+      type: object
+      required: [id, name, league_id, mode, voto_source, feature_flags, created_at, updated_at]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        league_id:
+          type: string
+        template_id:
+          type: ["string", "null"]
+        mode:
+          type: string
+          enum: [classic, mantra]
+        voto_source:
+          type: string
+          enum: [gazzetta, italia, fantacalcio_it, consensus]
+        feature_flags:
+          $ref: "#/components/schemas/FeatureFlags"
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    FederationUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        mode:
+          type: string
+          enum: [classic, mantra]
+        voto_source:
+          type: string
+          enum: [gazzetta, italia, fantacalcio_it, consensus]
+        feature_flags:
+          $ref: "#/components/schemas/FeatureFlags"
+
+    # ─── COMPETITION ──────────────────────────────────────────
+    Competition:
+      type: object
+      required: [id, league_id, name, type, season, start_giornata, end_giornata, active, completed, created_at]
+      properties:
+        id:
+          type: string
+        league_id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        type:
+          type: string
+          enum: [campionato, coppa, battle_royale, sprint_race, formula_uno, punteggio_assoluto]
+        season:
+          type: integer
+        start_giornata:
+          type: integer
+        end_giornata:
+          type: integer
+        participant_team_ids:
+          type: array
+          items:
+            type: string
+        tiebreakers:
+          type: array
+          items:
+            type: string
+        settings:
+          type: object
+          description: Configurazione specifica per tipo di competizione (JSON)
+        active:
+          type: boolean
+        completed:
+          type: boolean
+        starts_at:
+          type: ["string", "null"]
+          format: date-time
+        ends_at:
+          type: ["string", "null"]
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+
+    CompetitionInput:
+      type: object
+      required: [name, type, season, start_giornata, end_giornata]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        type:
+          type: string
+          enum: [campionato, coppa, battle_royale, sprint_race, formula_uno, punteggio_assoluto]
+        season:
+          type: integer
+        start_giornata:
+          type: integer
+        end_giornata:
+          type: integer
+        participant_team_ids:
+          type: array
+          items:
+            type: string
+        tiebreakers:
+          type: array
+          items:
+            type: string
+        settings:
+          type: object
+
+    CompetitionUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        start_giornata:
+          type: integer
+        end_giornata:
+          type: integer
+        participant_team_ids:
+          type: array
+          items:
+            type: string
+        tiebreakers:
+          type: array
+          items:
+            type: string
+        settings:
+          type: object
+        active:
+          type: boolean
+        completed:
+          type: boolean
+
+    # ─── MARKET EVENT ─────────────────────────────────────────
+    MarketEvent:
+      type: object
+      required: [id, league_id, name, type, status, window_starts_at, window_ends_at, created_at]
+      properties:
+        id:
+          type: string
+        league_id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        type:
+          type: string
+          enum: [auction, trade, release, free_agent]
+        status:
+          type: string
+          enum: [scheduled, active, completed, cancelled]
+        window_starts_at:
+          type: string
+          format: date-time
+        window_ends_at:
+          type: string
+          format: date-time
+        settings:
+          type: object
+          description: Regole specifiche per tipo (JSON)
+        label_color:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    MarketEventInput:
+      type: object
+      required: [name, type, window_starts_at, window_ends_at]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        type:
+          type: string
+          enum: [auction, trade, release, free_agent]
+        window_starts_at:
+          type: string
+          format: date-time
+        window_ends_at:
+          type: string
+          format: date-time
+        settings:
+          type: object
+        label_color:
+          type: string
+
+    MarketEventUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+          enum: [scheduled, active, completed, cancelled]
+        window_starts_at:
+          type: string
+          format: date-time
+        window_ends_at:
+          type: string
+          format: date-time
+        settings:
+          type: object
+        label_color:
+          type: string
+
+    # ─── FANTA TEAM ───────────────────────────────────────────
+    FantaTeam:
+      type: object
+      required: [id, league_id, manager_user_id, name, credits_remaining, created_at]
+      properties:
+        id:
+          type: string
+        league_id:
+          type: string
+        manager_user_id:
+          type: string
+        name:
+          type: string
+        name_auction:
+          type: ["string", "null"]
+        logo_url:
+          type: ["string", "null"]
+        credits_remaining:
+          type: integer
+        roster:
+          type: array
+          items:
+            type: integer
+        created_at:
+          type: string
+          format: date-time
+
+    FantaTeamInput:
+      type: object
+      required: [manager_user_id, name]
+      properties:
+        manager_user_id:
+          type: string
+        name:
+          type: string
+        name_auction:
+          type: string
+        logo_url:
+          type: string
+
+    FantaTeamUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        name_auction:
+          type: string
+        logo_url:
+          type: string
+        credits_remaining:
+          type: integer
+        roster:
+          type: array
+          items:
+            type: integer
+
+    # ─── PLAYER ───────────────────────────────────────────────
+    Player:
+      type: object
+      required: [id, name, full_name, real_team, role_classic]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        full_name:
+          type: string
+        real_team:
+          type: string
+        birth_date:
+          type: ["string", "null"]
+        nationality:
+          type: ["string", "null"]
+        height_cm:
+          type: ["integer", "null"]
+        weight_kg:
+          type: ["integer", "null"]
+        foot:
+          type: ["string", "null"]
+          enum: [left, right, both, null]
+        role_classic:
+          type: string
+          enum: [GK, DEF, MID, ATT]
+        roles_mantra:
+          type: array
+          items:
+            type: string
+        injured:
+          type: boolean
+        photo_url:
+          type: ["string", "null"]
+
+    PlayerList:
+      type: object
+      required: [items, total]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Player"
+        total:
+          type: integer
+
+    # ─── CONTRACT ─────────────────────────────────────────────
+    Contract:
+      type: object
+      required: [id, league_id, fanta_team_id, player_id, season_start, duration_seasons, purchase_price, clause_default, clause_investment, state, created_at]
+      properties:
+        id:
+          type: string
+        league_id:
+          type: string
+        fanta_team_id:
+          type: string
+        player_id:
+          type: integer
+        season_start:
+          type: integer
+        duration_seasons:
+          type: integer
+        purchase_price:
+          type: integer
+        clause_default:
+          type: integer
+        clause_investment:
+          type: integer
+        state:
+          type: string
+          enum: [active, expired, rescinded, clause_paid, traded]
+        notes:
+          type: array
+          items:
+            type: string
+        created_at:
+          type: string
+          format: date-time
+        closed_at:
+          type: ["string", "null"]
+          format: date-time
+
+    ContractInput:
+      type: object
+      required: [fanta_team_id, player_id, season_start, duration_seasons, purchase_price, clause_default]
+      properties:
+        fanta_team_id:
+          type: string
+        player_id:
+          type: integer
+        season_start:
+          type: integer
+        duration_seasons:
+          type: integer
+        purchase_price:
+          type: integer
+        clause_default:
+          type: integer
+        clause_investment:
+          type: integer
+
+    ContractUpdate:
+      type: object
+      properties:
+        state:
+          type: string
+          enum: [active, expired, rescinded, clause_paid, traded]
+        clause_investment:
+          type: integer
+        notes:
+          type: array
+          items:
+            type: string
+        closed_at:
+          type: string
+          format: date-time
+
+    # ─── DASHBOARD ────────────────────────────────────────────
+    DashboardSummary:
+      type: object
+      required: [my_leagues, active_markets, recent_competitions]
+      properties:
+        my_leagues:
+          type: array
+          items:
+            $ref: "#/components/schemas/League"
+        active_markets:
+          type: array
+          items:
+            $ref: "#/components/schemas/MarketEvent"
+        recent_competitions:
+          type: array
+          items:
+            $ref: "#/components/schemas/Competition"
+        template_count:
+          type: integer
+        total_league_count:
+          type: integer
