@@ -1,0 +1,83 @@
+
+Ho upgradato il piano API-Football a Pro (7500 req/giorno, rate limit 10/min). La quota non è più un vincolo. Procediamo subito con la catena completa: wipe dati test residui → sync teams → sync players → sync fixtures (round 1-2) → sync stats (round 1-2).
+Cinque task in sequenza, fermati dopo ognuno e aspetta conferma testuale prima di proseguire.
+Task 11 — Wipe dipendenze players + players + giornata_stats
+I record nelle tabelle contracts/market_events/fanta_teams sono test residuals con player_id fabricated (8, 9, 11, 12, 14 non corrispondono a player_id reali di API-Football). Da eliminare.
+sqlBEGIN;
+
+DELETE FROM market_events;
+DELETE FROM contracts;
+DELETE FROM fanta_teams;
+TRUNCATE players CASCADE;
+
+SELECT 'players' AS tbl, COUNT(*) AS n FROM players
+UNION ALL SELECT 'player_giornata_stats', COUNT(*) FROM player_giornata_stats
+UNION ALL SELECT 'contracts', COUNT(*) FROM contracts
+UNION ALL SELECT 'market_events', COUNT(*) FROM market_events
+UNION ALL SELECT 'fanta_teams', COUNT(*) FROM fanta_teams;
+
+COMMIT;
+Atteso: tutti a 0. Verifica anche che leagues, federations, template_profiles siano intatte (non toccarle):
+sqlSELECT 'leagues' AS tbl, COUNT(*) AS n FROM leagues
+UNION ALL SELECT 'federations', COUNT(*) FROM federations
+UNION ALL SELECT 'template_profiles', COUNT(*) FROM template_profiles;
+Stop. Riportami conteggi e conferma "OK Task 11".
+Task 12 — sync:teams (1 richiesta)
+bashpnpm --filter @workspace/scripts sync:teams --live
+Riporta:
+
+Output completo
+Le 20 squadre Serie A 2024 mappate (nomi attesi: Inter, Milan, Juventus, Napoli, Roma, Lazio, Atalanta, Fiorentina, Bologna, Torino, Genoa, Empoli, Udinese, Cagliari, Lecce, Verona, Monza, Parma, Venezia, Como)
+X-RateLimit-Remaining se loggato dal client
+
+Stop. Conferma "OK Task 12".
+Task 13 — sync:players (~26 richieste, paginato)
+bashpnpm --filter @workspace/scripts sync:players --live
+Riporta sintesi: "N pagine processate, M giocatori inseriti, K errori". Verifica DB:
+sqlSELECT COUNT(*) AS totale FROM players;
+SELECT role_classic, COUNT(*) FROM players GROUP BY role_classic ORDER BY 1;
+SELECT id, name, real_team, role_classic
+FROM players
+ORDER BY id
+LIMIT 5;
+Attesi: ~480-520 giocatori totali, distribuiti su 4 ruoli (GK/DEF/MID/ATT). Se vedi role_classic con valori diversi (NULL, "Unknown", stringhe inglesi non mappate), fermati e segnala — significa che il role-mapper non ha gestito qualche posizione di API-Football.
+Stop. Riportami sample + conteggi + conferma "OK Task 13".
+Task 14 — sync:fixtures round 1 e 2 (2 richieste)
+bashpnpm --filter @workspace/scripts sync:fixtures --live --rounds=1,2
+Lo script è report-only (non scrive in DB). Riporta la lista dei 20 fixture identificati, formato:
+round | fixture_id | home_team | away_team | status | date
+Atteso: 10 fixture per round, tutti con status FT (Serie A 2024 round 1-2 sono di Agosto 2024). Se vedi status diverso (NS, PST, 1H/2H), fermati e segnala.
+Stop. Riportami lista fixture + conferma "OK Task 14".
+Task 15 — sync:stats round 1 e 2 (~20 richieste)
+bashpnpm --filter @workspace/scripts sync:stats --live --rounds=1,2
+Riporta sintesi: "N fixture processate, M righe player_giornata_stats inserite, K errori". Verifica DB:
+sqlSELECT COUNT(*) AS totale FROM player_giornata_stats;
+
+SELECT round,
+       COUNT(*) AS righe,
+       COUNT(DISTINCT fixture_id) AS fixture,
+       COUNT(DISTINCT player_id) AS player_unici
+FROM player_giornata_stats
+GROUP BY round
+ORDER BY round;
+
+SELECT p.name, p.real_team, pgs.round, pgs.fixture_id, pgs.voto_mister,
+       jsonb_pretty(pgs.stats_json) AS stats
+FROM player_giornata_stats pgs
+JOIN players p ON p.id = pgs.player_id
+ORDER BY pgs.round, pgs.fixture_id
+LIMIT 3;
+Attesi:
+
+~550-600 righe totali (~28 player titolari+sub per fixture × 20 fixture)
+Distribuzione bilanciata round 1 / round 2 (entrambi ~275-300 righe, 10 fixture, ~250-280 player_unici per round)
+voto_mister deve essere NULL in tutte le righe — l'algoritmo voto Mister è un passo separato (lo affrontiamo dopo)
+stats_json deve contenere campi come games.rating, goals.total, shots.total, passes.total, tackles.total, duels.total, cards.yellow, cards.red
+
+Fermati dopo Task 15. Riportami tutto: sintesi sync + conteggi + sample formattato. Da lì decidiamo se passare alla fase successiva (algoritmo voto Mister applicato ai dati grezzi del backtest).
+Disciplina del run:
+
+Stop dopo OGNI task, niente catene senza supervisione
+Se uno step fallisce (errore API, rate limit, validation, FK), fermati, non ritentare automaticamente, non usare workaround tipo "stub-player"
+Niente sync oltre round 1-2, niente sync:fixtures-statistics (stats squadra, fuori scope backtest)
+Non toccare UI, non toccare seed templates, non toccare replit.md o briefs
