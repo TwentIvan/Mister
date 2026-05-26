@@ -1,0 +1,40 @@
+Bug confermato: passes.accuracy è count, non percentuale. Fix in 3 mosse + re-run.
+Task 32 — Fix in compute.ts
+Modifica computeStatsContributions per calcolare la pass accuracy come ratio:
+typescript// Prima (sbagliato): leggeva passes.accuracy come se fosse percentuale
+// Dopo (corretto):
+const passesTotal = parseInt(stats.passes?.total ?? '0', 10);
+const passesAccurate = parseInt(stats.passes?.accuracy ?? '0', 10);
+
+if (passesTotal >= config.stats.passAccuracy.minPasses) {
+  const passAccuracyPct = (passesAccurate / passesTotal) * 100;
+  const deltaFromNeutral = passAccuracyPct - config.stats.passAccuracy.neutral;
+  contribution += deltaFromNeutral * config.stats.passAccuracy.weightPerPoint;
+}
+// Se passesTotal < minPasses → niente contributo da pass accuracy (sample troppo piccolo)
+Adatta naming/sintassi al codice esistente. Mantieni invariata la logica di tutti gli altri contributi (duel, dribble, key_pass, tackle, ecc.).
+Task 33 — Aggiorna config.ts
+In defaultVotoConfig.stats:
+typescriptpassAccuracy: { 
+  neutral: 80,           // ricalibrato al valore teorico/empirico vero (era 28 in v1, sbagliato per bug interpretativo)
+  weightPerPoint: 0.012, // invariato
+  minPasses: 10          // NUOVO: soglia minima per calcolare il contributo
+},
+Aggiungi anche minPasses: number al type VotoMisterConfig.stats.passAccuracy.
+Task 34 — Re-run e confronto
+bashpnpm --filter @workspace/scripts run voto:backtest
+Riporta:
+
+La nuova distribuzione dei 4 voti
+Le nuove top 10 e bottom 10 (con round)
+Le nuove correlazioni
+La distribuzione per ruolo
+Confronto rapido v1 → v2 (mean ± std di stats_only e voto_synthesis per ruolo)
+
+Inoltre, riporta specificamente i 3 sample diagnostici:
+
+Locatelli Juventus 90' round 2 (era top 10 v1 a 7.56): com'è ora?
+Cambiaso Juventus 85' round 2 (era bottom 10 v1 a 5.86): com'è ora?
+Mosquera Hellas Verona 17' 2 gol round 1 (sub d'impatto): com'è ora? Conferma che il fattore minuti +1.5x continua a funzionare
+
+NON scrivere in DB. Continuiamo read-only.

@@ -139,9 +139,13 @@ function computeStatsContributions(
 
   // --- Qualità (percentuali/rate: NON moltiplicate per extrap) ---
 
-  const passAcc = s.passes.accuracy !== null ? parseFloat(s.passes.accuracy) : null;
-  if (passAcc !== null) {
-    contrib += (passAcc - cfg.passAccuracy.neutral) * cfg.passAccuracy.weightPerPoint;
+  // passes.accuracy in API-Football è un COUNT (passaggi riusciti), non una percentuale.
+  // La percentuale vera va calcolata come ratio: accurate / total × 100.
+  const passesTotal    = s.passes.total    !== null ? s.passes.total    : 0;
+  const passesAccurate = s.passes.accuracy !== null ? parseFloat(s.passes.accuracy) : 0;
+  if (passesTotal >= cfg.passAccuracy.minPasses) {
+    const passAccuracyPct = (passesAccurate / passesTotal) * 100;
+    contrib += (passAccuracyPct - cfg.passAccuracy.neutral) * cfg.passAccuracy.weightPerPoint;
   }
 
   const duelTotal = s.duels.total ?? 0;
