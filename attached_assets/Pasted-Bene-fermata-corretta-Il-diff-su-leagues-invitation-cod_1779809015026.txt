@@ -1,0 +1,33 @@
+Bene, fermata corretta. Il diff su leagues_invitation_code_unique è una divergenza preesistente analoga a quella già risolta sui players nella sessione precedente: Drizzle dichiara il vincolo, il DB non lo ha mai applicato. Lo risolviamo a mano via psql, come abbiamo già fatto per current_value e last_synced_at. NON rispondere "yes" al prompt di truncate: i 3 record sono dati di test che vogliamo preservare.
+Task 3 — verifica che non ci siano duplicati su leagues.invitation_code
+Esegui:
+sqlSELECT invitation_code, COUNT(*) AS n
+FROM leagues
+GROUP BY invitation_code
+HAVING COUNT(*) > 1;
+Riporta l'output. Attesi due scenari:
+
+Zero righe restituite → nessun duplicato, possiamo aggiungere il vincolo senza rischio. Passa al Task 4.
+Una o più righe → ci sono duplicati. Fermati, mostrameli, e aspetta istruzioni: decideremo se rinominare i codici dei record colpiti o rimuoverli.
+
+Verifica anche se per caso il vincolo esiste già nel DB sotto un altro nome:
+sqlSELECT conname, contype, pg_get_constraintdef(oid) AS def
+FROM pg_constraint
+WHERE conrelid = 'leagues'::regclass
+  AND contype IN ('u', 'p');
+Se trovi un vincolo unique su invitation_code già presente con un nome diverso, segnalalo: in quel caso il fix è rinominarlo, non aggiungerne uno nuovo.
+Task 4 — applicare il vincolo (solo se Task 3 conferma zero duplicati e nessun vincolo equivalente esistente)
+Esegui via psql:
+sqlALTER TABLE leagues
+ADD CONSTRAINT leagues_invitation_code_unique UNIQUE (invitation_code);
+Task 5 — ri-eseguire il push per verificare lo stato finale
+bashpnpm --filter @workspace/db run push
+Atteso: "No changes detected" o equivalente. Significa che DB e schema Drizzle sono ora completamente allineati.
+Fermati e riportami:
+
+L'output del Task 3 (sia la query duplicati che la query sui vincoli esistenti)
+Se hai eseguito il Task 4, conferma testuale
+L'output completo del Task 5
+
+Se al Task 5 emergono ALTRI diff inattesi (oltre a questo), NON applicarli: lista tutto e aspetta. Continueremo a sanare le divergenze una per volta.
+NON toccare nient'altro. NON UI, NON script, NON seed.
