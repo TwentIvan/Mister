@@ -1,0 +1,30 @@
+Stato schema chiuso bene. Passiamo al task 5c — sblocco sync live API-Football. API_FOOTBALL_KEY è già nei Secret di Replit da sessioni precedenti, non aggiungere niente.
+Task 8 — Inventario dello stato attuale del sync
+Prima di muovere un dito, voglio capire da dove partiamo. In sessioni passate hai già fatto dei test su API-Football, quindi non è chiaro se il guardrail live sia ancora in place o sia già stato rimosso. Riportami questi quattro output:
+
+Visibilità della key a runtime (solo primi 8 caratteri per non leakare in chat):
+
+bash   echo "${API_FOOTBALL_KEY:0:8}"
+
+Stato del guardrail live in scripts/sync/lib/client.ts. Cerca la logica che gestisce il flag --live o la variabile ambiente equivalente, e mostrami il blocco rilevante con 10-15 righe di contesto. Mi serve capire se l'errore "live mode disabled in task 5b" è ancora lanciato, se è stato rimosso, o se è gated diversamente (es. solo se la key non c'è).
+Unique index su player_giornata_stats (l'inventario constraint di prima non lo catturava):
+
+sql   SELECT indexname, indexdef
+   FROM pg_indexes
+   WHERE schemaname = 'public'
+     AND tablename = 'player_giornata_stats';
+
+Quanti dati ci sono già nelle tabelle alimentate dal sync — così capiamo se in sessioni precedenti il sync è stato effettivamente eseguito live (magari bypassando il flusso standard) o se siamo a quota zero/sample:
+
+sql   SELECT 'players' AS tbl, COUNT(*) AS n FROM players
+   UNION ALL
+   SELECT 'player_giornata_stats' AS tbl, COUNT(*) FROM player_giornata_stats;
+Se la sync API-Football mappa anche fixture o squadre reali in altre tabelle che mi sono perso, includile.
+NON modificare nulla. Solo inventario.
+Sulla base dei quattro output decidiamo insieme la mossa successiva. Le tre piste possibili:
+
+Guardrail ancora attivo, dati assenti/sample → rimuoviamo il guardrail, primo test con sync:teams --live (1 chiamata, basso rischio)
+Guardrail già rimosso, dati assenti → andiamo diretti a sync:teams --live
+Dati già popolati → capiamo se sono sample residui, output di test passati, o sync completo già fatto; decidiamo se serve re-sync, sync incrementale, o passare direttamente alla UI database giocatori
+
+Fermati ai 4 output. Non eseguire altro, non --live, non modifiche al file client.ts.
