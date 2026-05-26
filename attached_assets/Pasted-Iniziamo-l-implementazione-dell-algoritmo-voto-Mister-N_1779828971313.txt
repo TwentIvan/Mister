@@ -1,0 +1,170 @@
+Iniziamo l'implementazione dell'algoritmo voto Mister. Niente UPDATE in DB: lo script lavora in memoria, produce un report markdown, e aspetta valutazione prima di persistere.
+Task 23 — Creare il file di configurazione
+Crea scripts/voto-mister/config.ts con la struttura completa:
+typescriptexport type VotoMisterConfig = {
+  anchor: number;
+  minutes: {
+    threshold: number;       // sotto = NULL
+    fullSample: number;      // sopra = no estrapolazione
+    extrapolationCap: number; // moltiplicatore max sui count
+  };
+  stripping: {
+    goalFirst: number;
+    goalIncremental: number;
+    penaltyExtraOverGoal: number;
+    assist: number;
+    penaltyMissed: number;     // sign +
+    penaltyCommitted: number;  // sign +
+    redCardPrior: number;      // sign +
+    savePrior: number;         // sign -
+  };
+  blend: {
+    alphaStats: number;
+    betaRating: number;
+  };
+  stats: {
+    // qualità (peso per punto di scostamento dal neutro)
+    passAccuracy: { neutral: number; weightPerPoint: number };
+    duelWinRate: { neutral: number; weightPerPoint: number; minDuels: number };
+    dribbleSuccessRate: { neutral: number; weightPerPoint: number; minAttempts: number };
+    // volume (peso unitario + cap)
+    keyPass: { perUnit: number; cap: number };
+    tackle: { perUnit: number; cap: number };
+    block: { perUnit: number; cap: number };
+    interception: { perUnit: number; cap: number };
+    shotOn: { perUnit: number; cap: number };
+    save: { perUnit: number; cap: number };
+    foulDrawn: { perUnit: number; cap: number };
+    // penalità (peso unitario + cap negativo)
+    shotOffTarget: { perUnit: number; cap: number };
+    foulCommitted: { perUnit: number; cap: number };
+    dribbledPast: { perUnit: number; cap: number };
+  };
+};
+
+export const defaultVotoConfig: VotoMisterConfig = {
+  anchor: 6.0,
+  minutes: { threshold: 15, fullSample: 60, extrapolationCap: 1.5 },
+  stripping: {
+    goalFirst: 0.79,
+    goalIncremental: 0.83,
+    penaltyExtraOverGoal: 0.13,
+    assist: 0.60,
+    penaltyMissed: 0.60,
+    penaltyCommitted: 0.57,
+    redCardPrior: 1.0,
+    savePrior: 1.0,
+  },
+  blend: { alphaStats: 0.35, betaRating: 0.65 },
+  stats: {
+    passAccuracy: { neutral: 80, weightPerPoint: 0.012 },
+    duelWinRate: { neutral: 50, weightPerPoint: 0.008, minDuels: 5 },
+    dribbleSuccessRate: { neutral: 50, weightPerPoint: 0.005, minAttempts: 2 },
+    keyPass: { perUnit: 0.12, cap: 0.60 },
+    tackle: { perUnit: 0.08, cap: 0.48 },
+    block: { perUnit: 0.10, cap: 0.40 },
+    interception: { perUnit: 0.10, cap: 0.50 },
+    shotOn: { perUnit: 0.10, cap: 0.50 },
+    save: { perUnit: 0.15, cap: 1.05 },
+    foulDrawn: { perUnit: 0.05, cap: 0.20 },
+    shotOffTarget: { perUnit: -0.03, cap: -0.15 },
+    foulCommitted: { perUnit: -0.04, cap: -0.20 },
+    dribbledPast: { perUnit: -0.10, cap: -0.40 },
+  },
+};
+Task 24 — Scrivere l'algoritmo
+Crea scripts/voto-mister/compute.ts con questa logica per ogni riga player_giornata_stats:
+typescripttype ComputedVoti = {
+  votoStatsOnly: number | null;
+  votoRatingStripped: number | null;
+  votoBlend: number | null;
+  votoSynthesis: number | null;  // canonico (= blend o fallback su stats)
+};
+
+function computeVoti(stats: StatsJson, config: VotoMisterConfig): ComputedVoti {
+  const minutes = stats.games.minutes;
+  
+  // Soglia minuti
+  if (minutes === null || minutes < config.minutes.threshold) {
+    return { votoStatsOnly: null, votoRatingStripped: null, votoBlend: null, votoSynthesis: null };
+  }
+  
+  // Fattore di estrapolazione (1.0 se min ≥ 60, capped at extrapolationCap se sotto)
+  const extrap = minutes >= config.minutes.fullSample
+    ? 1.0
+    : Math.min(config.minutes.extrapolationCap, config.minutes.fullSample / minutes);
+  
+  // 1) voto_stats_only — somma contributi performance, con estrapolazione sui count
+  const statsContrib = computeStatsContributions(stats, config.stats, extrap);
+  const votoStatsOnly = config.anchor + statsContrib;
+  
+  // 2) voto_rating_stripped — api_rating con eventi rimossi (no estrapolazione)
+  const rating = stats.games.rating !== null ? parseFloat(stats.games.rating) : null;
+  const votoRatingStripped = rating === null ? null : rating - computeStripping(stats, config.stripping);
+  
+  // 3) voto_blend — α × stats + β × stripped (solo se entrambi disponibili)
+  const votoBlend = votoRatingStripped === null
+    ? null
+    : config.blend.alphaStats * votoStatsOnly + config.blend.betaRating * votoRatingStripped;
+  
+  // 4) voto_synthesis — canonico: blend se disponibile, altrimenti fallback su stats_only
+  const votoSynthesis = votoBlend !== null ? votoBlend : votoStatsOnly;
+  
+  return {
+    votoStatsOnly: round2(votoStatsOnly),
+    votoRatingStripped: round2(votoRatingStripped),
+    votoBlend: round2(votoBlend),
+    votoSynthesis: round2(votoSynthesis),
+  };
+}
+Dove:
+
+computeStatsContributions somma tutti i contributi di qualità e volume usando i pesi della config. L'estrapolazione si applica ai count (key_pass, tackle, ecc.) PRIMA del cap. Le percentuali non vengono moltiplicate (sono già rate).
+computeStripping somma: 0.79 × goalFirst + 0.83 × max(0, gol-1) + 0.13 × penaltyScored + 0.60 × assist − 0.60 × penaltyMissed − 0.57 × penaltyCommitted − 1.0 × redCard + 1.0 × penaltySaved. Attenzione ai segni: lo stripping rimuove un premio (sottrae) o un malus (somma).
+round2 arrotonda a 2 decimali.
+
+Task 25 — Eseguire e produrre il report
+Crea uno script entry point scripts/voto-mister/run-backtest.ts che:
+
+Carica defaultVotoConfig
+Legge tutte le righe da player_giornata_stats con JOIN su players (per nome, squadra, ruolo)
+Per ogni riga computa i 4 voti
+Genera un report markdown salvato in scripts/voto-mister/reports/backtest-v0-<timestamp>.md con questi blocchi:
+
+# Voto Mister v0 — Backtest report round 1-2
+
+## Configurazione
+[YAML del config usato]
+
+## Distribuzione 4 voti
+| Voto              | n_validi | min  | mean | median | std  | max  |
+|-------------------|----------|------|------|--------|------|------|
+
+## Top 10 per voto_synthesis
+| Nome | Squadra | Ruolo | Min | API | stats | stripped | blend | SYNTH | gol | ass | gialli |
+
+## Bottom 10 per voto_synthesis
+[same format]
+
+## Correlazioni
+[matrice 3x3: stats vs stripped vs blend, calcolata su righe con rating non NULL]
+
+## Distribuzione per ruolo
+[per ogni ruolo: count, mean, std di voto_synthesis]
+
+## Sample diagnostici
+- Mosquera 17' Hellas Verona 2 gol: i 4 voti
+- Thuram 90' Inter 2 gol: i 4 voti
+- 5 giocatori sotto-15min: i 4 voti (devono essere NULL)
+- 5 giocatori con rating API NULL: voto_synthesis fallback a stats_only
+
+Stampa anche a stdout la riga "Report scritto in <path>" e una sintesi delle distribuzioni.
+
+NON eseguire UPDATE su player_giornata_stats. Lo script è read-only sui dati, scrive solo il file report.
+Fermati e riportami:
+
+Conferma che i 3 file sono stati creati
+L'output stdout dello script (sintesi)
+Il contenuto integrale del report markdown
+
+Da lì analizziamo insieme e iteriamo sui pesi/config se serve.

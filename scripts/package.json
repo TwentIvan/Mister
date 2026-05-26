@@ -10,7 +10,8 @@
     "sync:teams": "tsx ./sync/teams.ts",
     "sync:fixtures": "tsx ./sync/fixtures.ts",
     "sync:stats": "tsx ./sync/stats.ts",
-    "sync:all": "tsx ./sync/run-all.ts"
+    "sync:all": "tsx ./sync/run-all.ts",
+    "voto:backtest": "tsx ./voto-mister/run-backtest.ts"
   },
   "dependencies": {
     "@workspace/db": "workspace:*",
