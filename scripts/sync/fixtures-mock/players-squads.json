@@ -1,0 +1,55 @@
+{
+  "get": "players/squads",
+  "parameters": {
+    "team": "505"
+  },
+  "errors": [],
+  "results": 1,
+  "paging": {
+    "current": 1,
+    "total": 1
+  },
+  "response": [
+    {
+      "team": {
+        "id": 505,
+        "name": "Inter",
+        "logo": "https://media.api-sports.io/football/teams/505.png"
+      },
+      "players": [
+        {
+          "id": 1485,
+          "name": "Y. Sommer",
+          "age": 35,
+          "number": 1,
+          "position": "Goalkeeper",
+          "photo": "https://media.api-sports.io/football/players/1485.png"
+        },
+        {
+          "id": 284476,
+          "name": "L. Martinez",
+          "age": 27,
+          "number": 10,
+          "position": "Attacker",
+          "photo": "https://media.api-sports.io/football/players/284476.png"
+        },
+        {
+          "id": 19938,
+          "name": "N. Barella",
+          "age": 27,
+          "number": 23,
+          "position": "Midfielder",
+          "photo": "https://media.api-sports.io/football/players/19938.png"
+        },
+        {
+          "id": 37145,
+          "name": "A. Bastoni",
+          "age": 25,
+          "number": 95,
+          "position": "Defender",
+          "photo": "https://media.api-sports.io/football/players/37145.png"
+        }
+      ]
+    }
+  ]
+}

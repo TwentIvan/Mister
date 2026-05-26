@@ -1,0 +1,111 @@
+{
+  "get": "players",
+  "parameters": {
+    "league": "135",
+    "season": "2024",
+    "page": "1"
+  },
+  "errors": [],
+  "results": 20,
+  "paging": {
+    "current": 1,
+    "total": 26
+  },
+  "response": [
+    {
+      "player": {
+        "id": 284476,
+        "name": "Lautaro Martinez",
+        "firstname": "Lautaro Julian",
+        "lastname": "Martinez",
+        "age": 27,
+        "birth": {
+          "date": "1997-08-22",
+          "place": "Bahia Blanca",
+          "country": "Argentina"
+        },
+        "nationality": "Argentina",
+        "height": "174 cm",
+        "weight": "72 kg",
+        "injured": false,
+        "photo": "https://media.api-sports.io/football/players/284476.png"
+      },
+      "statistics": [
+        {
+          "team": {
+            "id": 505,
+            "name": "Inter",
+            "logo": "https://media.api-sports.io/football/teams/505.png"
+          },
+          "league": {
+            "id": 135,
+            "name": "Serie A",
+            "country": "Italy",
+            "logo": "https://media.api-sports.io/football/leagues/135.png",
+            "flag": "https://media.api-sports.io/flags/it.svg",
+            "season": 2024
+          },
+          "games": {
+            "appearences": 28,
+            "lineups": 27,
+            "minutes": 2380,
+            "number": null,
+            "position": "Attacker",
+            "rating": "7.500000",
+            "captain": false
+          },
+          "substitutes": {
+            "in": 1,
+            "out": 5,
+            "bench": 3
+          },
+          "shots": {
+            "total": 72,
+            "on": 40
+          },
+          "goals": {
+            "total": 21,
+            "conceded": null,
+            "assists": 7,
+            "saves": null
+          },
+          "passes": {
+            "total": 520,
+            "key": 28,
+            "accuracy": 78
+          },
+          "tackles": {
+            "total": 14,
+            "blocks": 2,
+            "interceptions": 6
+          },
+          "duels": {
+            "total": 188,
+            "won": 94
+          },
+          "dribbles": {
+            "attempts": 52,
+            "success": 28,
+            "past": null
+          },
+          "fouls": {
+            "drawn": 42,
+            "committed": 18
+          },
+          "cards": {
+            "yellow": 3,
+            "yellowred": 0,
+            "red": 0
+          },
+          "penalty": {
+            "won": 3,
+            "commited": null,
+            "scored": 2,
+            "missed": 1,
+            "saved": null
+          }
+        }
+      ]
+    }
+  ]
+}

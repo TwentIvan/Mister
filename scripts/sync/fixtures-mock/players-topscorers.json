@@ -1,0 +1,205 @@
+{
+  "get": "players/topscorers",
+  "parameters": {
+    "league": "135",
+    "season": "2024"
+  },
+  "errors": [],
+  "results": 20,
+  "paging": {
+    "current": 1,
+    "total": 1
+  },
+  "response": [
+    {
+      "player": {
+        "id": 284476,
+        "name": "Lautaro Martinez",
+        "firstname": "Lautaro Julian",
+        "lastname": "Martinez",
+        "age": 27,
+        "birth": {
+          "date": "1997-08-22",
+          "place": "Bahia Blanca",
+          "country": "Argentina"
+        },
+        "nationality": "Argentina",
+        "height": "174 cm",
+        "weight": "72 kg",
+        "injured": false,
+        "photo": "https://media.api-sports.io/football/players/284476.png"
+      },
+      "statistics": [
+        {
+          "team": {
+            "id": 505,
+            "name": "Inter",
+            "logo": "https://media.api-sports.io/football/teams/505.png"
+          },
+          "league": {
+            "id": 135,
+            "name": "Serie A",
+            "country": "Italy",
+            "logo": "https://media.api-sports.io/football/leagues/135.png",
+            "flag": "https://media.api-sports.io/flags/it.svg",
+            "season": 2024
+          },
+          "games": {
+            "appearences": 28,
+            "lineups": 27,
+            "minutes": 2380,
+            "number": null,
+            "position": "Attacker",
+            "rating": "7.500000",
+            "captain": false
+          },
+          "substitutes": {
+            "in": 1,
+            "out": 5,
+            "bench": 3
+          },
+          "shots": {
+            "total": 72,
+            "on": 40
+          },
+          "goals": {
+            "total": 21,
+            "conceded": null,
+            "assists": 7,
+            "saves": null
+          },
+          "passes": {
+            "total": 520,
+            "key": 28,
+            "accuracy": 78
+          },
+          "tackles": {
+            "total": 14,
+            "blocks": 2,
+            "interceptions": 6
+          },
+          "duels": {
+            "total": 188,
+            "won": 94
+          },
+          "dribbles": {
+            "attempts": 52,
+            "success": 28,
+            "past": null
+          },
+          "fouls": {
+            "drawn": 42,
+            "committed": 18
+          },
+          "cards": {
+            "yellow": 3,
+            "yellowred": 0,
+            "red": 0
+          },
+          "penalty": {
+            "won": 3,
+            "commited": null,
+            "scored": 2,
+            "missed": 1,
+            "saved": null
+          }
+        }
+      ]
+    },
+    {
+      "player": {
+        "id": 47,
+        "name": "Mateo Retegui",
+        "firstname": "Mateo",
+        "lastname": "Retegui",
+        "age": 25,
+        "birth": {
+          "date": "2000-04-29",
+          "place": "San Fernando",
+          "country": "Argentina"
+        },
+        "nationality": "Italy",
+        "height": "185 cm",
+        "weight": "80 kg",
+        "injured": false,
+        "photo": "https://media.api-sports.io/football/players/47.png"
+      },
+      "statistics": [
+        {
+          "team": {
+            "id": 502,
+            "name": "Atalanta",
+            "logo": "https://media.api-sports.io/football/teams/502.png"
+          },
+          "league": {
+            "id": 135,
+            "name": "Serie A",
+            "country": "Italy",
+            "logo": "https://media.api-sports.io/football/leagues/135.png",
+            "flag": "https://media.api-sports.io/flags/it.svg",
+            "season": 2024
+          },
+          "games": {
+            "appearences": 32,
+            "lineups": 31,
+            "minutes": 2740,
+            "number": null,
+            "position": "Attacker",
+            "rating": "7.350000",
+            "captain": false
+          },
+          "substitutes": {
+            "in": 1,
+            "out": 6,
+            "bench": 2
+          },
+          "shots": {
+            "total": 84,
+            "on": 45
+          },
+          "goals": {
+            "total": 24,
+            "conceded": null,
+            "assists": 5,
+            "saves": null
+          },
+          "passes": {
+            "total": 480,
+            "key": 22,
+            "accuracy": 72
+          },
+          "tackles": {
+            "total": 8,
+            "blocks": 1,
+            "interceptions": 3
+          },
+          "duels": {
+            "total": 210,
+            "won": 100
+          },
+          "dribbles": {
+            "attempts": 38,
+            "success": 18,
+            "past": null
+          },
+          "fouls": {
+            "drawn": 38,
+            "committed": 12
+          },
+          "cards": {
+            "yellow": 4,
+            "yellowred": 0,
+            "red": 0
+          },
+          "penalty": {
+            "won": 2,
+            "commited": null,
+            "scored": 2,
+            "missed": 0,
+            "saved": null
+          }
+        }
+      ]
+    }
+  ]
+}

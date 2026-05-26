@@ -1,0 +1,55 @@
+{
+  "get": "teams",
+  "parameters": {
+    "league": "135",
+    "season": "2024"
+  },
+  "errors": [],
+  "results": 2,
+  "paging": {
+    "current": 1,
+    "total": 1
+  },
+  "response": [
+    {
+      "team": {
+        "id": 505,
+        "name": "Inter",
+        "code": "INT",
+        "country": "Italy",
+        "founded": 1908,
+        "national": false,
+        "logo": "https://media.api-sports.io/football/teams/505.png"
+      },
+      "venue": {
+        "id": 907,
+        "name": "Stadio Giuseppe Meazza",
+        "address": "Via Piccolomini, 5",
+        "city": "Milano",
+        "capacity": 80018,
+        "surface": "grass",
+        "image": "https://media.api-sports.io/football/venues/907.png"
+      }
+    },
+    {
+      "team": {
+        "id": 489,
+        "name": "AC Milan",
+        "code": "MIL",
+        "country": "Italy",
+        "founded": 1899,
+        "national": false,
+        "logo": "https://media.api-sports.io/football/teams/489.png"
+      },
+      "venue": {
+        "id": 907,
+        "name": "Stadio Giuseppe Meazza",
+        "address": "Via Piccolomini, 5",
+        "city": "Milano",
+        "capacity": 80018,
+        "surface": "grass",
+        "image": "https://media.api-sports.io/football/venues/907.png"
+      }
+    }
+  ]
+}

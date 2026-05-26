@@ -1,0 +1,41 @@
+caffolding script di import API-Football (dry-run only, zero chiamate reali)
+Non fare nessuna chiamata HTTP all'API-Football. Non chiedere la chiave API. Non creare la variabile Secrets. Tutto il lavoro deve girare leggendo i mock JSON in scripts/sync/fixtures-mock/ già presenti dalla task precedente.
+Prima di scrivere codice, leggi:
+
+docs/apifootball-survey.md (tabella mapping API → DB)
+lib/db/src/schema/players.ts
+lib/db/src/schema/player_giornata_stats.ts
+gli 8 file mock in scripts/sync/fixtures-mock/
+
+Crea questi file (e solo questi):
+
+scripts/sync/lib/client.ts — client HTTP riusabile con due modalità: mock (legge da JSON locale) e live (chiama l'API vera). Per ora la modalità live deve esistere come funzione ma non deve mai essere chiamata dagli script. Header x-apisports-key, base URL https://v3.football.api-sports.io. Rate limiter built-in: 1 request ogni 6 secondi (10/min) in modalità live, nessun limite in modalità mock.
+scripts/sync/lib/checkpoint.ts — gestione checkpoint persistente in scripts/sync/.checkpoint.json (aggiungere il file a .gitignore). Funzioni: loadCheckpoint(scriptName), saveCheckpoint(scriptName, state), clearCheckpoint(scriptName).
+scripts/sync/lib/role-mapper.ts — mappa ruoli inglese → italiano. Goalkeeper→P, Defender→D, Midfielder→C, Attacker→A. Funzione mapRoleClassic(apiPosition: string): 'P' | 'D' | 'C' | 'A'. Throw esplicito se input sconosciuto, non fallback silente.
+scripts/sync/players.ts — sincronizza anagrafica giocatori. Legge players.json mock (o chiama /players?league=135&season=2024&page=N in live mode, ma in questa task non lo chiama mai). Per ciascun giocatore: estrae player.id, player.name, firstname + lastname, birth.date, nationality, height, photo, statistics[0].team.name, statistics[0].games.position → mappato a role_classic. Upsert idempotente in players (ON CONFLICT su id aggiorna). roles_mantra = NULL o array vuoto, mai inventato. CLI: pnpm sync:players --dry-run (default mock) e pnpm sync:players --live (errore esplicito "live mode disabled, use task 5c" per ora).
+scripts/sync/teams.ts — sincronizza squadre Serie A. Legge teams.json mock. Upsert su tabella players.real_team (denormalizzato — verifica nello schema se esiste una tabella teams separata; se sì, popolala, altrimenti questo script logga solo la mappa team_id → team_name come riferimento). CLI: pnpm sync:teams --dry-run.
+scripts/sync/fixtures.ts — sincronizza calendario. Legge fixtures.json mock. Per ora non scrive in nessuna tabella (la tabella matchdays/fixtures non esiste ancora, lo abbiamo verificato nella diagnosi precedente), ma deve stampare un report: numero partite per round, range date, fixture_id list per le prime 4 giornate. CLI: pnpm sync:fixtures --dry-run --rounds=1,2,3,4.
+scripts/sync/stats.ts — sincronizza statistiche per partita. Legge fixtures-players.json mock (che contiene una sola partita esempio). Per ciascun giocatore della partita: estrae player.id, team.id, statistics complete, e upsert in player_giornata_stats con: season=2024, round estratto da league.round (parse N da "Regular Season - N"), fixture_id, player_id, voto_mister=NULL (l'algoritmo non esiste ancora), stats_json = dump grezzo dell'oggetto statistics[0]. CLI: pnpm sync:stats --dry-run --rounds=1,2,3,4. Idempotente su (season, round, fixture_id, player_id).
+scripts/sync/README.md — documenta: come si avvia il dry-run, come si aggiungono mock, come si farà il live in task 5c, struttura del checkpoint, mapping ruoli, vincoli rate-limit.
+
+Vincoli stretti:
+
+Non installare librerie HTTP nuove. Usa fetch nativo Node (≥18) o quello già presente nel progetto.
+Non chiamare l'API vera, mai. Anche --live deve essere bloccato con errore in questa task.
+Tutti gli upsert devono essere idempotenti.
+Logging strutturato: ogni script deve stampare a fine run un riepilogo { scanned, inserted, updated, skipped, errors }.
+Nessuna modifica a schema Drizzle. Se manca una colonna, fermati e segnala — non aggiungerla in autonomia.
+Codegen openapi non richiesto in questa task.
+Typecheck pulito obbligatorio.
+Non toccare frontend, dashboard, regolamento, template manager.
+
+Verifica finale prima di dichiarare fatto:
+
+pnpm sync:players --dry-run esegue senza errori e logga il riepilogo.
+pnpm sync:teams --dry-run idem.
+pnpm sync:fixtures --dry-run --rounds=1,2,3,4 idem.
+pnpm sync:stats --dry-run --rounds=1 idem (con il singolo mock di una partita).
+pnpm sync:players --live esce con errore esplicito "live mode disabled in task 5b".
+Typecheck pulito.
+
+Quando hai finito scrivi solo "fatto, 4 dry-run verdi, typecheck pulito, live mode bloccato" e fermati. Niente "ho anche sistemato X".
