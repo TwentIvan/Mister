@@ -1,0 +1,77 @@
+Task 5c — Import live Serie A 2024 (4 giornate, budget 69 request)
+Questa task abilita la modalità --live degli script di sync già esistenti, popola il DB con dati reali, e prepara lo schema per future rose attualizzate. Non implementare l'algoritmo voto_mister — voto_mister resta NULL in tutti i record.
+Prima di scrivere codice, leggi:
+
+docs/apifootball-survey.md
+scripts/sync/lib/client.ts, scripts/sync/lib/checkpoint.ts, scripts/sync/lib/role-mapper.ts
+scripts/sync/players.ts, scripts/sync/teams.ts, scripts/sync/fixtures.ts, scripts/sync/stats.ts
+lib/db/src/schema/players.ts, lib/db/src/schema/player_giornata_stats.ts
+
+Lavoro da fare:
+
+Schema migration — predisposizione rose attualizzate
+Aggiungi a lib/db/src/schema/players.ts la colonna current_team_id integer NULL (riferimento facoltativo a una squadra "attuale", separata dal real_team derivato dalle statistiche storiche). Nullable, default NULL. Crea la migration Drizzle corrispondente. Non popolarla in questa task — la popoleremo in una task 5d futura dedicata alle rose stagione-corrente.
+Configurazione Secret
+Chiedi all'utente di fornire la chiave API_FOOTBALL_KEY e configurala come Replit Secret. Non scriverla in codice, non committarla, non loggarla mai (nemmeno parzialmente).
+Abilita client live
+In scripts/sync/lib/client.ts, rimuovi il throw che blocca la modalità live. Implementa il fetch reale con:
+
+Base URL https://v3.football.api-sports.io
+Header x-apisports-key: <process.env.API_FOOTBALL_KEY>
+Rate limiter 1 request ogni 6 secondi (10/min), built-in
+Gestione errori: HTTP 429 → backoff esponenziale (10s, 20s, 40s, max 3 retry), HTTP 5xx → 1 retry dopo 5s, altri errori → fail-fast
+Logging strutturato di ogni request: [LIVE] GET /players?page=3 → 200 (1.2s, used N/100) dove N/100 è letto dall'header x-ratelimit-requests-remaining
+
+
+Tolleranza a edge case nel parsing
+In scripts/sync/players.ts, sostituisci il throw su posizione sconosciuta con try/catch + skip + log d'errore. Il giocatore va contato in skipped e l'errore in errors, ma lo script non deve fermarsi. Stesso pattern in stats.ts per giocatori senza minuti o senza statistics array. Tutti gli skip devono essere loggati con player_id, fixture_id e motivo.
+Upsert reale su DB
+In players.ts e stats.ts, sostituisci il blocco if (dryRun) { log } else { throw } con scrittura reale:
+
+players: INSERT ... ON CONFLICT (id) DO UPDATE SET name=..., real_team=..., role_classic=..., updated_at=NOW(). Il current_team_id non deve essere toccato in questo upsert (resta NULL o conserva valore precedente).
+player_giornata_stats: INSERT ... ON CONFLICT (season, round, fixture_id, player_id) DO UPDATE SET stats_json=..., updated_at=NOW(). voto_mister non viene toccato (resta NULL o conserva valore precedente).
+Conteggi corretti: inserted solo se nuovo record, updated se record esisteva già. Usa il RETURNING xmax = 0 di Postgres per distinguere.
+
+
+Flag --max-requests=N di safety
+Tutti gli script devono accettare --max-requests=N. Se durante l'esecuzione il contatore raggiunge N, lo script si ferma con uno stato pulito (salva checkpoint, stampa riepilogo) ed esce con codice 0 e messaggio [STOP] budget limit raggiunto. Default: nessun limite.
+Sequenza di esecuzione blindata
+Crea uno script orchestratore scripts/sync/run-all.ts (registrato come pnpm sync:all) che esegue in ordine, ognuno solo se il precedente è andato a buon fine:
+
+sync:teams --live (1 request)
+sync:players --live (~26 request)
+sync:fixtures --live --season=2024 (1 request, scarica tutto il calendario stagione)
+sync:stats --live --rounds=1,2,3,4 (~40 request, 4 giornate × 10 partite)
+
+Tra uno step e l'altro, stampa un separatore visivo e il budget residuo (richieste fatte / 100 Free).
+pnpm sync:all --live --max-requests=80 deve completare tutto il flusso con margine.
+Logging finale
+Alla fine di sync:all, stampa un riepilogo cumulativo con:
+
+Request totali consumate
+Per ogni script: { scanned, inserted, updated, skipped, errors }
+Lista degli errori con player_id/fixture_id per debug
+Stato finale DB: SELECT COUNT(*) FROM players, SELECT COUNT(*) FROM player_giornata_stats WHERE season=2024
+
+
+
+Vincoli stretti:
+
+Non implementare il voto Mister.
+Non aggiungere endpoint diversi da quelli elencati al punto 7. In particolare: niente /players/squads, niente /fixtures/statistics, niente /players/topscorers.
+Non popolare current_team_id — solo predisporre lo schema.
+Non installare librerie HTTP aggiuntive. Usa fetch nativo.
+Checkpoint deve restare funzionante: interruzione e ripresa senza duplicati e senza consumare request già spese.
+Typecheck pulito obbligatorio.
+Codegen openapi non richiesto.
+Non toccare frontend, dashboard, regolamento, template manager.
+
+Verifica finale prima di dichiarare fatto:
+
+Esegui pnpm sync:all --live --max-requests=80 e mostra l'output completo, incluso il riepilogo finale.
+Verifica DB: numero giocatori, distribuzione ruoli (GK/DEF/MID/ATT), numero righe in player_giornata_stats per ciascun round (1, 2, 3, 4).
+Verifica idempotenza: rilancia pnpm sync:all --live --max-requests=80 una seconda volta. Deve fare quasi tutti updated, zero inserted nuovi. Le request consumate devono essere comunque ~69 (gli endpoint vengono comunque chiamati).
+Verifica colonna current_team_id presente in players con \d players, tutti NULL.
+Typecheck pulito.
+
+Quando hai finito scrivi solo: "fatto, import live completato. Request consumate: N/100. Player importati: X. Stats importate: Y. Typecheck pulito." e fermati. Niente "ho semplificato", niente "ho aggiunto anche Z"
