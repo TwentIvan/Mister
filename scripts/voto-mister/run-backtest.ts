@@ -169,6 +169,7 @@ async function main() {
       r.real_team,
       r.role_classic,
       String(min),
+      String(r.round),
       String(api),
       r2(r.votoStatsOnly!),
       r2(r.votoRatingStripped ?? 0),
@@ -180,7 +181,7 @@ async function main() {
     ];
   }
 
-  const tableHeaders = ["Nome", "Squadra", "Ruolo", "Min", "API", "Stats", "Stripped", "Blend", "SYNTH", "Gol", "Ass", "Gialli"];
+  const tableHeaders = ["Nome", "Squadra", "Ruolo", "Min", "R", "API", "Stats", "Stripped", "Blend", "SYNTH", "Gol", "Ass", "Gialli"];
 
   // ---------------------------------------------------------------------------
   // Correlazioni

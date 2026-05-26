@@ -1,0 +1,50 @@
+V0 produce stats_only sistematicamente basso (mean 5.60 vs atteso ~6). Causa: neutri di pass/duel/dribble settati teoricamente (80/50/50) non corrispondono alla realtà del dataset. Iteriamo con neutri empirici.
+Task 26 — Calcolare i neutri empirici dei 3 indicatori percentuali
+sqlSELECT
+  ROUND(AVG((stats_json->'passes'->>'accuracy')::numeric), 2) AS pass_accuracy_mean,
+  ROUND(STDDEV((stats_json->'passes'->>'accuracy')::numeric), 2) AS pass_accuracy_std,
+  ROUND(AVG(
+    CASE WHEN (stats_json->'duels'->>'total')::int >= 5
+         THEN (stats_json->'duels'->>'won')::numeric / NULLIF((stats_json->'duels'->>'total')::numeric, 0) * 100
+    END
+  ), 2) AS duel_win_rate_mean,
+  ROUND(STDDEV(
+    CASE WHEN (stats_json->'duels'->>'total')::int >= 5
+         THEN (stats_json->'duels'->>'won')::numeric / NULLIF((stats_json->'duels'->>'total')::numeric, 0) * 100
+    END
+  ), 2) AS duel_win_rate_std,
+  ROUND(AVG(
+    CASE WHEN (stats_json->'dribbles'->>'attempts')::int >= 2
+         THEN (stats_json->'dribbles'->>'success')::numeric / NULLIF((stats_json->'dribbles'->>'attempts')::numeric, 0) * 100
+    END
+  ), 2) AS dribble_success_mean,
+  ROUND(STDDEV(
+    CASE WHEN (stats_json->'dribbles'->>'attempts')::int >= 2
+         THEN (stats_json->'dribbles'->>'success')::numeric / NULLIF((stats_json->'dribbles'->>'attempts')::numeric, 0) * 100
+    END
+  ), 2) AS dribble_success_std
+FROM player_giornata_stats
+WHERE (stats_json->'games'->>'minutes')::int >= 30;
+Filtro a 30' per evitare rumore da minutaggi minimi che distorcono i tassi.
+Riportami i 6 valori (3 medie + 3 std). Diventano i nuovi neutral nella config.
+Task 27 — Aggiornare la config con i neutri empirici
+Modifica scripts/voto-mister/config.ts:
+typescript// Sostituire i valori "neutral" con i risultati del Task 26 arrotondati all'intero
+passAccuracy: { neutral: <MEDIA_EMPIRICA_PASS>, weightPerPoint: 0.012 },
+duelWinRate: { neutral: <MEDIA_EMPIRICA_DUEL>, weightPerPoint: 0.008, minDuels: 5 },
+dribbleSuccessRate: { neutral: <MEDIA_EMPIRICA_DRIBBLE>, weightPerPoint: 0.005, minAttempts: 2 },
+Non toccare nient'altro nella config — solo i 3 neutri.
+Task 28 — Aggiungere round ai top/bottom nel report
+In run-backtest.ts, aggiungi la colonna round ai blocchi "Top 10" e "Bottom 10" del report, posizionata subito dopo "Min". Così se un giocatore appare due volte (giornata 1 e 2) si distingue al volo.
+Task 29 — Ri-eseguire il backtest e riportare
+bashpnpm --filter @workspace/scripts run voto:backtest
+Riporta:
+
+I 6 valori del Task 26 (così vediamo i neutri empirici)
+La nuova sintesi delle distribuzioni (output stdout)
+Le nuove top 10 e bottom 10 (con round visibile)
+Le nuove correlazioni
+La nuova distribuzione per ruolo
+
+Senza mostrarmi tutto il report v1: bastano i blocchi sopra. Confronterò io con il v0 per vedere se la ricalibrazione ha centrato il target (stats_only mean ≈ 6.0, correlazione blend × stripped più bassa di 0.95).
+Non scrivere niente in DB. Continua read-only finché non confermo che la calibrazione è soddisfacente.

@@ -57,9 +57,9 @@ export const defaultVotoConfig: VotoMisterConfig = {
   },
   blend: { alphaStats: 0.35, betaRating: 0.65 },
   stats: {
-    passAccuracy: { neutral: 80, weightPerPoint: 0.012 },
-    duelWinRate: { neutral: 50, weightPerPoint: 0.008, minDuels: 5 },
-    dribbleSuccessRate: { neutral: 50, weightPerPoint: 0.005, minAttempts: 2 },
+    passAccuracy: { neutral: 28, weightPerPoint: 0.012 },
+    duelWinRate: { neutral: 51, weightPerPoint: 0.008, minDuels: 5 },
+    dribbleSuccessRate: { neutral: 57, weightPerPoint: 0.005, minAttempts: 2 },
     keyPass: { perUnit: 0.12, cap: 0.60 },
     tackle: { perUnit: 0.08, cap: 0.48 },
     block: { perUnit: 0.10, cap: 0.40 },
