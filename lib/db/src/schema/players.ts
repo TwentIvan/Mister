@@ -77,6 +77,7 @@ export const players = pgTable("players", {
   birthDate: text("birth_date"),
   nationality: text("nationality"),
   heightCm: integer("height_cm"),
+  weightKg: integer("weight_kg"),
   foot: text("foot"), // "left" | "right" | "both"
   photoUrl: text("photo_url"),
 
