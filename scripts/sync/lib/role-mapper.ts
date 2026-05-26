@@ -5,22 +5,22 @@ import type { PlayerRoleClassic } from "@workspace/db/schema";
  * al tipo PlayerRoleClassic usato nello schema DB.
  *
  * Nota: il DB usa GK/DEF/MID/ATT (non P/D/C/A).
- * Throw esplicito su input sconosciuto — nessun fallback silente.
+ * Restituisce null per posizioni sconosciute — il chiamante decide se skippare.
  */
 const ROLE_MAP: Record<string, PlayerRoleClassic> = {
   Goalkeeper: "GK",
   Defender: "DEF",
   Midfielder: "MID",
   Attacker: "ATT",
+  // Alias usati da API-Football in alcuni endpoint
+  Forward: "ATT",
+  G: "GK",
+  D: "DEF",
+  M: "MID",
+  A: "ATT",
+  F: "ATT",
 };
 
-export function mapRoleClassic(apiPosition: string): PlayerRoleClassic {
-  const mapped = ROLE_MAP[apiPosition];
-  if (mapped === undefined) {
-    throw new Error(
-      `Posizione API-Football sconosciuta: "${apiPosition}". ` +
-        `Valori attesi: ${Object.keys(ROLE_MAP).join(", ")}`,
-    );
-  }
-  return mapped;
+export function mapRoleClassic(apiPosition: string): PlayerRoleClassic | null {
+  return ROLE_MAP[apiPosition] ?? null;
 }

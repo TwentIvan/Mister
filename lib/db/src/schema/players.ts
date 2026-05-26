@@ -20,6 +20,7 @@ import {
   real,
   serial,
   doublePrecision,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 
 // ============================================================
@@ -87,6 +88,13 @@ export const players = pgTable("players", {
    */
   currentValue: doublePrecision("current_value"),
 
+  /**
+   * Riferimento facoltativo alla squadra attuale (stagione corrente).
+   * Null finché non viene popolato da un sync dedicato (task 5d).
+   * Separato da real_team che è derivato dalle statistiche storiche.
+   */
+  currentTeamId: integer("current_team_id"),
+
   lastSyncedAt: timestamp("last_synced_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -105,24 +113,35 @@ export type NewPlayer = typeof players.$inferInsert;
  * (gol, assist, tiri, ammonizioni, espulsioni, minuti, voti grezzi, ecc.)
  * che servono all'algoritmo proprietario per calcolare il voto finale.
  */
-export const playerGiornataStats = pgTable("player_giornata_stats", {
-  id: serial("id").primaryKey(),
-  season: integer("season").notNull(),
-  round: integer("round").notNull(),
-  playerId: integer("player_id")
-    .notNull()
-    .references(() => players.id),
-  fixtureId: integer("fixture_id").notNull(),
+export const playerGiornataStats = pgTable(
+  "player_giornata_stats",
+  {
+    id: serial("id").primaryKey(),
+    season: integer("season").notNull(),
+    round: integer("round").notNull(),
+    playerId: integer("player_id")
+      .notNull()
+      .references(() => players.id),
+    fixtureId: integer("fixture_id").notNull(),
 
-  /** Voto finale calcolato dall'algoritmo Mister */
-  votoMister: real("voto_mister"),
+    /** Voto finale calcolato dall'algoritmo Mister */
+    votoMister: real("voto_mister"),
 
-  /** Statistiche grezze + log degli eventi per replay/debug */
-  statsJson: jsonb("stats_json").notNull(),
+    /** Statistiche grezze + log degli eventi per replay/debug */
+    statsJson: jsonb("stats_json").notNull(),
 
-  syncedAt: timestamp("synced_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-});
+    syncedAt: timestamp("synced_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("player_giornata_stats_unique_idx").on(
+      t.season,
+      t.round,
+      t.fixtureId,
+      t.playerId,
+    ),
+  ],
+);
 
 export type PlayerGiornataStats = typeof playerGiornataStats.$inferSelect;

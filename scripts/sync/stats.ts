@@ -1,36 +1,17 @@
 /**
  * sync:stats — sincronizza statistiche giocatore per partita.
  *
- * Legge fixtures-players.json mock. Per ciascun giocatore: estrae
- * player.id, statistics complete e prepara l'upsert in player_giornata_stats.
+ * Legge /fixtures per ottenere i fixture_id per round, poi chiama
+ * /fixtures/players per ogni partita. Upsert in player_giornata_stats.
+ * voto_mister resta NULL — non implementato in questa task.
  *
- * Nota: player_giornata_stats non ha una unique constraint su (player_id,
- * fixture_id). In live mode sarà necessario aggiungere tale constraint prima
- * di eseguire upsert idempotenti. Segnalato senza toccare lo schema.
- *
- * CLI: pnpm sync:stats --dry-run --rounds=1
- *      pnpm sync:stats --live   (bloccato in task 5b)
+ * CLI: pnpm sync:stats [--live] [--rounds=1,2,3,4] [--max-requests=N]
  */
 
-import { createClient } from "./lib/client.js";
-
-const args = process.argv.slice(2);
-const dryRun = args.includes("--dry-run");
-const live = args.includes("--live");
-
-const roundsArg = args.find((a) => a.startsWith("--rounds="));
-const requestedRounds: number[] = roundsArg
-  ? roundsArg
-      .replace("--rounds=", "")
-      .split(",")
-      .map((r) => parseInt(r.trim(), 10))
-      .filter((r) => !isNaN(r))
-  : [];
-
-if (live) {
-  createClient("live");
-  process.exit(1);
-}
+import { createClient, getLiveRequestCount } from "./lib/client.js";
+import { loadCheckpoint, saveCheckpoint, clearCheckpoint } from "./lib/checkpoint.js";
+import { pool } from "@workspace/db";
+import { parseRoundNumber } from "./fixtures.js";
 
 interface ApiFixture {
   fixture: { id: number };
@@ -71,26 +52,35 @@ interface ApiFixturePlayers {
   }>;
 }
 
-function parseRoundNumber(round: string): number | null {
-  const m = round.match(/Regular Season\s*-\s*(\d+)/i);
-  if (!m) return null;
-  return parseInt(m[1], 10);
-}
+export type SyncCounts = {
+  scanned: number;
+  inserted: number;
+  updated: number;
+  skipped: number;
+  errors: number;
+};
 
-interface PlayerGiornataRecord {
-  season: number;
-  round: number;
-  playerId: number;
-  fixtureId: number;
-  votoMister: null;
-  statsJson: unknown;
-}
+export type ErrorEntry = { playerId: number; fixtureId: number; reason: string };
 
-async function main() {
-  const client = createClient("mock");
-  const counts = { scanned: 0, inserted: 0, updated: 0, skipped: 0, errors: 0 };
+export async function run(opts: {
+  live: boolean;
+  maxRequests: number;
+  requestedRounds?: number[];
+}): Promise<{ counts: SyncCounts; errors: ErrorEntry[] }> {
+  const { live, maxRequests, requestedRounds = [] } = opts;
+  const client = createClient(live ? "live" : "mock");
+  const counts: SyncCounts = { scanned: 0, inserted: 0, updated: 0, skipped: 0, errors: 0 };
+  const errorLog: ErrorEntry[] = [];
 
-  const fixturesResp = client.get<ApiFixture>("fixtures", {
+  const checkpoint = loadCheckpoint("stats") as { processedFixtures?: number[] } | null;
+  const processedFixtures = new Set<number>(checkpoint?.processedFixtures ?? []);
+
+  if (live && getLiveRequestCount() >= maxRequests) {
+    console.log(`[STOP] budget limit raggiunto prima di /fixtures`);
+    return { counts, errors: errorLog };
+  }
+
+  const fixturesResp = await client.get<ApiFixture>("fixtures", {
     league: "135",
     season: "2024",
   });
@@ -111,17 +101,34 @@ async function main() {
       ? requestedRounds
       : [...fixturesByRound.keys()].sort((a, b) => a - b);
 
+  let budgetStop = false;
+
   for (const round of roundsToProcess) {
+    if (budgetStop) break;
+
     const fixtureIds = fixturesByRound.get(round);
     if (!fixtureIds || fixtureIds.length === 0) {
-      console.log(`[INFO] Round ${round}: nessuna partita nel mock, salto`);
+      console.log(`[INFO] Round ${round}: nessuna partita, salto`);
       continue;
     }
 
     console.log(`\n--- Round ${round}: ${fixtureIds.length} partite ---`);
 
     for (const fixtureId of fixtureIds) {
-      const playersResp = client.get<ApiFixturePlayers>("fixtures/players", {
+      if (budgetStop) break;
+
+      if (processedFixtures.has(fixtureId)) {
+        console.log(`[CHECKPOINT] fixture_id=${fixtureId} già processata, salto`);
+        continue;
+      }
+
+      if (live && getLiveRequestCount() >= maxRequests) {
+        console.log(`[STOP] budget limit raggiunto (${getLiveRequestCount()}/${maxRequests})`);
+        budgetStop = true;
+        break;
+      }
+
+      const playersResp = await client.get<ApiFixturePlayers>("fixtures/players", {
         fixture: String(fixtureId),
       });
 
@@ -134,55 +141,94 @@ async function main() {
             const stats = playerEntry.statistics[0];
             if (!stats) {
               counts.skipped++;
-              console.warn(
-                `[WARN] player_id=${playerEntry.player.id} fixture=${fixtureId}: nessuna statistica`,
-              );
+              const reason = "nessuna statistica nel payload";
+              console.warn(`[SKIP] player_id=${playerEntry.player.id} fixture=${fixtureId}: ${reason}`);
+              errorLog.push({ playerId: playerEntry.player.id, fixtureId, reason });
               continue;
             }
 
-            const record: PlayerGiornataRecord = {
-              season,
-              round,
-              playerId: playerEntry.player.id,
-              fixtureId,
-              votoMister: null,
-              statsJson: stats,
-            };
+            if (stats.games.minutes === null || stats.games.minutes === 0) {
+              counts.skipped++;
+              const reason = `minuti=${stats.games.minutes ?? "null"} — giocatore non entrato`;
+              console.warn(`[SKIP] player_id=${playerEntry.player.id} fixture=${fixtureId}: ${reason}`);
+              errorLog.push({ playerId: playerEntry.player.id, fixtureId, reason });
+              continue;
+            }
 
-            if (dryRun) {
-              console.log(
-                `[DRY-RUN] upsert player_giornata_stats ` +
-                  `player_id=${record.playerId} ` +
-                  `fixture_id=${record.fixtureId} ` +
-                  `season=${record.season} round=${record.round} ` +
-                  `minuti=${stats.games.minutes ?? "N/A"} ` +
-                  `gol=${stats.goals.total ?? 0} ` +
-                  `assist=${stats.goals.assists ?? 0} ` +
-                  `rating_raw=${stats.games.rating ?? "N/A"} ` +
-                  `voto_mister=NULL`,
-              );
+            // Upsert stub del giocatore se non esiste — evita FK violation.
+            // I campi obbligatori vengono aggiornati dal sync:players completo.
+            await pool.query(
+              `INSERT INTO players
+                (id, name, full_name, real_team, role_classic, roles_mantra, injured)
+               VALUES ($1, $2, $2, 'N/D', 'ATT', '[]'::jsonb, false)
+               ON CONFLICT (id) DO NOTHING`,
+              [playerEntry.player.id, playerEntry.player.name],
+            );
+
+            const result = await pool.query<{ xmax: string }>(
+              `INSERT INTO player_giornata_stats
+                (season, round, player_id, fixture_id, voto_mister, stats_json, synced_at)
+               VALUES ($1, $2, $3, $4, NULL, $5::jsonb, NOW())
+               ON CONFLICT (season, round, fixture_id, player_id) DO UPDATE SET
+                 stats_json = EXCLUDED.stats_json,
+                 synced_at = NOW()
+               RETURNING xmax::text`,
+              [season, round, playerEntry.player.id, fixtureId, JSON.stringify(stats)],
+            );
+
+            const xmax = result.rows[0]?.xmax ?? "0";
+            if (xmax === "0") {
               counts.inserted++;
             } else {
-              throw new Error(
-                "Modalità live non disponibile in task 5b — usa --dry-run",
-              );
+              counts.updated++;
             }
           } catch (err) {
             counts.errors++;
-            console.error(
-              `[ERRORE] player_id=${playerEntry.player.id} fixture=${fixtureId}: ${(err as Error).message}`,
-            );
+            const reason = (err as Error).message;
+            console.error(`[ERRORE] player_id=${playerEntry.player.id} fixture=${fixtureId}: ${reason}`);
+            errorLog.push({ playerId: playerEntry.player.id, fixtureId, reason });
           }
         }
       }
+
+      processedFixtures.add(fixtureId);
+      saveCheckpoint("stats", { processedFixtures: [...processedFixtures] });
     }
+  }
+
+  if (!budgetStop) {
+    clearCheckpoint("stats");
   }
 
   console.log("\n=== sync:stats riepilogo ===");
   console.log(JSON.stringify(counts, null, 2));
+  if (errorLog.length > 0) {
+    console.log("\n--- Errori/skip ---");
+    for (const e of errorLog) {
+      console.log(`  player_id=${e.playerId} fixture_id=${e.fixtureId}: ${e.reason}`);
+    }
+  }
+
+  return { counts, errors: errorLog };
 }
 
-main().catch((err) => {
-  console.error("[FATAL]", (err as Error).message);
-  process.exit(1);
-});
+// Esecuzione standalone
+if (process.argv[1]?.endsWith("stats.ts") || process.argv[1]?.endsWith("stats.js")) {
+  const args = process.argv.slice(2);
+  const live = args.includes("--live");
+  const maxRequestsArg = args.find((a) => a.startsWith("--max-requests="));
+  const maxRequests = maxRequestsArg
+    ? parseInt(maxRequestsArg.replace("--max-requests=", ""), 10)
+    : Infinity;
+  const roundsArg = args.find((a) => a.startsWith("--rounds="));
+  const requestedRounds: number[] = roundsArg
+    ? roundsArg.replace("--rounds=", "").split(",").map((r) => parseInt(r.trim(), 10)).filter((r) => !isNaN(r))
+    : [];
+
+  run({ live, maxRequests, requestedRounds })
+    .then(() => pool.end())
+    .catch((err) => {
+      console.error("[FATAL]", (err as Error).message);
+      pool.end().finally(() => process.exit(1));
+    });
+}
