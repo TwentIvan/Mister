@@ -47,3 +47,6 @@ Thumbs.db
 # Replit
 .cache/
 .local/
+
+# Sync checkpoint
+scripts/sync/.checkpoint.json
