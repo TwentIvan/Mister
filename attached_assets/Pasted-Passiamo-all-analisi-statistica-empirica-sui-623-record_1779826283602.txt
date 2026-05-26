@@ -1,0 +1,99 @@
+Passiamo all'analisi statistica empirica sui 623 record di backtest. Obiettivo: stimare quanto il rating API-Football si alza/abbassa in presenza di ciascun tipo di evento (gol, assist, cartellini, rigori). I delta che troveremo diventeranno parametri di "stripping" dell'algoritmo voto Mister, per separare il contributo eventi dal contributo performance.
+Tutte query SQL, niente chiamate API.
+Task 16 — Conteggio degli eventi nel dataset
+sqlSELECT
+  COUNT(*) AS total_rows,
+  COUNT(*) FILTER (WHERE stats_json->'games'->>'rating' IS NOT NULL) AS with_rating,
+  COUNT(*) FILTER (WHERE (stats_json->'goals'->>'total')::int > 0) AS with_goal,
+  COUNT(*) FILTER (WHERE (stats_json->'goals'->>'assists')::int > 0) AS with_assist,
+  COUNT(*) FILTER (WHERE (stats_json->'cards'->>'yellow')::int > 0) AS with_yellow,
+  COUNT(*) FILTER (WHERE (stats_json->'cards'->>'red')::int > 0) AS with_red,
+  COUNT(*) FILTER (WHERE (stats_json->'penalty'->>'scored')::int > 0) AS with_pen_scored,
+  COUNT(*) FILTER (WHERE (stats_json->'penalty'->>'missed')::int > 0) AS with_pen_missed,
+  COUNT(*) FILTER (WHERE (stats_json->'penalty'->>'saved')::int > 0) AS with_pen_saved,
+  COUNT(*) FILTER (WHERE (stats_json->'penalty'->>'commited')::int > 0) AS with_pen_committed,
+  COUNT(*) FILTER (WHERE p.role_classic = 'GK'
+                     AND (pgs.stats_json->'goals'->>'conceded')::int = 0
+                     AND (pgs.stats_json->'games'->>'minutes')::int >= 60) AS gk_clean_sheet,
+  COUNT(*) FILTER (WHERE p.role_classic = 'DEF'
+                     AND (pgs.stats_json->'goals'->>'conceded')::int = 0
+                     AND (pgs.stats_json->'games'->>'minutes')::int >= 60) AS def_clean_sheet
+FROM player_giornata_stats pgs
+JOIN players p ON p.id = pgs.player_id;
+Mi serve per capire quali eventi hanno sample size sufficiente per stime affidabili e quali sono troppo rari (es. rossi e rigori saranno pochi su 20 partite).
+Task 17 — Rating medio per numero di gol segnati (≥60' giocati)
+sqlSELECT
+  COALESCE((stats_json->'goals'->>'total')::int, 0) AS gol,
+  COUNT(*) AS n,
+  ROUND(AVG((stats_json->'games'->>'rating')::numeric), 3) AS rating_medio,
+  ROUND(STDDEV((stats_json->'games'->>'rating')::numeric), 3) AS rating_std,
+  MIN((stats_json->'games'->>'rating')::numeric) AS rating_min,
+  MAX((stats_json->'games'->>'rating')::numeric) AS rating_max
+FROM player_giornata_stats
+WHERE stats_json->'games'->>'rating' IS NOT NULL
+  AND (stats_json->'games'->>'minutes')::int >= 60
+GROUP BY 1
+ORDER BY 1;
+Task 18 — Rating medio per numero di assist (≥60')
+Stessa query del Task 17 ma raggruppata su (stats_json->'goals'->>'assists')::int.
+Task 19 — Rating medio per cartellini (≥60')
+sqlSELECT
+  COALESCE((stats_json->'cards'->>'yellow')::int, 0) AS gialli,
+  COALESCE((stats_json->'cards'->>'red')::int, 0) AS rossi,
+  COUNT(*) AS n,
+  ROUND(AVG((stats_json->'games'->>'rating')::numeric), 3) AS rating_medio
+FROM player_giornata_stats
+WHERE stats_json->'games'->>'rating' IS NOT NULL
+  AND (stats_json->'games'->>'minutes')::int >= 60
+GROUP BY 1, 2
+ORDER BY 1, 2;
+Task 20 — Rating medio per eventi rigore (≥60')
+sqlSELECT
+  COALESCE((stats_json->'penalty'->>'scored')::int, 0) AS pen_segnati,
+  COALESCE((stats_json->'penalty'->>'missed')::int, 0) AS pen_sbagliati,
+  COALESCE((stats_json->'penalty'->>'saved')::int, 0) AS pen_parati,
+  COALESCE((stats_json->'penalty'->>'commited')::int, 0) AS pen_causati,
+  COUNT(*) AS n,
+  ROUND(AVG((stats_json->'games'->>'rating')::numeric), 3) AS rating_medio
+FROM player_giornata_stats
+WHERE stats_json->'games'->>'rating' IS NOT NULL
+  AND (stats_json->'games'->>'minutes')::int >= 60
+GROUP BY 1, 2, 3, 4
+HAVING COUNT(*) > 0
+ORDER BY 1, 2, 3, 4;
+Task 21 — Clean sheet effect per GK e DEF
+sqlSELECT
+  p.role_classic,
+  CASE
+    WHEN (pgs.stats_json->'goals'->>'conceded')::int = 0 THEN 'clean_sheet'
+    WHEN (pgs.stats_json->'goals'->>'conceded')::int = 1 THEN '1_gol_subito'
+    WHEN (pgs.stats_json->'goals'->>'conceded')::int = 2 THEN '2_gol_subiti'
+    ELSE '3+_gol_subiti'
+  END AS clean_sheet_status,
+  COUNT(*) AS n,
+  ROUND(AVG((pgs.stats_json->'games'->>'rating')::numeric), 3) AS rating_medio
+FROM player_giornata_stats pgs
+JOIN players p ON p.id = pgs.player_id
+WHERE pgs.stats_json->'games'->>'rating' IS NOT NULL
+  AND p.role_classic IN ('GK', 'DEF')
+  AND (pgs.stats_json->'games'->>'minutes')::int >= 60
+GROUP BY 1, 2
+ORDER BY 1, 2;
+Task 22 — Baseline: rating medio dei "non-eventer" (≥60', nessun evento bonus/malus)
+sqlSELECT
+  COUNT(*) AS n,
+  ROUND(AVG((stats_json->'games'->>'rating')::numeric), 3) AS rating_medio_baseline,
+  ROUND(STDDEV((stats_json->'games'->>'rating')::numeric), 3) AS std
+FROM player_giornata_stats
+WHERE stats_json->'games'->>'rating' IS NOT NULL
+  AND (stats_json->'games'->>'minutes')::int >= 60
+  AND COALESCE((stats_json->'goals'->>'total')::int, 0) = 0
+  AND COALESCE((stats_json->'goals'->>'assists')::int, 0) = 0
+  AND COALESCE((stats_json->'cards'->>'yellow')::int, 0) = 0
+  AND COALESCE((stats_json->'cards'->>'red')::int, 0) = 0
+  AND COALESCE((stats_json->'penalty'->>'scored')::int, 0) = 0
+  AND COALESCE((stats_json->'penalty'->>'missed')::int, 0) = 0
+  AND COALESCE((stats_json->'penalty'->>'saved')::int, 0) = 0
+  AND COALESCE((stats_json->'penalty'->>'commited')::int, 0) = 0;
+Questo è il riferimento contro cui confrontare i gruppi "con evento": la differenza è il "premio evento" stimato.
+Esegui in sequenza, riporta gli output delle 7 query. Non scrivere niente in DB, non eseguire altre azioni.
