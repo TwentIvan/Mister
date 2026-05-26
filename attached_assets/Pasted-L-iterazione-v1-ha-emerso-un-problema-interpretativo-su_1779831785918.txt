@@ -1,0 +1,44 @@
+L'iterazione v1 ha emerso un problema interpretativo sul campo passes.accuracy. La media empirica 27.50 con std 18.69 non è coerente con una percentuale di Serie A (atteso ~80%, std ~10%). Sospetto fortemente che il campo sia un conteggio (numero di passaggi riusciti), non una percentuale. Verifichiamo e correggiamo.
+Task 30 — Verifica interpretazione del campo passes.accuracy
+Esegui questa diagnostica:
+sqlSELECT p.name, p.real_team, p.role_classic,
+       (pgs.stats_json->'games'->>'minutes')::int AS min,
+       (pgs.stats_json->'passes'->>'total')::int AS passes_total,
+       (pgs.stats_json->'passes'->>'accuracy')::numeric AS passes_accuracy_raw,
+       (pgs.stats_json->'passes'->>'key')::int AS passes_key,
+       ROUND(
+         (pgs.stats_json->'passes'->>'accuracy')::numeric * 100.0 / 
+         NULLIF((pgs.stats_json->'passes'->>'total')::numeric, 0),
+         1
+       ) AS hypothesis_if_count
+FROM player_giornata_stats pgs
+JOIN players p ON p.id = pgs.player_id
+WHERE (pgs.stats_json->'games'->>'minutes')::int = 90
+  AND p.role_classic = 'MID'
+ORDER BY (pgs.stats_json->'passes'->>'total')::int DESC
+LIMIT 10;
+Riporta l'output completo. Mi serve vedere:
+
+passes_total (count totale tentati)
+passes_accuracy_raw (valore grezzo come sta in JSON)
+hypothesis_if_count (la percentuale che otterremmo se accuracy fosse un count)
+
+Diagnosi: se passes_accuracy_raw < passes_total per quasi tutti, è certo che sia un count. La percentuale vera per Serie A 30+ min dovrebbe stare in hypothesis_if_count tra 75-95.
+Task 31 — Verifica anche sui 4 ruoli con statistica aggregata
+sqlSELECT p.role_classic,
+       COUNT(*) AS n,
+       ROUND(AVG((stats_json->'passes'->>'total')::numeric), 1) AS avg_passes_total,
+       ROUND(AVG((stats_json->'passes'->>'accuracy')::numeric), 1) AS avg_accuracy_raw,
+       ROUND(AVG(
+         (stats_json->'passes'->>'accuracy')::numeric * 100.0 /
+         NULLIF((stats_json->'passes'->>'total')::numeric, 0)
+       ), 1) AS avg_accuracy_pct_computed
+FROM player_giornata_stats pgs
+JOIN players p ON p.id = pgs.player_id
+WHERE (stats_json->'games'->>'minutes')::int >= 30
+  AND (stats_json->'passes'->>'total')::int > 0
+GROUP BY p.role_classic
+ORDER BY p.role_classic;
+Mi serve confrontare per ruolo: avg_accuracy_raw (come è ora) vs avg_accuracy_pct_computed (come dovrebbe essere se è count). Se avg_accuracy_pct_computed stà tra 70-90% per i 4 ruoli, ipotesi confermata.
+Fermati qui e riportami gli output di Task 30 e 31. Sulla base di quello che vediamo, decidiamo se aggiornare il codice in computeStatsContributions per calcolare la percentuale come ratio (e poi ricalibrare la config con un nuovo neutral realistico per la vera percentuale).
+NON modificare ancora codice né config. Solo diagnosi.
