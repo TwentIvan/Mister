@@ -1,0 +1,69 @@
+Tre task per portare il pitch al livello "definitivo" prima dell'integrazione API.
+Task 88 — Panchina: 14 slot auto-popolati
+Cambio strutturale rispetto a Batch 3:
+
+La panchina non è più 7 slot ma 14 slot (totale rosa = 11 titolari + 14 panchinari = 25)
+I 14 slot sono auto-popolati con tutti i giocatori non titolari, in ordine deterministico iniziale (es. per ruolo poi per nome, oppure ordine alfabetico). L'utente non deve trascinare manualmente la rosa in panchina
+Quando un giocatore va dal campo alla panchina (rimosso o spostato), entra automaticamente in un posto libero di panchina; quando un panchinaro va in campo, il suo posto di panchina si libera
+L'utente può riordinare la panchina (tap-swap o drag) per definire le priorità di sostituzione 1-14
+Per ogni slot panchina: numero priorità piccolo (1-14) sotto/accanto al token
+Layout: i 14 slot su 1 o 2 righe (decidi tu in base alla larghezza disponibile). Se 1 riga è troppo affollata, 2 righe da 7 vanno bene
+
+Conseguenza sul roster panel a destra:
+Diventa parzialmente ridondante (tutti i 25 giocatori sono sempre visibili tra campo + panchina). Mantienilo comunque, ma con questa modifica:
+
+I giocatori sono TUTTI visibili, e ognuno ha un'indicazione del suo stato: titolare / panchina #N / (mai "fuori rosa" perché tutti sono schierati)
+Il roster diventa quindi un modo alternativo di vedere la squadra (utile per scrolling rapido, filtraggio per ruolo, leggere voti)
+Tap su giocatore nel roster apre un menu "Sposta in...": titolare in slot disponibile (se compatibile) o panchina (con scelta posizione)
+
+In alternativa più semplice: il roster panel può anche essere rimosso dalla pagina formazione ora che tutti i 25 sono visibili. Decidi tu se preserve & adapt o se è più pulito eliminarlo. Propendo per mantenerlo ma con la modifica sopra: utile per filtrare/cercare.
+Stop. Riportami screenshot della pagina con 11 titolari + 14 in panchina, layout pulito.
+Task 89 — PlayerToken: anatomia completa con tutti i badges
+Il token attuale sul campo mostra solo [foto] [nome]. Vanno aggiunti tutti i badges previsti dal design originale. Anatomia completa:
+         ┌─────────────────┐
+casa ►   │   [ring]        │   ◄ voto badge (es. 7.5)
+         │   [ foto ]      │
+         │                 │
+         └─────────────────┘
+              [ MIL ]          ← team color pill (split rosso/nero) con 3 iniziali in bianco shadow
+                Reina           ← cognome
+                                ◄ (badge capitano "C" giallo, opzionale)
+Elementi:
+
+Ring affinità attorno alla foto: cerchio sottile (~3px stroke) attorno alla foto del giocatore. Colore:
+
+In modalità Classic (l'unica attiva ora): SEMPRE verde --accent-green (un verde chiaro brand-coherent, decidi la sfumatura)
+Architetturalmente: il colore è una prop del token (affinityColor: string). In Classic la prop arriva sempre = verde. In Mantra (futuro) arriverà variato per slot non-primari. Implementa la prop ora, valore hardcoded a verde
+
+
+Foto giocatore: dentro il ring, circolare. Dimensione ~70-80px diametro su desktop
+Icona casa/trasferta: piccola (~16-20px), posizionata in alto a sinistra del cerchio foto, leggermente sovrapposta. Icone Lucide Home (casa) o Plane (trasferta). Background cerchietto bianco semi-trasparente per leggibilità su qualsiasi sfondo
+Voto badge: in alto a destra del cerchio foto, sovrapposto. Cerchietto piccolo (~22-26px) con sfondo --green-deep, testo bianco font mono. Mostra votoMister formattato a 1 decimale (7.5). Se NULL: cerchietto outline grigio con —
+Pill team colors (sotto foto): rettangolo arrotondato (~80% della larghezza della foto), split verticale con primaryHex a sinistra e secondaryHex a destra. Sopra il pill: 3 iniziali del nome squadra Serie A in bianco font mono small, con text-shadow: 0 1px 2px rgba(0,0,0,0.6) per leggibilità sulle metà chiare. Le 3 iniziali devono essere conformi a quelle già usate nel roster (es. "MIL", "INT", "JUV") — usa una mappa team_id → 3 letter code
+Nome giocatore: sotto la pill, font Inter sans 11-12px, color cream-light o white. Mostra solo il cognome (split del full name dopo l'ultimo spazio). Se troppo lungo, truncate con ellipsis
+Capitano indicator: piccolo badge "C" giallo (es. #F4C430) in basso a destra del cerchio foto, sovrapposto, ~18-22px. Appare solo se questo giocatore è il capitano
+
+Dimensione totale del token sul campo: ~110-130px di altezza × ~90-110px di larghezza. Mantieni proporzioni quando scala su viewport piccoli.
+Verifica visiva: schiera 11 titolari e screenshot. Ogni token deve mostrare nettamente foto + pill colori squadra + casa/aereo + voto + nome. Pepe Reina (Como) dovrebbe avere pill blu/bianco con "COM" in bianco. Belotti (Roma) dovrebbe avere pill granata/giallo con "ROM".
+Task 90 — Bench token: variante compatta + ring per ruolo
+I token in panchina sono più piccoli e usano una variante del PlayerToken con queste differenze:
+
+Dimensione: ~50-60px di altezza totale (vs 110-130 del campo)
+Foto: ~36-44px diametro
+Ring colorato attorno alla foto: invece di verde-affinità, il ring usa il colore del ruolo del giocatore (lo stesso che usi per le badge ruolo nel roster):
+
+P (GK): arancio
+D (DEF): verde scuro
+C (MID): azzurro/blu
+A (ATT): rosso/granata
+
+
+Pill team colors: stessa logica del campo ma più piccolo (~70% delle dimensioni del campo)
+Voto badge: sì, mantieni il voto come piccolo cerchietto sovrapposto
+Casa/aereo: sì, mantieni
+Nome: solo cognome, font ancora più piccolo (10-11px)
+Numero priorità panchina (1-14): sotto il token, font mono small, color secondary
+Capitano: non applicabile (capitano è sempre titolare in fantacalcio)
+
+Riusa lo stesso component PlayerToken con prop variant: 'field' | 'bench' per evitare duplicazione di codice.
+Riportami screenshot finale: pitch + panchina, tutti i badges visibili sia nei titolari (verde ring) sia nei panchinari (ring colorato per ruolo).
