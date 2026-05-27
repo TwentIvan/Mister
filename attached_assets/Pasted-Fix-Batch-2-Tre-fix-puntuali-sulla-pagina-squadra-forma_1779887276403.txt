@@ -1,0 +1,57 @@
+Fix Batch 2
+
+Tre fix puntuali sulla pagina /squadra/formazione. Tutti prima di considerare Batch 2 chiuso.
+Task 82 — Slot del campo: ovali → cerchi perfetti
+Gli slot vuoti sul pitch (P, D, C, A, T) sono renderizzati come ovali allungati orizzontalmente invece che cerchi tondi. Vedi screenshot: il "P" in alto e tutti gli altri sono stirati. Issue di CSS:
+
+Probabile causa: width fissa in % (es. width: 12%) ma height in px (o viceversa). Il container flex con justify-content: space-evenly allarga lo slot per riempire lo spazio
+Fix: lo slot deve avere width = height (entrambi in px o entrambi aspect-ratio: 1/1 esplicito), e border-radius: 50% (non 100% che potrebbe interagire male)
+Dimensione consigliata: ~72px su desktop, scalata con clamp per il responsive (clamp(56px, 8vh, 80px))
+Distribuzione orizzontale degli slot: il container row deve avere gap fisso e justify-content: center, non space-evenly (che provoca l'effetto stiramento se gli items hanno width %)
+
+Task 83 — Tap-to-select: NON FUNZIONA, va riparato
+L'utente conferma: cliccare uno slot vuoto, poi cliccare un giocatore della rosa, non assegna nulla. Il flusso interattivo che avevi descritto a Task 80 non è operativo nella realtà.
+Debuga step-by-step:
+
+Verifica con console.log che il click su slot setti selectedSlot (lo state si aggiorna?)
+Verifica visivamente che lo slot selezionato cambi bordo (feedback "sono attivo")
+Verifica che il filtro automatico della rosa per ruolo dello slot avvenga (es. tap su P → mostra solo i 3 portieri)
+Verifica che il click su giocatore della rosa: legga selectedSlot, controlli compatibilità ruolo, chiami setSlots con l'assegnazione
+
+Una causa frequente: handler React passati come prop ma non rebindati correttamente (uso di onClick={handler} con handler ricreato a ogni render senza memo, oppure event propagation che non arriva). Un'altra: il setSlots non muta correttamente l'array (perde reference, React non rerendera).
+Quando hai fatto i fix, testa la sequenza completa:
+
+Modulo 4-3-3, tap su P → bordo verde visibile + rosa filtrata sui 3 portieri
+Tap su Pepe Reina nella rosa → entra nello slot P, lo slot diventa pieno con il PlayerToken, P scompare dalla rosa attiva (greyed out)
+Tap su uno slot D, poi su C. Cama → entra come difensore
+Tap su slot già pieno → diventa selezionato (per swap)
+Tap su altro slot pieno (o vuoto compatibile) → swap dei due giocatori
+Long-press / doppio tap su slot pieno → rimuove il giocatore (torna in rosa)
+
+Riportami il flusso 1→6 confermato funzionante prima di passare al task 84.
+Task 84 — Roster: aggiungi info squadra avversaria + icona casa/trasferta
+La colonna rosa attualmente mostra: foto · nome · squadra Serie A · badge ruolo · voto. Manca l'informazione cruciale per il manager: contro chi gioca quel giocatore in giornata 2 (la giornata che sta schierando) e se in casa o trasferta (la squadra Serie A del giocatore, non il fanta-team).
+Arricchimento mock data: per ogni squadra Serie A 2024-25 hardcoda l'avversario di giornata 2 + se gioca in casa o trasferta. Aggiungi al mock-data.ts:
+typescript// Mappa team_id → match info per Serie A giornata 2
+// Dati plausibili hardcoded (in produzione verranno da API-Football fixtures)
+const SERIE_A_ROUND_2_FIXTURES: Record<number, { opponent: string; opponentShort: string; isHome: boolean }> = {
+  489:  { opponent: "Torino", opponentShort: "TOR", isHome: true },        // Milan
+  505:  { opponent: "Lecce", opponentShort: "LEC", isHome: false },        // Inter
+  496:  { opponent: "Verona", opponentShort: "VER", isHome: true },        // Juventus
+  // ... copri tutte le 20 squadre con accoppiamenti plausibili
+};
+Poi enrich ogni RosterPlayer mockato joinando su current_team_id per produrre nextOpponent: string e nextOpponentIsHome: boolean. Mantieni anche fieldStatus per il match Mister (che già hai).
+UI: aggiorna ogni riga del roster per mostrare:
+[foto] Nome Giocatore                  [ruolo] [voto]
+       Squadra · [icon] vs Avversario
+Layout sotto il nome: una riga secondaria piccola (font size 11-12px, color --text-secondary) che mostra "Squadra Serie A" + separatore "·" + icona (Home casetta se isHome, Plane aereo se trasferta) + "vs OPPONENT_SHORT" (3 lettere). Esempio per F. Rossi (Atalanta vs Lazio in casa):
+F. Rossi
+Atalanta · 🏠 vs LAZ
+(uso emoji solo per illustrare, in codice serve l'icona Lucide vera)
+Il colore dell'icona: cream secondary, sobrio. Stesso peso visivo del testo team.
+Riportami:
+
+Screenshot del pitch con slot cerchi (non più ovali) e modulo 4-3-3
+Screenshot della rosa con almeno 4-5 righe che mostrano la nuova info "squadra · icona vs avversario"
+Conferma del flusso tap-to-select 1→6 testato
+Typecheck pulito
