@@ -1,6 +1,7 @@
 import { drizzle } from "drizzle-orm/node-postgres";
 import pg from "pg";
 import { seedSystemTemplates } from "./templates";
+import { seedVotoAlgorithmConfig } from "./voto-algorithm-config";
 
 const { Pool } = pg;
 
@@ -11,7 +12,9 @@ if (!process.env.DATABASE_URL) {
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const db = drizzle(pool);
 
-seedSystemTemplates(db)
+Promise.resolve()
+  .then(() => seedSystemTemplates(db))
+  .then(() => seedVotoAlgorithmConfig(db))
   .then(() => {
     console.log("Seed completato.");
     process.exit(0);

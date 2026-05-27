@@ -11,3 +11,4 @@ export * from "./market-events";
 export * from "./contracts";
 export * from "./fanta-teams";
 export * from "./players";
+export * from "./voto-algorithm-config";

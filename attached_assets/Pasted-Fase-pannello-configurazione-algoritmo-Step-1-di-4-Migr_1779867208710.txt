@@ -1,0 +1,126 @@
+Fase pannello configurazione algoritmo. Step 1 di 4 (Migration + Seed). Tabella voto_algorithm_config, riga di sistema seed, vincolo unique attivo.
+Task 37 — Schema Drizzle
+Crea lib/db/src/schema/voto-algorithm-config.ts:
+typescriptimport { pgTable, serial, integer, text, jsonb, boolean, timestamp, check } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
+import { federations } from "./federations";
+
+export const votoAlgorithmConfig = pgTable(
+  "voto_algorithm_config",
+  {
+    id: serial("id").primaryKey(),
+    federationId: integer("federation_id").references(() => federations.id, { onDelete: "cascade" }),
+    version: text("version").notNull(),
+    configJson: jsonb("config_json").notNull(),
+    status: text("status").notNull(),
+    isProtected: boolean("is_protected").notNull().default(false),
+    notes: text("notes"),
+    createdBy: text("created_by"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    statusCheck: check("voto_config_status_check", sql`${table.status} IN ('draft', 'active', 'archived')`),
+  })
+);
+Esporta dallo lib/db/src/schema/index.ts aggiungendo export * from "./voto-algorithm-config".
+Task 38 — Push schema
+bashpnpm --filter @workspace/db run push
+Atteso: aggiunge la tabella voto_algorithm_config, nessun'altra modifica. Se push trova diff inattesi su altre tabelle (residui di sessioni passate), fermati e mostrami.
+Task 39 — Vincolo unique partial via raw SQL
+Drizzle non supporta sempre indici unici con COALESCE in funzione + condizione WHERE. Aggiungiamolo via SQL diretto:
+sqlCREATE UNIQUE INDEX IF NOT EXISTS one_active_config_per_federation
+  ON voto_algorithm_config (COALESCE(federation_id, 0))
+  WHERE status = 'active';
+Verifica creazione:
+sqlSELECT indexname, indexdef
+FROM pg_indexes
+WHERE schemaname = 'public' AND tablename = 'voto_algorithm_config';
+Atteso: vedi sia voto_algorithm_config_pkey che one_active_config_per_federation.
+Task 40 — Seed system default v1.0
+Crea lib/db/src/seeds/voto-algorithm-config.ts:
+typescriptimport { db } from "../db"; // adatta al wrapper effettivo
+import { votoAlgorithmConfig } from "../schema/voto-algorithm-config";
+import { eq, and, isNull } from "drizzle-orm";
+
+// Importa defaultVotoConfig da scripts/voto-mister/config.ts
+// Se l'import cross-package non è possibile, copialo qui letteralmente:
+const defaultVotoConfig = {
+  anchor: 6.0,
+  minutes: { threshold: 15, fullSample: 60, extrapolationCap: 1.5 },
+  stripping: {
+    goalFirst: 0.79,
+    goalIncremental: 0.83,
+    penaltyExtraOverGoal: 0.13,
+    assist: 0.60,
+    penaltyMissed: 0.60,
+    penaltyCommitted: 0.57,
+    redCardPrior: 1.0,
+    savePrior: 1.0,
+  },
+  blend: { alphaStats: 0.35, betaRating: 0.65 },
+  stats: {
+    passAccuracy: { neutral: 80, weightPerPoint: 0.012, minPasses: 10 },
+    duelWinRate: { neutral: 50, weightPerPoint: 0.008, minDuels: 5 },
+    dribbleSuccessRate: { neutral: 50, weightPerPoint: 0.005, minAttempts: 2 },
+    keyPass: { perUnit: 0.12, cap: 0.60 },
+    tackle: { perUnit: 0.08, cap: 0.48 },
+    block: { perUnit: 0.10, cap: 0.40 },
+    interception: { perUnit: 0.10, cap: 0.50 },
+    shotOn: { perUnit: 0.10, cap: 0.50 },
+    save: { perUnit: 0.15, cap: 1.05 },
+    foulDrawn: { perUnit: 0.05, cap: 0.20 },
+    shotOffTarget: { perUnit: -0.03, cap: -0.15 },
+    foulCommitted: { perUnit: -0.04, cap: -0.20 },
+    dribbledPast: { perUnit: -0.10, cap: -0.40 },
+  },
+};
+
+export async function seedVotoAlgorithmConfig(database) {
+  // Verifica idempotenza
+  const existing = await database
+    .select()
+    .from(votoAlgorithmConfig)
+    .where(and(isNull(votoAlgorithmConfig.federationId), eq(votoAlgorithmConfig.version, "v1.0")))
+    .limit(1);
+  
+  if (existing.length > 0) {
+    console.log("[seed] voto_algorithm_config v1.0 system default già presente, skip");
+    return;
+  }
+  
+  await database.insert(votoAlgorithmConfig).values({
+    federationId: null,
+    version: "v1.0",
+    configJson: defaultVotoConfig,
+    status: "active",
+    isProtected: true,
+    notes: "Configurazione algoritmo voto Mister v1.0. Calibrata su backtest Serie A 2024-25 round 1-2 (623 record). Correzione interpretazione passes.accuracy applicata.",
+    createdBy: "system",
+  });
+  
+  console.log("[seed] voto_algorithm_config v1.0 system default inserito");
+}
+Registra la chiamata seedVotoAlgorithmConfig accanto a seedSystemTemplates dove già viene invocata (probabilmente nel comando pnpm --filter @workspace/db run seed). Esegui:
+bashpnpm --filter @workspace/db run seed
+Task 41 — Verifiche post-seed
+sql-- Riga inserita correttamente
+SELECT id, federation_id, version, status, is_protected, notes, created_by, created_at,
+       jsonb_pretty(config_json) AS config
+FROM voto_algorithm_config;
+Atteso: 1 sola riga, federation_id = NULL, version = 'v1.0', status = 'active', is_protected = true. Il config_json deve essere identico (modulo formattazione) al defaultVotoConfig del codice.
+Test del vincolo unique attivo per federazione — prova inserimento "attivo" duplicato (per system default, federation_id=NULL):
+sql-- Questo deve fallire con violazione del vincolo unico
+INSERT INTO voto_algorithm_config (federation_id, version, config_json, status, is_protected)
+VALUES (NULL, 'v1.0-test', '{}', 'active', false);
+Atteso: errore duplicate key value violates unique constraint "one_active_config_per_federation". Se non fallisce, segnalami: il vincolo non sta funzionando come previsto.
+Pulisci eventuale risultato accidentale di test (rollback automatico se la transazione fallisce, ma controlla per scrupolo):
+sqlSELECT COUNT(*) FROM voto_algorithm_config WHERE version = 'v1.0-test';
+Deve essere 0.
+Riportami:
+
+Output del seed (creato o già presente?)
+Output della verifica completa con jsonb_pretty
+Conferma che il vincolo unique respinge il duplicato
+Conferma che non rimangono righe orfane di test
+
+NON toccare: codice dell'algoritmo (compute.ts, run-backtest.ts), UI, schema OpenAPI. Quelli sono Step 2-4 prossimi.
