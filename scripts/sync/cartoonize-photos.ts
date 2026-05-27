@@ -1,11 +1,11 @@
 /**
  * cartoonize-photos.ts
- * Pipeline: download originale → face-detect CJS (blazeface) → crop viso
- *           → Replicate (3D Pixar) → remove.bg → webp 512×512
+ * Pipeline: download originale → face-detect CJS (blazeface, landmark-based)
+ *           → crop viso con padding bianco → Replicate (3D Pixar) → webp 512×512
  *
  * Uso:
- *   node_modules/.bin/tsx ./sync/cartoonize-photos.ts --players 1624,35544,6409
- *   node_modules/.bin/tsx ./sync/cartoonize-photos.ts --all-mario [--force]
+ *   pnpm --filter @workspace/scripts run sync:cartoonize -- --players 1624,35544,6409
+ *   pnpm --filter @workspace/scripts run sync:cartoonize -- --all-mario [--force]
  */
 
 import { db } from "@workspace/db";
@@ -28,8 +28,6 @@ const REPLICATE_MODEL =
 
 const REPLICATE_INPUT = {
   style: "3D",
-  // L'input è già pre-croppato sul viso via blazeface.
-  // Il prompt rinforza stile e sfondo; control_depth alto mantiene il framing dell'input.
   prompt:
     "3D Pixar animation style, face portrait, white background, centered face",
   negative_prompt:
@@ -41,7 +39,6 @@ const REPLICATE_INPUT = {
   control_depth_strength: 0.8,
 };
 
-const REMOVE_BG_KEY = process.env.REMOVE_BG_API_KEY ?? "";
 const CONCURRENCY = 3;
 const MAX_RETRIES = 3;
 const RETRY_DELAY_MS = 5000;
@@ -58,87 +55,114 @@ const AVATARS_DIR = path.resolve(
   "../../artifacts/mister-web/public/avatars",
 );
 const FACE_DETECT_SCRIPT = path.resolve(__dirname, "face-detect.cjs");
-const NODE_BIN = process.execPath; // stesso Node.js del processo corrente
+const NODE_BIN = process.execPath;
+
+// ─── Tipi ─────────────────────────────────────────────────────────────────────
+
+/** Output di face-detect.cjs — coordinate grezze (possono sforare i bordi). */
+interface FaceDetectResult {
+  /** Nessun viso trovato: usa center-crop come fallback. */
+  fallback?: boolean;
+  /** Coordinata sinistra del crop (può essere negativa). */
+  rawLeft?: number;
+  /** Coordinata superiore del crop (può essere negativa). */
+  rawTop?: number;
+  /** Lato del quadrato di crop. */
+  size?: number;
+  /** Larghezza immagine originale. */
+  w: number;
+  /** Altezza immagine originale. */
+  h: number;
+  /** true se il crop è stato calcolato dal bounding-box (landmark invalidi). */
+  bbox?: boolean;
+}
 
 // ─── Face-crop via subprocess CJS ─────────────────────────────────────────────
 
-interface CropBox {
-  left: number;
-  top: number;
-  width: number;
-  height: number;
-}
-interface FaceResult {
-  fallback: boolean;
-  w: number;
-  h: number;
-  left?: number;
-  top?: number;
-  width?: number;
-  height?: number;
-}
-
 /**
- * Rileva il viso nell'immagine tramite un subprocess CJS (blazeface).
- * Il subprocess patcha tf.util.isNullOrUndefined prima di caricare blazeface,
- * aggiramento del breaking change di TF.js 4.x.
- * Restituisce il crop box da passare a sharp.extract().
+ * Richiama face-detect.cjs (subprocess CJS) che usa blazeface per rilevare il viso
+ * e calcola le coordinate di crop (landmark-based con fallback bbox).
  */
-async function preCropFace(imageBuffer: Buffer): Promise<CropBox | null> {
+async function detectFace(imageBuffer: Buffer): Promise<FaceDetectResult> {
   const b64 = imageBuffer.toString("base64");
-
   try {
     const { stdout, stderr } = await execFileAsync(
       NODE_BIN,
       [FACE_DETECT_SCRIPT, b64],
-      { maxBuffer: 1024 * 1024 * 10 }, // 10MB stdout max
+      { maxBuffer: 1024 * 1024 * 10 },
     );
     if (stderr) process.stderr.write(stderr);
-
-    const result: FaceResult = JSON.parse(stdout.trim());
-    if (result.fallback) {
-      return null; // usa center-crop nel chiamante
-    }
-    return {
-      left: result.left!,
-      top: result.top!,
-      width: result.width!,
-      height: result.height!,
-    };
+    return JSON.parse(stdout.trim()) as FaceDetectResult;
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     process.stderr.write(`  face-detect subprocess error: ${msg}\n`);
-    return null;
+    return { fallback: true, w: 0, h: 0 };
   }
 }
 
 /**
- * Applica il crop (da preCropFace) e ridimensiona a 512 px quadrato.
- * Se cropBox è null → center-crop quadrato dell'immagine originale.
+ * Applica il crop al buffer originale e restituisce un PNG 512×512.
+ *
+ * Algoritmo:
+ * 1. Se nessun viso rilevato → center-crop quadrato dell'immagine.
+ * 2. Se crop landmark/bbox → clamp ai bordi + .extend() con sfondo bianco
+ *    per i margini mancanti → resize 512×512 con fit:'fill'.
  */
 async function applyCrop(
   imageBuffer: Buffer,
-  cropBox: CropBox | null,
+  det: FaceDetectResult,
 ): Promise<Buffer> {
-  let src = sharp(imageBuffer);
-
-  if (cropBox) {
-    src = src.extract({
-      left: cropBox.left,
-      top: cropBox.top,
-      width: cropBox.width,
-      height: cropBox.height,
-    });
-  } else {
-    // Fallback: center-crop quadrato
+  // ── Caso: nessun viso ──────────────────────────────────────────────────────
+  if (det.fallback || det.rawLeft === undefined) {
     const meta = await sharp(imageBuffer).metadata();
     const size = Math.min(meta.width ?? 512, meta.height ?? 512);
     const left = Math.round(((meta.width ?? size) - size) / 2);
-    const top = Math.round(((meta.height ?? size) - size) / 2);
-    src = src.extract({ left, top, width: size, height: size });
+    const top  = Math.round(((meta.height ?? size) - size) / 2);
+    return sharp(imageBuffer)
+      .extract({ left, top, width: size, height: size })
+      .resize(512, 512, { fit: "fill" })
+      .png()
+      .toBuffer();
   }
 
-  return src.resize(512, 512).png().toBuffer();
+  // ── Caso: crop con coordinate grezze (possono sforare) ────────────────────
+  const { rawLeft, rawTop, size, w, h } = det;
+
+  // Coordinate clamped ai bordi dell'immagine
+  const actualLeft   = Math.max(0, Math.round(rawLeft));
+  const actualTop    = Math.max(0, Math.round(rawTop));
+  const actualRight  = Math.min(w, Math.round(rawLeft + size));
+  const actualBottom = Math.min(h, Math.round(rawTop + size));
+  const actualWidth  = actualRight - actualLeft;
+  const actualHeight = actualBottom - actualTop;
+
+  // Padding necessario per le zone fuori bordo
+  const padTop    = actualTop  - Math.round(rawTop)  > 0 ? actualTop  - Math.round(rawTop)  : 0;
+  const padLeft   = actualLeft - Math.round(rawLeft) > 0 ? actualLeft - Math.round(rawLeft) : 0;
+  const padBottom = Math.round(rawTop  + size) - actualBottom > 0 ? Math.round(rawTop  + size) - actualBottom : 0;
+  const padRight  = Math.round(rawLeft + size) - actualRight  > 0 ? Math.round(rawLeft + size) - actualRight  : 0;
+
+  const WHITE = { r: 255, g: 255, b: 255, alpha: 1 };
+
+  let pipeline = sharp(imageBuffer)
+    .extract({ left: actualLeft, top: actualTop, width: actualWidth, height: actualHeight });
+
+  // Aggiunge padding bianco solo se necessario
+  if (padTop > 0 || padBottom > 0 || padLeft > 0 || padRight > 0) {
+    pipeline = pipeline.extend({
+      top:    padTop,
+      bottom: padBottom,
+      left:   padLeft,
+      right:  padRight,
+      background: WHITE,
+    });
+  }
+
+  return pipeline
+    .flatten({ background: WHITE })
+    .resize(512, 512, { fit: "fill" })
+    .png()
+    .toBuffer();
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -206,13 +230,19 @@ async function processPlayer(
       // ── Step 1: scarica originale → face-detect → crop ────────────────────
       const originalBuf = await downloadBuffer(player.photoUrl);
       console.log(`${tag} — face detect…`);
-      const cropBox = await preCropFace(originalBuf);
-      const croppedBuf = await applyCrop(originalBuf, cropBox);
-      if (cropBox) {
-        console.log(`${tag} — crop OK: ${cropBox.width}×${cropBox.height} @ (${cropBox.left},${cropBox.top})`);
-      } else {
+      const det = await detectFace(originalBuf);
+      const croppedBuf = await applyCrop(originalBuf, det);
+
+      if (det.fallback) {
         console.log(`${tag} — nessun viso, center crop`);
+      } else {
+        const method = det.bbox ? "bbox" : "landmark";
+        const s = Math.round(det.size ?? 0);
+        console.log(
+          `${tag} — crop OK [${method}]: ${s}×${s} @ (${Math.round(det.rawLeft!)},${Math.round(det.rawTop!)})`,
+        );
       }
+
       const imageBlob = new Blob([croppedBuf], { type: "image/png" });
 
       // ── Step 2: Replicate ─────────────────────────────────────────────────
@@ -249,41 +279,13 @@ async function processPlayer(
       if (urls.length === 0) throw new Error("Replicate non ha restituito URL");
       const imageUrl = urls[0];
 
-      // ── Step 3: remove.bg → trim → resize 512×512 → webp ─────────────────
-      let workingBuf: Buffer;
-      let hasTransparency = false;
-
-      if (REMOVE_BG_KEY) {
-        console.log(`${tag} — rimozione sfondo (remove.bg)…`);
-        try {
-          const formData = new FormData();
-          formData.append("image_url", imageUrl);
-          formData.append("size", "auto");
-          const rbgRes = await fetch("https://api.remove.bg/v1.0/removebg", {
-            method: "POST",
-            headers: { "X-Api-Key": REMOVE_BG_KEY },
-            body: formData,
-          });
-          if (!rbgRes.ok) {
-            const errText = await rbgRes.text();
-            throw new Error(`remove.bg ${rbgRes.status}: ${errText.slice(0, 80)}`);
-          }
-          workingBuf = Buffer.from(await rbgRes.arrayBuffer());
-          hasTransparency = true;
-          console.log(`${tag} — sfondo rimosso OK`);
-        } catch (rbgErr: unknown) {
-          const msg = rbgErr instanceof Error ? rbgErr.message : String(rbgErr);
-          console.warn(`${tag} — remove.bg fallito (${msg}), uso immagine Replicate`);
-          workingBuf = await downloadBuffer(imageUrl);
-        }
-      } else {
-        workingBuf = await downloadBuffer(imageUrl);
-      }
+      // ── Step 3: download → trim → 512×512 webp ───────────────────────────
+      const workingBuf = await downloadBuffer(imageUrl);
 
       fs.mkdirSync(AVATARS_DIR, { recursive: true });
 
       const trimmedBuf = await sharp(workingBuf)
-        .trim({ threshold: hasTransparency ? 5 : 20 })
+        .trim({ threshold: 20 })
         .toBuffer();
 
       await sharp(trimmedBuf)

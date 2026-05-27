@@ -1,0 +1,79 @@
+Aggiornamento dello script cartoonize-photos.ts — passaggio dal crop bounding-box-based al crop landmark-based per uniformità chirurgica del framing.
+Pulizia preliminare
+Prima di tutto: rimuovi qualsiasi riferimento a remove.bg dallo script e dalle dipendenze. Non lo usiamo, era una deviazione fuori scope. Lo sfondo che esce da Replicate (chiaro neutro o leggermente colorato) va benissimo così.
+Lascia invece la patch di node_modules/@tensorflow/tfjs-node/dist/nodejs_kernel_backend.js per util.isNullOrUndefined — funziona, è un workaround noto, non toccare. Documentala in un commento nel package.json o in un POSTINSTALL.md per chi clonerà il repo in futuro.
+Task 94 — Crop landmark-based
+BlazeFace restituisce 6 landmark per ogni volto, nell'ordine: [rightEye, leftEye, nose, mouth, rightEarTragion, leftEarTragion]. Usiamo questi per normalizzare la composizione di ogni avatar a una forma identica.
+Nuovo algoritmo di crop: sostituisci preCropFace con la versione landmark-based:
+typescriptfunction landmarkBasedCrop(
+  detection: BlazeFaceDetection,
+  imageWidth: number,
+  imageHeight: number
+): { left: number; top: number; size: number } {
+  // BlazeFace landmark order: rightEye, leftEye, nose, mouth, rightEar, leftEar
+  const [rightEye, leftEye, _nose, mouth] = detection.landmarks;
+  
+  // Eye midpoint (centro orizzontale e verticale di riferimento)
+  const eyeCenterX = (leftEye[0] + rightEye[0]) / 2;
+  const eyeCenterY = (leftEye[1] + rightEye[1]) / 2;
+  
+  // Mouth Y come riferimento verticale inferiore
+  const mouthY = mouth[1];
+  
+  // "Face unit" = distanza occhi-bocca (proxy della scala del volto)
+  const eyeToMouthDist = mouthY - eyeCenterY;
+  
+  // Validazione: se la distanza è anomala, fallback al bounding box
+  if (eyeToMouthDist < 5 || eyeToMouthDist > imageHeight * 0.6) {
+    return fallbackBoundingBoxCrop(detection, imageWidth, imageHeight);
+  }
+  
+  // PARAMETRI CALIBRATI per composizione uniforme:
+  // - K = 3.8 → crop size = ~3.8x la distanza occhi-bocca
+  // - EYE_OFFSET_FROM_TOP = 0.38 → posiziona occhi al 38% dall'alto
+  // Risultato: mouth si trova naturalmente al ~64% dall'alto
+  const K = 3.8;
+  const EYE_OFFSET_FROM_TOP = 0.38;
+  
+  const cropSize = eyeToMouthDist * K;
+  const cropTop = eyeCenterY - (EYE_OFFSET_FROM_TOP * cropSize);
+  const cropLeft = eyeCenterX - (cropSize / 2);
+  
+  return { left: cropLeft, top: cropTop, size: cropSize };
+}
+
+function fallbackBoundingBoxCrop(detection, imageWidth, imageHeight) {
+  // Fallback dell'attuale algoritmo (faceH × 1.25, centrato, offset upward)
+  // Solo se i landmark sono invalidi
+}
+Applicazione del crop con sharp:
+Il crop calcolato può sforare i bordi dell'immagine originale (parte del volto + margine può cadere fuori). Usa sharp con questa strategia:
+
+Calcola le coordinate effettive: actualLeft = max(0, cropLeft), actualTop = max(0, cropTop), actualRight = min(imageWidth, cropLeft + cropSize), actualBottom = min(imageHeight, cropTop + cropSize)
+Estrai con .extract({ left: actualLeft, top: actualTop, width: actualRight - actualLeft, height: actualBottom - actualTop })
+Se ci sono bordi mancanti (cioè actualLeft > cropLeft o simile), usa .extend() per padding bianco { r: 255, g: 255, b: 255 } o trasparente
+Resize finale a 512×512 con fit: 'fill' (non cover, perché la geometria è già esatta)
+Output PNG → buffer → invia a Replicate
+
+Test sui 5 sample (validazione qualitativa)
+Prima di lanciare i 25, riesegui il batch sui 5 sample originali con --force:
+bashpnpm --filter @workspace/scripts run sync:cartoonize -- --players 1624,35544,6409,1358,30509 --force
+Apri i 5 webp generati e verifica visivamente che:
+
+Tutti i volti abbiano la stessa proporzione nel quadrato (occhi alla stessa altezza, bocca alla stessa altezza)
+Nessun collo visibile (al massimo un accenno di gola sotto al mento)
+Nessuna spalla
+Il framing sia coerente sui 5 player
+
+Se ci sono ancora outlier (es. 1 dei 5 ha framing strano), prima di passare al batch dimmi su quale e con che effetto — può servire fine-tuning del parametro K (3.5 → più tight, 4.2 → più loose) o EYE_OFFSET_FROM_TOP (0.42 → più spazio in alto).
+Riportami:
+
+I 5 sample sono visivamente uniformi tra loro per posizione occhi/bocca nel quadrato?
+Tutti senza collo/spalle?
+Se sì, lancia il batch completo:
+
+bash   pnpm --filter @workspace/scripts run sync:cartoonize -- --all-mario --force
+
+Quando finito, conferma 25/25 e cambia il file di mock data mister-web/src/pages/formazione/mock-data.ts per usare photoCartoonUrl invece di photoUrl (banale find/replace)
+Screenshot della pagina Formazione coi 25 nuovi avatar (sia titolari schierati che in panchina)
+
