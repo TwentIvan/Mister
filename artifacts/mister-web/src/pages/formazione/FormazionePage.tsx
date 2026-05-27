@@ -426,31 +426,31 @@ function Pitch({ modulo, fieldSlots, selection, captainId, onSlotClick, onSlotDo
           </pattern>
         </defs>
         <rect x="0" y="0" width="100" height="140" fill="url(#pitch-stripes)" />
-        {/* Campo verde — spostato a destra (~10%) per lasciare spazio all'area tecnica */}
-        <rect x="14" y="5" width="81" height="130" fill="none" stroke="rgba(239,230,211,0.28)" strokeWidth="0.6" />
-        <line x1="14" y1="70" x2="95" y2="70" stroke="rgba(239,230,211,0.28)" strokeWidth="0.6" />
-        <circle cx="54.5" cy="70" r="11" fill="none" stroke="rgba(239,230,211,0.28)" strokeWidth="0.6" />
-        <circle cx="54.5" cy="70" r="0.8" fill="rgba(239,230,211,0.45)" />
+        {/* Campo verde — spostato a destra (~14%) per lasciare spazio all'area tecnica */}
+        <rect x="14" y="5" width="81" height="130" fill="none" stroke="#ffffff" strokeWidth="0.6" />
+        <line x1="14" y1="70" x2="95" y2="70" stroke="#ffffff" strokeWidth="0.6" />
+        <circle cx="54.5" cy="70" r="11" fill="none" stroke="#ffffff" strokeWidth="0.6" />
+        <circle cx="54.5" cy="70" r="0.8" fill="#ffffff" />
         {/* Area di rigore in alto */}
-        <rect x="29" y="5" width="51" height="20" fill="none" stroke="rgba(239,230,211,0.28)" strokeWidth="0.6" />
-        <rect x="42" y="5" width="25" height="9" fill="none" stroke="rgba(239,230,211,0.28)" strokeWidth="0.6" />
-        <circle cx="54.5" cy="17" r="0.8" fill="rgba(239,230,211,0.45)" />
+        <rect x="29" y="5" width="51" height="20" fill="none" stroke="#ffffff" strokeWidth="0.6" />
+        <rect x="42" y="5" width="25" height="9" fill="none" stroke="#ffffff" strokeWidth="0.6" />
+        <circle cx="54.5" cy="17" r="0.8" fill="#ffffff" />
         {/* Area di rigore in basso */}
-        <rect x="29" y="115" width="51" height="20" fill="none" stroke="rgba(239,230,211,0.28)" strokeWidth="0.6" />
-        <rect x="42" y="126" width="25" height="9" fill="none" stroke="rgba(239,230,211,0.28)" strokeWidth="0.6" />
-        <circle cx="54.5" cy="123" r="0.8" fill="rgba(239,230,211,0.45)" />
-        {/* Area tecnica — 3 lati (aperta sul lato sinistro verso panchina), fuori dalla touchline */}
-        <line x1="5" y1="28" x2="14" y2="28" stroke="rgba(239,230,211,0.28)" strokeWidth="0.6" strokeDasharray="4 3" />
-        <line x1="5" y1="48" x2="14" y2="48" stroke="rgba(239,230,211,0.28)" strokeWidth="0.6" strokeDasharray="4 3" />
-        <line x1="14" y1="28" x2="14" y2="48" stroke="rgba(239,230,211,0.28)" strokeWidth="0.6" strokeDasharray="4 3" />
+        <rect x="29" y="115" width="51" height="20" fill="none" stroke="#ffffff" strokeWidth="0.6" />
+        <rect x="42" y="126" width="25" height="9" fill="none" stroke="#ffffff" strokeWidth="0.6" />
+        <circle cx="54.5" cy="123" r="0.8" fill="#ffffff" />
+        {/* Area tecnica — 3 lati (aperta sul lato sinistro verso panchina), staccata dalla touchline */}
+        <line x1="3" y1="28" x2="11" y2="28" stroke="#ffffff" strokeWidth="0.6" strokeDasharray="4 3" />
+        <line x1="3" y1="48" x2="11" y2="48" stroke="#ffffff" strokeWidth="0.6" strokeDasharray="4 3" />
+        <line x1="11" y1="28" x2="11" y2="48" stroke="#ffffff" strokeWidth="0.6" strokeDasharray="4 3" />
       </svg>
 
       {/* MiniCoachToken — sovrapposto all'area tecnica (x 5%→14%, y 20%→34.3%) */}
       {coach && (
         <div style={{
           position: "absolute",
-          left: "5%", top: "20%",
-          width: "9%", height: "14.3%",
+          left: "3%", top: "20%",
+          width: "8%", height: "14.3%",
           display: "flex", alignItems: "center", justifyContent: "center",
           pointerEvents: "none",
           zIndex: 2,
