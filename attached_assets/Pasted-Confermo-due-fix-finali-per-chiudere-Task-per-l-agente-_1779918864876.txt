@@ -1,0 +1,52 @@
+Confermo, due fix finali per chiudere.
+Task per l'agente — fix finali Batch 7
+
+Due fix per chiudere Batch 7.
+Task 100 — Match altezza pitch ↔ roster
+Attualmente il pitch termina ben prima della fine della lista roster (che ha 25 righe). Visivamente sembra "tronco". Fix: estendi l'altezza del pitch in modo che coincida con la fine dell'ultima riga del roster.
+Implementazione consigliata:
+
+Il container del pitch usa height: 100% o min-height calcolato dinamicamente in base all'altezza naturale del roster a destra
+L'SVG del pitch si estende verticalmente per riempire questa altezza (il campo apparirà leggermente più "lungo" rispetto al rettangolo regolamentare 105×68m, ma è accettabile per UI)
+I cerchi dei player token mantengono proporzioni fisse — si distribuiscono su un'area più alta ma non si stirano
+Le linee del campo si adattano (area di rigore può essere più alta, cerchio di centrocampo resta tondo perché disegnato in valore assoluto px)
+
+Test: scrolling pagina, il pitch + roster devono terminare alla stessa altezza visiva.
+Task 101 — Inverti orientamento formazione (P in basso, ATT in alto)
+Cambia la convenzione di rendering della formazione. La porta del proprio team va in basso, l'attacco è in alto. È più logico mentalmente per il manager — "la mia squadra è davanti a me, sotto, e attacca verso l'alto".
+Modifiche specifiche:
+
+Inversione Y delle formation rows: tutti i posizionamenti verticali invertiti (new_y = 100 - old_y).
+
+Vecchio (4-3-3): P~10% / DEF~28% / MID~50% / ATT~78%
+Nuovo (4-3-3): ATT~22% / MID~50% / DEF~72% / P~90%
+Stessa logica per gli altri moduli (4-3-1-2, 3-5-2, 4-2-3-1, ecc.)
+
+
+Area tecnica: si sposta dalla metà superiore alla metà inferiore del pitch (la propria metà campo è ora quella inferiore).
+
+Coordinate Y: da ~25% a ~75% dall'alto
+X invariato (bordo sinistro, fuori dal green)
+Lato aperto del rettangolo invariato (lato sinistro lungo aperto, gli altri 3 chiusi)
+Coach token resta dentro l'area tecnica nella nuova posizione
+
+
+Aree di rigore: già disegnate sia in alto che in basso (simmetria del campo). Quindi visivamente non cambiano. Cambia solo l'identità concettuale: l'area in basso ora è quella della propria porta (vicino al GK), quella in alto è dell'avversaria (vicino agli attaccanti). Nessuna modifica al disegno richiesta.
+Test obbligatori:
+
+Schiera Pepe Reina (GK) nel slot P → deve apparire in basso, centrato nell'area piccola della porta inferiore
+Schiera Belotti (ATT) nel primo slot A → deve apparire in alto, vicino all'area piccola della porta superiore
+Coach Allegri (area tecnica) → ora nella metà bassa del pitch, lato sinistro fuori dal green
+Cambia modulo 4-3-3 → 4-3-1-2: il T slot deve apparire tra MID e ATT, quindi tra la riga MID (~50%) e ATT (~22%), cioè al ~36% dall'alto
+
+
+
+Riportami screenshot finale dopo entrambi i fix:
+
+Pitch e roster con la stessa altezza visiva (terminano insieme)
+P in basso (area piccola sotto), ATT in alto (area piccola sopra)
+Area tecnica + coach Allegri nel quadrante basso-sinistra
+Roster sulla sinistra invariato
+
+
+Questo è il vero ultimo fix di Batch 7. Quando torna OK, passiamo allo Step 3 (API CRUD lineup) — backend persistenza vera. Step UI pitch chiude qui dopo... non conto più le iterazioni 😅 ma comunque ora è un pezzo solido che ci porteremo dietro per sempre.

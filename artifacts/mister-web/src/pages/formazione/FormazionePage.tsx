@@ -81,9 +81,10 @@ function lastName(name: string): string {
 
 function rowPositionsForFormation(formation: number[]): number[] {
   const n = formation.length;
-  if (n === 4) return [9, 30, 55, 78];
-  if (n === 5) return [9, 25, 42, 58, 78];
-  return formation.map((_, i) => 9 + (i / (n - 1)) * 69);
+  // Orientamento: ATT in alto (~22%), P in basso (~91%)
+  if (n === 4) return [91, 70, 45, 22];
+  if (n === 5) return [91, 75, 58, 42, 22];
+  return formation.map((_, i) => 91 - (i / (n - 1)) * 69);
 }
 
 // ─── Roster iniziale: tutti i 25, per ruolo poi nome ──────────────────────────
@@ -407,9 +408,9 @@ function Pitch({ modulo, fieldSlots, selection, captainId, onSlotClick, onSlotDo
 
   return (
     <div style={{
-      position: "relative", width: "100%", aspectRatio: "5 / 7",
-      borderRadius: "var(--r-lg) var(--r-lg) 0 0", overflow: "hidden",
-      border: "1px solid rgba(239,230,211,0.12)", borderBottom: "none",
+      position: "relative", width: "100%", height: "100%",
+      borderRadius: "var(--r-lg)", overflow: "hidden",
+      border: "1px solid rgba(239,230,211,0.12)",
       userSelect: "none",
     }}>
       <svg style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none" }} viewBox="0 0 100 140" preserveAspectRatio="none">
@@ -433,17 +434,17 @@ function Pitch({ modulo, fieldSlots, selection, captainId, onSlotClick, onSlotDo
         <rect x="29" y="115" width="51" height="20" fill="none" stroke="#ffffff" strokeWidth="0.6" />
         <rect x="42" y="126" width="25" height="9" fill="none" stroke="#ffffff" strokeWidth="0.6" />
         <circle cx="54.5" cy="123" r="0.8" fill="#ffffff" />
-        {/* Area tecnica — 3 lati (aperta sul lato sinistro verso panchina), staccata dalla touchline */}
-        <line x1="3" y1="28" x2="11" y2="28" stroke="#ffffff" strokeWidth="0.6" strokeDasharray="4 3" />
-        <line x1="3" y1="48" x2="11" y2="48" stroke="#ffffff" strokeWidth="0.6" strokeDasharray="4 3" />
-        <line x1="11" y1="28" x2="11" y2="48" stroke="#ffffff" strokeWidth="0.6" strokeDasharray="4 3" />
+        {/* Area tecnica — 3 lati, quadrante basso-sinistra (propria metà campo = basso) */}
+        <line x1="3" y1="92" x2="11" y2="92" stroke="#ffffff" strokeWidth="0.6" strokeDasharray="4 3" />
+        <line x1="3" y1="112" x2="11" y2="112" stroke="#ffffff" strokeWidth="0.6" strokeDasharray="4 3" />
+        <line x1="11" y1="92" x2="11" y2="112" stroke="#ffffff" strokeWidth="0.6" strokeDasharray="4 3" />
       </svg>
 
       {/* MiniCoachToken — sovrapposto all'area tecnica */}
       {coach && (
         <div style={{
           position: "absolute",
-          left: "3%", top: "20%",
+          left: "3%", top: "65.7%",
           width: "8%", height: "14.3%",
           display: "flex", alignItems: "center", justifyContent: "center",
           pointerEvents: "none",
@@ -838,7 +839,7 @@ export default function FormazionePage() {
       </div>
 
       {/* ── Layout: [Roster | Pitch] ── */}
-      <div className="formazione-grid" style={{ display: "grid", gridTemplateColumns: "280px 1fr", gap: "var(--sp-5)", alignItems: "start" }}>
+      <div className="formazione-grid" style={{ display: "grid", gridTemplateColumns: "280px 1fr", gap: "var(--sp-5)", alignItems: "stretch" }}>
 
         {/* Colonna sinistra: roster / panchina */}
         <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--r-md)", boxShadow: "var(--shadow-card)", overflow: "hidden", display: "flex", flexDirection: "column" }}>
@@ -878,7 +879,7 @@ export default function FormazionePage() {
           </div>
 
           {/* Lista roster */}
-          <div style={{ overflowY: "auto", maxHeight: "calc(100vh - 300px)", minHeight: 300 }}>
+          <div style={{ overflowY: "auto", minHeight: 300 }}>
             {filteredRosterRows.length === 0 ? (
               <div style={{ padding: "24px 16px", textAlign: "center", fontSize: 12, color: "var(--ink-dim)" }}>
                 {starterCount === 11 ? "Tutti i giocatori sono in campo" : "Nessun giocatore in questa posizione"}
@@ -900,7 +901,7 @@ export default function FormazionePage() {
         </div>
 
         {/* Colonna destra: pitch */}
-        <div style={{ background: "#17332a", borderRadius: "var(--r-lg)", border: "1px solid rgba(239,230,211,0.1)", overflow: "hidden" }}>
+        <div style={{ background: "#17332a", borderRadius: "var(--r-lg)", border: "1px solid rgba(239,230,211,0.1)", overflow: "hidden", height: "100%" }}>
           <Pitch
             modulo={modulo}
             fieldSlots={fieldSlots}
