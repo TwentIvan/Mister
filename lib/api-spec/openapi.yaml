@@ -689,6 +689,103 @@ paths:
               schema:
                 $ref: "#/components/schemas/DashboardSummary"
 
+  # ─── VOTO ALGORITHM CONFIG ────────────────────────────────
+  /voto-algorithm-configs:
+    get:
+      operationId: listVotoAlgorithmConfigs
+      tags: [superadmin]
+      summary: Elenco configurazioni algoritmo voto
+      parameters:
+        - name: federationId
+          in: query
+          schema:
+            type: string
+            nullable: true
+          description: Se omesso, ritorna tutte. Stringa speciale 'null' per filtrare solo system default. Altrimenti ID federazione.
+        - name: status
+          in: query
+          schema:
+            $ref: "#/components/schemas/VotoAlgorithmConfigStatus"
+      responses:
+        "200":
+          description: Lista config, ordinate per createdAt desc
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/VotoAlgorithmConfig"
+    post:
+      operationId: createVotoAlgorithmConfig
+      tags: [superadmin]
+      summary: Crea una nuova configurazione algoritmo voto
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VotoAlgorithmConfigCreate"
+      responses:
+        "201":
+          description: Config creata
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VotoAlgorithmConfig"
+        "409":
+          description: Vincolo unique violato (status=active già presente per la federazione)
+
+  /voto-algorithm-configs/{id}:
+    patch:
+      operationId: updateVotoAlgorithmConfig
+      tags: [superadmin]
+      summary: Modifica parziale di una configurazione algoritmo voto
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VotoAlgorithmConfigUpdate"
+      responses:
+        "200":
+          description: Config aggiornata
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VotoAlgorithmConfig"
+        "403":
+          description: Operazione bloccata (es. tentativo di archiviare riga is_protected)
+        "404":
+          description: Config non trovata
+
+  /voto-algorithm-configs/recalculate:
+    post:
+      operationId: recalculateVotoMister
+      tags: [superadmin]
+      summary: Ricalcola voto_mister su tutti i player_giornata_stats
+      description: Usa la config attiva del federation_id specificato (o system default se omesso). Operazione sincrona, ~1s per 600 record.
+      parameters:
+        - name: federationId
+          in: query
+          schema:
+            type: string
+            nullable: true
+      responses:
+        "200":
+          description: Ricalcolo completato
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VotoAlgorithmRecalculateResponse"
+        "404":
+          description: Nessuna config attiva trovata
+
 components:
   parameters:
     StringId:
@@ -1424,4 +1521,85 @@ components:
         template_count:
           type: integer
         total_league_count:
+          type: integer
+
+    # ─── VOTO ALGORITHM CONFIG ─────────────────────────────────
+    VotoAlgorithmConfigStatus:
+      type: string
+      enum: [draft, active, archived]
+
+    VotoMisterConfigPayload:
+      type: object
+      description: Struttura JSON dei parametri algoritmo voto Mister. Forma libera per supportare evoluzioni future senza migration.
+      additionalProperties: true
+
+    VotoAlgorithmConfig:
+      type: object
+      required: [id, version, configJson, status, isProtected, createdAt]
+      properties:
+        id:
+          type: integer
+        federationId:
+          type: string
+          nullable: true
+          description: "NULL = configurazione di sistema (default Mister). Stringa = config specifica per la federazione indicata."
+        version:
+          type: string
+          example: "v1.0"
+        configJson:
+          $ref: "#/components/schemas/VotoMisterConfigPayload"
+        status:
+          $ref: "#/components/schemas/VotoAlgorithmConfigStatus"
+        isProtected:
+          type: boolean
+        notes:
+          type: string
+          nullable: true
+        createdBy:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+
+    VotoAlgorithmConfigCreate:
+      type: object
+      required: [version, configJson, status]
+      properties:
+        federationId:
+          type: string
+          nullable: true
+        version:
+          type: string
+        configJson:
+          $ref: "#/components/schemas/VotoMisterConfigPayload"
+        status:
+          $ref: "#/components/schemas/VotoAlgorithmConfigStatus"
+        notes:
+          type: string
+          nullable: true
+
+    VotoAlgorithmConfigUpdate:
+      type: object
+      description: "Modifica parziale. Tutti i campi opzionali. Se status passa a 'active', la precedente attiva per la stessa federazione viene archiviata atomicamente."
+      properties:
+        configJson:
+          $ref: "#/components/schemas/VotoMisterConfigPayload"
+        status:
+          $ref: "#/components/schemas/VotoAlgorithmConfigStatus"
+        notes:
+          type: string
+          nullable: true
+
+    VotoAlgorithmRecalculateResponse:
+      type: object
+      required: [updatedCount, skippedCount, durationMs]
+      properties:
+        updatedCount:
+          type: integer
+          description: Righe player_giornata_stats con voto_mister aggiornato
+        skippedCount:
+          type: integer
+          description: Righe sotto soglia minuti (voto_mister resta NULL)
+        durationMs:
           type: integer

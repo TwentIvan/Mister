@@ -1,0 +1,180 @@
+Step 3 — endpoint API CRUD per voto_algorithm_config. Lo dividiamo in 2 batch: Batch 1 (OpenAPI spec + codegen) ora, Batch 2 (handler Express + test curl) dopo verifica.
+Task 46 — Aggiungere schemas ed endpoint a lib/api-spec/openapi.yaml
+Apri lib/api-spec/openapi.yaml. Aggiungi nella sezione components.schemas:
+yamlVotoAlgorithmConfigStatus:
+  type: string
+  enum: [draft, active, archived]
+
+VotoMisterConfigPayload:
+  type: object
+  description: Struttura JSON dei parametri algoritmo voto Mister. Forma libera per supportare evoluzioni future senza migration.
+  additionalProperties: true
+
+VotoAlgorithmConfig:
+  type: object
+  required: [id, version, configJson, status, isProtected, createdAt]
+  properties:
+    id:
+      type: integer
+    federationId:
+      type: string
+      nullable: true
+      description: NULL = configurazione di sistema (default Mister). Stringa = config specifica per la federazione indicata.
+    version:
+      type: string
+      example: "v1.0"
+    configJson:
+      $ref: '#/components/schemas/VotoMisterConfigPayload'
+    status:
+      $ref: '#/components/schemas/VotoAlgorithmConfigStatus'
+    isProtected:
+      type: boolean
+    notes:
+      type: string
+      nullable: true
+    createdBy:
+      type: string
+      nullable: true
+    createdAt:
+      type: string
+      format: date-time
+
+VotoAlgorithmConfigCreate:
+  type: object
+  required: [version, configJson, status]
+  properties:
+    federationId:
+      type: string
+      nullable: true
+    version:
+      type: string
+    configJson:
+      $ref: '#/components/schemas/VotoMisterConfigPayload'
+    status:
+      $ref: '#/components/schemas/VotoAlgorithmConfigStatus'
+    notes:
+      type: string
+      nullable: true
+
+VotoAlgorithmConfigUpdate:
+  type: object
+  description: Modifica parziale. Tutti i campi opzionali. Se status passa a 'active', la precedente attiva per la stessa federazione viene archiviata atomicamente.
+  properties:
+    configJson:
+      $ref: '#/components/schemas/VotoMisterConfigPayload'
+    status:
+      $ref: '#/components/schemas/VotoAlgorithmConfigStatus'
+    notes:
+      type: string
+      nullable: true
+
+VotoAlgorithmRecalculateResponse:
+  type: object
+  required: [updatedCount, skippedCount, durationMs]
+  properties:
+    updatedCount:
+      type: integer
+      description: Righe player_giornata_stats con voto_mister aggiornato
+    skippedCount:
+      type: integer
+      description: Righe sotto soglia minuti (voto_mister resta NULL)
+    durationMs:
+      type: integer
+Aggiungi 4 path nella sezione paths:
+yaml/voto-algorithm-configs:
+  get:
+    operationId: listVotoAlgorithmConfigs
+    parameters:
+      - name: federationId
+        in: query
+        schema:
+          type: string
+          nullable: true
+        description: Se omesso, ritorna tutte. Stringa speciale 'null' per filtrare solo system default. Altrimenti ID federazione.
+      - name: status
+        in: query
+        schema:
+          $ref: '#/components/schemas/VotoAlgorithmConfigStatus'
+    responses:
+      '200':
+        description: Lista config, ordinate per createdAt desc
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/VotoAlgorithmConfig'
+  post:
+    operationId: createVotoAlgorithmConfig
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/VotoAlgorithmConfigCreate'
+    responses:
+      '201':
+        description: Config creata
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VotoAlgorithmConfig'
+      '409':
+        description: Vincolo unique violato (status=active già presente per la federazione)
+
+/voto-algorithm-configs/{id}:
+  patch:
+    operationId: updateVotoAlgorithmConfig
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/VotoAlgorithmConfigUpdate'
+    responses:
+      '200':
+        description: Config aggiornata
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VotoAlgorithmConfig'
+      '403':
+        description: Operazione bloccata (es. tentativo di archiviare riga is_protected)
+      '404':
+        description: Config non trovata
+
+/voto-algorithm-configs/recalculate:
+  post:
+    operationId: recalculateVotoMister
+    description: Ricalcola voto_mister su tutti i player_giornata_stats usando la config attiva del federation_id specificato (o system default se omesso). Operazione sincrona, ~1s per 600 record.
+    parameters:
+      - name: federationId
+        in: query
+        schema:
+          type: string
+          nullable: true
+    responses:
+      '200':
+        description: Ricalcolo completato
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VotoAlgorithmRecalculateResponse'
+      '404':
+        description: Nessuna config attiva trovata
+Task 47 — Regenerate Zod + React Query hooks
+bashpnpm --filter @workspace/api-spec run codegen
+Atteso: nessun errore, file generati in lib/api-zod/src/generated/ e lib/api-client-react/src/generated/ aggiornati con gli schema e hooks dei nuovi endpoint (useListVotoAlgorithmConfigs, useCreateVotoAlgorithmConfig, ecc.).
+Riportami:
+
+Conferma che openapi.yaml ha gli aggiornamenti (con il git diff se possibile, o un riassunto)
+Output del comando codegen (deve essere pulito, niente warning su schema malformati)
+Lista dei nuovi file/funzioni esportate dai due package api-zod e api-client-react (es. grep -i voto lib/api-zod/src/generated/*.ts)
+
+NON implementare ancora gli handler Express. Quelli vengono in Batch 2 dopo che ho verificato lo spec e i tipi generati.

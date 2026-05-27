@@ -1116,3 +1116,78 @@ export const GetDashboardResponse = zod.object({
 })
 
 
+/**
+ * @summary Elenco configurazioni algoritmo voto
+ */
+export const ListVotoAlgorithmConfigsQueryParams = zod.object({
+  "federationId": zod.coerce.string().nullish().describe('Se omesso, ritorna tutte. Stringa speciale \'null\' per filtrare solo system default. Altrimenti ID federazione.'),
+  "status": zod.enum(['draft', 'active', 'archived']).optional()
+})
+
+export const ListVotoAlgorithmConfigsResponseItem = zod.object({
+  "id": zod.number(),
+  "federationId": zod.string().nullish().describe('NULL = configurazione di sistema (default Mister). Stringa = config specifica per la federazione indicata.'),
+  "version": zod.string(),
+  "configJson": zod.record(zod.string(), zod.unknown()).describe('Struttura JSON dei parametri algoritmo voto Mister. Forma libera per supportare evoluzioni future senza migration.'),
+  "status": zod.enum(['draft', 'active', 'archived']),
+  "isProtected": zod.boolean(),
+  "notes": zod.string().nullish(),
+  "createdBy": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+})
+export const ListVotoAlgorithmConfigsResponse = zod.array(ListVotoAlgorithmConfigsResponseItem)
+
+
+/**
+ * @summary Crea una nuova configurazione algoritmo voto
+ */
+export const CreateVotoAlgorithmConfigBody = zod.object({
+  "federationId": zod.string().nullish(),
+  "version": zod.string(),
+  "configJson": zod.record(zod.string(), zod.unknown()).describe('Struttura JSON dei parametri algoritmo voto Mister. Forma libera per supportare evoluzioni future senza migration.'),
+  "status": zod.enum(['draft', 'active', 'archived']),
+  "notes": zod.string().nullish()
+})
+
+
+/**
+ * @summary Modifica parziale di una configurazione algoritmo voto
+ */
+export const UpdateVotoAlgorithmConfigParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateVotoAlgorithmConfigBody = zod.object({
+  "configJson": zod.record(zod.string(), zod.unknown()).optional().describe('Struttura JSON dei parametri algoritmo voto Mister. Forma libera per supportare evoluzioni future senza migration.'),
+  "status": zod.enum(['draft', 'active', 'archived']).optional(),
+  "notes": zod.string().nullish()
+}).describe('Modifica parziale. Tutti i campi opzionali. Se status passa a \'active\', la precedente attiva per la stessa federazione viene archiviata atomicamente.')
+
+export const UpdateVotoAlgorithmConfigResponse = zod.object({
+  "id": zod.number(),
+  "federationId": zod.string().nullish().describe('NULL = configurazione di sistema (default Mister). Stringa = config specifica per la federazione indicata.'),
+  "version": zod.string(),
+  "configJson": zod.record(zod.string(), zod.unknown()).describe('Struttura JSON dei parametri algoritmo voto Mister. Forma libera per supportare evoluzioni future senza migration.'),
+  "status": zod.enum(['draft', 'active', 'archived']),
+  "isProtected": zod.boolean(),
+  "notes": zod.string().nullish(),
+  "createdBy": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * Usa la config attiva del federation_id specificato (o system default se omesso). Operazione sincrona, ~1s per 600 record.
+ * @summary Ricalcola voto_mister su tutti i player_giornata_stats
+ */
+export const RecalculateVotoMisterQueryParams = zod.object({
+  "federationId": zod.coerce.string().nullish()
+})
+
+export const RecalculateVotoMisterResponse = zod.object({
+  "updatedCount": zod.number().describe('Righe player_giornata_stats con voto_mister aggiornato'),
+  "skippedCount": zod.number().describe('Righe sotto soglia minuti (voto_mister resta NULL)'),
+  "durationMs": zod.number()
+})
+
+

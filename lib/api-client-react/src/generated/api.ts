@@ -41,14 +41,20 @@ import type {
   ListLeaguesParams,
   ListPlayersParams,
   ListTemplatesParams,
+  ListVotoAlgorithmConfigsParams,
   MarketEvent,
   MarketEventInput,
   MarketEventUpdate,
   Player,
   PlayerList,
+  RecalculateVotoMisterParams,
   TemplateInput,
   TemplateProfile,
-  TemplateUpdate
+  TemplateUpdate,
+  VotoAlgorithmConfig,
+  VotoAlgorithmConfigCreate,
+  VotoAlgorithmConfigUpdate,
+  VotoAlgorithmRecalculateResponse
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -2722,4 +2728,309 @@ export function useGetDashboard<TData = Awaited<ReturnType<typeof getDashboard>>
 
 
 
+
+export const getListVotoAlgorithmConfigsUrl = (params?: ListVotoAlgorithmConfigsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/voto-algorithm-configs?${stringifiedParams}` : `/api/voto-algorithm-configs`
+}
+
+/**
+ * @summary Elenco configurazioni algoritmo voto
+ */
+export const listVotoAlgorithmConfigs = async (params?: ListVotoAlgorithmConfigsParams, options?: RequestInit): Promise<VotoAlgorithmConfig[]> => {
+
+  return customFetch<VotoAlgorithmConfig[]>(getListVotoAlgorithmConfigsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListVotoAlgorithmConfigsQueryKey = (params?: ListVotoAlgorithmConfigsParams,) => {
+    return [
+    `/api/voto-algorithm-configs`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListVotoAlgorithmConfigsQueryOptions = <TData = Awaited<ReturnType<typeof listVotoAlgorithmConfigs>>, TError = ErrorType<unknown>>(params?: ListVotoAlgorithmConfigsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listVotoAlgorithmConfigs>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListVotoAlgorithmConfigsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listVotoAlgorithmConfigs>>> = ({ signal }) => listVotoAlgorithmConfigs(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listVotoAlgorithmConfigs>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListVotoAlgorithmConfigsQueryResult = NonNullable<Awaited<ReturnType<typeof listVotoAlgorithmConfigs>>>
+export type ListVotoAlgorithmConfigsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Elenco configurazioni algoritmo voto
+ */
+
+export function useListVotoAlgorithmConfigs<TData = Awaited<ReturnType<typeof listVotoAlgorithmConfigs>>, TError = ErrorType<unknown>>(
+ params?: ListVotoAlgorithmConfigsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listVotoAlgorithmConfigs>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListVotoAlgorithmConfigsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateVotoAlgorithmConfigUrl = () => {
+
+
+
+
+  return `/api/voto-algorithm-configs`
+}
+
+/**
+ * @summary Crea una nuova configurazione algoritmo voto
+ */
+export const createVotoAlgorithmConfig = async (votoAlgorithmConfigCreate: VotoAlgorithmConfigCreate, options?: RequestInit): Promise<VotoAlgorithmConfig> => {
+
+  return customFetch<VotoAlgorithmConfig>(getCreateVotoAlgorithmConfigUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      votoAlgorithmConfigCreate,)
+  }
+);}
+
+
+
+
+export const getCreateVotoAlgorithmConfigMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createVotoAlgorithmConfig>>, TError,{data: BodyType<VotoAlgorithmConfigCreate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createVotoAlgorithmConfig>>, TError,{data: BodyType<VotoAlgorithmConfigCreate>}, TContext> => {
+
+const mutationKey = ['createVotoAlgorithmConfig'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createVotoAlgorithmConfig>>, {data: BodyType<VotoAlgorithmConfigCreate>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createVotoAlgorithmConfig(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateVotoAlgorithmConfigMutationResult = NonNullable<Awaited<ReturnType<typeof createVotoAlgorithmConfig>>>
+    export type CreateVotoAlgorithmConfigMutationBody = BodyType<VotoAlgorithmConfigCreate>
+    export type CreateVotoAlgorithmConfigMutationError = ErrorType<void>
+
+    /**
+ * @summary Crea una nuova configurazione algoritmo voto
+ */
+export const useCreateVotoAlgorithmConfig = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createVotoAlgorithmConfig>>, TError,{data: BodyType<VotoAlgorithmConfigCreate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createVotoAlgorithmConfig>>,
+        TError,
+        {data: BodyType<VotoAlgorithmConfigCreate>},
+        TContext
+      > => {
+      return useMutation(getCreateVotoAlgorithmConfigMutationOptions(options));
+    }
+
+export const getUpdateVotoAlgorithmConfigUrl = (id: number,) => {
+
+
+
+
+  return `/api/voto-algorithm-configs/${id}`
+}
+
+/**
+ * @summary Modifica parziale di una configurazione algoritmo voto
+ */
+export const updateVotoAlgorithmConfig = async (id: number,
+    votoAlgorithmConfigUpdate: VotoAlgorithmConfigUpdate, options?: RequestInit): Promise<VotoAlgorithmConfig> => {
+
+  return customFetch<VotoAlgorithmConfig>(getUpdateVotoAlgorithmConfigUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      votoAlgorithmConfigUpdate,)
+  }
+);}
+
+
+
+
+export const getUpdateVotoAlgorithmConfigMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateVotoAlgorithmConfig>>, TError,{id: number;data: BodyType<VotoAlgorithmConfigUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateVotoAlgorithmConfig>>, TError,{id: number;data: BodyType<VotoAlgorithmConfigUpdate>}, TContext> => {
+
+const mutationKey = ['updateVotoAlgorithmConfig'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateVotoAlgorithmConfig>>, {id: number;data: BodyType<VotoAlgorithmConfigUpdate>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateVotoAlgorithmConfig(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateVotoAlgorithmConfigMutationResult = NonNullable<Awaited<ReturnType<typeof updateVotoAlgorithmConfig>>>
+    export type UpdateVotoAlgorithmConfigMutationBody = BodyType<VotoAlgorithmConfigUpdate>
+    export type UpdateVotoAlgorithmConfigMutationError = ErrorType<void>
+
+    /**
+ * @summary Modifica parziale di una configurazione algoritmo voto
+ */
+export const useUpdateVotoAlgorithmConfig = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateVotoAlgorithmConfig>>, TError,{id: number;data: BodyType<VotoAlgorithmConfigUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateVotoAlgorithmConfig>>,
+        TError,
+        {id: number;data: BodyType<VotoAlgorithmConfigUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateVotoAlgorithmConfigMutationOptions(options));
+    }
+
+export const getRecalculateVotoMisterUrl = (params?: RecalculateVotoMisterParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/voto-algorithm-configs/recalculate?${stringifiedParams}` : `/api/voto-algorithm-configs/recalculate`
+}
+
+/**
+ * Usa la config attiva del federation_id specificato (o system default se omesso). Operazione sincrona, ~1s per 600 record.
+ * @summary Ricalcola voto_mister su tutti i player_giornata_stats
+ */
+export const recalculateVotoMister = async (params?: RecalculateVotoMisterParams, options?: RequestInit): Promise<VotoAlgorithmRecalculateResponse> => {
+
+  return customFetch<VotoAlgorithmRecalculateResponse>(getRecalculateVotoMisterUrl(params),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getRecalculateVotoMisterMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof recalculateVotoMister>>, TError,{params?: RecalculateVotoMisterParams}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof recalculateVotoMister>>, TError,{params?: RecalculateVotoMisterParams}, TContext> => {
+
+const mutationKey = ['recalculateVotoMister'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof recalculateVotoMister>>, {params?: RecalculateVotoMisterParams}> = (props) => {
+          const {params} = props ?? {};
+
+          return  recalculateVotoMister(params,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RecalculateVotoMisterMutationResult = NonNullable<Awaited<ReturnType<typeof recalculateVotoMister>>>
+
+    export type RecalculateVotoMisterMutationError = ErrorType<void>
+
+    /**
+ * @summary Ricalcola voto_mister su tutti i player_giornata_stats
+ */
+export const useRecalculateVotoMister = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof recalculateVotoMister>>, TError,{params?: RecalculateVotoMisterParams}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof recalculateVotoMister>>,
+        TError,
+        {params?: RecalculateVotoMisterParams},
+        TContext
+      > => {
+      return useMutation(getRecalculateVotoMisterMutationOptions(options));
+    }
 

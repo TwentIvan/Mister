@@ -645,6 +645,58 @@ export interface DashboardSummary {
   total_league_count?: number;
 }
 
+export type VotoAlgorithmConfigStatus = typeof VotoAlgorithmConfigStatus[keyof typeof VotoAlgorithmConfigStatus];
+
+
+export const VotoAlgorithmConfigStatus = {
+  draft: 'draft',
+  active: 'active',
+  archived: 'archived',
+} as const;
+
+/**
+ * Struttura JSON dei parametri algoritmo voto Mister. Forma libera per supportare evoluzioni future senza migration.
+ */
+export interface VotoMisterConfigPayload { [key: string]: unknown }
+
+export interface VotoAlgorithmConfig {
+  id: number;
+  /** NULL = configurazione di sistema (default Mister). Stringa = config specifica per la federazione indicata. */
+  federationId?: string | null;
+  version: string;
+  configJson: VotoMisterConfigPayload;
+  status: VotoAlgorithmConfigStatus;
+  isProtected: boolean;
+  notes?: string | null;
+  createdBy?: string | null;
+  createdAt: string;
+}
+
+export interface VotoAlgorithmConfigCreate {
+  federationId?: string | null;
+  version: string;
+  configJson: VotoMisterConfigPayload;
+  status: VotoAlgorithmConfigStatus;
+  notes?: string | null;
+}
+
+/**
+ * Modifica parziale. Tutti i campi opzionali. Se status passa a 'active', la precedente attiva per la stessa federazione viene archiviata atomicamente.
+ */
+export interface VotoAlgorithmConfigUpdate {
+  configJson?: VotoMisterConfigPayload;
+  status?: VotoAlgorithmConfigStatus;
+  notes?: string | null;
+}
+
+export interface VotoAlgorithmRecalculateResponse {
+  /** Righe player_giornata_stats con voto_mister aggiornato */
+  updatedCount: number;
+  /** Righe sotto soglia minuti (voto_mister resta NULL) */
+  skippedCount: number;
+  durationMs: number;
+}
+
 export type ListTemplatesParams = {
 active_only?: boolean;
 };
@@ -673,5 +725,17 @@ export const ListPlayersRole = {
 
 export type GetDashboardParams = {
 user_id?: string;
+};
+
+export type ListVotoAlgorithmConfigsParams = {
+/**
+ * Se omesso, ritorna tutte. Stringa speciale 'null' per filtrare solo system default. Altrimenti ID federazione.
+ */
+federationId?: string | null;
+status?: VotoAlgorithmConfigStatus;
+};
+
+export type RecalculateVotoMisterParams = {
+federationId?: string | null;
 };
 
