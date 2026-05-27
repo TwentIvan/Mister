@@ -1,0 +1,160 @@
+Inizio della feature "gameplay formazione". Step 1 di 6 — Schema dati + seed lega di test con 8 fanta_team + tabella team_colors. Diviso in 3 sub-task con stop in mezzo.
+Task 58 — Tre nuovi schemi Drizzle + push
+Crea i seguenti file in lib/db/src/schema/:
+typescript// team-colors.ts
+import { pgTable, integer, text } from "drizzle-orm/pg-core";
+
+export const teamColors = pgTable("team_colors", {
+  teamId: integer("team_id").primaryKey(),         // ID API-Football
+  teamName: text("team_name").notNull(),
+  primaryHex: text("primary_hex").notNull(),
+  secondaryHex: text("secondary_hex").notNull(),
+  textHex: text("text_hex").notNull().default('#FFFFFF'),
+  source: text("source"),
+});
+typescript// lineups.ts
+import { pgTable, serial, text, integer, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { fantaTeams } from "./fanta-teams";
+import { players } from "./players";
+
+export const lineups = pgTable("lineups", {
+  id: serial("id").primaryKey(),
+  fantaTeamId: text("fanta_team_id").notNull().references(() => fantaTeams.id, { onDelete: "cascade" }),
+  season: integer("season").notNull(),
+  round: integer("round").notNull(),
+  module: text("module").notNull(),            // es. "4-3-3", "4-3-1-2"
+  captainPlayerId: integer("captain_player_id").references(() => players.id),
+  submittedAt: timestamp("submitted_at", { withTimezone: true }),
+  lockedAt: timestamp("locked_at", { withTimezone: true }),
+}, (table) => ({
+  uniqueRound: uniqueIndex("lineup_one_per_team_round").on(table.fantaTeamId, table.season, table.round),
+}));
+typescript// lineup-players.ts
+import { pgTable, serial, integer, text, boolean, uniqueIndex } from "drizzle-orm/pg-core";
+import { lineups } from "./lineups";
+import { players } from "./players";
+
+export const lineupPlayers = pgTable("lineup_players", {
+  id: serial("id").primaryKey(),
+  lineupId: integer("lineup_id").notNull().references(() => lineups.id, { onDelete: "cascade" }),
+  playerId: integer("player_id").notNull().references(() => players.id),
+  slotPosition: text("slot_position").notNull(),  // "GK" | "DEF" | "MID" | "T" | "ATT"
+  slotIndex: integer("slot_index").notNull(),      // 1-11 titolari, 12+ panchina
+  isStarter: boolean("is_starter").notNull(),
+  benchOrder: integer("bench_order"),               // ordine sostituzione, NULL per i titolari
+}, (table) => ({
+  uniqueSlot: uniqueIndex("lineup_unique_slot").on(table.lineupId, table.slotIndex),
+}));
+Aggiungi i 3 export a lib/db/src/schema/index.ts. Esegui pnpm --filter @workspace/db run push.
+Atteso: 3 nuove tabelle create, nessun diff inatteso su altre tabelle.
+Stop. Riportami push output + verifica \d+ team_colors, \d+ lineups, \d+ lineup_players.
+Task 59 — Seed team_colors (20 squadre Serie A 2024-25)
+Crea lib/db/src/seeds/team-colors.ts con i seguenti dati:
+typescriptconst teamColorsSeed = [
+  { teamId: 487,  teamName: "Lazio",         primaryHex: "#87CEEB", secondaryHex: "#FFFFFF", textHex: "#0A1F17" },
+  { teamId: 489,  teamName: "AC Milan",      primaryHex: "#FB090B", secondaryHex: "#000000", textHex: "#FFFFFF" },
+  { teamId: 490,  teamName: "Cagliari",      primaryHex: "#C8102E", secondaryHex: "#002654", textHex: "#FFFFFF" },
+  { teamId: 492,  teamName: "Napoli",        primaryHex: "#009EE0", secondaryHex: "#FFFFFF", textHex: "#FFFFFF" },
+  { teamId: 494,  teamName: "Udinese",       primaryHex: "#000000", secondaryHex: "#FFFFFF", textHex: "#FFFFFF" },
+  { teamId: 495,  teamName: "Genoa",         primaryHex: "#C8102E", secondaryHex: "#002654", textHex: "#FFFFFF" },
+  { teamId: 496,  teamName: "Juventus",      primaryHex: "#000000", secondaryHex: "#FFFFFF", textHex: "#FFFFFF" },
+  { teamId: 497,  teamName: "AS Roma",       primaryHex: "#8E1F2F", secondaryHex: "#F0BC42", textHex: "#FFFFFF" },
+  { teamId: 499,  teamName: "Atalanta",      primaryHex: "#1565C0", secondaryHex: "#000000", textHex: "#FFFFFF" },
+  { teamId: 500,  teamName: "Bologna",       primaryHex: "#D6263A", secondaryHex: "#1B3B6F", textHex: "#FFFFFF" },
+  { teamId: 502,  teamName: "Fiorentina",    primaryHex: "#6F2DA8", secondaryHex: "#FFFFFF", textHex: "#FFFFFF" },
+  { teamId: 503,  teamName: "Torino",        primaryHex: "#8B1A1A", secondaryHex: "#FFFFFF", textHex: "#FFFFFF" },
+  { teamId: 504,  teamName: "Hellas Verona", primaryHex: "#FFD700", secondaryHex: "#1F4E8C", textHex: "#0A1F17" },
+  { teamId: 505,  teamName: "Inter",         primaryHex: "#0067B1", secondaryHex: "#000000", textHex: "#FFFFFF" },
+  { teamId: 511,  teamName: "Empoli",        primaryHex: "#1976D2", secondaryHex: "#FFFFFF", textHex: "#FFFFFF" },
+  { teamId: 517,  teamName: "Venezia",       primaryHex: "#006633", secondaryHex: "#000000", textHex: "#FFFFFF" },
+  { teamId: 523,  teamName: "Parma",         primaryHex: "#FFD700", secondaryHex: "#003E7E", textHex: "#0A1F17" },
+  { teamId: 867,  teamName: "Lecce",         primaryHex: "#FFD700", secondaryHex: "#C8102E", textHex: "#0A1F17" },
+  { teamId: 895,  teamName: "Como",          primaryHex: "#0066CC", secondaryHex: "#FFFFFF", textHex: "#FFFFFF" },
+  { teamId: 1579, teamName: "Monza",         primaryHex: "#D90E2E", secondaryHex: "#FFFFFF", textHex: "#FFFFFF" },
+];
+
+// source = "manual_seed_v1" per tutte
+Tutte le righe hanno source = "manual_seed_v1". Idempotente (se esiste già una riga con stesso team_id, skip).
+Aggiungi la chiamata seedTeamColors(db) a lib/db/src/seeds/run.ts accanto agli altri seed. Esegui pnpm --filter @workspace/db run seed.
+Verifica:
+sqlSELECT COUNT(*) FROM team_colors;
+-- atteso: 20
+
+SELECT team_name, primary_hex, secondary_hex
+FROM team_colors
+WHERE team_name IN ('AC Milan', 'Inter', 'Juventus', 'AS Roma')
+ORDER BY team_name;
+Stop. Riportami conta + sample.
+Task 60 — Riusa una lega esistente + 8 fanta_team + 200 contracts
+Le 3 leghe esistenti hanno tutte invitation_code = NULL. Ne riusiamo una rinominandola e popolandola.
+sql-- Step a: scegli una delle 3 leghe esistenti (la prima per id)
+SELECT id, name, federation_id, invitation_code FROM leagues ORDER BY id LIMIT 3;
+-- Rinominala "Lega Test MVP" e dale un codice invito plausibile
+UPDATE leagues 
+SET name = 'Lega Test MVP', 
+    invitation_code = 'MVP-2024-LEGA',
+    description = 'Lega di test seed per backtest gameplay round 1-2'
+WHERE id = (SELECT id FROM leagues ORDER BY id LIMIT 1);
+Riportami quale league_id hai aggiornato.
+Poi crea uno script di seed lib/db/src/seeds/test-league-mvp.ts che:
+
+Identifica la lega "Lega Test MVP" e ne legge id
+Inserisce 8 fanta_team con questi nomi e manager:
+
+"Mario's Squad" / "Ivan"
+"I Magnifici" / "Sara"
+"Real Trastevere" / "Marco"
+"Pancho Boys" / "Luca"
+"Sandhagen FC" / "Giulia"
+"Tottenham Pelati" / "Matteo"
+"Atletico Caffeina" / "Anna"
+"Bomber Coraggio" / "Davide"
+
+Per i campi NOT NULL del schema fanta_teams che non sono manager_name/name (es. crediti, league_id, federation_id se serve), usa valori sensati (es. crediti=500). Adatta al schema effettivo.
+Draft deterministico delle rose: per ognuno degli 8 team, assegna 25 giocatori (3 GK, 8 DEF, 8 MID, 6 ATT) con queste regole:
+
+Random seedato con seed costante "lega-test-mvp-2024" (per riproducibilità)
+No duplicati: ogni giocatore appartiene a 1 sola squadra
+Algoritmo: per ogni ruolo, shuffle dei giocatori di quel ruolo, poi distribuisci in ordine — primi 3 GK al team 1, GK 4-6 al team 2, ecc.
+
+
+Per ogni assegnazione, inserisci una riga in contracts con:
+
+fanta_team_id, player_id, league_id, season = 2024
+prezzo = 1 (placeholder), durata_stagioni = 1 (o quale campo equivalente esista), status = 'active'
+Altri campi NOT NULL: valori default sensati
+
+
+
+Idempotente: se la lega ha già 8 fanta_team, skip l'intero seed.
+Aggiungi seedTestLeagueMvp(db) a run.ts. Esegui seed.
+Verifiche finali:
+sql-- 8 fanta_team nella lega
+SELECT id, name, manager_name, crediti 
+FROM fanta_teams 
+WHERE league_id = (SELECT id FROM leagues WHERE name = 'Lega Test MVP');
+
+-- Distribuzione contratti per fanta_team
+SELECT ft.name AS squadra,
+       COUNT(*) FILTER (WHERE p.role_classic = 'GK')  AS gk,
+       COUNT(*) FILTER (WHERE p.role_classic = 'DEF') AS def,
+       COUNT(*) FILTER (WHERE p.role_classic = 'MID') AS mid,
+       COUNT(*) FILTER (WHERE p.role_classic = 'ATT') AS att,
+       COUNT(*) AS totale
+FROM fanta_teams ft
+JOIN contracts c ON c.fanta_team_id = ft.id
+JOIN players p ON p.id = c.player_id
+WHERE ft.league_id = (SELECT id FROM leagues WHERE name = 'Lega Test MVP')
+GROUP BY ft.id, ft.name
+ORDER BY ft.name;
+
+-- Conferma no duplicati
+SELECT player_id, COUNT(*) AS team_count
+FROM contracts
+WHERE league_id = (SELECT id FROM leagues WHERE name = 'Lega Test MVP')
+GROUP BY player_id
+HAVING COUNT(*) > 1;
+-- atteso: 0 righe
+Atteso: 8 squadre × (3+8+8+6=25) = 200 contracts, distribuzione 3/8/8/6 per ogni team, nessun player duplicato.
+Stop. Riportami i 3 output sopra + conferma finale.
+NON toccare voto_mister, voto_algorithm_config, players. Sono dati stabili.

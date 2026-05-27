@@ -12,3 +12,6 @@ export * from "./contracts";
 export * from "./fanta-teams";
 export * from "./players";
 export * from "./voto-algorithm-config";
+export * from "./team-colors";
+export * from "./lineups";
+export * from "./lineup-players";

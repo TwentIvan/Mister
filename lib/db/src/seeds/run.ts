@@ -2,6 +2,8 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import pg from "pg";
 import { seedSystemTemplates } from "./templates";
 import { seedVotoAlgorithmConfig } from "./voto-algorithm-config";
+import { seedTeamColors } from "./team-colors";
+import { seedTestLeagueMvp } from "./test-league-mvp";
 
 const { Pool } = pg;
 
@@ -15,6 +17,8 @@ const db = drizzle(pool);
 Promise.resolve()
   .then(() => seedSystemTemplates(db))
   .then(() => seedVotoAlgorithmConfig(db))
+  .then(() => seedTeamColors(db))
+  .then(() => seedTestLeagueMvp(db))
   .then(() => {
     console.log("Seed completato.");
     process.exit(0);
