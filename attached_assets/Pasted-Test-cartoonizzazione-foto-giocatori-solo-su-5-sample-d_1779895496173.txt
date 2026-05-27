@@ -1,0 +1,68 @@
+Test cartoonizzazione foto giocatori — solo su 5 sample della rosa di Mario's Squad.
+Task 93 — Setup colonna + script test
+
+Schema: aggiungi colonna a players schema Drizzle:
+
+typescriptphotoCartoonUrl: text("photo_cartoon_url"),
+Push: pnpm --filter @workspace/db run push.
+
+Script scripts/sync/cartoonize-photos.ts:
+
+Dependency: pnpm add replicate -w (al root).
+Logica:
+
+Legge dalla CLI: --players <id1,id2,...> per specificare quali processare, oppure --all-mario per processare tutti i 25 di ft-mvp-1
+Per ogni player: chiama Replicate face-to-many con style: "Cartoon", input image: <photo_url>, attende output
+Scarica il risultato (URL temporaneo Replicate)
+Salva localmente in mister-web/public/avatars/<player_id>.webp (converti formato se serve, libreria sharp per resize/format se necessario — pnpm add sharp -w)
+Aggiorna players.photo_cartoon_url = '/avatars/<player_id>.webp'
+Idempotente: skip se photo_cartoon_url già valorizzato (a meno di flag --force)
+Concorrenza limite: 3 in parallelo, retry 2 volte su errori temporanei
+Logging dettagliato su stdout (player N/25, tempo, esito)
+
+Modello Replicate suggerito (versione fissa per riproducibilità):
+typescriptconst output = await replicate.run(
+  "fofr/face-to-many:35cea9c3164d9fb7fbd48b51503eabdb39c9d04fdaef9a68f368bed8087ec5f9",  // versione attuale al momento, verifica se più recente
+  {
+    input: {
+      image: player.photoUrl,
+      style: "Cartoon",
+      prompt: "a person, classic cartoon style portrait",
+      negative_prompt: "anime, 3d render, photorealistic, sketch",
+      lora_scale: 1.0,
+      prompt_strength: 4.5,
+      denoising_strength: 0.65,
+      instant_id_strength: 0.85,
+      control_depth_strength: 0.8,
+    }
+  }
+);
+I parametri sopra sono indicativi; consulta la doc Replicate aggiornata di fofr/face-to-many per i nomi/range correnti se la versione è cambiata.
+
+Esecuzione test:
+
+Seleziona 5 giocatori da Mario's Squad rappresentativi (mix ruoli, capigliature, età, etnie). Esempio query per scegliere:
+sqlSELECT p.id, p.name, p.real_team, p.role_classic, p.photo_url
+FROM contracts c
+JOIN players p ON p.id = c.player_id
+WHERE c.fanta_team_id = 'ft-mvp-1'
+ORDER BY random()
+LIMIT 5;
+Oppure scelta manuale: 1 GK + 1 DEF + 2 MID + 1 ATT con foto chiare (URL non rotti). Verifica prima che le photo_url rispondano HTTP 200.
+Lancia:
+bashpnpm tsx scripts/sync/cartoonize-photos.ts --players <id1>,<id2>,<id3>,<id4>,<id5>
+
+Output da consegnarmi:
+
+
+Lista dei 5 player_id scelti con nome
+Conferma che il file mister-web/public/avatars/<id>.webp esiste per ognuno
+I 5 URL accessibili (es. http://localhost:5173/avatars/123.webp se Vite dev server gira, oppure il path Replit)
+Conferma che players.photo_cartoon_url è valorizzato per i 5
+
+NON processare gli altri 20 della rosa Mario's Squad ancora. Aspettiamo la validazione visiva dell'utente sui 5 sample.
+Errori comuni da gestire:
+
+Replicate timeout: retry con backoff
+Image URL 404 dal API-Football: skip e log error
+Modello non trovato / versione obsoleta: prova latest come fallback

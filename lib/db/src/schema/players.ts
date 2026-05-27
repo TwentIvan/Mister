@@ -80,6 +80,7 @@ export const players = pgTable("players", {
   weightKg: integer("weight_kg"),
   foot: text("foot"), // "left" | "right" | "both"
   photoUrl: text("photo_url"),
+  photoCartoonUrl: text("photo_cartoon_url"),
 
   injured: boolean("injured").notNull().default(false),
 

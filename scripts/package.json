@@ -12,12 +12,15 @@
     "sync:stats": "tsx ./sync/stats.ts",
     "sync:all": "tsx ./sync/run-all.ts",
     "voto:backtest": "tsx ./voto-mister/run-backtest.ts",
-    "voto:persist": "tsx ./voto-mister/persist-voto-mister.ts"
+    "voto:persist": "tsx ./voto-mister/persist-voto-mister.ts",
+    "sync:cartoonize": "tsx ./sync/cartoonize-photos.ts"
   },
   "dependencies": {
     "@workspace/db": "workspace:*",
     "@workspace/voto-engine": "workspace:*",
-    "drizzle-orm": "catalog:"
+    "drizzle-orm": "catalog:",
+    "replicate": "^1.0.1",
+    "sharp": "^0.34.2"
   },
   "devDependencies": {
     "@types/node": "catalog:",
