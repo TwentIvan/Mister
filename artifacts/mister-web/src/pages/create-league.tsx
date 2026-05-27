@@ -156,9 +156,9 @@ export default function CreateLeague() {
               <Trophy className="h-5 w-5 text-primary" />
               Scegli il template
             </h3>
-            <FormDescription>
+            <p className="text-sm text-muted-foreground">
               Il template definisce regole, meccaniche di mercato e complessità della lega.
-            </FormDescription>
+            </p>
             
             <FormField
               control={form.control}
