@@ -33,11 +33,14 @@ import type {
   Federation,
   FederationUpdate,
   GetDashboardParams,
+  GetLineupsParams,
   HealthStatus,
   League,
   LeagueInput,
   LeagueStats,
   LeagueUpdate,
+  Lineup,
+  LineupInput,
   ListLeaguesParams,
   ListPlayersParams,
   ListTemplatesParams,
@@ -51,6 +54,7 @@ import type {
   TemplateInput,
   TemplateProfile,
   TemplateUpdate,
+  ValidationErrors,
   VotoAlgorithmConfig,
   VotoAlgorithmConfigCreate,
   VotoAlgorithmConfigUpdate,
@@ -3032,5 +3036,160 @@ export const useRecalculateVotoMister = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getRecalculateVotoMisterMutationOptions(options));
+    }
+
+export const getGetLineupsUrl = (params: GetLineupsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/lineups?${stringifiedParams}` : `/api/lineups`
+}
+
+/**
+ * @summary Recupera la formazione di una squadra per una giornata
+ */
+export const getLineups = async (params: GetLineupsParams, options?: RequestInit): Promise<Lineup | null> => {
+
+  return customFetch<Lineup | null>(getGetLineupsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetLineupsQueryKey = (params?: GetLineupsParams,) => {
+    return [
+    `/api/lineups`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetLineupsQueryOptions = <TData = Awaited<ReturnType<typeof getLineups>>, TError = ErrorType<unknown>>(params: GetLineupsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getLineups>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetLineupsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getLineups>>> = ({ signal }) => getLineups(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getLineups>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetLineupsQueryResult = NonNullable<Awaited<ReturnType<typeof getLineups>>>
+export type GetLineupsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Recupera la formazione di una squadra per una giornata
+ */
+
+export function useGetLineups<TData = Awaited<ReturnType<typeof getLineups>>, TError = ErrorType<unknown>>(
+ params: GetLineupsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getLineups>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetLineupsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getPutLineupUrl = () => {
+
+
+
+
+  return `/api/lineups`
+}
+
+/**
+ * @summary Crea o aggiorna la formazione (upsert)
+ */
+export const putLineup = async (lineupInput: LineupInput, options?: RequestInit): Promise<Lineup> => {
+
+  return customFetch<Lineup>(getPutLineupUrl(),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      lineupInput,)
+  }
+);}
+
+
+
+
+export const getPutLineupMutationOptions = <TError = ErrorType<ValidationErrors | void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof putLineup>>, TError,{data: BodyType<LineupInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof putLineup>>, TError,{data: BodyType<LineupInput>}, TContext> => {
+
+const mutationKey = ['putLineup'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof putLineup>>, {data: BodyType<LineupInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  putLineup(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PutLineupMutationResult = NonNullable<Awaited<ReturnType<typeof putLineup>>>
+    export type PutLineupMutationBody = BodyType<LineupInput>
+    export type PutLineupMutationError = ErrorType<ValidationErrors | void>
+
+    /**
+ * @summary Crea o aggiorna la formazione (upsert)
+ */
+export const usePutLineup = <TError = ErrorType<ValidationErrors | void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof putLineup>>, TError,{data: BodyType<LineupInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof putLineup>>,
+        TError,
+        {data: BodyType<LineupInput>},
+        TContext
+      > => {
+      return useMutation(getPutLineupMutationOptions(options));
     }
 

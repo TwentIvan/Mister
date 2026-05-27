@@ -1,0 +1,106 @@
+Batch 7 davvero chiuso. Iterazione lunga ma il pitch ora è solido e definitivo — non ci torneremo più.
+Step 3 — API CRUD lineup
+Lasciamo l'UI per un attimo e andiamo nel backend. La pagina Formazione attualmente lavora su mock-data.ts — niente persiste. Salva fa solo un console.log. Step 3 è dove sostituiamo il mock con il vero ciclo: pagina apre → GET lineup da DB → utente edita → Salva → PUT lineup → conferma persistenza.
+Task per l'agente — Step 3 in 3 sub-task con stop
+
+Step 3 — API CRUD lineup. Tre sotto-task in sequenza, stop dopo ognuno.
+Task 102 — OpenAPI spec + Orval regenerate
+Estendi openapi.yaml con due endpoint per i lineup:
+
+GET /api/lineups — query params: fantaTeamId (string, required), season (int, required), round (int, required). Risposta: oggetto Lineup completo (con array players) o null se non esiste
+PUT /api/lineups — body completo con tutti i campi del lineup. Comportamento upsert: se esiste già un lineup per (fantaTeamId, season, round) lo aggiorna; altrimenti lo crea. Risposta: il lineup salvato
+
+Schema Lineup in components/schemas:
+yamlLineup:
+  type: object
+  required: [fantaTeamId, season, round, module, players]
+  properties:
+    id: { type: integer, description: "auto-generated, omit on PUT" }
+    fantaTeamId: { type: string }
+    season: { type: integer }
+    round: { type: integer }
+    module: { type: string, example: "4-3-3" }
+    captainPlayerId: { type: integer, nullable: true }
+    submittedAt: { type: string, format: date-time, nullable: true }
+    lockedAt: { type: string, format: date-time, nullable: true }
+    players:
+      type: array
+      items:
+        type: object
+        required: [playerId, slotPosition, slotIndex, isStarter]
+        properties:
+          playerId: { type: integer }
+          slotPosition: { type: string, enum: [GK, DEF, MID, T, ATT] }
+          slotIndex: { type: integer, description: "1-11 per titolari, 12+ per panchina" }
+          isStarter: { type: boolean }
+          benchOrder: { type: integer, nullable: true }
+Esegui pnpm --filter @workspace/api run orval per rigenerare i TS types e gli hooks React Query consumati da mister-web.
+Verifica: i nuovi hooks useGetLineups e usePutLineup esistono nel folder generato di mister-web.
+Stop. Riportami: hooks generati, conferma compilazione TypeScript pulita.
+Task 103 — Backend Express + validazione Zod
+In lib/api-server aggiungi i route handler per i due endpoint.
+Validazione Zod prima di toccare il DB. Schema Zod equivalente all'OpenAPI ma con regole di business addizionali:
+
+players deve avere esattamente 11 titolari (players.filter(p => p.isStarter).length === 11)
+Distribuzione ruoli dei titolari deve coincidere col modulo. Parse del module string in array [1, N_DEF, N_MID, N_T?, N_ATT] (es. "4-3-1-2" → [1,4,3,1,2]). Conta i titolari per slot_position e verifica match esatto
+T slot accetta solo MID (cross-check: per ogni lineup_player con slotPosition='T', leggi players.role_classic e verifica sia 'MID')
+Captain è uno dei titolari (captainPlayerId deve essere presente nei players con isStarter=true, oppure può essere null)
+Tutti i playerId appartengono alla rosa del fanta_team — query DB:
+
+sql   SELECT player_id FROM contracts 
+   WHERE fanta_team_id = $1 AND status = 'active'
+Verifica che ogni playerId nel payload sia in quella lista
+6. No duplicati: ogni playerId appare al massimo 1 volta in players[]
+7. slot_index unico: ogni slotIndex appare al massimo 1 volta
+Se validazione fallisce: rispondi 400 con array di errori specifici.
+Logica upsert con transaction:
+In una singola transaction Postgres:
+
+Cerca lineup esistente per (fanta_team_id, season, round) — il UNIQUE INDEX lineup_one_per_team_round lo garantisce singolo
+Se esiste:
+
+Verifica locked_at IS NULL (se locked, rispondi 403 "Lineup bloccato, deadline passata")
+Aggiorna lineups row con i nuovi module, captain_player_id, submitted_at = NOW()
+DELETE tutte le righe lineup_players per quel lineup_id, poi INSERT le nuove
+
+
+Se non esiste:
+
+INSERT in lineups
+INSERT in lineup_players per ogni player
+
+
+
+Tutto in BEGIN ... COMMIT. Rollback su errore.
+Per il GET: query singola con JOIN lineups + lineup_players, restituisce JSON shape conforme allo schema OpenAPI. Se non trovato: 200 con body null (non 404, perché "non c'è ancora" è uno stato valido).
+Riportami:
+
+Curl/test esempio di PUT con payload valido (4-3-3 completo) → response 200, ID lineup
+Curl/test esempio di GET con i query params → response col lineup appena creato
+Curl/test esempio di PUT con validazione che fallisce (es. 10 titolari invece di 11) → response 400 con errore specifico
+Verifica DB: SELECT * FROM lineups; SELECT * FROM lineup_players; mostra i dati persistiti
+
+Stop. Riportami i 4 punti.
+Task 104 — Frontend integration: addio mock data
+Nella pagina FormazionePage.tsx:
+
+Sostituisci import { ... } from './mock-data' con useGetLineups + usePutLineup hook
+All'apertura pagina: chiama GET con (fantaTeamId='ft-mvp-1', season=2024, round=2). Mentre carica: skeleton loader. Se null (no lineup esistente): partenza con campo vuoto + roster a 25. Se esiste: hydration dello state (field e roster derivati dai players ricevuti)
+Bottone "Salva": chiama PUT con il payload corrente. On success: toast "Formazione salvata" + invalidate query. On error: toast errore con dettaglio
+Bottone "Reset": svuota field, ricarica roster con tutti i 25 in ordine alfabetico per ruolo. NON chiama API — è solo client-side. Solo "Salva" persiste
+
+Per il roster panel e per i player data (foto, voto, opponent info, ecc.): purtroppo ancora manteniamo mock-data.ts per la parte dei dati anagrafici dei giocatori e del coach, perché non abbiamo ancora endpoint dedicati. Solo il lineup vero passa per l'API. Lascia un commento TODO: replace with /api/fanta-teams/{id}/roster endpoint when available sopra l'import del mock.
+Test scenario completo:
+
+Apri pagina (fresh state, nessun lineup esistente in DB) → 25 in roster, 0 schierati, "Voto previsto: —"
+Schiera 11 titolari per un 4-3-3, scegli un capitano
+Clicca "Salva" → toast "Formazione salvata"
+Verifica DB: SELECT * FROM lineups WHERE fanta_team_id='ft-mvp-1' AND round=2; → 1 riga. SELECT COUNT(*) FROM lineup_players WHERE lineup_id=N; → 11 (i titolari)
+Aspetta — qui un punto da chiarire: salviamo SOLO i titolari, o anche i panchinari nel lineup_players? Il schema supporta entrambi (is_starter boolean). Per ora salva TUTTI i 25 in lineup_players: 11 con is_starter=true, 14 con is_starter=false e bench_order = N (la priorità del roster). Così abbiamo l'intero stato della formazione persistente
+Refresh della pagina → GET ritorna il lineup, state si hydrata, vedi i tuoi 11 titolari + il roster nel suo ordine originale
+Cambia un titolare, clicca Salva → upsert aggiorna senza creare duplicati
+Reset → svuota client-side. Non clicca Salva → reload pagina mostra ancora il lineup precedente (Reset è client-only)
+
+Riportami screenshot e verifiche DB.
+
+Tre sub-task. Stop dopo ognuno. Step 3 chiude con la formazione che persiste davvero. Step 5 (scoring) sarà il prossimo passo dopo.

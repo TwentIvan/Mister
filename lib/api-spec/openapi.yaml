@@ -26,6 +26,8 @@ tags:
     description: Giocatori Serie A
   - name: contracts
     description: Contratti pluriennali
+  - name: lineups
+    description: Formazioni giornata
 
 paths:
   /healthz:
@@ -785,6 +787,63 @@ paths:
                 $ref: "#/components/schemas/VotoAlgorithmRecalculateResponse"
         "404":
           description: Nessuna config attiva trovata
+
+  # ─── LINEUPS ─────────────────────────────────────────────
+  /lineups:
+    get:
+      operationId: getLineups
+      tags: [lineups]
+      summary: Recupera la formazione di una squadra per una giornata
+      parameters:
+        - in: query
+          name: fantaTeamId
+          schema:
+            type: string
+          required: true
+        - in: query
+          name: season
+          schema:
+            type: integer
+          required: true
+        - in: query
+          name: round
+          schema:
+            type: integer
+          required: true
+      responses:
+        "200":
+          description: Lineup trovato, o null se non ancora compilato
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/Lineup"
+                  - type: "null"
+    put:
+      operationId: putLineup
+      tags: [lineups]
+      summary: Crea o aggiorna la formazione (upsert)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LineupInput"
+      responses:
+        "200":
+          description: Lineup salvato
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Lineup"
+        "400":
+          description: Payload non valido (errori di validazione)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationErrors"
+        "403":
+          description: Lineup bloccato — deadline passata
 
 components:
   parameters:
@@ -1603,3 +1662,79 @@ components:
           description: Righe sotto soglia minuti (voto_mister resta NULL)
         durationMs:
           type: integer
+
+    # ─── LINEUPS ──────────────────────────────────────────────
+    LineupPlayer:
+      type: object
+      required: [playerId, slotPosition, slotIndex, isStarter]
+      properties:
+        playerId:
+          type: integer
+        slotPosition:
+          type: string
+          enum: [GK, DEF, MID, T, ATT]
+        slotIndex:
+          type: integer
+          description: "1–11 per titolari, 12+ per panchina"
+        isStarter:
+          type: boolean
+        benchOrder:
+          type: ["integer", "null"]
+          description: Ordine di priorità in panchina (1 = prima riserva)
+
+    Lineup:
+      type: object
+      required: [id, fantaTeamId, season, round, module, players]
+      properties:
+        id:
+          type: integer
+        fantaTeamId:
+          type: string
+        season:
+          type: integer
+        round:
+          type: integer
+        module:
+          type: string
+          example: "4-3-3"
+        captainPlayerId:
+          type: ["integer", "null"]
+        submittedAt:
+          type: ["string", "null"]
+          format: date-time
+        lockedAt:
+          type: ["string", "null"]
+          format: date-time
+        players:
+          type: array
+          items:
+            $ref: "#/components/schemas/LineupPlayer"
+
+    LineupInput:
+      type: object
+      required: [fantaTeamId, season, round, module, players]
+      properties:
+        fantaTeamId:
+          type: string
+        season:
+          type: integer
+        round:
+          type: integer
+        module:
+          type: string
+          example: "4-3-3"
+        captainPlayerId:
+          type: ["integer", "null"]
+        players:
+          type: array
+          items:
+            $ref: "#/components/schemas/LineupPlayer"
+
+    ValidationErrors:
+      type: object
+      required: [errors]
+      properties:
+        errors:
+          type: array
+          items:
+            type: string

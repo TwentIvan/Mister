@@ -697,6 +697,59 @@ export interface VotoAlgorithmRecalculateResponse {
   durationMs: number;
 }
 
+export type LineupPlayerSlotPosition = typeof LineupPlayerSlotPosition[keyof typeof LineupPlayerSlotPosition];
+
+
+export const LineupPlayerSlotPosition = {
+  GK: 'GK',
+  DEF: 'DEF',
+  MID: 'MID',
+  T: 'T',
+  ATT: 'ATT',
+} as const;
+
+export interface LineupPlayer {
+  playerId: number;
+  slotPosition: LineupPlayerSlotPosition;
+  /** 1–11 per titolari, 12+ per panchina */
+  slotIndex: number;
+  isStarter: boolean;
+  /**
+     * Ordine di priorità in panchina (1 = prima riserva)
+     * @nullable
+     */
+  benchOrder?: number | null;
+}
+
+export interface Lineup {
+  id: number;
+  fantaTeamId: string;
+  season: number;
+  round: number;
+  module: string;
+  /** @nullable */
+  captainPlayerId?: number | null;
+  /** @nullable */
+  submittedAt?: string | null;
+  /** @nullable */
+  lockedAt?: string | null;
+  players: LineupPlayer[];
+}
+
+export interface LineupInput {
+  fantaTeamId: string;
+  season: number;
+  round: number;
+  module: string;
+  /** @nullable */
+  captainPlayerId?: number | null;
+  players: LineupPlayer[];
+}
+
+export interface ValidationErrors {
+  errors: string[];
+}
+
 export type ListTemplatesParams = {
 active_only?: boolean;
 };
@@ -737,5 +790,11 @@ status?: VotoAlgorithmConfigStatus;
 
 export type RecalculateVotoMisterParams = {
 federationId?: string | null;
+};
+
+export type GetLineupsParams = {
+fantaTeamId: string;
+season: number;
+round: number;
 };
 

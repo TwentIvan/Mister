@@ -1191,3 +1191,68 @@ export const RecalculateVotoMisterResponse = zod.object({
 })
 
 
+/**
+ * @summary Recupera la formazione di una squadra per una giornata
+ */
+export const GetLineupsQueryParams = zod.object({
+  "fantaTeamId": zod.coerce.string(),
+  "season": zod.coerce.number(),
+  "round": zod.coerce.number()
+})
+
+export const GetLineupsResponse = zod.union([zod.object({
+  "id": zod.number(),
+  "fantaTeamId": zod.string(),
+  "season": zod.number(),
+  "round": zod.number(),
+  "module": zod.string(),
+  "captainPlayerId": zod.number().nullish(),
+  "submittedAt": zod.coerce.date().nullish(),
+  "lockedAt": zod.coerce.date().nullish(),
+  "players": zod.array(zod.object({
+  "playerId": zod.number(),
+  "slotPosition": zod.enum(['GK', 'DEF', 'MID', 'T', 'ATT']),
+  "slotIndex": zod.number().describe('1–11 per titolari, 12+ per panchina'),
+  "isStarter": zod.boolean(),
+  "benchOrder": zod.number().nullish().describe('Ordine di priorità in panchina (1 = prima riserva)')
+}))
+}),zod.null()])
+
+
+/**
+ * @summary Crea o aggiorna la formazione (upsert)
+ */
+export const PutLineupBody = zod.object({
+  "fantaTeamId": zod.string(),
+  "season": zod.number(),
+  "round": zod.number(),
+  "module": zod.string(),
+  "captainPlayerId": zod.number().nullish(),
+  "players": zod.array(zod.object({
+  "playerId": zod.number(),
+  "slotPosition": zod.enum(['GK', 'DEF', 'MID', 'T', 'ATT']),
+  "slotIndex": zod.number().describe('1–11 per titolari, 12+ per panchina'),
+  "isStarter": zod.boolean(),
+  "benchOrder": zod.number().nullish().describe('Ordine di priorità in panchina (1 = prima riserva)')
+}))
+})
+
+export const PutLineupResponse = zod.object({
+  "id": zod.number(),
+  "fantaTeamId": zod.string(),
+  "season": zod.number(),
+  "round": zod.number(),
+  "module": zod.string(),
+  "captainPlayerId": zod.number().nullish(),
+  "submittedAt": zod.coerce.date().nullish(),
+  "lockedAt": zod.coerce.date().nullish(),
+  "players": zod.array(zod.object({
+  "playerId": zod.number(),
+  "slotPosition": zod.enum(['GK', 'DEF', 'MID', 'T', 'ATT']),
+  "slotIndex": zod.number().describe('1–11 per titolari, 12+ per panchina'),
+  "isStarter": zod.boolean(),
+  "benchOrder": zod.number().nullish().describe('Ordine di priorità in panchina (1 = prima riserva)')
+}))
+})
+
+
