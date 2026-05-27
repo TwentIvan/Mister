@@ -426,31 +426,31 @@ function Pitch({ modulo, fieldSlots, selection, captainId, onSlotClick, onSlotDo
           </pattern>
         </defs>
         <rect x="0" y="0" width="100" height="140" fill="url(#pitch-stripes)" />
-        <rect x="5" y="5" width="90" height="130" fill="none" stroke="rgba(239,230,211,0.28)" strokeWidth="0.6" />
-        <line x1="5" y1="70" x2="95" y2="70" stroke="rgba(239,230,211,0.28)" strokeWidth="0.6" />
-        <circle cx="50" cy="70" r="12" fill="none" stroke="rgba(239,230,211,0.28)" strokeWidth="0.6" />
-        <circle cx="50" cy="70" r="0.8" fill="rgba(239,230,211,0.45)" />
-        <rect x="22" y="5" width="56" height="20" fill="none" stroke="rgba(239,230,211,0.28)" strokeWidth="0.6" />
-        <rect x="36" y="5" width="28" height="9" fill="none" stroke="rgba(239,230,211,0.28)" strokeWidth="0.6" />
-        <circle cx="50" cy="17" r="0.8" fill="rgba(239,230,211,0.45)" />
-        <rect x="22" y="115" width="56" height="20" fill="none" stroke="rgba(239,230,211,0.28)" strokeWidth="0.6" />
-        <rect x="36" y="126" width="28" height="9" fill="none" stroke="rgba(239,230,211,0.28)" strokeWidth="0.6" />
-        <circle cx="50" cy="123" r="0.8" fill="rgba(239,230,211,0.45)" />
-        {/* Area tecnica — bordo sinistro, metà campo difensiva (portiere in alto) */}
-        <rect x="5" y="26" width="11" height="21"
-          fill="none"
-          stroke="rgba(239,230,211,0.5)"
-          strokeWidth="1.5"
-          strokeDasharray="4 3"
-        />
+        {/* Campo verde — spostato a destra (~10%) per lasciare spazio all'area tecnica */}
+        <rect x="14" y="5" width="81" height="130" fill="none" stroke="rgba(239,230,211,0.28)" strokeWidth="0.6" />
+        <line x1="14" y1="70" x2="95" y2="70" stroke="rgba(239,230,211,0.28)" strokeWidth="0.6" />
+        <circle cx="54.5" cy="70" r="11" fill="none" stroke="rgba(239,230,211,0.28)" strokeWidth="0.6" />
+        <circle cx="54.5" cy="70" r="0.8" fill="rgba(239,230,211,0.45)" />
+        {/* Area di rigore in alto */}
+        <rect x="29" y="5" width="51" height="20" fill="none" stroke="rgba(239,230,211,0.28)" strokeWidth="0.6" />
+        <rect x="42" y="5" width="25" height="9" fill="none" stroke="rgba(239,230,211,0.28)" strokeWidth="0.6" />
+        <circle cx="54.5" cy="17" r="0.8" fill="rgba(239,230,211,0.45)" />
+        {/* Area di rigore in basso */}
+        <rect x="29" y="115" width="51" height="20" fill="none" stroke="rgba(239,230,211,0.28)" strokeWidth="0.6" />
+        <rect x="42" y="126" width="25" height="9" fill="none" stroke="rgba(239,230,211,0.28)" strokeWidth="0.6" />
+        <circle cx="54.5" cy="123" r="0.8" fill="rgba(239,230,211,0.45)" />
+        {/* Area tecnica — 3 lati (aperta sul lato sinistro verso panchina), fuori dalla touchline */}
+        <line x1="5" y1="28" x2="14" y2="28" stroke="rgba(239,230,211,0.28)" strokeWidth="0.6" strokeDasharray="4 3" />
+        <line x1="5" y1="48" x2="14" y2="48" stroke="rgba(239,230,211,0.28)" strokeWidth="0.6" strokeDasharray="4 3" />
+        <line x1="14" y1="28" x2="14" y2="48" stroke="rgba(239,230,211,0.28)" strokeWidth="0.6" strokeDasharray="4 3" />
       </svg>
 
-      {/* MiniCoachToken sovrapposto all'area tecnica (center SVG rect: x≈10.5%, y≈26.4%) */}
+      {/* MiniCoachToken — sovrapposto all'area tecnica (x 5%→14%, y 20%→34.3%) */}
       {coach && (
         <div style={{
           position: "absolute",
-          left: "5%", top: "18.6%",
-          width: "11%", height: "15%",
+          left: "5%", top: "20%",
+          width: "9%", height: "14.3%",
           display: "flex", alignItems: "center", justifyContent: "center",
           pointerEvents: "none",
           zIndex: 2,
@@ -466,7 +466,7 @@ function Pitch({ modulo, fieldSlots, selection, captainId, onSlotClick, onSlotDo
 
           return (
             <div key={rowIdx} style={{
-              position: "absolute", left: "3%", right: "3%", top: `${topPct}%`,
+              position: "absolute", left: "16%", right: "7%", top: `${topPct}%`,
               transform: "translateY(-50%)",
               display: "flex", justifyContent: "center", alignItems: "flex-start", gap: 10,
             }}>

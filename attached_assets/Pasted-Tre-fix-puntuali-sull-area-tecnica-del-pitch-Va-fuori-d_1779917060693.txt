@@ -1,0 +1,40 @@
+Tre fix puntuali sull'area tecnica del pitch. Va fuori dal verde, va aperta su un lato, va con stroke uniforme alle altre linee.
+Modifiche all'SVG del pitch:
+(a) Spazio fuori dal green rectangle
+L'area tecnica nella realtà è FUORI dalla linea laterale (touchline), nello spazio tra il campo e la panchina. Quindi:
+
+Restringi il rettangolo verde del campo di ~10-12% in larghezza
+Spostalo leggermente verso destra dentro l'SVG container, in modo che ci sia uno spazio "margine" a sinistra tra il bordo dell'SVG e il bordo sinistro del green
+Questo spazio (~10-12% di pitch_width) è dove disegneremo l'area tecnica
+Il green mantiene la sua aspect-ratio interna (le aree di rigore, cerchio, formazione restano proporzionati come ora)
+Niente padding aggiuntivo sul lato destro per ora (lascia simmetria solo se la pagina lo richiede esteticamente — altrimenti accetta layout asimmetrico)
+
+(b) Disegna l'area tecnica nello spazio esterno appena creato
+Posizione:
+
+x: nello spazio a sinistra, tra il bordo SVG e il bordo sinistro del green (centrata in quello spazio o leggermente più vicina al green)
+y: ~25-28% dall'alto del pitch totale (a metà della propria metà campo difensiva, dove sta il portiere)
+Dimensioni: width ~8-10% del pitch_width totale, height ~16-18% del pitch_height totale
+Orientamento: rettangolo più alto che largo
+
+(c) Rettangolo aperto su un lato
+L'area tecnica reale ha solo 3 lati disegnati (il lato più lontano dal campo è aperto verso la panchina). Quindi disegna 3 segmenti, non un <rect> chiuso:
+
+Lato corto superiore (orizzontale, in alto)
+Lato corto inferiore (orizzontale, in basso)
+Lato lungo destro (verticale, quello verso il campo / linea laterale)
+NON disegnare il lato lungo sinistro (verticale, quello verso l'esterno / panchina)
+
+Implementazione: usa 3 elementi <line> separati, oppure un <polyline> con 3 segmenti, invece di un <rect> chiuso.
+(d) Stroke uniforme con le altre linee del campo
+Le linee tratteggiate devono avere lo stesso stroke-width delle altre linee del pitch (area di rigore, cerchio centrale, area piccola, ecc.). Riusa la stessa variabile/constante che usi per quelle linee. Mantieni:
+
+Stesso colore (rgba(239, 230, 211, 0.5) o quello che usi per le altre linee)
+stroke-dasharray="4 3" (tratteggio)
+
+Se attualmente le altre linee hanno stroke-width: 2 o 1.5, applica esattamente quello.
+Coach token dentro l'area tecnica
+Resta nella posizione attuale (sotto la rilevazione iniziale del problema, era OK) ma ora vive dentro il nuovo spazio fuori-green. Verifica che ci stia comodo: ridimensiona se necessario per non sporgere dai 3 lati chiusi.
+Riportami screenshot finale dopo i 3 fix.
+
+Quando questo viene chiuso, Batch 7 è davvero finito e passiamo al backend (Step 3 — API CRUD lineup).
