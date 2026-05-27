@@ -1,0 +1,91 @@
+Implementazione cosmetica della figura allenatore. Quattro task in sequenza con stop in mezzo.
+Task 95 — Schema + sync coaches
+
+Crea schema Drizzle coaches:
+
+typescriptexport const coaches = pgTable("coaches", {
+  id: integer("id").primaryKey(),  // API-Football coach ID
+  name: text("name").notNull(),
+  firstname: text("firstname"),
+  lastname: text("lastname"),
+  photoUrl: text("photo_url"),
+  photoCartoonUrl: text("photo_cartoon_url"),
+  nationality: text("nationality"),
+  birthDate: date("birth_date"),
+  currentTeamId: integer("current_team_id"),  // team Serie A che allena (no FK, no teams table)
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+Push. Verifica schema con \d+ coaches.
+
+Crea scripts/sync/coaches.ts:
+
+Per ognuno dei 20 team Serie A 2024-25 (li trovi nel DB su team_colors.team_id), chiama GET https://v3.football.api-sports.io/coachs?team={team_id} e prendi il primo coach dalla response (l'attuale head coach). Upsert in coaches.
+Headers richiesti:
+x-rapidapi-key: ${API_FOOTBALL_KEY}
+x-rapidapi-host: v3.football.api-sports.io
+Rate limit: spazia le chiamate (sleep 200ms tra una e l'altra) per stare sotto la soglia free/Pro.
+Aggiungi al package.json di scripts: "sync:coaches": "tsx scripts/sync/coaches.ts".
+Lancia: pnpm --filter @workspace/scripts run sync:coaches.
+Verifica: SELECT COUNT(*) FROM coaches; → atteso 20.
+Stop. Riportami: conta coaches + 5 sample (nome + currentTeamId + photoUrl valida)
+Task 96 — Cartoonize coach photos
+Riusa la stessa pipeline di cartoonize-photos.ts ma applicala ai coach. Due opzioni:
+
+(a) Estendi lo script esistente con un flag --target coaches che processa la tabella coaches invece di players
+(b) Crea uno script gemello cartoonize-coaches.ts (più chiaro ma duplica codice)
+
+Preferisco (a) — fai refactor minimo: aggiungi un parametro --target che switcha la sorgente. Default players (backward compatible).
+Lancia su tutti i 20 coach: pnpm --filter @workspace/scripts run sync:cartoonize -- --target coaches --all.
+I .webp finiscono in mister-web/public/avatars/coaches/<coach_id>.webp (sottocartella per separarli dai player). Il path completo viene salvato in coaches.photo_cartoon_url.
+Stop. Riportami: 20/20 cartoonize, sample 2-3 URL accessibili.
+Task 97 — Assegna coach a fanta_team + UI mock data
+
+Migrazione: aggiungi colonna a fanta_teams:
+
+sqlALTER TABLE fanta_teams ADD COLUMN head_coach_id integer;
+(Aggiungi via Drizzle schema, push.)
+
+Seed: assegna random stable un coach Serie A a ognuno degli 8 fanta_team della Lega Test MVP:
+
+
+Mario's Squad (ft-mvp-1) → assegna Massimiliano Allegri se presente nei coach sincronizzati (o, se Allegri non allena più Serie A nel 2024-25, prendi il coach Juventus attuale). Hardcoded: cerca per nome o per currentTeamId = 496 (Juventus)
+Altri 7 fanta_team → random stable (seed "coach-assignment-mvp-2024") tra i restanti 19 coach. Niente duplicati
+
+Aggiorna players.coachId valori e verifica.
+
+Aggiorna mock-data.ts della pagina Formazione:
+
+
+Aggiungi una sezione coach: { id, name, firstname, lastname, photoCartoonUrl, currentTeamId, currentTeamColors: {primaryHex, secondaryHex}, currentTeamShort, opponentShort, isHomeMatch }
+Popola con i dati del coach assegnato a Mario's Squad (query da DB)
+
+Stop. Riportami: 8/8 assegnazioni, conferma che Mario's Squad ha il coach Juventus.
+Task 98 — UI: area tecnica + coach token
+Modifica FormazionePage.tsx e Pitch.tsx:
+
+Disegna area tecnica nel pitch SVG:
+
+Rettangolo tratteggiato (stroke-dasharray: 4 3, stroke: rgba(239,230,211,0.5), fill: none)
+Posizione: bordo sinistro del pitch, a metà verticale della metà inferiore del pitch
+Dimensioni: width ~6% pitch_width, height ~12% pitch_height
+Orientamento: verticale (rettangolo più alto che largo)
+Stick out: il bordo sinistro del rettangolo coincide con il bordo sinistro del pitch (zero overflow), o leggermente più dentro
+
+
+Coach token dentro l'area tecnica:
+
+Riusa il PlayerToken con variant: 'coach' (nuova variante)
+Dimensione: ~70% di un field token, per stare dentro l'area
+Anatomia: foto cartoonizzata + nome (cognome) + pill colori squadra Serie A che allena (primaryHex/secondaryHex/teamShort) + icon casa/aereo + opponentShort (analogo al PlayerToken)
+Voto badge: mostra — per ora (Step 5 lo riempirà)
+Ring affinità: niente (il coach non è "in posizione")
+Capitano: non applicabile
+Label sotto: "MISTER" piccolo in font mono (per distinguerlo dai giocatori), poi cognome
+
+
+Posizione token: centrato dentro l'area tecnica, in modo che il nome "MISTER + cognome" sia leggibile sotto la foto
+
+Riportami screenshot finale: pitch con formazione + coach Mister Allegri (o chi è) dentro l'area tecnica laterale, voto —.
+
+Quattro task. Stop dopo ognuno. Fammi sapere quando hai lanciato il primo (sync coaches).

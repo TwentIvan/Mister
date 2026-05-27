@@ -13,7 +13,8 @@
     "sync:all": "tsx ./sync/run-all.ts",
     "voto:backtest": "tsx ./voto-mister/run-backtest.ts",
     "voto:persist": "tsx ./voto-mister/persist-voto-mister.ts",
-    "sync:cartoonize": "tsx ./sync/cartoonize-photos.ts"
+    "sync:cartoonize": "tsx ./sync/cartoonize-photos.ts",
+    "sync:coaches": "tsx ./sync/coaches.ts"
   },
   "dependencies": {
     "@tensorflow-models/blazeface": "^0.1.0",
