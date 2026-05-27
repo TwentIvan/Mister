@@ -1,0 +1,106 @@
+
+UI letta e mostrata correttamente. Procedi con Batch 2: rendi il form editabile e collega le 3 azioni. Tutto in italiano, segue DESIGN_SYSTEM.md e AGENT_BRIEF.md.
+Task 52 — Form editabile + stato dirty
+Tutti i campi (numerici dei 3 tab, nome versione, note) diventano editabili. Track changes in React state (es. useState<VotoMisterConfig> + version string + notes). Quando i valori del form divergono da quelli della config selezionata, il form è in stato dirty.
+UI signaling:
+
+Indicatore "● Modifiche non salvate" sopra la riga bottoni quando dirty. Punto in --warn (ambra spenta), niente colori squillanti
+Bottoni "Salva come bozza" e "Salva e attiva": disabilitati quando il form NON è dirty
+Bottone "Ricalcola voti": sempre abilitato se esiste una config attiva (è indipendente dal form)
+
+Aggiungi sopra i bottoni un campo input per il nome versione, etichetta "Nome versione":
+
+Pre-popolato col version della config selezionata (es. "v1.0")
+Editabile: il salvataggio userà questo valore. Se l'utente modifica i pesi ma lascia "v1.0", verrà creata una nuova riga con version="v1.0" (legale — version non è UNIQUE)
+Validazione minima: stringa non vuota
+
+Aggiungi anche la textarea "Note sulla versione" già abbozzata in Batch 1 — ora collegata allo state.
+Task 53 — Mutation "Salva come bozza"
+Hook: useCreateVotoAlgorithmConfig.
+Click → POST con body:
+json{
+  "federationId": null,
+  "version": "<dal form>",
+  "configJson": <dal form>,
+  "status": "draft",
+  "notes": "<dal form>"
+}
+Post-success:
+
+Invalida useListVotoAlgorithmConfigs (React Query queryClient.invalidateQueries)
+Toast verde in basso a destra: Bozza "v1.x" salvata. Auto-dismiss dopo 4s
+Auto-seleziona la nuova bozza nel dropdown
+Reset stato dirty (la bozza appena salvata è "lo stato corrente")
+
+Errore (5xx, network): toast rosso Errore durante il salvataggio. Riprova. con bottone "Riprova" che ritenta la stessa mutation.
+Task 54 — Mutation "Salva e attiva" + dialog
+Click → mostra dialog modale prima di chiamare l'API:
+Titolo Fraunces: Attivare versione "<nome dal form>"?
+
+Body Inter:
+La versione attualmente attiva (v1.0) verrà archiviata.
+Tutti i nuovi voti calcolati useranno la nuova versione.
+
+Nota: questo non ricalcola i voti già salvati in database.
+Per ricalcolare, usa il bottone "Ricalcola voti" separato.
+
+Bottoni:
+[Annulla] (secondary)  [Attiva versione] (primary verde)
+Click "Annulla" → chiude dialog, nessuna azione.
+Click "Attiva versione" → POST con status="active". L'API gestisce atomicamente l'archiviazione della precedente.
+Post-success:
+
+Invalida query
+Toast: Versione "v1.x" attivata. La versione precedente è stata archiviata.
+Auto-seleziona la nuova attiva
+
+Task 55 — Mutation "Ricalcola voti" + dialog
+Click → dialog:
+Titolo Fraunces: Ricalcolare i voti della stagione?
+
+Body Inter:
+Verrà usata la versione attualmente attiva: v1.0
+Note: <primi 80 caratteri delle notes della config attiva, "...")
+
+Voti potenzialmente aggiornati: 623 record
+Tempo stimato: meno di 2 secondi
+
+Bottoni:
+[Annulla]  [Ricalcola] (primary)
+Click "Ricalcola" → POST /voto-algorithm-configs/recalculate. Durante l'attesa, dentro il dialog mostra spinner + testo "Ricalcolo in corso...". Riceve risposta con updatedCount, skippedCount, durationMs.
+Post-success: dialog si chiude, toast verde:
+Ricalcolati <updatedCount> voti in <durationMs>ms. <skippedCount> righe sotto soglia minuti (NULL).
+Errore: toast rosso, dialog resta aperto per consentire retry.
+Task 56 — Stati visivi durante mutation
+
+Bottone della mutation in corso: disabilitato + spinner inline a destra del testo
+Altri bottoni: disabilitati durante una mutation in corso (evita doppi-submit)
+Dopo successo: ripristina stati normali
+
+Task 57 — Test end-to-end
+Procedi così, riportami passo per passo:
+
+Carica pagina → conferma v1.0 attiva visibile
+Modifica anchor da 6 a 6.5 → conferma indicatore "Modifiche non salvate" appare, bottoni si abilitano
+Cambia nome versione in "v1.1-test-ui" → ancora dirty
+Click "Salva come bozza" → conferma toast "Bozza v1.1-test-ui salvata", bozza appare nel dropdown sotto "Bozze"
+Modifica blend.alphaStats da 0.35 a 0.40 → torna dirty
+Click "Salva e attiva" → dialog appare → click "Attiva versione" → toast attivazione, v1.0 archiviata
+Verifica nel dropdown: la attiva è ora "v1.1-test-ui" (la nuova creata con anchor 6.5 e alpha 0.40), v1.0 sotto Archivio
+Click "Ricalcola voti" → dialog mostra version v1.1-test-ui e note → click "Ricalcola" → spinner → toast con counts
+Verifica via SQL diretto:
+
+sql   SELECT ROUND(AVG(voto_mister)::numeric, 2) FROM player_giornata_stats WHERE voto_mister IS NOT NULL;
+La media deve essere salita da 6.64 (atteso intorno a 6.93 con anchor 6.5 e alpha 0.40, ma il numero esatto dipende dalla formula — l'importante è che sia diversa da 6.64)
+
+Cleanup: seleziona v1.0 dal dropdown → tutto il form si ripopola con i valori v1.0 originali → click "Salva e attiva" → dialog → conferma → v1.0 di nuovo attiva
+Click "Ricalcola voti" → torna alla media originale 6.64
+Stato finale: v1.0 active, v1.1-test-ui archived, media voto_mister = 6.64
+
+Riportami:
+
+Tutti gli step di test eseguiti (OK/KO per ogni numero)
+Conferma che alla fine v1.0 è attiva e la media è 6.64 (stato pulito post-test)
+Eventuali stranezze visive (toast non visibili, dialog scrostato, bottoni che restano disabilitati per sbaglio, ecc.)
+
+NON aggiungere endpoint nuovi al backend. NON modificare lo schema. Solo UI.
