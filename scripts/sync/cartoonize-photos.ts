@@ -23,9 +23,9 @@ const REPLICATE_MODEL =
   "fofr/face-to-many:35cea9c3164d9fb7fbd48b51503eabdb39c9d04fdaef9a68f368bed8087ec5f9";
 
 const REPLICATE_INPUT = {
-  style: "Cartoon",
-  prompt: "a person, classic cartoon style portrait",
-  negative_prompt: "anime, 3d render, photorealistic, sketch",
+  style: "3D",
+  prompt: "a person, 3D animated character portrait, Pixar style",
+  negative_prompt: "photorealistic, sketch, watermark, blurry",
   lora_scale: 1.0,
   prompt_strength: 4.5,
   denoising_strength: 0.65,
@@ -33,9 +33,9 @@ const REPLICATE_INPUT = {
   control_depth_strength: 0.8,
 };
 
-const CONCURRENCY = 3;
-const MAX_RETRIES = 2;
-const RETRY_DELAY_MS = 3000;
+const CONCURRENCY = 1;
+const MAX_RETRIES = 3;
+const RETRY_DELAY_MS = 12000;
 
 // ID giocatori di Mario's Squad (ft-mvp-1)
 const MARIO_SQUAD_IDS = [
@@ -151,7 +151,7 @@ async function processPlayer(
 
       // Converti in webp 512×512
       await sharp(buf)
-        .resize(512, 512, { fit: "cover", position: "face" })
+        .resize(512, 512, { fit: "cover", position: "centre" })
         .webp({ quality: 85 })
         .toFile(outPath);
 
@@ -169,6 +169,11 @@ async function processPlayer(
       return; // successo
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
+      // Errori di input non ha senso riprovare
+      if (msg.includes("422") || msg.includes("Unprocessable")) {
+        console.error(`${tag} — ERRORE INPUT (non riprovabile): ${msg}`);
+        return;
+      }
       if (attempt <= MAX_RETRIES) {
         console.warn(`${tag} — errore tentativo ${attempt}: ${msg}. Retry tra ${RETRY_DELAY_MS / 1000}s…`);
         await sleep(RETRY_DELAY_MS * attempt);
