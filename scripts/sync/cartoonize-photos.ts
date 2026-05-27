@@ -36,8 +36,9 @@ const REPLICATE_INPUT = {
   denoising_strength: 0.75,
   // instant_id preserva l'identità del viso
   instant_id_strength: 0.80,
-  // control_depth basso → meno locked alla profondità dell'input → libertà di reframare
-  control_depth_strength: 0.5,
+  // control_depth a 0 → ignora completamente la composizione/framing dell'input,
+  // lascia che sia solo il prompt a decidere inquadratura e taglio
+  control_depth_strength: 0.0,
 };
 
 // Remove.bg API key (opzionale — se assente, lo sfondo non viene rimosso)
@@ -197,12 +198,12 @@ async function processPlayer(
         .trim({ threshold: hasTransparency ? 5 : 20 })
         .toBuffer();
 
-      // Passo 3: ridimensiona a 512×512 — fit cover (riempie il frame con il viso)
-      // fit:"cover" massimizza la dimensione del viso e uniforma l'inquadratura tra player.
+      // Passo 3: ridimensiona a 512×512 — fit contain (mai clipping della testa)
+      // Il modello decide già il framing via prompt; contain garantisce che niente venga tagliato.
       await sharp(trimmedBuf)
         .resize(512, 512, {
-          fit: "cover",
-          position: "centre",
+          fit: "contain",
+          background: { r: 255, g: 255, b: 255, alpha: 1 },
         })
         .flatten({ background: { r: 255, g: 255, b: 255 } })
         .webp({ quality: 85 })
