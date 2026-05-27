@@ -33,9 +33,9 @@ const REPLICATE_INPUT = {
   control_depth_strength: 0.8,
 };
 
-const CONCURRENCY = 1;
+const CONCURRENCY = 3;
 const MAX_RETRIES = 3;
-const RETRY_DELAY_MS = 12000;
+const RETRY_DELAY_MS = 5000;
 
 // ID giocatori di Mario's Squad (ft-mvp-1)
 const MARIO_SQUAD_IDS = [
