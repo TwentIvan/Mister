@@ -24,13 +24,20 @@ const REPLICATE_MODEL =
 
 const REPLICATE_INPUT = {
   style: "3D",
-  prompt: "a person, 3D animated Pixar style portrait, plain background",
-  negative_prompt: "photorealistic, sketch, watermark, blurry, text",
+  // Prompt forzato: solo testa, riempie il frame, niente collo/spalle
+  prompt:
+    "3D Pixar animation style, extreme close-up head portrait, face fills the entire frame, top of head to chin only, no neck, no shoulders, no body, tight headshot, centered face, white background",
+  negative_prompt:
+    "neck, shoulders, chest, body, torso, collar, shirt, jacket, full body, half body, bust, decolletage, colorful background, dark background, blurry, watermark, text, logo",
   lora_scale: 1.0,
-  prompt_strength: 4.5,
-  denoising_strength: 0.65,
-  instant_id_strength: 0.85,
-  control_depth_strength: 0.8,
+  // prompt_strength alto → il prompt guida il framing (inquadratura stretta)
+  prompt_strength: 8,
+  // denoising alto → meno vincolato alla posa originale, più libertà al prompt
+  denoising_strength: 0.75,
+  // instant_id preserva l'identità del viso
+  instant_id_strength: 0.80,
+  // control_depth basso → meno locked alla profondità dell'input → libertà di reframare
+  control_depth_strength: 0.5,
 };
 
 // Remove.bg API key (opzionale — se assente, lo sfondo non viene rimosso)
@@ -184,28 +191,18 @@ async function processPlayer(
 
       fs.mkdirSync(AVATARS_DIR, { recursive: true });
 
-      // Passo 2: trim bordi → bounding-box stretto della persona
-      // Con trasparenza: rimuove bordi alpha=0. Senza: rimuove bordi del colore dell'angolo.
-      // Il crop 62% è relativo alla persona, non al frame originale → molto più robusto.
+      // Passo 2: trim bordi trasparenti → bounding-box stretto del viso
+      // Il modello gestisce già il framing grazie al prompt — nessun crop manuale.
       const trimmedBuf = await sharp(workingBuf)
         .trim({ threshold: hasTransparency ? 5 : 20 })
         .toBuffer();
 
-      const trimMeta = await sharp(trimmedBuf).metadata();
-      const personH = trimMeta.height ?? 512;
-      const personW = trimMeta.width ?? 512;
-      const faceH = Math.round(personH * 0.62);
-
-      // Passo 3: estrai zona testa (62% superiore del bounding-box)
-      const faceBuf = await sharp(trimmedBuf)
-        .extract({ left: 0, top: 0, width: personW, height: faceH })
-        .toBuffer();
-
-      // Passo 4: ridimensiona a 512×512 — fit contain con sfondo bianco
-      await sharp(faceBuf)
+      // Passo 3: ridimensiona a 512×512 — fit cover (riempie il frame con il viso)
+      // fit:"cover" massimizza la dimensione del viso e uniforma l'inquadratura tra player.
+      await sharp(trimmedBuf)
         .resize(512, 512, {
-          fit: "contain",
-          background: { r: 255, g: 255, b: 255, alpha: 1 },
+          fit: "cover",
+          position: "centre",
         })
         .flatten({ background: { r: 255, g: 255, b: 255 } })
         .webp({ quality: 85 })
