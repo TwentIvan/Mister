@@ -1,0 +1,36 @@
+Task 105 — Redesign righe del roster: badge rettangolari colorati per ruolo
+Le righe attuali del roster (#N foto nome team-text role-letter voto) diventano badge rettangolari con angoli smussati, background colorato per ruolo, e una composizione più "carta giocatore". Solo questa modifica visiva, niente logica.
+Modifiche specifiche:
+
+Background della riga = colore del ruolo
+
+P (GK): arancio (riusa la stessa variabile colore della pill ruolo)
+D (DEF): verde scuro
+C (MID): blu
+A (ATT): rosso
+Se i colori delle pill sono troppo saturi come background, applica leggera desaturazione o opacità ~75-85% per non essere "loud"
+
+
+Angoli smussati: border-radius 8-12px (coerente con altri card)
+Spaziatura tra righe: ~6-8px verticali tra una riga e l'altra (badge separati, non lista continua)
+Padding interno: ~10-12px verticali, ~14px orizzontali
+Rimuovi #N (priorità) a sinistra: scompare. La priorità si evince visivamente dalla posizione
+Rimuovi pill ruolo (P/D/C/A) a destra: scompare, il background della riga ora trasmette il ruolo
+Foto giocatore con anello verde affinità: uguale ai field tokens. box-shadow: 0 0 0 2px var(--accent-green) o border: 2px solid var(--accent-green) attorno alla foto circolare
+Aggiungi pill bicolore squadra: stessa pill split-color con 3 lettere già usata nei field tokens (primaryHex a sinistra, secondaryHex a destra, 3 lettere bianco-shadow al centro). Riusa lo stesso component, sostituisce il testo "Atalanta" che c'era prima
+
+Layout finale della riga:
+┌──────────────────────────────────────────────────┐
+│ ⬤ Cognome                              voto     │
+│   [BIC pill] · [icon] vs OPP                     │
+└──────────────────────────────────────────────────┘
+(background = colore ruolo, rounded)
+
+Foto (con ring verde) a sinistra
+Nome cognome a destra della foto, in alto
+Sotto il nome: pill bicolore della squadra + separatore "·" + icona casa/aereo + codice avversario (3 lettere)
+Voto a destra, allineato verticalmente al nome (top)
+
+Contrasto testo: bianco o cream-light su tutti i background colorati. Per il D (verde scuro), verifica che il bianco resti nettamente leggibile (potrebbe servire font-weight: 500 per "spingere" la leggibilità).
+Niente di altro va toccato: pitch, panchina (che non esiste più), area tecnica, coach token, header, filtri ruolo → tutto invariato. Solo le righe del roster.
+Riportami screenshot del roster con il nuovo design, mostrando almeno 2 righe per ogni ruolo (così vediamo tutti i 4 colori applicati).

@@ -37,6 +37,14 @@ const ROLE_BADGE: Record<RoleClassic, { label: string; bg: string }> = {
   ATT: { label: "A", bg: "#8b2c2c" },
 };
 
+// Background colorato per riga del roster — leggermente desaturati per non essere "loud"
+const ROLE_ROW_BG: Record<RoleClassic, string> = {
+  GK:  "#7a5012",
+  DEF: "#1a3d2b",
+  MID: "#19305c",
+  ATT: "#6b1f1f",
+};
+
 type RoleFilter = "tutti" | RoleClassic;
 const ROLE_FILTERS: { label: string; value: RoleFilter }[] = [
   { label: "Tutti", value: "tutti" },
@@ -618,72 +626,108 @@ interface PlayerRowProps {
   onClick: () => void;
 }
 
-function PlayerRow({ player, priority, isSelected, isCompatible, hasFieldSelected, onClick }: PlayerRowProps) {
-  const badge = ROLE_BADGE[player.roleClassic];
+function PlayerRow({ player, isSelected, isCompatible, hasFieldSelected, onClick }: PlayerRowProps) {
+  const bg = ROLE_ROW_BG[player.roleClassic];
   const dimmed = hasFieldSelected && !isCompatible;
+  const colors = TEAM_COLORS[player.realTeam] ?? { primary: "#444", secondary: "#888" };
+  const code = TEAM_CODE[player.realTeam] ?? "???";
 
   return (
     <div
       onClick={onClick}
       style={{
-        display: "flex", alignItems: "center", gap: 9, padding: "6px 12px",
-        borderBottom: "1px solid var(--border)",
-        borderLeft: isSelected ? "3px solid var(--green-deep)" : "3px solid transparent",
+        display: "flex", alignItems: "center", gap: 10,
+        padding: "10px 14px",
+        borderRadius: 10,
+        border: isSelected ? "2px solid rgba(255,255,255,0.72)" : "2px solid transparent",
         cursor: "pointer",
-        opacity: dimmed ? 0.38 : 1,
-        background: isSelected ? "rgba(31,71,51,0.18)" : "transparent",
-        transition: "background 0.1s, opacity 0.15s",
+        opacity: dimmed ? 0.32 : 1,
+        background: bg,
+        transition: "opacity 0.15s, filter 0.1s",
+        flexShrink: 0,
       }}
       onMouseEnter={(e) => {
-        if (!dimmed) (e.currentTarget as HTMLDivElement).style.background = isSelected ? "rgba(31,71,51,0.25)" : "var(--green-pale)";
+        if (!dimmed) (e.currentTarget as HTMLDivElement).style.filter = "brightness(1.18)";
       }}
       onMouseLeave={(e) => {
-        (e.currentTarget as HTMLDivElement).style.background = isSelected ? "rgba(31,71,51,0.18)" : "transparent";
+        (e.currentTarget as HTMLDivElement).style.filter = "none";
       }}
     >
-      {/* Priorità #N */}
-      <span style={{
-        flexShrink: 0, width: 22, textAlign: "right",
-        fontFamily: "var(--font-mono)", fontSize: 10, fontWeight: 600,
-        color: "var(--ink-dim)", lineHeight: 1,
-      }}>
-        #{priority}
-      </span>
-
-      {/* Foto */}
-      <div style={{ width: 32, height: 32, borderRadius: "50%", overflow: "hidden", flexShrink: 0, background: "var(--border)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        {(player.photoCartoonUrl ?? player.photoUrl) ? (
-          <img src={player.photoCartoonUrl ?? player.photoUrl!} alt={player.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
-        ) : (
-          <span style={{ fontSize: 10, color: "var(--ink-dim)", fontFamily: "var(--font-mono)" }}>{player.name[0]}</span>
-        )}
+      {/* Foto con ring verde affinità */}
+      <div style={{ position: "relative", width: 40, height: 40, flexShrink: 0 }}>
+        <div style={{
+          position: "absolute", inset: 2, borderRadius: "50%",
+          overflow: "hidden", background: "rgba(0,0,0,0.4)",
+        }}>
+          {(player.photoCartoonUrl ?? player.photoUrl) ? (
+            <img
+              src={player.photoCartoonUrl ?? player.photoUrl!} alt={player.name}
+              style={{ width: "100%", height: "100%", objectFit: "cover" }}
+              onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+            />
+          ) : (
+            <span style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", fontSize: 11, color: "rgba(255,255,255,0.7)", fontFamily: "var(--font-mono)" }}>
+              {player.name[0]}
+            </span>
+          )}
+        </div>
+        {/* Ring verde affinità */}
+        <div style={{
+          position: "absolute", inset: 0, borderRadius: "50%",
+          border: `2px solid ${AFFINITY_GREEN}`,
+          boxShadow: `0 0 6px ${AFFINITY_GREEN}55`,
+          pointerEvents: "none",
+        }} />
       </div>
 
-      {/* Nome + squadra */}
+      {/* Nome + pill + avversario */}
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 12, fontWeight: 500, color: "var(--ink)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-          {player.name}
+        <div style={{
+          fontSize: 13, fontWeight: 500, color: "#fff",
+          whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+          lineHeight: 1.2, marginBottom: 4,
+        }}>
+          {lastName(player.name)}
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 3, marginTop: 1 }}>
-          <span style={{ fontSize: 10, color: "var(--ink-dim)" }}>{player.realTeam}</span>
+        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+          {/* Pill bicolore squadra */}
+          <div style={{
+            width: 36, height: 13, borderRadius: 4, overflow: "hidden",
+            position: "relative", flexShrink: 0, boxShadow: "0 1px 3px rgba(0,0,0,0.5)",
+          }}>
+            <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: "50%", background: colors.primary }} />
+            <div style={{ position: "absolute", right: 0, top: 0, bottom: 0, width: "50%", background: colors.secondary }} />
+            <span style={{
+              position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center",
+              fontFamily: "var(--font-mono)", fontSize: 7, fontWeight: 700,
+              color: "#fff", textShadow: "0 1px 3px rgba(0,0,0,0.8)", letterSpacing: "0.04em",
+            }}>
+              {code}
+            </span>
+          </div>
+
           {player.nextOpponentShort && (
             <>
-              <span style={{ fontSize: 10, color: "var(--ink-dim)" }}>·</span>
-              {player.nextIsHome ? <Home size={9} style={{ color: "var(--ink-dim)" }} /> : <Plane size={9} style={{ color: "var(--ink-dim)" }} />}
-              <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, fontWeight: 600, color: "var(--ink-dim)" }}>{player.nextOpponentShort}</span>
+              <span style={{ fontSize: 9, color: "rgba(255,255,255,0.45)" }}>·</span>
+              {player.nextIsHome
+                ? <Home  size={8} color="rgba(255,255,255,0.65)" />
+                : <Plane size={8} color="rgba(255,255,255,0.65)" />
+              }
+              <span style={{ fontFamily: "var(--font-mono)", fontSize: 8, fontWeight: 600, color: "rgba(255,255,255,0.75)", letterSpacing: "0.04em" }}>
+                {player.nextOpponentShort}
+              </span>
             </>
           )}
         </div>
       </div>
 
-      {/* Ruolo */}
-      <span style={{ flexShrink: 0, padding: "1px 5px", borderRadius: "var(--r-sm)", background: badge.bg, color: "#fff", fontFamily: "var(--font-mono)", fontSize: 9, fontWeight: 700, letterSpacing: "0.04em" }}>
-        {badge.label}
-      </span>
-
       {/* Voto */}
-      <span style={{ flexShrink: 0, width: 32, textAlign: "right", fontFamily: "var(--font-mono)", fontSize: 12, fontWeight: 600, color: player.votoMister !== null ? "var(--green-deep)" : "var(--ink-dim)" }}>
-        {player.votoMister !== null ? player.votoMister.toFixed(2) : "—"}
+      <span style={{
+        flexShrink: 0, fontFamily: "var(--font-mono)", fontSize: 13, fontWeight: 700,
+        color: player.votoMister !== null ? "#4ade80" : "rgba(255,255,255,0.35)",
+        alignSelf: "flex-start",
+      }}>
+        {player.votoMister !== null ? player.votoMister.toFixed(1) : "—"}
       </span>
     </div>
   );
@@ -1042,7 +1086,7 @@ export default function FormazionePage() {
           </div>
 
           {/* Lista roster */}
-          <div style={{ overflowY: "auto", minHeight: 300 }}>
+          <div style={{ overflowY: "auto", minHeight: 300, padding: "8px 8px", display: "flex", flexDirection: "column", gap: 7 }}>
             {filteredRosterRows.length === 0 ? (
               <div style={{ padding: "24px 16px", textAlign: "center", fontSize: 12, color: "var(--ink-dim)" }}>
                 {starterCount === 11 ? "Tutti i giocatori sono in campo" : "Nessun giocatore in questa posizione"}
