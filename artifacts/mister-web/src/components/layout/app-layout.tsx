@@ -7,7 +7,8 @@ import {
   ShieldAlert,
   Sliders,
   Moon,
-  Sun
+  Sun,
+  Shield,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "@/components/theme-provider";
@@ -19,6 +20,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const navItems = [
     { href: "/", label: "Cruscotto", icon: LayoutDashboard },
     { href: "/leagues", label: "Le mie leghe", icon: Trophy },
+    { href: "/squadra/formazione", label: "Formazione", icon: Shield },
     { href: "/players", label: "Giocatori", icon: Users },
   ];
 

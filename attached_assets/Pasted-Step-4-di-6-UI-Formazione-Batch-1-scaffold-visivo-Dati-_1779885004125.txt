@@ -1,0 +1,98 @@
+Step 4 di 6 — UI Formazione, Batch 1 (scaffold visivo). Dati mock hardcoded; le API si collegheranno dopo.
+Setup contesto: questa pagina è visivamente cruciale. Carica skill frontend-design, leggi AGENT_BRIEF.md e DESIGN_SYSTEM.md se non sono già in contesto. Il pitch è un'isola tematica (palette verde-deep di brand, non Pro Evo verde brillante), che però resta coerente col resto del prodotto. Niente emoji, niente cartoon. Tutto italiano.
+Task 75 — Voce sidebar + route
+Aggiungi nella sidebar sotto "Le mie leghe" una voce "Formazione" (route /squadra/formazione o convenzione equivalente). Per il MVP il context "quale fanta_team" è fisso → mostriamo sempre Mario's Squad (ft-mvp-1, user-ivan). Quando avremo auth + selezione team multipla, la voce sarà condizionata.
+Task 76 — Mock data: rosa Mario's Squad
+Esegui prima una query per leggere la rosa di Mario's Squad da DB, poi embeddala come costante TypeScript in un file dedicato mister-web/src/pages/formazione/mock-data.ts. La query:
+sqlSELECT p.id, p.name, p.real_team, p.role_classic, p.photo_url, p.current_team_id,
+       tc.primary_hex, tc.secondary_hex, tc.text_hex,
+       pgs.voto_mister, pgs.round AS voto_round
+FROM contracts c
+JOIN players p ON p.id = c.player_id
+LEFT JOIN team_colors tc ON tc.team_id = p.current_team_id
+LEFT JOIN player_giornata_stats pgs ON pgs.player_id = p.id AND pgs.round = 2
+WHERE c.fanta_team_id = 'ft-mvp-1'
+ORDER BY 
+  CASE p.role_classic WHEN 'GK' THEN 1 WHEN 'DEF' THEN 2 WHEN 'MID' THEN 3 WHEN 'ATT' THEN 4 END,
+  p.name;
+L'output diventa un array di 25 oggetti RosterPlayer. Riguardo voto_mister: è il voto base per round 2 calcolato dall'algoritmo. Sarà NULL per i giocatori che non hanno giocato round 2 (<15') o che la loro squadra Serie A non era in campo round 2. Tienitelo NULL — la UI lo gestirà come "non disponibile".
+Per il dato casa/trasferta: non abbiamo una tabella fixture locale, e per ora non vogliamo dipendere dalle API. Hardcoda staticamente nella struct mock un campo fieldStatus: 'casa' | 'trasferta' per ogni giocatore, distribuito così: i primi ~13 dei 25 della rosa "casa", gli altri "trasferta". È un dato finto plausibile per test visivo. Quando avremo lo Step 5 (scoring) collegheremo i fixture reali.
+Aggiungi anche al mock il match simulato per round 2 (la sfida fanta-fanta della Lega Test MVP giornata 2): leggi da competition_matches per competitionId = 'comp-mvp-campionato-2024', giornata = 2. Trova il match dove Mario's Squad gioca, riporta nome avversario + se Mario è home o away. Embedda come costante.
+Task 77 — Page skeleton + module selector + pitch vuoto
+Crea mister-web/src/pages/formazione/FormazionePage.tsx. Struttura:
+┌────────────────────────────────────────────────────────────────┐
+│ [h1 Fraunces] Formazione                                       │
+│ [subtitle] Mario's Squad · Giornata 2 · vs <avversario>        │
+│           [pill 'casa' o 'trasferta']                          │
+│                                                                │
+│ [Riga toolbar]                                                 │
+│ Modulo: [4-3-3 ▾] [Capitano: <nome o "—">] [Voto previsto: —]  │
+│                                                  [Salva] [Reset]│
+├────────────────────────────────────────────────────────────────┤
+│                                                                │
+│ ┌──────────────────────────────────┬─────────────────────────┐ │
+│ │                                  │  ROSA                   │ │
+│ │  PITCH                           │  [filtri ruolo: P D C A]│ │
+│ │  (verde-deep, linee cream)       │                         │ │
+│ │                                  │  [lista giocatori]      │ │
+│ │  rows formazione                 │  ...                    │ │
+│ │  (vuote in Batch 1)              │                         │ │
+│ │                                  │                         │ │
+│ └──────────────────────────────────┴─────────────────────────┘ │
+└────────────────────────────────────────────────────────────────┘
+Layout: grid 2 colonne (pitch a sinistra ~70%, roster a destra ~30%) su desktop. Su mobile: stacked verticale (pitch sopra, roster sotto, scrollabile).
+Module selector: dropdown con queste opzioni (in ordine):
+4-3-3
+4-4-2
+3-5-2
+3-4-3
+5-3-2
+4-2-3-1     (con T)
+4-3-1-2     (con T)
+3-4-1-2     (con T)
+3-4-2-1     (con T)
+Lo state del modulo è useState<string>('4-3-3'). Quando cambia, le formation rows del pitch si riconfigurano (in Batch 1 sono vuote, ma il numero di slot per riga deve essere già corretto).
+Pitch component: SVG o div con stile CSS. Background var(--green-deep) #1f4733. Linee del campo (rettangolo, area piccola, cerchio centrale, area di rigore) in rgba(239, 230, 211, 0.25) (cream traslucido). Aspect ratio 5:7 verticale (campo "alla TV" con porte sopra e sotto).
+Sopra il pitch, sovrapposte, formation rows (N righe per il modulo, dall'alto): la prima riga è sempre il GK (1 slot), poi DEF (N slot), MID (N slot), eventuale T (N slot), ATT (N slot). Esempio 4-3-1-2:
+
+Row 1 (alta): 1 GK
+Row 2: 4 DEF
+Row 3: 3 MID
+Row 4: 1 T
+Row 5 (bassa, vicino porta avversaria): 2 ATT
+
+Le rows si dispongono verticalmente nel pitch con padding. Gli slot in una row si distribuiscono orizzontalmente equidistanti (justify-content: space-evenly).
+Slot vuoto: cerchio tratteggiato cream traslucido, dimensione ~70px, etichetta del ruolo al centro ("P" / "D" / "C" / "T" / "A") in JetBrains Mono small. Hover/tap: cambia bordo per indicare "selezionabile". Tap → in Batch 2 verrà collegato al roster panel; per ora basta lo stato visivo "selezionato".
+Roster panel a destra: scaffold con label "Rosa", filtri ruolo (4 pill tappable: Tutti / P / D / C / A), e per ora una lista mock con 5-6 righe placeholder che mostrano nome + ruolo + voto + foto (un'anteprima del componente PlayerCard che farai in Batch 2). Anche questo serve solo a darti l'idea visiva. Layout della riga roster: foto piccola (40px tonda) + nome + badge ruolo + voto in mono allineato a destra.
+Toolbar superiore (sopra il pitch):
+
+"Modulo: [select]"
+"Capitano: —" (placeholder, in Batch 2 mostrerà il nome)
+"Voto previsto: —" (placeholder, in Batch 2 sommerà i voti)
+Spacing automatico + bottoni "Salva" (primary, disabled in Batch 1) e "Reset" (ghost, disabled in Batch 1)
+
+Sotto il subtitle: pill home/away mostrante il fieldStatus del match.
+Constraint non negoziabili:
+
+Palette: solo le variabili CSS di DESIGN_SYSTEM.md. Niente colori inventati
+Tipografia: H1 Fraunces, body Inter, numeri JBM
+Modulo non hardcoded nel codice: la struttura formazione viene parsata dal nome "4-3-1-2" → [1, 4, 3, 1, 2] (con il primo che è sempre il GK)
+Niente animazioni "bouncy", niente emoji
+Il pitch DEVE riempire la sua porzione di schermata sul desktop senza whitespace inutile
+
+Cosa NON fare in Batch 1:
+
+Tap-to-select reale (placeholder click states OK ma non assegnano giocatori)
+Calcolo voto previsto (lascia "—")
+Capitano selection (lascia "—")
+Salva/Reset funzionalità (disabled)
+Player photos nei token (in Batch 2 quando arriveranno i player tokens veri)
+
+Riportami:
+
+Conferma route + voce sidebar
+Screenshot (o descrizione testuale) della pagina con modulo 4-3-3 selezionato (visualizzazione default)
+Cambia modulo a 4-3-1-2: conferma che il pitch riconfigura 5 righe con la T tra centrocampo e attacco
+Tutti i typecheck/build puliti
+
+STOP qui per Batch 1. Stop al primo segnale visivo buono → Batch 2 collegherà tap-to-select + player tokens veri + capitano + voto previsto.
