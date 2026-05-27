@@ -3,13 +3,17 @@
  * Pipeline: download originale → face-detect CJS (blazeface, landmark-based)
  *           → crop viso con padding bianco → Replicate (3D Pixar) → webp 512×512
  *
- * Uso:
+ * Uso (players — backward compatible):
  *   pnpm --filter @workspace/scripts run sync:cartoonize -- --players 1624,35544,6409
  *   pnpm --filter @workspace/scripts run sync:cartoonize -- --all-mario [--force]
+ *
+ * Uso (coaches):
+ *   pnpm --filter @workspace/scripts run sync:cartoonize -- --target coaches --all [--force]
+ *   pnpm --filter @workspace/scripts run sync:cartoonize -- --target coaches --players 3386,2425
  */
 
 import { db } from "@workspace/db";
-import { players } from "@workspace/db/schema";
+import { players, coaches } from "@workspace/db/schema";
 import { inArray, eq } from "drizzle-orm";
 import Replicate from "replicate";
 import sharp from "sharp";
@@ -54,35 +58,34 @@ const AVATARS_DIR = path.resolve(
   __dirname,
   "../../artifacts/mister-web/public/avatars",
 );
+const COACHES_DIR = path.join(AVATARS_DIR, "coaches");
 const FACE_DETECT_SCRIPT = path.resolve(__dirname, "face-detect.cjs");
 const NODE_BIN = process.execPath;
 
 // ─── Tipi ─────────────────────────────────────────────────────────────────────
 
+type Target = "players" | "coaches";
+
 /** Output di face-detect.cjs — coordinate grezze (possono sforare i bordi). */
 interface FaceDetectResult {
-  /** Nessun viso trovato: usa center-crop come fallback. */
   fallback?: boolean;
-  /** Coordinata sinistra del crop (può essere negativa). */
   rawLeft?: number;
-  /** Coordinata superiore del crop (può essere negativa). */
   rawTop?: number;
-  /** Lato del quadrato di crop. */
   size?: number;
-  /** Larghezza immagine originale. */
   w: number;
-  /** Altezza immagine originale. */
   h: number;
-  /** true se il crop è stato calcolato dal bounding-box (landmark invalidi). */
   bbox?: boolean;
+}
+
+interface Subject {
+  id: number;
+  name: string;
+  photoUrl: string | null;
+  photoCartoonUrl: string | null;
 }
 
 // ─── Face-crop via subprocess CJS ─────────────────────────────────────────────
 
-/**
- * Richiama face-detect.cjs (subprocess CJS) che usa blazeface per rilevare il viso
- * e calcola le coordinate di crop (landmark-based con fallback bbox).
- */
 async function detectFace(imageBuffer: Buffer): Promise<FaceDetectResult> {
   const b64 = imageBuffer.toString("base64");
   try {
@@ -100,19 +103,10 @@ async function detectFace(imageBuffer: Buffer): Promise<FaceDetectResult> {
   }
 }
 
-/**
- * Applica il crop al buffer originale e restituisce un PNG 512×512.
- *
- * Algoritmo:
- * 1. Se nessun viso rilevato → center-crop quadrato dell'immagine.
- * 2. Se crop landmark/bbox → clamp ai bordi + .extend() con sfondo bianco
- *    per i margini mancanti → resize 512×512 con fit:'fill'.
- */
 async function applyCrop(
   imageBuffer: Buffer,
   det: FaceDetectResult,
 ): Promise<Buffer> {
-  // ── Caso: nessun viso ──────────────────────────────────────────────────────
   if (det.fallback || det.rawLeft === undefined) {
     const meta = await sharp(imageBuffer).metadata();
     const size = Math.min(meta.width ?? 512, meta.height ?? 512);
@@ -125,10 +119,7 @@ async function applyCrop(
       .toBuffer();
   }
 
-  // ── Caso: crop con coordinate grezze (possono sforare) ────────────────────
   const { rawLeft, rawTop, size, w, h } = det;
-
-  // Coordinate clamped ai bordi dell'immagine
   const actualLeft   = Math.max(0, Math.round(rawLeft));
   const actualTop    = Math.max(0, Math.round(rawTop));
   const actualRight  = Math.min(w, Math.round(rawLeft + size));
@@ -136,52 +127,59 @@ async function applyCrop(
   const actualWidth  = actualRight - actualLeft;
   const actualHeight = actualBottom - actualTop;
 
-  // Padding necessario per le zone fuori bordo
   const padTop    = actualTop  - Math.round(rawTop)  > 0 ? actualTop  - Math.round(rawTop)  : 0;
   const padLeft   = actualLeft - Math.round(rawLeft) > 0 ? actualLeft - Math.round(rawLeft) : 0;
   const padBottom = Math.round(rawTop  + size) - actualBottom > 0 ? Math.round(rawTop  + size) - actualBottom : 0;
   const padRight  = Math.round(rawLeft + size) - actualRight  > 0 ? Math.round(rawLeft + size) - actualRight  : 0;
 
   const WHITE = { r: 255, g: 255, b: 255, alpha: 1 };
-
   let pipeline = sharp(imageBuffer)
     .extract({ left: actualLeft, top: actualTop, width: actualWidth, height: actualHeight });
 
-  // Aggiunge padding bianco solo se necessario
   if (padTop > 0 || padBottom > 0 || padLeft > 0 || padRight > 0) {
-    pipeline = pipeline.extend({
-      top:    padTop,
-      bottom: padBottom,
-      left:   padLeft,
-      right:  padRight,
-      background: WHITE,
-    });
+    pipeline = pipeline.extend({ top: padTop, bottom: padBottom, left: padLeft, right: padRight, background: WHITE });
   }
 
-  return pipeline
-    .flatten({ background: WHITE })
-    .resize(512, 512, { fit: "fill" })
-    .png()
-    .toBuffer();
+  return pipeline.flatten({ background: WHITE }).resize(512, 512, { fit: "fill" }).png().toBuffer();
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function parseArgs(): { playerIds: number[]; force: boolean } {
+function parseArgs(): { target: Target; ids: number[] | "all"; force: boolean } {
   const args = process.argv.slice(2);
   const force = args.includes("--force");
-  const allMario = args.includes("--all-mario");
-  const playersFlag = args.indexOf("--players");
 
-  if (allMario) return { playerIds: MARIO_SQUAD_IDS, force };
+  // --target coaches | players (default: players)
+  const targetFlag = args.indexOf("--target");
+  const target: Target =
+    targetFlag !== -1 && args[targetFlag + 1] === "coaches" ? "coaches" : "players";
+
+  // --all: tutti i record del target
+  if (args.includes("--all")) {
+    return { target, ids: "all", force };
+  }
+
+  // --all-mario: shortcut per i 25 giocatori di Mario's Squad (solo players)
+  if (args.includes("--all-mario")) {
+    return { target: "players", ids: MARIO_SQUAD_IDS, force };
+  }
+
+  // --players <id1,id2,...>
+  const playersFlag = args.indexOf("--players");
   if (playersFlag !== -1 && args[playersFlag + 1]) {
     const ids = args[playersFlag + 1]
       .split(",")
       .map((s) => parseInt(s.trim(), 10))
       .filter((n) => !isNaN(n));
-    return { playerIds: ids, force };
+    return { target, ids, force };
   }
-  console.error("Uso: --players <id1,id2,...> | --all-mario  [--force]");
+
+  console.error(
+    "Uso:\n" +
+    "  --players <id1,id2,...> [--target coaches] [--force]\n" +
+    "  --all-mario [--force]\n" +
+    "  --target coaches --all [--force]",
+  );
   process.exit(1);
 }
 
@@ -195,40 +193,71 @@ async function downloadBuffer(url: string): Promise<Buffer> {
   return Buffer.from(await res.arrayBuffer());
 }
 
-// ─── Processamento singolo giocatore ─────────────────────────────────────────
+// ─── Carica soggetti dal DB ───────────────────────────────────────────────────
 
-async function processPlayer(
+async function loadSubjects(target: Target, ids: number[] | "all"): Promise<Subject[]> {
+  if (target === "coaches") {
+    const rows =
+      ids === "all"
+        ? await db.select({ id: coaches.id, name: coaches.name, photoUrl: coaches.photoUrl, photoCartoonUrl: coaches.photoCartoonUrl }).from(coaches)
+        : await db.select({ id: coaches.id, name: coaches.name, photoUrl: coaches.photoUrl, photoCartoonUrl: coaches.photoCartoonUrl }).from(coaches).where(inArray(coaches.id, ids));
+    return rows;
+  } else {
+    const playerIds = ids === "all" ? [] : (ids as number[]);
+    if (playerIds.length === 0) {
+      console.error("--target players richiede --players <ids> o --all-mario, non --all");
+      process.exit(1);
+    }
+    const rows = await db
+      .select({ id: players.id, name: players.name, photoUrl: players.photoUrl, photoCartoonUrl: players.photoCartoonUrl })
+      .from(players)
+      .where(inArray(players.id, playerIds));
+    return rows;
+  }
+}
+
+// ─── Aggiorna DB ──────────────────────────────────────────────────────────────
+
+async function saveCartoonUrl(target: Target, id: number, relPath: string) {
+  if (target === "coaches") {
+    await db.update(coaches).set({ photoCartoonUrl: relPath, updatedAt: new Date() }).where(eq(coaches.id, id));
+  } else {
+    await db.update(players).set({ photoCartoonUrl: relPath }).where(eq(players.id, id));
+  }
+}
+
+// ─── Processamento singolo soggetto ──────────────────────────────────────────
+
+async function processSubject(
   replicate: Replicate,
-  player: {
-    id: number;
-    name: string;
-    photoUrl: string | null;
-    photoCartoonUrl: string | null;
-  },
+  subject: Subject,
   idx: number,
   total: number,
+  target: Target,
   force: boolean,
 ): Promise<void> {
-  const tag = `[${idx + 1}/${total}] ${player.name} (${player.id})`;
+  const tag = `[${idx + 1}/${total}] ${subject.name} (${subject.id})`;
 
-  if (!player.photoUrl) {
+  if (!subject.photoUrl) {
     console.log(`${tag} — SKIP: nessun photoUrl`);
     return;
   }
-  if (player.photoCartoonUrl && !force) {
-    console.log(`${tag} — SKIP: già cartoonizzato (${player.photoCartoonUrl})`);
+  if (subject.photoCartoonUrl && !force) {
+    console.log(`${tag} — SKIP: già cartoonizzato (${subject.photoCartoonUrl})`);
     return;
   }
 
-  const outPath = path.join(AVATARS_DIR, `${player.id}.webp`);
+  const outDir  = target === "coaches" ? COACHES_DIR : AVATARS_DIR;
+  const outPath = path.join(outDir, `${subject.id}.webp`);
+  const relPath = target === "coaches" ? `/avatars/coaches/${subject.id}.webp` : `/avatars/${subject.id}.webp`;
 
   for (let attempt = 1; attempt <= MAX_RETRIES + 1; attempt++) {
     try {
       const t0 = Date.now();
       console.log(`${tag} — avvio (tentativo ${attempt})…`);
 
-      // ── Step 1: scarica originale → face-detect → crop ────────────────────
-      const originalBuf = await downloadBuffer(player.photoUrl);
+      // ── Step 1: scarica → face-detect → crop ──────────────────────────────
+      const originalBuf = await downloadBuffer(subject.photoUrl);
       console.log(`${tag} — face detect…`);
       const det = await detectFace(originalBuf);
       const croppedBuf = await applyCrop(originalBuf, det);
@@ -238,9 +267,7 @@ async function processPlayer(
       } else {
         const method = det.bbox ? "bbox" : "landmark";
         const s = Math.round(det.size ?? 0);
-        console.log(
-          `${tag} — crop OK [${method}]: ${s}×${s} @ (${Math.round(det.rawLeft!)},${Math.round(det.rawTop!)})`,
-        );
+        console.log(`${tag} — crop OK [${method}]: ${s}×${s} @ (${Math.round(det.rawLeft!)},${Math.round(det.rawTop!)})`);
       }
 
       const imageBlob = new Blob([croppedBuf], { type: "image/png" });
@@ -281,18 +308,11 @@ async function processPlayer(
 
       // ── Step 3: download → trim → 512×512 webp ───────────────────────────
       const workingBuf = await downloadBuffer(imageUrl);
+      fs.mkdirSync(outDir, { recursive: true });
 
-      fs.mkdirSync(AVATARS_DIR, { recursive: true });
-
-      const trimmedBuf = await sharp(workingBuf)
-        .trim({ threshold: 20 })
-        .toBuffer();
-
+      const trimmedBuf = await sharp(workingBuf).trim({ threshold: 20 }).toBuffer();
       await sharp(trimmedBuf)
-        .resize(512, 512, {
-          fit: "contain",
-          background: { r: 255, g: 255, b: 255, alpha: 1 },
-        })
+        .resize(512, 512, { fit: "contain", background: { r: 255, g: 255, b: 255, alpha: 1 } })
         .flatten({ background: { r: 255, g: 255, b: 255 } })
         .webp({ quality: 85 })
         .toFile(outPath);
@@ -300,11 +320,7 @@ async function processPlayer(
       const elapsed = ((Date.now() - t0) / 1000).toFixed(1);
       console.log(`${tag} — salvato (${elapsed}s)`);
 
-      const relPath = `/avatars/${player.id}.webp`;
-      await db
-        .update(players)
-        .set({ photoCartoonUrl: relPath })
-        .where(eq(players.id, player.id));
+      await saveCartoonUrl(target, subject.id, relPath);
       console.log(`${tag} — ✓ DB aggiornato: ${relPath}`);
       return;
     } catch (err: unknown) {
@@ -345,7 +361,7 @@ async function runWithConcurrency<T>(
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 async function main() {
-  const { playerIds, force } = parseArgs();
+  const { target, ids, force } = parseArgs();
   const token = process.env.REPLICATE_API_TOKEN;
   if (!token) {
     console.error("Variabile REPLICATE_API_TOKEN mancante");
@@ -353,47 +369,34 @@ async function main() {
   }
 
   const replicate = new Replicate({ auth: token });
+  const targets = await loadSubjects(target, ids);
 
   console.log(
-    `\n─── Cartoonize: ${playerIds.length} giocatori, concorrenza ${CONCURRENCY}${force ? ", --force" : ""} ───\n`,
+    `\n─── Cartoonize [${target}]: ${targets.length} soggetti, concorrenza ${CONCURRENCY}${force ? ", --force" : ""} ───\n`,
   );
 
-  const rows = await db
-    .select({
-      id: players.id,
-      name: players.name,
-      photoUrl: players.photoUrl,
-      photoCartoonUrl: players.photoCartoonUrl,
-    })
-    .from(players)
-    .where(inArray(players.id, playerIds));
-
-  const rowMap = new Map(rows.map((r) => [r.id, r]));
-  const targets = playerIds
-    .map((id) => {
-      const r = rowMap.get(id);
-      if (!r) {
-        console.warn(`Player ${id} non trovato in DB — skip`);
-        return null;
-      }
-      return r;
-    })
-    .filter((r): r is NonNullable<typeof r> => r !== null);
+  // Ordina per ID corrispondente all'input se fornito come lista
+  const orderedTargets =
+    ids !== "all" && Array.isArray(ids)
+      ? ids.map((id) => targets.find((r) => r.id === id)).filter((r): r is Subject => {
+          if (!r) return false;
+          return true;
+        })
+      : targets;
 
   await runWithConcurrency(
-    targets,
-    (player, idx) => processPlayer(replicate, player, idx, targets.length, force),
+    orderedTargets,
+    (subject, idx) => processSubject(replicate, subject, idx, orderedTargets.length, target, force),
     CONCURRENCY,
   );
 
   console.log("\n─── Sommario ───");
-  for (const player of targets) {
-    const updated = await db
-      .select({ photoCartoonUrl: players.photoCartoonUrl })
-      .from(players)
-      .where(eq(players.id, player.id));
-    const url = updated[0]?.photoCartoonUrl ?? null;
-    console.log(`  ${player.id} ${player.name}: ${url ?? "NON AGGIORNATO"}`);
+  for (const subject of orderedTargets) {
+    const url =
+      target === "coaches"
+        ? (await db.select({ u: coaches.photoCartoonUrl }).from(coaches).where(eq(coaches.id, subject.id)))[0]?.u
+        : (await db.select({ u: players.photoCartoonUrl }).from(players).where(eq(players.id, subject.id)))[0]?.u;
+    console.log(`  ${subject.id} ${subject.name}: ${url ?? "NON AGGIORNATO"}`);
   }
   console.log("───────────────\n");
 }
