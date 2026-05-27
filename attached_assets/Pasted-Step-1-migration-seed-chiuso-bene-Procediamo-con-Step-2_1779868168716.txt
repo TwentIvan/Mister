@@ -1,0 +1,109 @@
+Step 1 (migration + seed) chiuso bene. Procediamo con Step 2: il codice dell'algoritmo legge la config attiva da DB invece che dal file TS.
+Task 42 — Funzione loadActiveConfig
+Crea scripts/voto-mister/load-config.ts:
+typescriptimport { eq, and, isNull } from "drizzle-orm";
+import { votoAlgorithmConfig } from "@workspace/db/schema"; // adatta al path effettivo
+import type { VotoMisterConfig } from "./config";
+
+/**
+ * Carica la config attiva dal DB.
+ * - Se federationId è dato e ha config attiva → quella
+ * - Altrimenti fallback al system default (federation_id NULL, status=active)
+ * - Se nemmeno il system default esiste → errore esplicito (vuol dire che il seed non è girato)
+ */
+export async function loadActiveConfig(
+  db: any, // adatta al tipo Drizzle effettivo
+  federationId: string | null = null
+): Promise<VotoMisterConfig> {
+  // Tentativo: config specifica per la federazione
+  if (federationId !== null) {
+    const specific = await db
+      .select()
+      .from(votoAlgorithmConfig)
+      .where(
+        and(
+          eq(votoAlgorithmConfig.federationId, federationId),
+          eq(votoAlgorithmConfig.status, "active")
+        )
+      )
+      .limit(1);
+    
+    if (specific.length > 0) {
+      return specific[0].configJson as VotoMisterConfig;
+    }
+  }
+  
+  // Fallback: system default
+  const systemDefault = await db
+    .select()
+    .from(votoAlgorithmConfig)
+    .where(
+      and(
+        isNull(votoAlgorithmConfig.federationId),
+        eq(votoAlgorithmConfig.status, "active")
+      )
+    )
+    .limit(1);
+  
+  if (systemDefault.length === 0) {
+    throw new Error(
+      "Nessuna configurazione algoritmo attiva trovata in DB. " +
+      "Eseguire `pnpm --filter @workspace/db run seed` per inizializzare il system default."
+    );
+  }
+  
+  return systemDefault[0].configJson as VotoMisterConfig;
+}
+Task 43 — Refactor di run-backtest.ts
+Sostituisci l'import import { defaultVotoConfig } from "./config" con una chiamata async a loadActiveConfig(db). Dove la config viene usata, aggiungi un log diagnostico chiaro:
+typescriptconst config = await loadActiveConfig(db); // system default
+console.log(`[backtest] Config sourced from DB: ${config ? 'OK' : 'FAILED'}`);
+console.log(`[backtest] anchor=${config.anchor}, alpha=${config.blend.alphaStats}, beta=${config.blend.betaRating}`);
+Mantieni invariata la logica matematica.
+Task 44 — Refactor di persist-voto-mister.ts
+Stesso pattern: sostituisci l'import da TS con loadActiveConfig(db). Stesso log diagnostico.
+Task 45 — Verifica no-regression
+Esegui:
+bashpnpm --filter @workspace/scripts run voto:backtest
+Atteso (siccome la config in DB è identica al defaultVotoConfig in TS):
+
+I 4 voti calcolati devono essere esattamente identici a quelli del report v2 precedente
+Verifica leggendo dalla colonna voto_mister già persistita (quella del Task 35):
+
+sqlSELECT
+  COUNT(*) AS popolati,
+  ROUND(AVG(voto_mister)::numeric, 2) AS media,
+  ROUND(STDDEV(voto_mister)::numeric, 2) AS std,
+  MIN(voto_mister) AS minimo,
+  MAX(voto_mister) AS massimo
+FROM player_giornata_stats
+WHERE voto_mister IS NOT NULL;
+Riconfronta con la riga del backtest appena rigenerato:
+
+popolati ✅ 552
+media ✅ 6.64
+std ✅ 0.36
+min ✅ 5.70
+max ✅ 8.52
+
+E poi confronta un singolo voto per essere sicuri:
+sql-- Top performer del round 2: Joronen Venezia GK (atteso voto_mister=8.52)
+SELECT p.name, p.real_team, pgs.round, pgs.voto_mister
+FROM player_giornata_stats pgs
+JOIN players p ON p.id = pgs.player_id
+WHERE p.name LIKE '%Joronen%'
+ORDER BY pgs.round;
+Riportami:
+
+Il log diagnostico stdout (deve dire Config sourced from DB: OK)
+La sintesi backtest del run (mean/std/min/max devono essere identici a v2)
+La query Joronen
+Conferma che i 3 file modificati sono scripts/voto-mister/run-backtest.ts, scripts/voto-mister/persist-voto-mister.ts, e il nuovo scripts/voto-mister/load-config.ts
+
+NON modificare:
+
+scripts/voto-mister/config.ts (rimane come single source of truth per il TYPE e per il seed)
+scripts/voto-mister/compute.ts (la logica matematica non cambia, solo la sorgente del config)
+DB (niente UPDATE, niente INSERT di nuove config)
+
+Se backtest produce numeri diversi da v2, fermati e segnala — significa che il refactor ha introdotto un bug, non vogliamo persistere niente.

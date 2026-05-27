@@ -9,7 +9,7 @@
  */
 
 import { pool } from "@workspace/db";
-import { defaultVotoConfig } from "./config.js";
+import { loadActiveConfig } from "./load-config.js";
 import { computeVoti } from "./compute.js";
 import type { StatsJson } from "./compute.js";
 
@@ -28,6 +28,10 @@ async function fetchRows(): Promise<Row[]> {
 }
 
 async function main() {
+  const config = await loadActiveConfig();
+  console.log(`[persist] Config sourced from DB: ${config ? "OK" : "FAILED"}`);
+  console.log(`[persist] anchor=${config.anchor}, alpha=${config.blend.alphaStats}, beta=${config.blend.betaRating}`);
+
   const rows = await fetchRows();
   console.log(`Righe lette: ${rows.length}`);
 
@@ -36,7 +40,7 @@ async function main() {
   let nullCount = 0;
 
   for (const r of rows) {
-    const v = computeVoti(r.stats_json, defaultVotoConfig);
+    const v = computeVoti(r.stats_json, config);
     if (v.votoSynthesis !== null) {
       updates.push({ id: r.id, voto: v.votoSynthesis });
     } else {

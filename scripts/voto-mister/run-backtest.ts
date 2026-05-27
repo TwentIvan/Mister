@@ -8,7 +8,8 @@
  */
 
 import { pool } from "@workspace/db";
-import { defaultVotoConfig } from "./config.js";
+import { loadActiveConfig } from "./load-config.js";
+import type { VotoMisterConfig } from "./config.js";
 import { computeVoti } from "./compute.js";
 import type { StatsJson, ComputedVoti } from "./compute.js";
 import { writeFileSync, mkdirSync } from "fs";
@@ -97,7 +98,7 @@ function mdTable(headers: string[], rows: string[][]): string {
   return [fmt(headers), sep, ...rows.map(fmt)].join("\n");
 }
 
-function configYaml(cfg: typeof defaultVotoConfig): string {
+function configYaml(cfg: VotoMisterConfig): string {
   return [
     `anchor: ${cfg.anchor}`,
     `minutes:`,
@@ -123,15 +124,17 @@ function configYaml(cfg: typeof defaultVotoConfig): string {
 interface Computed extends Row, ComputedVoti {}
 
 async function main() {
+  const config = await loadActiveConfig();
+  console.log(`[backtest] Config sourced from DB: ${config ? "OK" : "FAILED"}`);
+  console.log(`[backtest] anchor=${config.anchor}, alpha=${config.blend.alphaStats}, beta=${config.blend.betaRating}`);
+
   const rows = await fetchRows();
 
   // Computa voti
   const computed: Computed[] = rows.map(r => ({
     ...r,
-    ...computeVoti(r.stats_json, defaultVotoConfig),
+    ...computeVoti(r.stats_json, config),
   }));
-
-  const config = defaultVotoConfig;
 
   // ---------------------------------------------------------------------------
   // Distribuzione 4 voti
