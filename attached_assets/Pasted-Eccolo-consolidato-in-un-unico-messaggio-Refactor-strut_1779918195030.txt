@@ -1,0 +1,68 @@
+Eccolo, consolidato in un unico messaggio:
+
+Refactor strutturale finale della pagina Formazione: rimozione completa della sezione panchina + integrazione delle sue funzioni nel roster panel + inversione layout colonne.
+Task 99 — Rimuovi panchina + roster diventa panchina + roster a sinistra
+1. Layout: inverti l'ordine delle due colonne
+
+Da: [Pitch | Roster] (attuale)
+A: [Roster | Pitch] (nuovo)
+
+Inverti grid-template-columns o l'ordine degli elementi figli del container principale, mantenendo proporzioni (~30% roster, ~70% pitch su desktop).
+Coerenza spaziale: il flusso visivo diventa Panchina → Coach (area tecnica sul lato sinistro del pitch) → Campo. Il roster sta fisicamente accanto al coach token nell'area tecnica, dando l'effetto "panchina dietro l'allenatore".
+Responsive:
+
+Desktop: 2 colonne side-by-side (roster sinistra, pitch destra)
+Mobile: stacked verticale con roster sopra il pitch
+
+2. Elimina la sezione PANCHINA sotto il pitch
+Rimuovi completamente il container con i 14/25 token in 2 righe sotto il pitch. Rimozione totale, niente fallback. Nessuna animazione di transizione.
+3. Adatta altezza pitch
+Lascia l'altezza del pitch invariata. Probabilmente avrai del whitespace sotto al pitch — accettabile, l'occhio va dritto sulla formazione.
+4. State model aggiornato:
+typescriptconst [field, setField] = useState<SlotState[]>(emptySlotsForFormation(module));  // 11 slot
+const [roster, setRoster] = useState<number[]>(initialRosterOrder);                // array ordinato di player IDs
+// niente più variabile separata `bench`
+
+Stato iniziale: roster contiene tutti i 25 player IDs (ordine: per ruolo, poi alfabetico cognome, come oggi)
+Aggiunta a campo: setRoster(prev => prev.filter(id => id !== playerId)). La lista si compatta automaticamente
+Rimozione da campo: setRoster(prev => [...prev, playerId]). Va in coda (priorità più bassa)
+Quando 11 sono in campo: roster.length === 14
+
+5. Numerazione priorità in roster
+Ogni riga del roster mostra un piccolo #N (priorità di sostituzione) a sinistra. La prima riga è #1, l'ultima è #N. Font JBM 10-11px, color --text-tertiary.
+Posizione del #N: a sinistra della foto, prima di tutto il resto. Compatto.
+6. Header roster:
+Cambia da "ROSA · 25 giocatori" a "ROSA · N rimanenti" (dinamico, mostra roster.length). Quando il campo è pieno: "ROSA · 14 rimanenti".
+7. Riordino del roster — tap-to-swap
+Coerente col flusso tap-to-select esistente:
+
+Tap su una riga roster (senza slot campo selezionato) → diventa selectedRosterIndex = N. Feedback visivo: bordo accentato verde a sinistra della riga
+Tap su un'altra riga roster (con selezione attiva) → swap delle posizioni nell'array ([roster[a], roster[b]] = [roster[b], roster[a]]), deseleziona
+Tap su uno slot campo compatibile (con riga roster selezionata) → assegna al campo (comportamento attuale)
+Tap fuori (es. su pitch background) → deseleziona
+
+8. Rimuovi colonna stato (TIT/PAN #N) dalla riga del roster
+Non serve più — l'unica info di stato è il numero di priorità #N a sinistra. Tutti gli elementi in lista sono panchinari per definizione.
+9. Filtri ruolo (P/D/C/A)
+Continuano a funzionare. Il count mostrato accanto a ogni pill filtro è il numero di giocatori di quel ruolo rimasti in roster (cioè non ancora schierati).
+10. Stile riga roster aggiornato:
+[#N]  [foto-piccola]  [Nome Cognome]  [pill ruolo]  [voto]
+                       Squadra · [icon] vs OPP
+#N font JBM small a sinistra. Il resto invariato rispetto a oggi.
+Test scenario obbligatori (verificare prima di consegnare):
+
+Pagina caricata, 4-3-3 default, 0 titolari → layout [Roster | Pitch], roster mostra "25 rimanenti" con numerazione #1 a #25
+Schiera 11 titolari (4-3-3 completo) → roster diventa "14 rimanenti", numerazione #1 a #14 (lista compattata, senza buchi)
+Tap su roster #3 (highlight verde) → tap su roster #7 → swap: ora il giocatore che era in #7 è in #3, quello che era #3 è in #7
+Tap su titolare in campo → rimosso, torna in coda al roster come ultimo (es. #15 se eri a 14 prima)
+Cambio modulo 4-3-3 → 4-3-1-2: preserve logic mantiene i compatibili, surplus eventuale va in coda al roster, ordine preservato per i rimanenti
+Su mobile (viewport <640px): roster sopra, pitch sotto, stacked verticale
+
+Riportami screenshot:
+
+Layout iniziale (25 in roster a sinistra, 0 schierati nel pitch a destra)
+Layout con 11 titolari schierati (14 in roster con priority numbering visibile)
+Conferma tap-swap del roster (anche solo descrizione testuale dello swap effettuato + verifica counter aggiornato)
+
+
+Questo è il task completo. Quando torna ok, Batch 7 è davvero chiuso e passiamo allo Step 3 (API CRUD lineup) — backend per persistenza vera.

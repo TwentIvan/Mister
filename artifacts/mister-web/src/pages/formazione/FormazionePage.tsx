@@ -41,8 +41,8 @@ const ROLE_FILTERS: { label: string; value: RoleFilter }[] = [
 // ─── Selezione attiva ─────────────────────────────────────────────────────────
 
 type Selection =
-  | { kind: "field"; slotId: string }
-  | { kind: "bench"; playerId: number }
+  | { kind: "field";  slotId: string }
+  | { kind: "roster"; rosterIdx: number; playerId: number }
   | null;
 
 // ─── Helpers formazione ────────────────────────────────────────────────────────
@@ -86,9 +86,9 @@ function rowPositionsForFormation(formation: number[]): number[] {
   return formation.map((_, i) => 9 + (i / (n - 1)) * 69);
 }
 
-// ─── Panchina iniziale: tutti i 25, per ruolo poi nome ────────────────────────
+// ─── Roster iniziale: tutti i 25, per ruolo poi nome ──────────────────────────
 
-function initialBench(): number[] {
+function initialRoster(): number[] {
   const ROLE_PRIO: Record<RoleClassic, number> = { GK: 0, DEF: 1, MID: 2, ATT: 3 };
   return [...ROSA_MARIO]
     .sort((a, b) => {
@@ -98,14 +98,14 @@ function initialBench(): number[] {
     .map(p => p.id);
 }
 
-// ─── Migrazione lineup al cambio modulo ─────────────────────────────────────
+// ─── Migrazione lineup al cambio modulo ──────────────────────────────────────
 
 function migrateLineup(
   oldFieldSlots: Record<string, number>,
-  oldBench: number[],
+  oldRoster: number[],
   oldFormation: number[],
   newFormation: number[],
-): { newFieldSlots: Record<string, number>; newBench: number[]; message: string } {
+): { newFieldSlots: Record<string, number>; newRoster: number[]; message: string } {
   const getFieldPlayers = (labelFilter: (l: string) => boolean): number[] => {
     const result: number[] = [];
     oldFormation.forEach((count, rowIdx) => {
@@ -151,12 +151,11 @@ function migrateLineup(
   const newATTSlots = getNewSlotIds(l => l === "A");
   oldATTs.forEach((pid, i) => { if (i < newATTSlots.length) newSlots[newATTSlots[i]] = pid; else surplus.push(pid); });
 
-  // Surplus → in coda alla panchina
-  const newBench = [...oldBench, ...surplus];
+  const newRoster = [...oldRoster, ...surplus];
   const titolariCount = Object.keys(newSlots).length;
   let message = `Modulo cambiato. ${titolariCount} giocatori mantenuti`;
-  if (surplus.length > 0) message += `, ${surplus.length} in panchina`;
-  return { newFieldSlots: newSlots, newBench, message: message + "." };
+  if (surplus.length > 0) message += `, ${surplus.length} in lista`;
+  return { newFieldSlots: newSlots, newRoster, message: message + "." };
 }
 
 // ─── PlayerToken ──────────────────────────────────────────────────────────────
@@ -300,7 +299,6 @@ function PlayerToken({
         {name}
       </span>
 
-      {/* Numero priorità (solo bench) */}
       {benchPriority !== undefined && (
         <span style={{
           fontFamily: "var(--font-mono)", fontSize: 9, fontWeight: 500,
@@ -335,7 +333,6 @@ function MiniCoachToken({ coach }: MiniCoachTokenProps) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2, pointerEvents: "none" }}>
-      {/* MISTER pill */}
       <div style={{
         padding: "1px 5px", borderRadius: 2,
         background: "rgba(244,196,48,0.18)", border: "1px solid rgba(244,196,48,0.45)",
@@ -345,7 +342,6 @@ function MiniCoachToken({ coach }: MiniCoachTokenProps) {
         Mister
       </div>
 
-      {/* Ring + foto */}
       <div style={{ position: "relative", width: OUTER, height: OUTER }}>
         <div style={{ position: "absolute", inset: RING, borderRadius: "50%", overflow: "hidden", background: "rgba(0,0,0,0.35)" }}>
           {coach.photoCartoonUrl && (
@@ -364,7 +360,6 @@ function MiniCoachToken({ coach }: MiniCoachTokenProps) {
         }} />
       </div>
 
-      {/* Pill colori squadra */}
       <div style={{
         width: 28, height: 10, borderRadius: 3, overflow: "hidden",
         position: "relative", flexShrink: 0, boxShadow: "0 1px 3px rgba(0,0,0,0.5)",
@@ -380,7 +375,6 @@ function MiniCoachToken({ coach }: MiniCoachTokenProps) {
         </span>
       </div>
 
-      {/* Cognome */}
       <span style={{
         fontSize: 8, fontWeight: 600,
         color: "rgba(239,230,211,0.92)", fontFamily: "var(--font-sans)",
@@ -445,7 +439,7 @@ function Pitch({ modulo, fieldSlots, selection, captainId, onSlotClick, onSlotDo
         <line x1="11" y1="28" x2="11" y2="48" stroke="#ffffff" strokeWidth="0.6" strokeDasharray="4 3" />
       </svg>
 
-      {/* MiniCoachToken — sovrapposto all'area tecnica (x 5%→14%, y 20%→34.3%) */}
+      {/* MiniCoachToken — sovrapposto all'area tecnica */}
       {coach && (
         <div style={{
           position: "absolute",
@@ -476,7 +470,7 @@ function Pitch({ modulo, fieldSlots, selection, captainId, onSlotClick, onSlotDo
                 const player = playerId !== undefined ? PLAYER_BY_ID.get(playerId) : undefined;
                 const isOccupied = player !== undefined;
                 const isFieldSelected = selection?.kind === "field" && selection.slotId === slotId;
-                const hasBenchSelected = selection?.kind === "bench";
+                const hasRosterSelected = selection?.kind === "roster";
 
                 return (
                   <div
@@ -485,7 +479,7 @@ function Pitch({ modulo, fieldSlots, selection, captainId, onSlotClick, onSlotDo
                     onDoubleClick={() => onSlotDoubleClick(slotId)}
                     role="button" tabIndex={0}
                     onKeyDown={(e) => { if (e.key === "Enter") onSlotClick(slotId); }}
-                    title={isOccupied ? `${player!.name} — doppio click per tornare in panchina` : `Slot ${roleLabel}`}
+                    title={isOccupied ? `${player!.name} — doppio click per togliere` : `Slot ${roleLabel}`}
                     style={{ display: "flex", flexDirection: "column", alignItems: "center", cursor: "pointer", flexShrink: 0, outline: "none" }}
                   >
                     {isOccupied ? (
@@ -497,13 +491,13 @@ function Pitch({ modulo, fieldSlots, selection, captainId, onSlotClick, onSlotDo
                       <div style={{
                         width: "clamp(72px, 9vh, 90px)", height: "clamp(72px, 9vh, 90px)",
                         borderRadius: "50%",
-                        border: `2px dashed ${(isFieldSelected || hasBenchSelected) ? "rgba(239,230,211,0.8)" : "rgba(239,230,211,0.32)"}`,
-                        background: (isFieldSelected || hasBenchSelected) ? "rgba(239,230,211,0.1)" : "rgba(239,230,211,0.04)",
+                        border: `2px dashed ${(isFieldSelected || hasRosterSelected) ? "rgba(239,230,211,0.8)" : "rgba(239,230,211,0.32)"}`,
+                        background: (isFieldSelected || hasRosterSelected) ? "rgba(239,230,211,0.1)" : "rgba(239,230,211,0.04)",
                         display: "flex", alignItems: "center", justifyContent: "center",
                         boxShadow: isFieldSelected ? "0 0 0 3px rgba(74,222,128,0.4)" : "none",
                         transition: "box-shadow 0.15s, border-color 0.15s",
                       }}>
-                        <span style={{ fontFamily: "var(--font-mono)", fontSize: 13, fontWeight: 700, color: (isFieldSelected || hasBenchSelected) ? "rgba(239,230,211,0.8)" : "rgba(239,230,211,0.38)", letterSpacing: "0.05em" }}>
+                        <span style={{ fontFamily: "var(--font-mono)", fontSize: 13, fontWeight: 700, color: (isFieldSelected || hasRosterSelected) ? "rgba(239,230,211,0.8)" : "rgba(239,230,211,0.38)", letterSpacing: "0.05em" }}>
                           {roleLabel}
                         </span>
                       </div>
@@ -519,85 +513,50 @@ function Pitch({ modulo, fieldSlots, selection, captainId, onSlotClick, onSlotDo
   );
 }
 
-// ─── Bench ────────────────────────────────────────────────────────────────────
-
-interface BenchProps {
-  bench: number[];
-  selection: Selection;
-  onPlayerClick: (playerId: number) => void;
-}
-
-function Bench({ bench, selection, onPlayerClick }: BenchProps) {
-  return (
-    <div style={{ padding: "14px 10px 20px" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-        <div style={{ flex: 1, height: 1, background: "rgba(239,230,211,0.12)" }} />
-        <span style={{ fontSize: 11, fontWeight: 500, color: "rgba(239,230,211,0.4)", fontFamily: "var(--font-sans)", letterSpacing: "0.07em", textTransform: "uppercase" }}>
-          Panchina · {bench.length}
-        </span>
-        <div style={{ flex: 1, height: 1, background: "rgba(239,230,211,0.12)" }} />
-      </div>
-
-      {/* Flex-wrap: ~7-8 token per riga */}
-      <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 8 }}>
-        {bench.map((playerId, idx) => {
-          const player = PLAYER_BY_ID.get(playerId);
-          if (!player) return null;
-          const isSelected = selection?.kind === "bench" && selection.playerId === playerId;
-
-          return (
-            <div
-              key={playerId}
-              onClick={() => onPlayerClick(playerId)}
-              role="button" tabIndex={0}
-              onKeyDown={(e) => { if (e.key === "Enter") onPlayerClick(playerId); }}
-              title={`${player.name} — panchina #${idx + 1}`}
-              style={{ cursor: "pointer", outline: "none", minWidth: 76, display: "flex", justifyContent: "center" }}
-            >
-              <PlayerToken
-                player={player} variant="bench"
-                affinityColor={ROLE_RING[player.roleClassic]}
-                isSelected={isSelected}
-                benchPriority={idx + 1}
-              />
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
 // ─── Riga giocatore nel roster ────────────────────────────────────────────────
 
 interface PlayerRowProps {
   player: typeof ROSA_MARIO[0];
-  statusLabel: string;
-  statusColor: string;
+  priority: number;
+  isSelected: boolean;
   isCompatible: boolean;
   hasFieldSelected: boolean;
-  hasBenchSelected: boolean;
   onClick: () => void;
 }
 
-function PlayerRow({ player, statusLabel, statusColor, isCompatible, hasFieldSelected, hasBenchSelected, onClick }: PlayerRowProps) {
+function PlayerRow({ player, priority, isSelected, isCompatible, hasFieldSelected, onClick }: PlayerRowProps) {
   const badge = ROLE_BADGE[player.roleClassic];
-  const isTitolare = statusLabel === "TIT";
-  const clickable = !isTitolare && ((!hasFieldSelected && !hasBenchSelected) || isCompatible);
+  const dimmed = hasFieldSelected && !isCompatible;
 
   return (
     <div
-      onClick={clickable ? onClick : undefined}
+      onClick={onClick}
       style={{
         display: "flex", alignItems: "center", gap: 9, padding: "6px 12px",
         borderBottom: "1px solid var(--border)",
-        cursor: clickable ? "pointer" : "default",
-        opacity: hasFieldSelected && !isCompatible && !isTitolare ? 0.38 : 1,
-        background: "transparent", transition: "background 0.1s, opacity 0.15s",
+        borderLeft: isSelected ? "3px solid var(--green-deep)" : "3px solid transparent",
+        cursor: "pointer",
+        opacity: dimmed ? 0.38 : 1,
+        background: isSelected ? "rgba(31,71,51,0.18)" : "transparent",
+        transition: "background 0.1s, opacity 0.15s",
       }}
-      onMouseEnter={(e) => { if (clickable) (e.currentTarget as HTMLDivElement).style.background = "var(--green-pale)"; }}
-      onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.background = "transparent"; }}
+      onMouseEnter={(e) => {
+        if (!dimmed) (e.currentTarget as HTMLDivElement).style.background = isSelected ? "rgba(31,71,51,0.25)" : "var(--green-pale)";
+      }}
+      onMouseLeave={(e) => {
+        (e.currentTarget as HTMLDivElement).style.background = isSelected ? "rgba(31,71,51,0.18)" : "transparent";
+      }}
     >
+      {/* Priorità #N */}
+      <span style={{
+        flexShrink: 0, width: 22, textAlign: "right",
+        fontFamily: "var(--font-mono)", fontSize: 10, fontWeight: 600,
+        color: "var(--ink-dim)", lineHeight: 1,
+      }}>
+        #{priority}
+      </span>
+
+      {/* Foto */}
       <div style={{ width: 32, height: 32, borderRadius: "50%", overflow: "hidden", flexShrink: 0, background: "var(--border)", display: "flex", alignItems: "center", justifyContent: "center" }}>
         {(player.photoCartoonUrl ?? player.photoUrl) ? (
           <img src={player.photoCartoonUrl ?? player.photoUrl!} alt={player.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
@@ -606,6 +565,7 @@ function PlayerRow({ player, statusLabel, statusColor, isCompatible, hasFieldSel
         )}
       </div>
 
+      {/* Nome + squadra */}
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: 12, fontWeight: 500, color: "var(--ink)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
           {player.name}
@@ -622,16 +582,14 @@ function PlayerRow({ player, statusLabel, statusColor, isCompatible, hasFieldSel
         </div>
       </div>
 
+      {/* Ruolo */}
       <span style={{ flexShrink: 0, padding: "1px 5px", borderRadius: "var(--r-sm)", background: badge.bg, color: "#fff", fontFamily: "var(--font-mono)", fontSize: 9, fontWeight: 700, letterSpacing: "0.04em" }}>
         {badge.label}
       </span>
 
+      {/* Voto */}
       <span style={{ flexShrink: 0, width: 32, textAlign: "right", fontFamily: "var(--font-mono)", fontSize: 12, fontWeight: 600, color: player.votoMister !== null ? "var(--green-deep)" : "var(--ink-dim)" }}>
         {player.votoMister !== null ? player.votoMister.toFixed(2) : "—"}
-      </span>
-
-      <span style={{ flexShrink: 0, width: 30, textAlign: "right", fontFamily: "var(--font-mono)", fontSize: 10, fontWeight: 700, color: statusColor }}>
-        {statusLabel}
       </span>
     </div>
   );
@@ -641,19 +599,17 @@ function PlayerRow({ player, statusLabel, statusColor, isCompatible, hasFieldSel
 
 export default function FormazionePage() {
   const [modulo, setModulo] = useState("4-3-3");
-  // Stato separato: slot campo + panchina (array ordinato)
   const [fieldSlots, setFieldSlots] = useState<Record<string, number>>({});
-  const [bench, setBench] = useState<number[]>(initialBench);
+  const [roster, setRoster] = useState<number[]>(initialRoster);
   const [selection, setSelection] = useState<Selection>(null);
   const [manualRoleFilter, setManualRoleFilter] = useState<RoleFilter>("tutti");
   const [moduleChangeMsg, setModuleChangeMsg] = useState<string | null>(null);
   const captainId: number | null = null;
 
   const formation = useMemo(() => parseFormation(modulo), [modulo]);
-
   const starterCount = useMemo(() => Object.keys(fieldSlots).length, [fieldSlots]);
 
-  // Ruolo richiesto dallo slot campo selezionato (per filtro roster)
+  // Ruolo richiesto dallo slot campo selezionato
   const selectedFieldSlotRole: RoleClassic | null = useMemo(() => {
     if (!selection || selection.kind !== "field") return null;
     return getSlotRole(selection.slotId, formation);
@@ -661,34 +617,39 @@ export default function FormazionePage() {
 
   const effectiveFilter: RoleFilter = selectedFieldSlotRole ?? manualRoleFilter;
 
-  const filteredRosa = useMemo(() => {
-    if (effectiveFilter === "tutti") return ROSA_MARIO;
-    return ROSA_MARIO.filter(p => p.roleClassic === effectiveFilter);
-  }, [effectiveFilter]);
-
-  // Mappa inversa: playerId → posizione in campo (per status)
+  // Mappa inversa: playerId → slotId (per sapere chi è in campo)
   const fieldPlayerIdx = useMemo(() => {
     const m = new Map<number, string>();
     for (const [slotId, pid] of Object.entries(fieldSlots)) m.set(pid, slotId);
     return m;
   }, [fieldSlots]);
 
-  // Mappa inversa: playerId → posizione in panchina (per status)
-  const benchPlayerIdx = useMemo(() => {
-    const m = new Map<number, number>();
-    bench.forEach((pid, i) => m.set(pid, i + 1));
-    return m;
-  }, [bench]);
+  // Conteggio ruoli nel roster (per i filtri)
+  const rosterRoleCounts = useMemo(() => {
+    const counts: Record<RoleClassic, number> = { GK: 0, DEF: 0, MID: 0, ATT: 0 };
+    roster.forEach(pid => {
+      const p = PLAYER_BY_ID.get(pid);
+      if (p) counts[p.roleClassic]++;
+    });
+    return counts;
+  }, [roster]);
+
+  // Roster filtrato per ruolo + con priorità
+  const filteredRosterRows = useMemo(() => {
+    return roster
+      .map((pid, idx) => ({ player: PLAYER_BY_ID.get(pid)!, rosterIdx: idx, priority: idx + 1 }))
+      .filter(({ player }) => player && (effectiveFilter === "tutti" || player.roleClassic === effectiveFilter));
+  }, [roster, effectiveFilter]);
 
   // ── Cambio modulo ────────────────────────────────────────────────────────────
   function handleModuloChange(newModulo: string) {
     if (newModulo === modulo) return;
-    const { newFieldSlots, newBench, message } = migrateLineup(
-      fieldSlots, bench, formation, parseFormation(newModulo),
+    const { newFieldSlots, newRoster, message } = migrateLineup(
+      fieldSlots, roster, formation, parseFormation(newModulo),
     );
     setModulo(newModulo);
     setFieldSlots(newFieldSlots);
-    setBench(newBench);
+    setRoster(newRoster);
     setSelection(null);
     setModuleChangeMsg(message);
     setTimeout(() => setModuleChangeMsg(null), 3500);
@@ -696,7 +657,6 @@ export default function FormazionePage() {
 
   // ── Click su slot campo ───────────────────────────────────────────────────────
   function handleFieldSlotClick(slotId: string) {
-    // Deseleziona stesso
     if (selection?.kind === "field" && selection.slotId === slotId) {
       setSelection(null); return;
     }
@@ -705,21 +665,17 @@ export default function FormazionePage() {
       setSelection({ kind: "field", slotId }); return;
     }
 
-    if (selection.kind === "bench") {
-      // Bench player → questo slot campo
+    if (selection.kind === "roster") {
       const pid = selection.playerId;
       const player = PLAYER_BY_ID.get(pid)!;
       const requiredRole = getSlotRole(slotId, formation);
       if (player.roleClassic !== requiredRole) {
-        // Ruolo incompatibile: reseleziona il nuovo slot campo vuoto
-        if (fieldSlots[slotId] === undefined) {
-          setSelection({ kind: "field", slotId });
-        }
+        if (fieldSlots[slotId] === undefined) setSelection({ kind: "field", slotId });
         return;
       }
       const oldOccupant = fieldSlots[slotId];
       setFieldSlots(prev => ({ ...prev, [slotId]: pid }));
-      setBench(prev => {
+      setRoster(prev => {
         const next = prev.filter(id => id !== pid);
         if (oldOccupant !== undefined) next.push(oldOccupant);
         return next;
@@ -732,7 +688,6 @@ export default function FormazionePage() {
       const srcPid  = fieldSlots[srcSlot];
       const dstPid  = fieldSlots[slotId];
       if (srcPid !== undefined) {
-        // Sposta o scambia
         setFieldSlots(prev => {
           const next = { ...prev };
           if (dstPid !== undefined) {
@@ -746,56 +701,54 @@ export default function FormazionePage() {
         });
         setSelection(null);
       } else {
-        // Sorgente vuota: reseleziona destinazione
         setSelection({ kind: "field", slotId });
       }
     }
   }
 
-  // ── Doppio click su slot campo → torna in panchina ───────────────────────────
+  // ── Doppio click su slot campo → torna in lista ───────────────────────────────
   function handleFieldSlotDoubleClick(slotId: string) {
     const pid = fieldSlots[slotId];
     if (pid === undefined) return;
     setFieldSlots(prev => { const n = { ...prev }; delete n[slotId]; return n; });
-    setBench(prev => [...prev, pid]);
+    setRoster(prev => [...prev, pid]);
     if (selection?.kind === "field" && selection.slotId === slotId) setSelection(null);
   }
 
-  // ── Click su giocatore in panchina ────────────────────────────────────────────
-  function handleBenchPlayerClick(playerId: number) {
-    if (selection?.kind === "bench" && selection.playerId === playerId) {
+  // ── Click su riga roster ──────────────────────────────────────────────────────
+  function handleRosterRowClick(playerId: number, rosterIdx: number) {
+    // Deseleziona stessa riga
+    if (selection?.kind === "roster" && selection.playerId === playerId) {
       setSelection(null); return;
     }
 
     if (selection === null) {
-      setSelection({ kind: "bench", playerId }); return;
+      setSelection({ kind: "roster", rosterIdx, playerId }); return;
     }
 
-    if (selection.kind === "bench") {
-      // Swap posizioni in panchina
-      const selPid = selection.playerId;
-      setBench(prev => {
+    if (selection.kind === "roster") {
+      // Swap posizioni nel roster
+      setRoster(prev => {
         const next = [...prev];
-        const a = next.indexOf(selPid);
+        const a = next.indexOf(selection.playerId);
         const b = next.indexOf(playerId);
-        if (a !== -1 && b !== -1) { [next[a], next[b]] = [next[b], next[a]]; }
+        if (a !== -1 && b !== -1) [next[a], next[b]] = [next[b], next[a]];
         return next;
       });
       setSelection(null); return;
     }
 
     if (selection.kind === "field") {
-      // Bench player → slot campo selezionato
+      // Assegna questo giocatore allo slot campo selezionato
       const slotId = selection.slotId;
       const player = PLAYER_BY_ID.get(playerId)!;
       const requiredRole = getSlotRole(slotId, formation);
       if (player.roleClassic !== requiredRole) {
-        // Incompatibile: seleziona il bench player
-        setSelection({ kind: "bench", playerId }); return;
+        setSelection({ kind: "roster", rosterIdx, playerId }); return;
       }
       const oldOccupant = fieldSlots[slotId];
       setFieldSlots(prev => ({ ...prev, [slotId]: playerId }));
-      setBench(prev => {
+      setRoster(prev => {
         const next = prev.filter(id => id !== playerId);
         if (oldOccupant !== undefined) next.push(oldOccupant);
         return next;
@@ -804,20 +757,7 @@ export default function FormazionePage() {
     }
   }
 
-  // ── Click su giocatore nel roster (vista secondaria) ─────────────────────────
-  function handleRosterPlayerClick(playerId: number) {
-    // Agisce solo se c'è uno slot campo selezionato e il giocatore è in panchina
-    if (!benchPlayerIdx.has(playerId)) return;
-    if (selection === null) {
-      setSelection({ kind: "bench", playerId }); return;
-    }
-    if (selection.kind === "field") {
-      handleBenchPlayerClick(playerId);
-    }
-  }
-
   const hasFieldSelected = selection?.kind === "field";
-  const hasBenchSelected = selection?.kind === "bench";
   const { avversario, fieldStatus } = MATCH_GIORNATA_2;
   const salvaEnabled = starterCount === 11;
 
@@ -872,9 +812,9 @@ export default function FormazionePage() {
 
         {selection !== null && (
           <div style={{ padding: "3px 10px", borderRadius: 99, background: "rgba(74,222,128,0.1)", border: "1px solid rgba(74,222,128,0.4)", fontSize: 12, color: "var(--green-deep)", fontWeight: 500 }}>
-            {selection.kind === "bench"
-              ? `${lastName(PLAYER_BY_ID.get(selection.playerId)?.name ?? "")} selezionato — scegli uno slot`
-              : <>Slot <strong style={{ fontFamily: "var(--font-mono)" }}>{selectedFieldSlotRole && ROLE_BADGE[selectedFieldSlotRole].label}</strong> — scegli dalla panchina</>
+            {selection.kind === "roster"
+              ? `${lastName(PLAYER_BY_ID.get(selection.playerId)?.name ?? "")} selezionato — scegli uno slot o un'altra riga`
+              : <>Slot <strong style={{ fontFamily: "var(--font-mono)" }}>{selectedFieldSlotRole && ROLE_BADGE[selectedFieldSlotRole].label}</strong> — scegli dal roster</>
             }
           </div>
         )}
@@ -889,7 +829,7 @@ export default function FormazionePage() {
             Salva
           </button>
           <button
-            onClick={() => { setFieldSlots({}); setBench(initialBench()); setSelection(null); }}
+            onClick={() => { setFieldSlots({}); setRoster(initialRoster()); setSelection(null); }}
             style={{ padding: "6px 16px", borderRadius: "var(--r-sm)", border: "1px solid var(--border-strong)", background: "transparent", color: "var(--ink-mid)", fontSize: 13, fontWeight: 500, cursor: "pointer" }}
           >
             Reset
@@ -897,10 +837,69 @@ export default function FormazionePage() {
         </div>
       </div>
 
-      {/* ── Layout pitch+panchina / roster ── */}
-      <div className="formazione-grid" style={{ display: "grid", gridTemplateColumns: "1fr 280px", gap: "var(--sp-5)", alignItems: "start" }}>
+      {/* ── Layout: [Roster | Pitch] ── */}
+      <div className="formazione-grid" style={{ display: "grid", gridTemplateColumns: "280px 1fr", gap: "var(--sp-5)", alignItems: "start" }}>
 
-        {/* Colonna sinistra: pitch + panchina */}
+        {/* Colonna sinistra: roster / panchina */}
+        <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--r-md)", boxShadow: "var(--shadow-card)", overflow: "hidden", display: "flex", flexDirection: "column" }}>
+          {/* Header */}
+          <div style={{ padding: "10px 12px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <span style={{ fontFamily: "var(--font-sans)", fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--ink-dim)" }}>Rosa</span>
+            <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--ink-dim)" }}>
+              <span style={{ fontWeight: 600, color: roster.length === 0 ? "var(--ink-dim)" : "var(--ink)" }}>{roster.length}</span> rimanenti
+            </span>
+          </div>
+
+          {/* Filtri ruolo con conteggio */}
+          <div style={{ display: "flex", gap: 4, padding: "8px 12px", borderBottom: "1px solid var(--border)", flexWrap: "wrap" }}>
+            {ROLE_FILTERS.map(rf => {
+              const count = rf.value === "tutti" ? roster.length : rosterRoleCounts[rf.value as RoleClassic];
+              return (
+                <button
+                  key={rf.value}
+                  onClick={() => { if (!hasFieldSelected) setManualRoleFilter(rf.value); }}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 4,
+                    padding: "3px 8px", borderRadius: 99, border: "1px solid",
+                    borderColor: effectiveFilter === rf.value ? "var(--green-deep)" : "var(--border-strong)",
+                    background: effectiveFilter === rf.value ? "var(--green-deep)" : "transparent",
+                    color: effectiveFilter === rf.value ? "#fff" : "var(--ink-mid)",
+                    fontFamily: "var(--font-mono)", fontSize: 11, fontWeight: 600,
+                    cursor: hasFieldSelected ? "default" : "pointer",
+                    opacity: hasFieldSelected && effectiveFilter !== rf.value ? 0.38 : 1,
+                    transition: "all 0.12s",
+                  }}
+                >
+                  {rf.label}
+                  <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, opacity: 0.75 }}>{count}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Lista roster */}
+          <div style={{ overflowY: "auto", maxHeight: "calc(100vh - 300px)", minHeight: 300 }}>
+            {filteredRosterRows.length === 0 ? (
+              <div style={{ padding: "24px 16px", textAlign: "center", fontSize: 12, color: "var(--ink-dim)" }}>
+                {starterCount === 11 ? "Tutti i giocatori sono in campo" : "Nessun giocatore in questa posizione"}
+              </div>
+            ) : (
+              filteredRosterRows.map(({ player, rosterIdx, priority }) => (
+                <PlayerRow
+                  key={player.id}
+                  player={player}
+                  priority={priority}
+                  isSelected={selection?.kind === "roster" && selection.playerId === player.id}
+                  isCompatible={!hasFieldSelected || player.roleClassic === selectedFieldSlotRole}
+                  hasFieldSelected={!!hasFieldSelected}
+                  onClick={() => handleRosterRowClick(player.id, rosterIdx)}
+                />
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* Colonna destra: pitch */}
         <div style={{ background: "#17332a", borderRadius: "var(--r-lg)", border: "1px solid rgba(239,230,211,0.1)", overflow: "hidden" }}>
           <Pitch
             modulo={modulo}
@@ -911,68 +910,15 @@ export default function FormazionePage() {
             onSlotDoubleClick={handleFieldSlotDoubleClick}
             coach={COACH_MARIO}
           />
-          <Bench
-            bench={bench}
-            selection={selection}
-            onPlayerClick={handleBenchPlayerClick}
-          />
-        </div>
-
-        {/* Pannello roster */}
-        <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--r-md)", boxShadow: "var(--shadow-card)", overflow: "hidden", display: "flex", flexDirection: "column" }}>
-          <div style={{ padding: "10px 12px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <span style={{ fontFamily: "var(--font-sans)", fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--ink-dim)" }}>Rosa</span>
-            <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--ink-dim)" }}>{ROSA_MARIO.length} giocatori</span>
-          </div>
-
-          <div style={{ display: "flex", gap: 4, padding: "8px 12px", borderBottom: "1px solid var(--border)", flexWrap: "wrap" }}>
-            {ROLE_FILTERS.map(rf => (
-              <button
-                key={rf.value}
-                onClick={() => { if (!hasFieldSelected) setManualRoleFilter(rf.value); }}
-                style={{
-                  padding: "3px 10px", borderRadius: 99, border: "1px solid",
-                  borderColor: effectiveFilter === rf.value ? "var(--green-deep)" : "var(--border-strong)",
-                  background: effectiveFilter === rf.value ? "var(--green-deep)" : "transparent",
-                  color: effectiveFilter === rf.value ? "#fff" : "var(--ink-mid)",
-                  fontFamily: "var(--font-mono)", fontSize: 11, fontWeight: 600,
-                  cursor: hasFieldSelected ? "default" : "pointer",
-                  opacity: hasFieldSelected && effectiveFilter !== rf.value ? 0.38 : 1,
-                  transition: "all 0.12s",
-                }}
-              >
-                {rf.label}
-              </button>
-            ))}
-          </div>
-
-          <div style={{ overflowY: "auto", maxHeight: "calc(100vh - 300px)", minHeight: 300 }}>
-            {filteredRosa.map(player => {
-              const panIdx = benchPlayerIdx.get(player.id);
-              const isTit = fieldPlayerIdx.has(player.id);
-              const statusLabel = isTit ? "TIT" : panIdx !== undefined ? `#${panIdx}` : "—";
-              const statusColor = isTit ? "#4ade80" : "rgba(239,230,211,0.45)";
-              const isCompatible = !hasFieldSelected || player.roleClassic === selectedFieldSlotRole;
-
-              return (
-                <PlayerRow
-                  key={player.id}
-                  player={player}
-                  statusLabel={statusLabel}
-                  statusColor={statusColor}
-                  isCompatible={isCompatible}
-                  hasFieldSelected={!!hasFieldSelected}
-                  hasBenchSelected={!!hasBenchSelected}
-                  onClick={() => handleRosterPlayerClick(player.id)}
-                />
-              );
-            })}
-          </div>
         </div>
       </div>
 
       <style>{`
-        @media (max-width: 900px) { .formazione-grid { grid-template-columns: 1fr !important; } }
+        @media (max-width: 900px) {
+          .formazione-grid { grid-template-columns: 1fr !important; }
+          .formazione-grid > :first-child { order: 1; }
+          .formazione-grid > :last-child  { order: 2; }
+        }
       `}</style>
     </div>
   );
