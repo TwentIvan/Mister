@@ -13,6 +13,7 @@ import {
   timestamp,
 } from "drizzle-orm/pg-core";
 import { leagues } from "./leagues";
+import { coaches } from "./coaches";
 
 // ============================================================
 // TIPI DI SUPPORTO
@@ -73,6 +74,9 @@ export const fantaTeams = pgTable("fanta_teams", {
 
   /** Snapshot della rosa attuale. */
   roster: jsonb("roster").$type<RosterSnapshot>().notNull(),
+
+  /** Allenatore fanta scelto dal manager (riferisce coaches.id). */
+  headCoachId: integer("head_coach_id").references(() => coaches.id, { onDelete: "set null" }),
 
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()

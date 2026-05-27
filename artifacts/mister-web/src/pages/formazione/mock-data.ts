@@ -1,6 +1,14 @@
 // ─── Tipi ────────────────────────────────────────────────────────────────────
 
 export type RoleClassic = "GK" | "DEF" | "MID" | "ATT";
+
+export interface HeadCoach {
+  id: number;
+  name: string;
+  photoCartoonUrl: string | null;
+  nationality: string | null;
+  currentTeamName: string | null;
+}
 export type FieldStatus = "casa" | "trasferta";
 
 export interface RosterPlayer {
@@ -143,3 +151,14 @@ export const ROSA_MARIO: RosterPlayer[] = [
 ];
 
 export const PLAYER_BY_ID = new Map<number, RosterPlayer>(ROSA_MARIO.map(p => [p.id, p]));
+
+// ─── Allenatore Mario's Squad ─────────────────────────────────────────────────
+// I. Tudor (id 2432) — allena la Juventus (team_id 496) nella stagione corrente
+
+export const COACH_MARIO: HeadCoach = {
+  id: 2432,
+  name: "I. Tudor",
+  photoCartoonUrl: "/avatars/coaches/2432.webp",
+  nationality: "Croatia",
+  currentTeamName: "Juventus",
+};

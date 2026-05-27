@@ -2,8 +2,8 @@ import { useState, useMemo } from "react";
 import { Home, Plane } from "lucide-react";
 import {
   ROSA_MARIO, MATCH_GIORNATA_2, PLAYER_BY_ID,
-  TEAM_COLORS, TEAM_CODE,
-  type RoleClassic,
+  TEAM_COLORS, TEAM_CODE, COACH_MARIO,
+  type RoleClassic, type HeadCoach,
 } from "./mock-data";
 
 // ─── Costanti ────────────────────────────────────────────────────────────────
@@ -309,6 +309,137 @@ function PlayerToken({
           {benchPriority}
         </span>
       )}
+    </div>
+  );
+}
+
+// ─── CoachToken ───────────────────────────────────────────────────────────────
+
+interface CoachTokenProps {
+  coach: HeadCoach;
+}
+
+function CoachToken({ coach }: CoachTokenProps) {
+  const PHOTO  = 56;
+  const RING   = 2;
+  const OUTER  = PHOTO + RING * 2;
+
+  const shortName = (() => {
+    const parts = coach.name.trim().split(/\s+/);
+    const last = parts[parts.length - 1];
+    return last.length > 10 ? last.slice(0, 9) + "." : last;
+  })();
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+      {/* Badge ruolo */}
+      <div style={{
+        padding: "2px 7px", borderRadius: 3,
+        background: "rgba(244,196,48,0.18)", border: "1px solid rgba(244,196,48,0.45)",
+        fontFamily: "var(--font-mono)", fontSize: 8, fontWeight: 700,
+        color: "#F4C430", letterSpacing: "0.1em", textTransform: "uppercase",
+      }}>
+        Allenatore
+      </div>
+
+      {/* Ring + foto */}
+      <div style={{ position: "relative", width: OUTER, height: OUTER }}>
+        {/* Foto */}
+        <div style={{ position: "absolute", inset: RING, borderRadius: "50%", overflow: "hidden", background: "rgba(0,0,0,0.35)" }}>
+          {coach.photoCartoonUrl && (
+            <img
+              src={coach.photoCartoonUrl} alt={coach.name}
+              style={{ width: "100%", height: "100%", objectFit: "cover" }}
+              onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+            />
+          )}
+        </div>
+        {/* Ring oro */}
+        <div style={{
+          position: "absolute", inset: 0, borderRadius: "50%",
+          border: `${RING}px solid rgba(244,196,48,0.72)`,
+          boxShadow: "0 0 8px rgba(244,196,48,0.25)",
+          pointerEvents: "none",
+        }} />
+      </div>
+
+      {/* Nome */}
+      <span style={{
+        fontSize: 11, fontWeight: 600,
+        color: "rgba(239,230,211,0.9)", fontFamily: "var(--font-sans)",
+        textAlign: "center", lineHeight: 1.2,
+        maxWidth: OUTER + 12,
+        overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+        textShadow: "0 1px 3px rgba(0,0,0,0.7)",
+      }}>
+        {shortName}
+      </span>
+
+      {/* Nazionalità / squadra reale */}
+      {coach.currentTeamName && (
+        <span style={{
+          fontSize: 9, fontFamily: "var(--font-mono)", fontWeight: 500,
+          color: "rgba(239,230,211,0.38)", letterSpacing: "0.04em",
+        }}>
+          {coach.currentTeamName}
+        </span>
+      )}
+    </div>
+  );
+}
+
+// ─── AreaTecnica ──────────────────────────────────────────────────────────────
+
+interface AreaTecnicaProps {
+  coach: HeadCoach;
+}
+
+function AreaTecnica({ coach }: AreaTecnicaProps) {
+  return (
+    <div style={{
+      position: "relative",
+      display: "flex", alignItems: "center", justifyContent: "center",
+      padding: "12px 16px",
+      background: "#0f2a1f",
+      borderTop: "2px solid rgba(239,230,211,0.18)",
+    }}>
+      {/* Linea laterale sinistra */}
+      <div style={{
+        position: "absolute", left: 0, top: 0, bottom: 0, width: 3,
+        background: "rgba(239,230,211,0.15)",
+      }} />
+      {/* Linea laterale destra */}
+      <div style={{
+        position: "absolute", right: 0, top: 0, bottom: 0, width: 3,
+        background: "rgba(239,230,211,0.15)",
+      }} />
+
+      {/* Etichetta sezione */}
+      <div style={{
+        position: "absolute", left: 16, top: "50%", transform: "translateY(-50%)",
+        fontFamily: "var(--font-mono)", fontSize: 9, fontWeight: 600,
+        color: "rgba(239,230,211,0.25)", letterSpacing: "0.1em", textTransform: "uppercase",
+      }}>
+        Area tecnica
+      </div>
+
+      {/* Token coach centrato */}
+      <CoachToken coach={coach} />
+
+      {/* Panchina stilizzata (3 sediolini a destra) */}
+      <div style={{
+        position: "absolute", right: 20, top: "50%", transform: "translateY(-50%)",
+        display: "flex", gap: 4, alignItems: "flex-end",
+      }}>
+        {[0, 1, 2].map(i => (
+          <div key={i} style={{
+            width: 10, height: 10,
+            borderRadius: "2px 2px 0 0",
+            background: "rgba(239,230,211,0.12)",
+            border: "1px solid rgba(239,230,211,0.2)",
+          }} />
+        ))}
+      </div>
     </div>
   );
 }
@@ -806,6 +937,7 @@ export default function FormazionePage() {
             onSlotClick={handleFieldSlotClick}
             onSlotDoubleClick={handleFieldSlotDoubleClick}
           />
+          <AreaTecnica coach={COACH_MARIO} />
           <Bench
             bench={bench}
             selection={selection}
