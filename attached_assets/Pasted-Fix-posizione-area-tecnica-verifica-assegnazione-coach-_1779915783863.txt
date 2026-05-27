@@ -1,0 +1,49 @@
+Fix posizione area tecnica + verifica assegnazione coach Mario's Squad.
+Task 98-fix — Riposiziona area tecnica DENTRO il pitch
+L'attuale rendering ha l'area tecnica come strip separato sotto il pitch. Errore di interpretazione iniziale. La posizione corretta è dentro l'SVG del pitch, sulla linea laterale, a metà della metà campo difensiva (quella in alto, dove sta il portiere).
+Modifiche da fare:
+
+Rimuovi lo strip orizzontale "AREA TECNICA" sotto il pitch (era posizionato tra pitch e panchina). Quel container va eliminato
+Aggiungi area tecnica nell'SVG del pitch come elemento <rect>:
+
+Posizione: x = bordo sinistro del pitch (allineato col bordo o leggermente verso l'interno per dare margine), y = ~22-28% dall'alto del pitch
+Dimensioni: width ~10-12% del pitch_width, height ~16-18% del pitch_height
+Style: stroke-dasharray="4 3" (tratteggio FIFA-style), stroke: rgba(239, 230, 211, 0.5) (cream traslucido come le altre linee del campo), stroke-width: 1.5, fill: none
+Orientamento: rettangolo più alto che largo (quasi verticale)
+
+
+Coach token dentro l'area tecnica:
+
+Resta nel pitch SVG (non in un container fratello al pitch)
+Centrato dentro il rettangolo dell'area tecnica
+Scaling: token ridimensionato per stare comodamente dentro (foto piccola ~32-40px, label minuta sotto)
+Anatomia: foto cartoonizzata + nome ("MISTER" pill piccola sopra + cognome sotto) + pill colori squadra Serie A che allena + voto badge —
+Verifica che NON sporga dai bordi del rettangolo
+
+
+Layout della pagina dopo il fix:
+
+   ┌─ PITCH (con area tecnica + coach token dentro, in alto a sinistra)
+   │   • Aree di rigore
+   │   • Area tecnica (rettangolo dashed con coach token interno)
+   │   • Cerchio centrale
+   │   • Formazione 11 slot
+   │   • Area di rigore opposta
+   ├─ PANCHINA (riga di 25/N slot, come ora)
+Niente più strip intermedio. Niente più "AREA TECNICA" label esterna.
+Task 98-fix-bis — Verifica coach Mario's Squad
+Nel Task 97 hai assegnato I. Tudor (Juventus, id current_team_id=496) a Mario's Squad. Avevo richiesto Allegri (currentTeamId=489, Milan) come primo criterio, fallback per nome. Ti chiedo:
+Sostituisci Tudor con Allegri per Mario's Squad. Query update diretto:
+sqlUPDATE fanta_teams 
+SET head_coach_id = (SELECT id FROM coaches WHERE lastname = 'Allegri' LIMIT 1)
+WHERE id = 'ft-mvp-1';
+Se questa modifica crea conflitto con un'altra fanta_team che aveva già Allegri (improbabile ma controlla), riassegna quella squadra a Tudor o a un altro coach libero.
+Aggiorna anche il mock-data.ts di pagina Formazione perché legga il nuovo coach assegnato a Mario's Squad.
+Riportami:
+
+Screenshot finale del pitch con l'area tecnica DENTRO il campo, in alto a sinistra, e il coach token al suo interno
+Conferma che Allegri (Milan) è ora il coach di Mario's Squad (visualizzato nel coach token)
+Pill colori del coach token mostra rosso/nero (Milan) con label "MIL"
+
+
+Quando torna ok, Batch 7 è chiuso e si passa allo Step 3 (API CRUD lineup) per persistenza.Hai detto: da questa immagine ti è più chiaro?
