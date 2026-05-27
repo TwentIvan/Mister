@@ -1,0 +1,37 @@
+Task 103-bis (fix collaterale prima di Task 103) — Pitch altezza FISSA
+Il pitch attualmente si ridimensiona quando i giocatori vengono schierati (la sua altezza segue dinamicamente quella del roster, che si compatta da 25 a N). Sbagliato — il pitch deve avere altezza fissa, indipendente dallo stato del roster.
+Comportamento corretto:
+
+All'apertura pagina: pitch e roster hanno la stessa altezza (entrambi alla "full size" con 25 in roster)
+Quando i giocatori vanno in campo: il roster si compatta normalmente (lista più corta), ma il pitch rimane alto come prima
+Quando il roster ha 14 elementi (campo pieno): il pitch è ancora alto come all'inizio, eventualmente whitespace sotto il roster
+
+Implementazione consigliata:
+Calcola l'altezza massima del roster a fresh state (25 elementi) una sola volta al primo render, e usala come height fissa del container del pitch.
+Soluzione semplice con CSS variable:
+css--full-roster-height: calc(25 * var(--roster-row-height) + 24 * var(--row-gap) + var(--header-padding));
+Applicata sia al container del pitch (height: var(--full-roster-height)) sia al container del roster (con min-height: var(--full-roster-height)).
+Oppure, approccio React con useRef + useLayoutEffect: misura l'altezza naturale del roster al primo render con getBoundingClientRect(), salva in state, applica come height inline al pitch. Lock & freeze.
+Scegli tu il pattern più pulito per come è strutturato il codice attuale.
+Test:
+
+Apri pagina: pitch e roster stessa altezza
+Schiera 1, 5, 11 titolari → pitch sempre uguale, roster si compatta da 25 → 24 → ... → 14
+Reset → roster torna 25, pitch invariato
+
+Riportami screenshot a 11 titolari schierati per conferma.
+
+Quando questo è chiuso, procedi col Task 103 (Express routes + validazione Zod + upsert) come da piano originale.Leggo la pagina formazione per capire la struttura attuale:
+
+
+6 actions
+Ho letto tutto. Il problema è chiaro: il grid usa alignItems: stretch e la colonna pitch ha height: "100%" — quando il roster si compatta, entrambe le colonne seguono. Fix con useRef + useLayoutEffect: misuro il roster al mount pasted00:14Claude ha risposto: Bene.Verified completed tasks and flagged validation concernVerified completed tasks and flagged validation concernBene. Task 103-bis + 103 completati in batch.
+Una micro-verifica da fare prima di passare al Task 104 — la nota "saltato se rosa vuota in dev" mi suona un po' fragile. Per ft-mvp-1 la rosa è popolata (25 contracts seedati da Step 1), quindi la regola 5 dovrebbe scattare attivamente, non essere in modalità fallback.
+Mini check da chiedere all'agente prima di Task 104:
+Test rapido: invia un PUT a /api/lineups per ft-mvp-1 dove uno dei playerId 
+in players[] è un ID che NON appartiene alla rosa di ft-mvp-1 (es. usa 
+playerId 999999 inesistente, o un player_id di una squadra diversa). 
+Atteso: response 400 con errore "Player X non appartiene alla rosa". 
+Se invece passa 200, la regola 5 ha un bug — diagnosi e fix prima di Task 104.
+Se il test passa OK (400), procedi col Task 104. Se passa 200 (= bug), fixa prima la validazione.
+Una volta confermata la regola, vai col Task 104 come da piano (frontend integration: useGetLineups, usePutLineup, skeleton, hydration, Salva, Reset).

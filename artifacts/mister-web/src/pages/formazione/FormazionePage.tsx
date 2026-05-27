@@ -1,5 +1,13 @@
-import { useState, useMemo, useRef, useLayoutEffect } from "react";
+import { useState, useMemo, useRef, useLayoutEffect, useEffect } from "react";
 import { Home, Plane } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import {
+  useGetLineups,
+  usePutLineup,
+  getGetLineupsQueryKey,
+} from "@workspace/api-client-react";
+import { useToast } from "@/hooks/use-toast";
+// TODO: replace with /api/fanta-teams/{id}/roster endpoint when available
 import {
   ROSA_MARIO, MATCH_GIORNATA_2, PLAYER_BY_ID,
   TEAM_COLORS, TEAM_CODE, COACH_MARIO,
@@ -97,6 +105,91 @@ function initialRoster(): number[] {
       return d !== 0 ? d : a.name.localeCompare(b.name);
     })
     .map(p => p.id);
+}
+
+// ─── Helpers payload API ──────────────────────────────────────────────────────
+
+/** Mappa slotIndex (1-11) → slotId campo (es. "2-1") dalla formazione */
+function buildSlotIndexToSlotId(formation: number[]): Map<number, string> {
+  const map = new Map<number, string>();
+  let idx = 1;
+  formation.forEach((count, rowIdx) => {
+    for (let si = 0; si < count; si++) {
+      map.set(idx, `${rowIdx}-${si}`);
+      idx++;
+    }
+  });
+  return map;
+}
+
+function labelToSlotPosition(label: string): "GK" | "DEF" | "MID" | "T" | "ATT" {
+  switch (label) {
+    case "P": return "GK";
+    case "D": return "DEF";
+    case "T": return "T";
+    case "A": return "ATT";
+    default:  return "MID";
+  }
+}
+
+function roleToSlotPosition(role: RoleClassic): "GK" | "DEF" | "MID" | "T" | "ATT" {
+  switch (role) {
+    case "GK":  return "GK";
+    case "DEF": return "DEF";
+    case "ATT": return "ATT";
+    default:    return "MID";
+  }
+}
+
+function buildPutPayload(
+  modulo: string,
+  fieldSlots: Record<string, number>,
+  roster: number[],
+  captainPlayerId: number | null,
+  formation: number[],
+) {
+  type SlotPos = "GK" | "DEF" | "MID" | "T" | "ATT";
+  const players: Array<{
+    playerId: number;
+    slotPosition: SlotPos;
+    slotIndex: number;
+    isStarter: boolean;
+    benchOrder: number | null;
+  }> = [];
+
+  let slotIndex = 1;
+  formation.forEach((count, rowIdx) => {
+    const label = getRowLabel(rowIdx, formation.length);
+    const slotPosition = labelToSlotPosition(label);
+    for (let si = 0; si < count; si++) {
+      const playerId = fieldSlots[`${rowIdx}-${si}`];
+      if (playerId !== undefined) {
+        players.push({ playerId, slotPosition, slotIndex, isStarter: true, benchOrder: null });
+      }
+      slotIndex++;
+    }
+  });
+
+  roster.forEach((playerId, idx) => {
+    const player = PLAYER_BY_ID.get(playerId);
+    if (!player) return;
+    players.push({
+      playerId,
+      slotPosition: roleToSlotPosition(player.roleClassic),
+      slotIndex: 12 + idx,
+      isStarter: false,
+      benchOrder: idx + 1,
+    });
+  });
+
+  return {
+    fantaTeamId: "ft-mvp-1" as const,
+    season: 2024,
+    round: 2,
+    module: modulo,
+    captainPlayerId,
+    players,
+  };
 }
 
 // ─── Migrazione lineup al cambio modulo ──────────────────────────────────────
@@ -598,6 +691,8 @@ function PlayerRow({ player, priority, isSelected, isCompatible, hasFieldSelecte
 
 // ─── Pagina principale ────────────────────────────────────────────────────────
 
+const LINEUP_PARAMS = { fantaTeamId: "ft-mvp-1", season: 2024, round: 2 } as const;
+
 export default function FormazionePage() {
   const [modulo, setModulo] = useState("4-3-3");
   const [fieldSlots, setFieldSlots] = useState<Record<string, number>>({});
@@ -605,7 +700,37 @@ export default function FormazionePage() {
   const [selection, setSelection] = useState<Selection>(null);
   const [manualRoleFilter, setManualRoleFilter] = useState<RoleFilter>("tutti");
   const [moduleChangeMsg, setModuleChangeMsg] = useState<string | null>(null);
-  const captainId: number | null = null;
+  const [captainId, setCaptainId] = useState<number | null>(null);
+
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  const { data: lineupData, isLoading: lineupLoading } = useGetLineups(LINEUP_PARAMS);
+  const saveMutation = usePutLineup();
+
+  // Hydra stato da API al primo caricamento — non si riesegue dopo modifiche locali
+  const hasHydrated = useRef(false);
+  useEffect(() => {
+    if (hasHydrated.current || lineupData === undefined) return;
+    hasHydrated.current = true;
+    if (lineupData === null) return; // nessun lineup salvato — stato fresco
+    const savedFormation = parseFormation(lineupData.module);
+    setModulo(lineupData.module);
+    setCaptainId(lineupData.captainPlayerId ?? null);
+    const slotMap = buildSlotIndexToSlotId(savedFormation);
+    const newFieldSlots: Record<string, number> = {};
+    for (const p of lineupData.players) {
+      if (p.isStarter) {
+        const slotId = slotMap.get(p.slotIndex);
+        if (slotId) newFieldSlots[slotId] = p.playerId;
+      }
+    }
+    setFieldSlots(newFieldSlots);
+    const bench = lineupData.players
+      .filter(p => !p.isStarter)
+      .sort((a, b) => (a.benchOrder ?? 999) - (b.benchOrder ?? 999));
+    setRoster(bench.map(p => p.playerId));
+  }, [lineupData]);
 
   const formation = useMemo(() => parseFormation(modulo), [modulo]);
   const starterCount = useMemo(() => Object.keys(fieldSlots).length, [fieldSlots]);
@@ -772,6 +897,22 @@ export default function FormazionePage() {
   const { avversario, fieldStatus } = MATCH_GIORNATA_2;
   const salvaEnabled = starterCount === 11;
 
+  if (lineupLoading) {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: "var(--sp-5)" }}>
+        <div>
+          <div style={{ height: 28, width: 180, borderRadius: "var(--r-sm)", background: "var(--border)", marginBottom: 8 }} />
+          <div style={{ height: 16, width: 280, borderRadius: "var(--r-sm)", background: "var(--border)" }} />
+        </div>
+        <div style={{ height: 48, borderRadius: "var(--r-md)", background: "var(--surface)", border: "1px solid var(--border)" }} />
+        <div style={{ display: "grid", gridTemplateColumns: "280px 1fr", gap: "var(--sp-5)" }}>
+          <div style={{ height: 620, borderRadius: "var(--r-md)", background: "var(--surface)", border: "1px solid var(--border)" }} />
+          <div style={{ height: 620, borderRadius: "var(--r-md)", background: "var(--surface)", border: "1px solid var(--border)" }} />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "var(--sp-5)" }}>
 
@@ -834,13 +975,25 @@ export default function FormazionePage() {
 
         <div style={{ display: "flex", gap: 8 }}>
           <button
-            disabled={!salvaEnabled}
-            style={{ padding: "6px 16px", borderRadius: "var(--r-sm)", border: "none", background: "var(--green-deep)", color: "#fff", fontSize: 13, fontWeight: 600, cursor: salvaEnabled ? "pointer" : "not-allowed", opacity: salvaEnabled ? 1 : 0.45, transition: "opacity 0.2s" }}
+            disabled={!salvaEnabled || saveMutation.isPending}
+            onClick={() => {
+              const payload = buildPutPayload(modulo, fieldSlots, roster, captainId, formation);
+              saveMutation.mutate({ data: payload }, {
+                onSuccess: () => {
+                  queryClient.invalidateQueries({ queryKey: getGetLineupsQueryKey(LINEUP_PARAMS) });
+                  toast({ title: "Formazione salvata" });
+                },
+                onError: () => {
+                  toast({ variant: "destructive", title: "Salvataggio fallito" });
+                },
+              });
+            }}
+            style={{ padding: "6px 16px", borderRadius: "var(--r-sm)", border: "none", background: "var(--green-deep)", color: "#fff", fontSize: 13, fontWeight: 600, cursor: (salvaEnabled && !saveMutation.isPending) ? "pointer" : "not-allowed", opacity: (salvaEnabled && !saveMutation.isPending) ? 1 : 0.45, transition: "opacity 0.2s" }}
           >
-            Salva
+            {saveMutation.isPending ? "Salvataggio…" : "Salva"}
           </button>
           <button
-            onClick={() => { setFieldSlots({}); setRoster(initialRoster()); setSelection(null); }}
+            onClick={() => { setFieldSlots({}); setRoster(initialRoster()); setSelection(null); setCaptainId(null); }}
             style={{ padding: "6px 16px", borderRadius: "var(--r-sm)", border: "1px solid var(--border-strong)", background: "transparent", color: "var(--ink-mid)", fontSize: 13, fontWeight: 500, cursor: "pointer" }}
           >
             Reset
