@@ -1,0 +1,103 @@
+V2 approvata. Persistiamo voto_synthesis come voto_mister canonico in DB.
+Task 35 — UPDATE su player_giornata_stats.voto_mister
+Sequenza in transazione:
+sqlBEGIN;
+
+-- Verifica stato pre-update
+SELECT
+  COUNT(*) AS total,
+  COUNT(*) FILTER (WHERE voto_mister IS NOT NULL) AS gia_popolati,
+  COUNT(*) FILTER (WHERE voto_mister IS NULL) AS da_popolare
+FROM player_giornata_stats;
+Atteso: total=623, gia_popolati=0, da_popolare=623.
+Poi modifica run-backtest.ts (o crea uno script gemello persist-voto-mister.ts nello stesso package) che:
+
+Esegue lo stesso calcolo dei 4 voti come ora
+Invece di scrivere il report, fa UPDATE riga per riga del campo voto_mister con voto_synthesis
+Non aggiorna le 71 righe sotto soglia 15' (restano NULL — è semanticamente corretto: "non c'è abbastanza materiale per giudicare")
+
+Implementa come UPDATE batchato per id (evita un round-trip per ogni riga):
+typescript// Pseudo-codice
+const updates = computedVoti
+  .filter(r => r.votoSynthesis !== null)
+  .map(r => `(${r.id}, ${r.votoSynthesis})`)
+  .join(',');
+
+await db.execute(sql`
+  UPDATE player_giornata_stats AS t
+  SET voto_mister = v.voto
+  FROM (VALUES ${sql.raw(updates)}) AS v(id, voto)
+  WHERE t.id = v.id;
+`);
+Adatta sintassi al wrapper Drizzle che usi.
+Task 36 — Verifica post-update
+sqlSELECT
+  COUNT(*) AS total,
+  COUNT(*) FILTER (WHERE voto_mister IS NOT NULL) AS popolati,
+  COUNT(*) FILTER (WHERE voto_mister IS NULL) AS null_attesi,
+  ROUND(AVG(voto_mister)::numeric, 2) AS media,
+  ROUND(STDDEV(voto_mister)::numeric, 2) AS std,
+  MIN(voto_mister) AS minimo,
+  MAX(voto_mister) AS massimo
+FROM player_giornata_stats;
+
+-- Distribuzione per round
+SELECT round,
+       COUNT(*) FILTER (WHERE voto_mister IS NOT NULL) AS n,
+       ROUND(AVG(voto_mister)::numeric, 2) AS media,
+       ROUND(MIN(voto_mister)::numeric, 2) AS min_voto,
+       ROUND(MAX(voto_mister)::numeric, 2) AS max_voto
+FROM player_giornata_stats
+GROUP BY round
+ORDER BY round;
+
+-- Distribuzione per ruolo (sanity check)
+SELECT p.role_classic,
+       COUNT(*) FILTER (WHERE pgs.voto_mister IS NOT NULL) AS n,
+       ROUND(AVG(pgs.voto_mister)::numeric, 2) AS media
+FROM player_giornata_stats pgs
+JOIN players p ON p.id = pgs.player_id
+WHERE pgs.voto_mister IS NOT NULL
+GROUP BY p.role_classic
+ORDER BY p.role_classic;
+Attesi (dai numeri del backtest v2):
+
+total=623, popolati=552, null_attesi=71
+media ~6.64, std ~0.36, min ~5.70, max ~8.52
+Distribuzione per ruolo: GK ~6.84, DEF ~6.68, MID ~6.64, ATT ~6.51
+
+Se i numeri tornano, COMMIT. Se anche uno solo diverge significativamente, ROLLBACK e segnala.
+Riporta i 3 output e conferma se hai committato o rollbackato.
+
+Passo 2: il pannello configurabile algoritmo — design da discutere prima di costruire
+Mi ricordo. Quando avremo persistito, propongo di affrontarlo subito perché senza quel pannello la config v2 resta hardcoded nel TS — perfetto per dev/backtest, inadatto a un prodotto. Prima di scrivere codice voglio condividere il design con te.
+Architettura proposta
+Nuova tabella voto_algorithm_config semplice:
+id              serial PK
+version         text          // es. "v2.0", "v2.1-tweak-saves"
+config_json     jsonb         // l'intera struttura VotoMisterConfig
+is_active       boolean       // solo una riga true per volta
+created_at      timestamptz
+created_by      text          // user che ha modificato
+notes           text nullable // commento libero
+Il calcolo del voto legge sempre dalla riga is_active = true. Cambiare config = inserire nuova riga e flippare il flag. Storia automatica, rollback semplice.
+UI panel (sotto "Amministrazione" → "Algoritmo voto")
+Tre tab orizzontali in cima:
+
+Calibrazione base — anchor, minuti (threshold/fullSample/extrapolationCap), blend (α/β)
+Stripping eventi — gli 8 valori di stripping (peso gol, gol incrementale, premio extra rigore, assist, ecc.)
+Pesi performance — i ~12 contributi stats con neutral/weightPerPoint o perUnit/cap
+
+Ogni parametro come riga con:
+
+Label italiano + descrizione breve sotto (es. "Peso di un passaggio chiave nel voto base, contribuisce fino al cap")
+Input numerico (JetBrains Mono come da DESIGN_SYSTEM)
+Valore corrente + valore default a fianco (testo piccolo grigio: "default: 0.12")
+Bottone "ripristina default" inline su ogni riga
+
+In fondo alla pagina:
+
+Campo note (textarea, 2 righe)
+Bottone "Salva e attiva" (verde, primario)
+Bottone "Salva come bozza" (secondario, per testare prima di attivare)
+Bottone "Ricalcola voti stagione corrente" (azzurro, esegue UPDATE su tutti i player_giornata_stats della stagione attiva con nuova config). Mostra un dialog di conferma con "stai per ricalcolare N voti, sicuro?"

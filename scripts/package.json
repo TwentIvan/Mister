@@ -11,7 +11,8 @@
     "sync:fixtures": "tsx ./sync/fixtures.ts",
     "sync:stats": "tsx ./sync/stats.ts",
     "sync:all": "tsx ./sync/run-all.ts",
-    "voto:backtest": "tsx ./voto-mister/run-backtest.ts"
+    "voto:backtest": "tsx ./voto-mister/run-backtest.ts",
+    "voto:persist": "tsx ./voto-mister/persist-voto-mister.ts"
   },
   "dependencies": {
     "@workspace/db": "workspace:*",
