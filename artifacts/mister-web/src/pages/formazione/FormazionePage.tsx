@@ -195,9 +195,9 @@ function PlayerToken({
       <div style={{ position: "relative", width: OUTER, height: OUTER, flexShrink: 0 }}>
         {/* Foto */}
         <div style={{ position: "absolute", inset: RING, borderRadius: "50%", overflow: "hidden", background: "rgba(0,0,0,0.35)" }}>
-          {player.photoUrl && (
+          {(player.photoCartoonUrl ?? player.photoUrl) && (
             <img
-              src={player.photoUrl} alt={player.name}
+              src={player.photoCartoonUrl ?? player.photoUrl!} alt={player.name}
               style={{ width: "100%", height: "100%", objectFit: "cover" }}
               onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
             />
@@ -495,8 +495,8 @@ function PlayerRow({ player, statusLabel, statusColor, isCompatible, hasFieldSel
       onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.background = "transparent"; }}
     >
       <div style={{ width: 32, height: 32, borderRadius: "50%", overflow: "hidden", flexShrink: 0, background: "var(--border)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        {player.photoUrl ? (
-          <img src={player.photoUrl} alt={player.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
+        {(player.photoCartoonUrl ?? player.photoUrl) ? (
+          <img src={player.photoCartoonUrl ?? player.photoUrl!} alt={player.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
         ) : (
           <span style={{ fontSize: 10, color: "var(--ink-dim)", fontFamily: "var(--font-mono)" }}>{player.name[0]}</span>
         )}

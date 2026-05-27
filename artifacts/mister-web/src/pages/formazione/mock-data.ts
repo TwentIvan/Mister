@@ -9,6 +9,7 @@ export interface RosterPlayer {
   realTeam: string;
   roleClassic: RoleClassic;
   photoUrl: string | null;
+  photoCartoonUrl: string | null;
   votoMister: number | null;
   fieldStatus: FieldStatus;
   nextOpponentShort: string | null;
@@ -111,34 +112,34 @@ function fixture(realTeam: string) {
 
 export const ROSA_MARIO: RosterPlayer[] = [
   // ── GK (3) ────────────────────────────────────────────────────────────────
-  { id: 30419,  name: "F. Rossi",          realTeam: "Atalanta",      roleClassic: "GK",  photoUrl: "https://media.api-sports.io/football/players/30419.png",  votoMister: null, fieldStatus: "casa",      ...fixture("Atalanta") },
-  { id: 30913,  name: "M. Chiesa",         realTeam: "Hellas Verona", roleClassic: "GK",  photoUrl: "https://media.api-sports.io/football/players/30913.png",  votoMister: null, fieldStatus: "casa",      ...fixture("Hellas Verona") },
-  { id: 1624,   name: "Pepe Reina",        realTeam: "Como",          roleClassic: "GK",  photoUrl: "https://media.api-sports.io/football/players/1624.png",   votoMister: 7.54, fieldStatus: "casa",      ...fixture("Como") },
+  { id: 30419,  name: "F. Rossi",          realTeam: "Atalanta",      roleClassic: "GK",  photoUrl: "https://media.api-sports.io/football/players/30419.png",  photoCartoonUrl: "/avatars/30419.webp",  votoMister: null, fieldStatus: "casa",      ...fixture("Atalanta") },
+  { id: 30913,  name: "M. Chiesa",         realTeam: "Hellas Verona", roleClassic: "GK",  photoUrl: "https://media.api-sports.io/football/players/30913.png",  photoCartoonUrl: "/avatars/30913.webp",  votoMister: null, fieldStatus: "casa",      ...fixture("Hellas Verona") },
+  { id: 1624,   name: "Pepe Reina",        realTeam: "Como",          roleClassic: "GK",  photoUrl: "https://media.api-sports.io/football/players/1624.png",   photoCartoonUrl: "/avatars/1624.webp",   votoMister: 7.54, fieldStatus: "casa",      ...fixture("Como") },
   // ── DEF (8) ───────────────────────────────────────────────────────────────
-  { id: 446092, name: "C. Cama",           realTeam: "AS Roma",       roleClassic: "DEF", photoUrl: "https://media.api-sports.io/football/players/446092.png", votoMister: null, fieldStatus: "casa",      ...fixture("AS Roma") },
-  { id: 162570, name: "G. Cittadini",      realTeam: "Atalanta",      roleClassic: "DEF", photoUrl: "https://media.api-sports.io/football/players/162570.png", votoMister: null, fieldStatus: "casa",      ...fixture("Atalanta") },
-  { id: 25911,  name: "G. Donati",         realTeam: "Monza",         roleClassic: "DEF", photoUrl: "https://media.api-sports.io/football/players/25911.png",  votoMister: null, fieldStatus: "casa",      ...fixture("Monza") },
-  { id: 35544,  name: "J. Vásquez",        realTeam: "Genoa",         roleClassic: "DEF", photoUrl: "https://media.api-sports.io/football/players/35544.png",  votoMister: 6.91, fieldStatus: "casa",      ...fixture("Genoa") },
-  { id: 6931,   name: "L. Cacace",         realTeam: "Empoli",        roleClassic: "DEF", photoUrl: "https://media.api-sports.io/football/players/6931.png",   votoMister: 7.06, fieldStatus: "casa",      ...fixture("Empoli") },
-  { id: 1084,   name: "M. Pongračić",      realTeam: "Lecce",         roleClassic: "DEF", photoUrl: "https://media.api-sports.io/football/players/1084.png",   votoMister: null, fieldStatus: "casa",      ...fixture("Lecce") },
-  { id: 40392,  name: "M. Wieteska",       realTeam: "Cagliari",      roleClassic: "DEF", photoUrl: "https://media.api-sports.io/football/players/40392.png",  votoMister: null, fieldStatus: "casa",      ...fixture("Cagliari") },
-  { id: 353417, name: "N. Postiglione",    realTeam: "Monza",         roleClassic: "DEF", photoUrl: "https://media.api-sports.io/football/players/353417.png", votoMister: null, fieldStatus: "casa",      ...fixture("Monza") },
+  { id: 446092, name: "C. Cama",           realTeam: "AS Roma",       roleClassic: "DEF", photoUrl: "https://media.api-sports.io/football/players/446092.png", photoCartoonUrl: "/avatars/446092.webp", votoMister: null, fieldStatus: "casa",      ...fixture("AS Roma") },
+  { id: 162570, name: "G. Cittadini",      realTeam: "Atalanta",      roleClassic: "DEF", photoUrl: "https://media.api-sports.io/football/players/162570.png", photoCartoonUrl: "/avatars/162570.webp", votoMister: null, fieldStatus: "casa",      ...fixture("Atalanta") },
+  { id: 25911,  name: "G. Donati",         realTeam: "Monza",         roleClassic: "DEF", photoUrl: "https://media.api-sports.io/football/players/25911.png",  photoCartoonUrl: "/avatars/25911.webp",  votoMister: null, fieldStatus: "casa",      ...fixture("Monza") },
+  { id: 35544,  name: "J. Vásquez",        realTeam: "Genoa",         roleClassic: "DEF", photoUrl: "https://media.api-sports.io/football/players/35544.png",  photoCartoonUrl: "/avatars/35544.webp",  votoMister: 6.91, fieldStatus: "casa",      ...fixture("Genoa") },
+  { id: 6931,   name: "L. Cacace",         realTeam: "Empoli",        roleClassic: "DEF", photoUrl: "https://media.api-sports.io/football/players/6931.png",   photoCartoonUrl: "/avatars/6931.webp",   votoMister: 7.06, fieldStatus: "casa",      ...fixture("Empoli") },
+  { id: 1084,   name: "M. Pongračić",      realTeam: "Lecce",         roleClassic: "DEF", photoUrl: "https://media.api-sports.io/football/players/1084.png",   photoCartoonUrl: "/avatars/1084.webp",   votoMister: null, fieldStatus: "casa",      ...fixture("Lecce") },
+  { id: 40392,  name: "M. Wieteska",       realTeam: "Cagliari",      roleClassic: "DEF", photoUrl: "https://media.api-sports.io/football/players/40392.png",  photoCartoonUrl: "/avatars/40392.webp",  votoMister: null, fieldStatus: "casa",      ...fixture("Cagliari") },
+  { id: 353417, name: "N. Postiglione",    realTeam: "Monza",         roleClassic: "DEF", photoUrl: "https://media.api-sports.io/football/players/353417.png", photoCartoonUrl: "/avatars/353417.webp", votoMister: null, fieldStatus: "casa",      ...fixture("Monza") },
   // ── MID (8) ───────────────────────────────────────────────────────────────
-  { id: 42007,  name: "Dani Silva",        realTeam: "Hellas Verona", roleClassic: "MID", photoUrl: "https://media.api-sports.io/football/players/42007.png",  votoMister: null, fieldStatus: "casa",      ...fixture("Hellas Verona") },
-  { id: 1358,   name: "E. Elmas",          realTeam: "Torino",        roleClassic: "MID", photoUrl: "https://media.api-sports.io/football/players/1358.png",   votoMister: null, fieldStatus: "casa",      ...fixture("Torino") },
-  { id: 342074, name: "G. Faticanti",      realTeam: "Lecce",         roleClassic: "MID", photoUrl: "https://media.api-sports.io/football/players/342074.png", votoMister: null, fieldStatus: "trasferta", ...fixture("Lecce") },
-  { id: 484411, name: "J. Idele",          realTeam: "Atalanta",      roleClassic: "MID", photoUrl: "https://media.api-sports.io/football/players/484411.png", votoMister: null, fieldStatus: "trasferta", ...fixture("Atalanta") },
-  { id: 129687, name: "M. Aké",            realTeam: "Juventus",      roleClassic: "MID", photoUrl: "https://media.api-sports.io/football/players/129687.png", votoMister: null, fieldStatus: "trasferta", ...fixture("Juventus") },
-  { id: 2055,   name: "M. Rog",            realTeam: "Cagliari",      roleClassic: "MID", photoUrl: "https://media.api-sports.io/football/players/2055.png",   votoMister: null, fieldStatus: "trasferta", ...fixture("Cagliari") },
-  { id: 6409,   name: "N. Estévez",        realTeam: "Parma",         roleClassic: "MID", photoUrl: "https://media.api-sports.io/football/players/6409.png",   votoMister: 6.91, fieldStatus: "trasferta", ...fixture("Parma") },
-  { id: 1920,   name: "N. Radonjić",       realTeam: "Torino",        roleClassic: "MID", photoUrl: "https://media.api-sports.io/football/players/1920.png",   votoMister: null, fieldStatus: "trasferta", ...fixture("Torino") },
+  { id: 42007,  name: "Dani Silva",        realTeam: "Hellas Verona", roleClassic: "MID", photoUrl: "https://media.api-sports.io/football/players/42007.png",  photoCartoonUrl: "/avatars/42007.webp",  votoMister: null, fieldStatus: "casa",      ...fixture("Hellas Verona") },
+  { id: 1358,   name: "E. Elmas",          realTeam: "Torino",        roleClassic: "MID", photoUrl: "https://media.api-sports.io/football/players/1358.png",   photoCartoonUrl: "/avatars/1358.webp",   votoMister: null, fieldStatus: "casa",      ...fixture("Torino") },
+  { id: 342074, name: "G. Faticanti",      realTeam: "Lecce",         roleClassic: "MID", photoUrl: "https://media.api-sports.io/football/players/342074.png", photoCartoonUrl: "/avatars/342074.webp", votoMister: null, fieldStatus: "trasferta", ...fixture("Lecce") },
+  { id: 484411, name: "J. Idele",          realTeam: "Atalanta",      roleClassic: "MID", photoUrl: "https://media.api-sports.io/football/players/484411.png", photoCartoonUrl: "/avatars/484411.webp", votoMister: null, fieldStatus: "trasferta", ...fixture("Atalanta") },
+  { id: 129687, name: "M. Aké",            realTeam: "Juventus",      roleClassic: "MID", photoUrl: "https://media.api-sports.io/football/players/129687.png", photoCartoonUrl: "/avatars/129687.webp", votoMister: null, fieldStatus: "trasferta", ...fixture("Juventus") },
+  { id: 2055,   name: "M. Rog",            realTeam: "Cagliari",      roleClassic: "MID", photoUrl: "https://media.api-sports.io/football/players/2055.png",   photoCartoonUrl: "/avatars/2055.webp",   votoMister: null, fieldStatus: "trasferta", ...fixture("Cagliari") },
+  { id: 6409,   name: "N. Estévez",        realTeam: "Parma",         roleClassic: "MID", photoUrl: "https://media.api-sports.io/football/players/6409.png",   photoCartoonUrl: "/avatars/6409.webp",   votoMister: 6.91, fieldStatus: "trasferta", ...fixture("Parma") },
+  { id: 1920,   name: "N. Radonjić",       realTeam: "Torino",        roleClassic: "MID", photoUrl: "https://media.api-sports.io/football/players/1920.png",   photoCartoonUrl: "/avatars/1920.webp",   votoMister: null, fieldStatus: "trasferta", ...fixture("Torino") },
   // ── ATT (6) ───────────────────────────────────────────────────────────────
-  { id: 30509,  name: "A. Belotti",        realTeam: "AS Roma",       roleClassic: "ATT", photoUrl: "https://media.api-sports.io/football/players/30509.png",  votoMister: 7.25, fieldStatus: "trasferta", ...fixture("AS Roma") },
-  { id: 30879,  name: "A. Petagna",        realTeam: "Monza",         roleClassic: "ATT", photoUrl: "https://media.api-sports.io/football/players/30879.png",  votoMister: 7.11, fieldStatus: "trasferta", ...fixture("Monza") },
-  { id: 30414,  name: "G. Simeone",        realTeam: "Napoli",        roleClassic: "ATT", photoUrl: "https://media.api-sports.io/football/players/30414.png",  votoMister: null, fieldStatus: "trasferta", ...fixture("Napoli") },
-  { id: 449638, name: "J. Nuredini",       realTeam: "Genoa",         roleClassic: "ATT", photoUrl: "https://media.api-sports.io/football/players/449638.png", votoMister: null, fieldStatus: "trasferta", ...fixture("Genoa") },
-  { id: 443141, name: "K. Maussi Martins", realTeam: "Monza",         roleClassic: "ATT", photoUrl: "https://media.api-sports.io/football/players/443141.png", votoMister: null, fieldStatus: "trasferta", ...fixture("Monza") },
-  { id: 31031,  name: "R. Inglese",        realTeam: "Parma",         roleClassic: "ATT", photoUrl: "https://media.api-sports.io/football/players/31031.png",  votoMister: null, fieldStatus: "trasferta", ...fixture("Parma") },
+  { id: 30509,  name: "A. Belotti",        realTeam: "AS Roma",       roleClassic: "ATT", photoUrl: "https://media.api-sports.io/football/players/30509.png",  photoCartoonUrl: "/avatars/30509.webp",  votoMister: 7.25, fieldStatus: "trasferta", ...fixture("AS Roma") },
+  { id: 30879,  name: "A. Petagna",        realTeam: "Monza",         roleClassic: "ATT", photoUrl: "https://media.api-sports.io/football/players/30879.png",  photoCartoonUrl: "/avatars/30879.webp",  votoMister: 7.11, fieldStatus: "trasferta", ...fixture("Monza") },
+  { id: 30414,  name: "G. Simeone",        realTeam: "Napoli",        roleClassic: "ATT", photoUrl: "https://media.api-sports.io/football/players/30414.png",  photoCartoonUrl: "/avatars/30414.webp",  votoMister: null, fieldStatus: "trasferta", ...fixture("Napoli") },
+  { id: 449638, name: "J. Nuredini",       realTeam: "Genoa",         roleClassic: "ATT", photoUrl: "https://media.api-sports.io/football/players/449638.png", photoCartoonUrl: "/avatars/449638.webp", votoMister: null, fieldStatus: "trasferta", ...fixture("Genoa") },
+  { id: 443141, name: "K. Maussi Martins", realTeam: "Monza",         roleClassic: "ATT", photoUrl: "https://media.api-sports.io/football/players/443141.png", photoCartoonUrl: "/avatars/443141.webp", votoMister: null, fieldStatus: "trasferta", ...fixture("Monza") },
+  { id: 31031,  name: "R. Inglese",        realTeam: "Parma",         roleClassic: "ATT", photoUrl: "https://media.api-sports.io/football/players/31031.png",  photoCartoonUrl: "/avatars/31031.webp",  votoMister: null, fieldStatus: "trasferta", ...fixture("Parma") },
 ];
 
 export const PLAYER_BY_ID = new Map<number, RosterPlayer>(ROSA_MARIO.map(p => [p.id, p]));
