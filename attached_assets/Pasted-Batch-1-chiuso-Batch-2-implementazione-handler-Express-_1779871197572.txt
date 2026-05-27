@@ -1,0 +1,157 @@
+Batch 1 chiuso. Batch 2 — implementazione handler Express + test integrazione.
+Task 48 — Implementare 4 handler in lib/api-server
+Crea un nuovo router (probabilmente lib/api-server/src/routes/voto-algorithm-config.ts o equivalente alla convenzione del progetto). Registralo nel router principale.
+Dipendenza importante: gli handler hanno bisogno della logica di computeVoti da scripts/voto-mister/compute.ts e loadActiveConfig da scripts/voto-mister/load-config.ts. Tre opzioni in ordine di preferenza:
+
+Se pnpm-workspace permette a @workspace/api-server di importare da @workspace/scripts: import diretto. Più semplice
+Se NO, estrai compute.ts, load-config.ts, e config.ts in un nuovo package @workspace/voto-engine (un piccolo lib in lib/voto-engine/), aggiorna gli import di scripts e api-server di conseguenza
+Se hai dubbi su quale strada, scegli la 2 (refactor pulito) e segnala in chat — è la soluzione architetturalmente più solida
+
+Implementazione handler:
+GET /voto-algorithm-configs
+Query params: federationId (opzionale: stringa, valore speciale 'null' per system default), status (opzionale: enum).
+typescript// Pseudocodice
+const conditions = [];
+if (req.query.federationId === 'null') {
+  conditions.push(isNull(votoAlgorithmConfig.federationId));
+} else if (req.query.federationId) {
+  conditions.push(eq(votoAlgorithmConfig.federationId, req.query.federationId));
+}
+if (req.query.status) {
+  conditions.push(eq(votoAlgorithmConfig.status, req.query.status));
+}
+
+const rows = await db.select().from(votoAlgorithmConfig)
+  .where(conditions.length ? and(...conditions) : undefined)
+  .orderBy(desc(votoAlgorithmConfig.createdAt));
+
+res.json(rows);
+POST /voto-algorithm-configs
+Body validato con CreateVotoAlgorithmConfigBody Zod. Se status === 'active', archivia atomicamente la precedente attiva per la stessa federazione, dentro transazione. isProtected sempre false (solo il seed setta true).
+typescriptawait db.transaction(async (tx) => {
+  if (body.status === 'active') {
+    await tx.update(votoAlgorithmConfig)
+      .set({ status: 'archived' })
+      .where(and(
+        body.federationId 
+          ? eq(votoAlgorithmConfig.federationId, body.federationId)
+          : isNull(votoAlgorithmConfig.federationId),
+        eq(votoAlgorithmConfig.status, 'active')
+      ));
+  }
+  
+  const [created] = await tx.insert(votoAlgorithmConfig).values({
+    ...body,
+    isProtected: false,
+    createdBy: 'api', // placeholder, integreremo auth dopo
+  }).returning();
+  
+  res.status(201).json(created);
+});
+In caso di unique constraint violation: catturare l'errore di Postgres (code 23505) e rispondere 409 Conflict.
+PATCH /voto-algorithm-configs/:id
+Validato con UpdateVotoAlgorithmConfigBody. Recupera la riga esistente, applica modifiche, gestisce transizione → active atomicamente come sopra.
+Non implementare guardia su is_protected — il flag protegge dal DELETE futuro, ma le edit (anche di una riga protetta) sono permesse: l'admin può modificare le note del system default v1.0 o anche archiviarla. Coerente con "libertà di sperimentazione".
+404 se id non trovato.
+POST /voto-algorithm-configs/recalculate
+Query param federationId opzionale (NULL/system default per default).
+typescriptconst startTime = Date.now();
+
+const config = await loadActiveConfig(db, req.query.federationId ?? null);
+
+// Carica tutte le righe + stats (usa lo stesso JOIN che fa persist-voto-mister.ts)
+const rows = await db.select({...}).from(playerGiornataStats)...;
+
+// Calcola in memoria
+const computed = rows.map(row => ({
+  id: row.id,
+  voto: computeVoti(row.statsJson, config).votoSynthesis,
+}));
+
+const toUpdate = computed.filter(c => c.voto !== null);
+const skipped = computed.filter(c => c.voto === null).length;
+
+// Bulk UPDATE con VALUES (stesso pattern già usato in persist-voto-mister.ts)
+if (toUpdate.length > 0) {
+  const values = toUpdate.map(c => `(${c.id}, ${c.voto})`).join(',');
+  await db.execute(sql.raw(`
+    UPDATE player_giornata_stats AS t
+    SET voto_mister = v.voto::real
+    FROM (VALUES ${values}) AS v(id, voto)
+    WHERE t.id = v.id
+  `));
+}
+
+res.json({
+  updatedCount: toUpdate.length,
+  skippedCount: skipped,
+  durationMs: Date.now() - startTime,
+});
+404 se loadActiveConfig lancia "nessuna config attiva".
+Type-checking e build
+Dopo aver scritto i 4 handler:
+bashpnpm run typecheck
+pnpm run build
+Devono passare entrambi puliti.
+Task 49 — Test integrazione con curl
+Avvia il server:
+bashpnpm --filter @workspace/api-server run dev
+Su localhost:5000 (o quello specificato in replit.md). Poi esegui questa sequenza di test:
+bash# 1. List: la config v1.0 system default deve essere già lì
+curl -s http://localhost:5000/voto-algorithm-configs | jq
+
+# 2. List filtrata su attive
+curl -s 'http://localhost:5000/voto-algorithm-configs?status=active' | jq
+
+# 3. List filtrata su system default
+curl -s 'http://localhost:5000/voto-algorithm-configs?federationId=null' | jq
+
+# 4. Crea una bozza (modifica solo l'anchor a scopo test)
+curl -s -X POST http://localhost:5000/voto-algorithm-configs \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "federationId": null,
+    "version": "v1.1-test-draft",
+    "configJson": {"anchor": 6.5, "minutes": {"threshold": 15, "fullSample": 60, "extrapolationCap": 1.5}, "stripping": {"goalFirst":0.79,"goalIncremental":0.83,"penaltyExtraOverGoal":0.13,"assist":0.6,"penaltyMissed":0.6,"penaltyCommitted":0.57,"redCardPrior":1.0,"savePrior":1.0}, "blend":{"alphaStats":0.35,"betaRating":0.65}, "stats":{"passAccuracy":{"neutral":80,"weightPerPoint":0.012,"minPasses":10},"duelWinRate":{"neutral":51,"weightPerPoint":0.008,"minDuels":5},"dribbleSuccessRate":{"neutral":57,"weightPerPoint":0.005,"minAttempts":2},"keyPass":{"perUnit":0.12,"cap":0.60},"tackle":{"perUnit":0.08,"cap":0.48},"block":{"perUnit":0.10,"cap":0.40},"interception":{"perUnit":0.10,"cap":0.50},"shotOn":{"perUnit":0.10,"cap":0.50},"save":{"perUnit":0.15,"cap":1.05},"foulDrawn":{"perUnit":0.05,"cap":0.20},"shotOffTarget":{"perUnit":-0.03,"cap":-0.15},"foulCommitted":{"perUnit":-0.04,"cap":-0.20},"dribbledPast":{"perUnit":-0.10,"cap":-0.40}}},
+    "status": "draft",
+    "notes": "Test bozza con anchor 6.5"
+  }' | jq
+
+# 5. List di nuovo: ora ci sono 2 config (v1.0 active, v1.1-test-draft draft)
+curl -s http://localhost:5000/voto-algorithm-configs | jq '[.[] | {id, version, status}]'
+
+# 6. PATCH la bozza per attivarla (deve archiviare la v1.0 atomicamente)
+curl -s -X PATCH http://localhost:5000/voto-algorithm-configs/2 \
+  -H 'Content-Type: application/json' \
+  -d '{"status": "active", "notes": "Test attivazione"}' | jq
+
+# 7. Verifica: v1.0 dovrebbe essere ora 'archived', v1.1-test-draft 'active'
+curl -s 'http://localhost:5000/voto-algorithm-configs?status=active' | jq '[.[] | {id, version, status}]'
+curl -s 'http://localhost:5000/voto-algorithm-configs?status=archived' | jq '[.[] | {id, version, status}]'
+
+# 8. Ricalcola con la nuova config attiva (anchor 6.5 → voto_mister medio dovrebbe salire)
+curl -s -X POST http://localhost:5000/voto-algorithm-configs/recalculate | jq
+Atteso al passo 8: updatedCount: 552, skippedCount: 71, durationMs: <2000. La media voto_mister in DB dovrebbe ora essere ~7.14 invece di 6.64 (perché anchor = 6.5 invece di 6.0, shift di +0.5 sul voto_stats che pesato α=0.35 dà +0.175).
+Verifica:
+sqlSELECT ROUND(AVG(voto_mister)::numeric, 2) AS media FROM player_giornata_stats WHERE voto_mister IS NOT NULL;
+Cleanup post-test: ripristina lo stato di partenza:
+bash# Riattiva v1.0
+curl -X PATCH http://localhost:5000/voto-algorithm-configs/1 \
+  -H 'Content-Type: application/json' \
+  -d '{"status": "active"}'
+
+# Cancella la bozza di test (nota: per ora non abbiamo DELETE — la lasciamo archiviata, non infastidisce)
+# Verifica stato finale: v1.0 attivo, v1.1-test-draft archiviato
+curl -s http://localhost:5000/voto-algorithm-configs | jq '[.[] | {id, version, status}]'
+
+# Ricalcola di nuovo (riporta voto_mister al valore originale 6.64)
+curl -X POST http://localhost:5000/voto-algorithm-configs/recalculate
+Verifica finale: media voto_mister torna a 6.64. Stato DB pulito.
+Riportami:
+
+Quale strategia hai scelto per la dipendenza compute.ts (1 import diretto, 2 nuovo package voto-engine, 3 altro)
+Output di typecheck/build (puliti)
+Output di ogni curl della sequenza Task 49
+Verifica finale: media voto_mister tornata a 6.64
+
+Se qualcosa si rompe (errore 500 inatteso, transazione che lascia stato inconsistente, performance >5s sul recalculate), fermati e segnala — non vogliamo persistere uno stato rotto.

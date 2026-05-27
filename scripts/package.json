@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@workspace/db": "workspace:*",
+    "@workspace/voto-engine": "workspace:*",
     "drizzle-orm": "catalog:"
   },
   "devDependencies": {

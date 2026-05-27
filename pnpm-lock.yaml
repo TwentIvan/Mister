@@ -172,6 +172,9 @@ importers:
       '@workspace/db':
         specifier: workspace:*
         version: link:../../lib/db
+      '@workspace/voto-engine':
+        specifier: workspace:*
+        version: link:../../lib/voto-engine
       cookie-parser:
         specifier: ^1.4.7
         version: 1.4.7
@@ -640,11 +643,23 @@ importers:
         specifier: 'catalog:'
         version: 4.21.0
 
+  lib/voto-engine:
+    dependencies:
+      '@workspace/db':
+        specifier: workspace:*
+        version: link:../db
+      drizzle-orm:
+        specifier: 'catalog:'
+        version: 0.45.2(@types/pg@8.20.0)(pg@8.20.0)
+
   scripts:
     dependencies:
       '@workspace/db':
         specifier: workspace:*
         version: link:../lib/db
+      '@workspace/voto-engine':
+        specifier: workspace:*
+        version: link:../lib/voto-engine
       drizzle-orm:
         specifier: 'catalog:'
         version: 0.45.2(@types/pg@8.20.0)(pg@8.20.0)

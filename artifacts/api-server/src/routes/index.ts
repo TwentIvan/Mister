@@ -9,6 +9,7 @@ import fantaTeamsRouter from "./fanta-teams";
 import playersRouter from "./players";
 import contractsRouter from "./contracts";
 import dashboardRouter from "./dashboard";
+import votoAlgorithmConfigRouter from "./voto-algorithm-config";
 
 const router: IRouter = Router();
 
@@ -22,5 +23,6 @@ router.use(fantaTeamsRouter);
 router.use(playersRouter);
 router.use(contractsRouter);
 router.use(dashboardRouter);
+router.use(votoAlgorithmConfigRouter);
 
 export default router;

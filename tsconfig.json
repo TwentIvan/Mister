@@ -7,6 +7,9 @@
       "path": "./lib/db"
     },
     {
+      "path": "./lib/voto-engine"
+    },
+    {
       "path": "./lib/api-client-react"
     },
     {
