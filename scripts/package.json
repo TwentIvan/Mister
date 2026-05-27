@@ -16,6 +16,8 @@
     "sync:cartoonize": "tsx ./sync/cartoonize-photos.ts"
   },
   "dependencies": {
+    "@tensorflow-models/blazeface": "^0.1.0",
+    "@tensorflow/tfjs-node": "^4.22.0",
     "@workspace/db": "workspace:*",
     "@workspace/voto-engine": "workspace:*",
     "drizzle-orm": "catalog:",

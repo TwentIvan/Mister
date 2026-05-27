@@ -1,0 +1,37 @@
+Aggiornamento dello script scripts/sync/cartoonize-photos.ts per fare pre-crop face-only dell'input prima di chiamare Replicate.
+Step 1: Aggiungi dipendenze al package scripts:
+bashpnpm add @vladmandic/face-api @tensorflow/tfjs-node canvas
+(canvas è necessario per face-api in Node.js per gestire le immagini come canvas).
+Step 2: Scarica i pesi del modello face detection. Crea cartella artifacts/scripts/face-api-models/ e scarica i 3 file di pesi del modello ssd_mobilenetv1 (più robusto di tiny_face_detector per foto sportive):
+
+ssd_mobilenetv1_model-weights_manifest.json
+ssd_mobilenetv1_model-shard1
+ssd_mobilenetv1_model-shard2
+
+Disponibili in: https://github.com/vladmandic/face-api/tree/master/model
+Step 3: Modifica cartoonize-photos.ts aggiungendo una funzione preCropFace(imageBuffer: Buffer): Promise<Buffer> che:
+
+Crea un canvas con l'immagine
+Carica nets.ssdMobilenetv1 se non già caricato (caching globale)
+Detect del volto con faceapi.detectSingleFace() (single, prendiamo il volto più grande)
+Estrae bounding box
+Calcola crop quadrato come da algoritmo sopra (size = box.height × 1.6, centrato sul volto)
+Usa sharp per extract + resize(512, 512) + eventuale extend con background trasparente se il crop esce
+Restituisce buffer PNG
+
+Step 4: Nel main del script, prima di chiamare Replicate:
+typescriptconst originalBuffer = await fetch(player.photoUrl).then(r => r.buffer());
+const croppedBuffer = await preCropFace(originalBuffer);
+// passa croppedBuffer (non l'URL originale) come input a face-to-many
+const output = await replicate.run(MODEL, { input: { image: croppedBuffer, ... } });
+(verifica nel SDK Replicate Node che accetta Buffer come input image, oppure usa await fileFromBuffer(croppedBuffer) se necessario)
+Step 5: Gestione edge case:
+
+Se face-api non detecta nessun volto → log warning e usa fallback: center crop quadrato dell'immagine senza face detection
+Se detecta multipli volti → prendi quello con bounding box più grande
+Se il box è molto piccolo (<10% dell'immagine, foto strana) → log + fallback al center crop
+
+Step 6: Rilancia tutti i 25 con flag --force:
+bashpnpm --filter @workspace/scripts run sync:cartoonize -- --all-mario --force
+Sovrascrive i 25 webp esistenti coi nuovi crop-then-cartoonized.
+Verifica finale: i nuovi /avatars/<id>.webp dovrebbero mostrare solo volto (dalla fronte al mento), niente collo né maglietta.

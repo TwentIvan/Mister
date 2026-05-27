@@ -1,11 +1,11 @@
 /**
  * cartoonize-photos.ts
- * Converte le foto giocatori in stile cartoon via Replicate fofr/face-to-many.
+ * Pipeline: download originale → face-detect CJS (blazeface) → crop viso
+ *           → Replicate (3D Pixar) → remove.bg → webp 512×512
  *
  * Uso:
- *   pnpm tsx scripts/sync/cartoonize-photos.ts --players 1624,35544,6409
- *   pnpm tsx scripts/sync/cartoonize-photos.ts --all-mario
- *   pnpm tsx scripts/sync/cartoonize-photos.ts --players 1624 --force
+ *   node_modules/.bin/tsx ./sync/cartoonize-photos.ts --players 1624,35544,6409
+ *   node_modules/.bin/tsx ./sync/cartoonize-photos.ts --all-mario [--force]
  */
 
 import { db } from "@workspace/db";
@@ -16,6 +16,10 @@ import sharp from "sharp";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import { execFile } from "child_process";
+import { promisify } from "util";
+
+const execFileAsync = promisify(execFile);
 
 // ─── Configurazione ───────────────────────────────────────────────────────────
 
@@ -24,32 +28,24 @@ const REPLICATE_MODEL =
 
 const REPLICATE_INPUT = {
   style: "3D",
-  // Prompt forzato: solo testa, riempie il frame, niente collo/spalle
+  // L'input è già pre-croppato sul viso via blazeface.
+  // Il prompt rinforza stile e sfondo; control_depth alto mantiene il framing dell'input.
   prompt:
-    "3D Pixar animation style, extreme close-up head portrait, face fills the entire frame, top of head to chin only, no neck, no shoulders, no body, tight headshot, centered face, white background",
+    "3D Pixar animation style, face portrait, white background, centered face",
   negative_prompt:
-    "neck, shoulders, chest, body, torso, collar, shirt, jacket, full body, half body, bust, decolletage, colorful background, dark background, blurry, watermark, text, logo",
+    "neck, shoulders, chest, body, torso, collar, shirt, jacket, blurry, watermark, text, logo",
   lora_scale: 1.0,
-  // prompt_strength alto → il prompt guida il framing (inquadratura stretta)
-  prompt_strength: 8,
-  // denoising alto → meno vincolato alla posa originale, più libertà al prompt
-  denoising_strength: 0.75,
-  // instant_id preserva l'identità del viso
-  instant_id_strength: 0.80,
-  // control_depth a 0 → ignora completamente la composizione/framing dell'input,
-  // lascia che sia solo il prompt a decidere inquadratura e taglio
-  control_depth_strength: 0.0,
+  prompt_strength: 4.5,
+  denoising_strength: 0.65,
+  instant_id_strength: 0.85,
+  control_depth_strength: 0.8,
 };
 
-// Remove.bg API key (opzionale — se assente, lo sfondo non viene rimosso)
-// Registrazione gratuita su https://www.remove.bg/ → 50 rimozioni/mese gratis
 const REMOVE_BG_KEY = process.env.REMOVE_BG_API_KEY ?? "";
-
 const CONCURRENCY = 3;
 const MAX_RETRIES = 3;
 const RETRY_DELAY_MS = 5000;
 
-// ID giocatori di Mario's Squad (ft-mvp-1)
 const MARIO_SQUAD_IDS = [
   30419, 30913, 1624, 446092, 162570, 25911, 35544, 6931, 1084, 40392, 353417,
   42007, 1358, 342074, 484411, 129687, 2055, 6409, 1920, 30509, 30879, 30414,
@@ -57,7 +53,93 @@ const MARIO_SQUAD_IDS = [
 ];
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const AVATARS_DIR = path.resolve(__dirname, "../../artifacts/mister-web/public/avatars");
+const AVATARS_DIR = path.resolve(
+  __dirname,
+  "../../artifacts/mister-web/public/avatars",
+);
+const FACE_DETECT_SCRIPT = path.resolve(__dirname, "face-detect.cjs");
+const NODE_BIN = process.execPath; // stesso Node.js del processo corrente
+
+// ─── Face-crop via subprocess CJS ─────────────────────────────────────────────
+
+interface CropBox {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+}
+interface FaceResult {
+  fallback: boolean;
+  w: number;
+  h: number;
+  left?: number;
+  top?: number;
+  width?: number;
+  height?: number;
+}
+
+/**
+ * Rileva il viso nell'immagine tramite un subprocess CJS (blazeface).
+ * Il subprocess patcha tf.util.isNullOrUndefined prima di caricare blazeface,
+ * aggiramento del breaking change di TF.js 4.x.
+ * Restituisce il crop box da passare a sharp.extract().
+ */
+async function preCropFace(imageBuffer: Buffer): Promise<CropBox | null> {
+  const b64 = imageBuffer.toString("base64");
+
+  try {
+    const { stdout, stderr } = await execFileAsync(
+      NODE_BIN,
+      [FACE_DETECT_SCRIPT, b64],
+      { maxBuffer: 1024 * 1024 * 10 }, // 10MB stdout max
+    );
+    if (stderr) process.stderr.write(stderr);
+
+    const result: FaceResult = JSON.parse(stdout.trim());
+    if (result.fallback) {
+      return null; // usa center-crop nel chiamante
+    }
+    return {
+      left: result.left!,
+      top: result.top!,
+      width: result.width!,
+      height: result.height!,
+    };
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    process.stderr.write(`  face-detect subprocess error: ${msg}\n`);
+    return null;
+  }
+}
+
+/**
+ * Applica il crop (da preCropFace) e ridimensiona a 512 px quadrato.
+ * Se cropBox è null → center-crop quadrato dell'immagine originale.
+ */
+async function applyCrop(
+  imageBuffer: Buffer,
+  cropBox: CropBox | null,
+): Promise<Buffer> {
+  let src = sharp(imageBuffer);
+
+  if (cropBox) {
+    src = src.extract({
+      left: cropBox.left,
+      top: cropBox.top,
+      width: cropBox.width,
+      height: cropBox.height,
+    });
+  } else {
+    // Fallback: center-crop quadrato
+    const meta = await sharp(imageBuffer).metadata();
+    const size = Math.min(meta.width ?? 512, meta.height ?? 512);
+    const left = Math.round(((meta.width ?? size) - size) / 2);
+    const top = Math.round(((meta.height ?? size) - size) / 2);
+    src = src.extract({ left, top, width: size, height: size });
+  }
+
+  return src.resize(512, 512).png().toBuffer();
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -68,7 +150,6 @@ function parseArgs(): { playerIds: number[]; force: boolean } {
   const playersFlag = args.indexOf("--players");
 
   if (allMario) return { playerIds: MARIO_SQUAD_IDS, force };
-
   if (playersFlag !== -1 && args[playersFlag + 1]) {
     const ids = args[playersFlag + 1]
       .split(",")
@@ -76,7 +157,6 @@ function parseArgs(): { playerIds: number[]; force: boolean } {
       .filter((n) => !isNaN(n));
     return { playerIds: ids, force };
   }
-
   console.error("Uso: --players <id1,id2,...> | --all-mario  [--force]");
   process.exit(1);
 }
@@ -95,7 +175,12 @@ async function downloadBuffer(url: string): Promise<Buffer> {
 
 async function processPlayer(
   replicate: Replicate,
-  player: { id: number; name: string; photoUrl: string | null; photoCartoonUrl: string | null },
+  player: {
+    id: number;
+    name: string;
+    photoUrl: string | null;
+    photoCartoonUrl: string | null;
+  },
   idx: number,
   total: number,
   force: boolean,
@@ -106,7 +191,6 @@ async function processPlayer(
     console.log(`${tag} — SKIP: nessun photoUrl`);
     return;
   }
-
   if (player.photoCartoonUrl && !force) {
     console.log(`${tag} — SKIP: già cartoonizzato (${player.photoCartoonUrl})`);
     return;
@@ -114,36 +198,45 @@ async function processPlayer(
 
   const outPath = path.join(AVATARS_DIR, `${player.id}.webp`);
 
-  // Retry loop
   for (let attempt = 1; attempt <= MAX_RETRIES + 1; attempt++) {
     try {
       const t0 = Date.now();
-      console.log(`${tag} — avvio Replicate (tentativo ${attempt})…`);
+      console.log(`${tag} — avvio (tentativo ${attempt})…`);
 
+      // ── Step 1: scarica originale → face-detect → crop ────────────────────
+      const originalBuf = await downloadBuffer(player.photoUrl);
+      console.log(`${tag} — face detect…`);
+      const cropBox = await preCropFace(originalBuf);
+      const croppedBuf = await applyCrop(originalBuf, cropBox);
+      if (cropBox) {
+        console.log(`${tag} — crop OK: ${cropBox.width}×${cropBox.height} @ (${cropBox.left},${cropBox.top})`);
+      } else {
+        console.log(`${tag} — nessun viso, center crop`);
+      }
+      const imageBlob = new Blob([croppedBuf], { type: "image/png" });
+
+      // ── Step 2: Replicate ─────────────────────────────────────────────────
       let output: unknown;
       try {
-        output = await replicate.run(REPLICATE_MODEL as `${string}/${string}:${string}`, {
-          input: { image: player.photoUrl, ...REPLICATE_INPUT },
-        });
+        output = await replicate.run(
+          REPLICATE_MODEL as `${string}/${string}:${string}`,
+          { input: { image: imageBlob, ...REPLICATE_INPUT } },
+        );
       } catch (err: unknown) {
-        // Fallback: prova con latest se versione non trovata
         const msg = err instanceof Error ? err.message : String(err);
         if (msg.includes("version") || msg.includes("not found")) {
-          console.warn(`${tag} — versione fissa non trovata, provo latest…`);
           output = await replicate.run("fofr/face-to-many" as `${string}/${string}`, {
-            input: { image: player.photoUrl, ...REPLICATE_INPUT },
+            input: { image: imageBlob, ...REPLICATE_INPUT },
           });
         } else {
           throw err;
         }
       }
 
-      // output è array di URL o ReadableStream
       const urls: string[] = [];
       if (Array.isArray(output)) {
         for (const item of output) {
           if (typeof item === "string") urls.push(item);
-          // ReadableStream (Replicate streaming)
           else if (item && typeof (item as { url?: () => Promise<URL> }).url === "function") {
             const u = await (item as { url: () => Promise<URL> }).url();
             urls.push(u.toString());
@@ -154,10 +247,9 @@ async function processPlayer(
       }
 
       if (urls.length === 0) throw new Error("Replicate non ha restituito URL");
-
       const imageUrl = urls[0];
 
-      // Passo 1: rimozione sfondo via remove.bg (se API key disponibile)
+      // ── Step 3: remove.bg → trim → resize 512×512 → webp ─────────────────
       let workingBuf: Buffer;
       let hasTransparency = false;
 
@@ -176,30 +268,24 @@ async function processPlayer(
             const errText = await rbgRes.text();
             throw new Error(`remove.bg ${rbgRes.status}: ${errText.slice(0, 80)}`);
           }
-          const arrBuf = await rbgRes.arrayBuffer();
-          workingBuf = Buffer.from(arrBuf);
+          workingBuf = Buffer.from(await rbgRes.arrayBuffer());
           hasTransparency = true;
           console.log(`${tag} — sfondo rimosso OK`);
         } catch (rbgErr: unknown) {
           const msg = rbgErr instanceof Error ? rbgErr.message : String(rbgErr);
-          console.warn(`${tag} — remove.bg fallito (${msg}), scarico immagine originale`);
+          console.warn(`${tag} — remove.bg fallito (${msg}), uso immagine Replicate`);
           workingBuf = await downloadBuffer(imageUrl);
         }
       } else {
-        console.log(`${tag} — scarico immagine (no REMOVE_BG_API_KEY)…`);
         workingBuf = await downloadBuffer(imageUrl);
       }
 
       fs.mkdirSync(AVATARS_DIR, { recursive: true });
 
-      // Passo 2: trim bordi trasparenti → bounding-box stretto del viso
-      // Il modello gestisce già il framing grazie al prompt — nessun crop manuale.
       const trimmedBuf = await sharp(workingBuf)
         .trim({ threshold: hasTransparency ? 5 : 20 })
         .toBuffer();
 
-      // Passo 3: ridimensiona a 512×512 — fit contain (mai clipping della testa)
-      // Il modello decide già il framing via prompt; contain garantisce che niente venga tagliato.
       await sharp(trimmedBuf)
         .resize(512, 512, {
           fit: "contain",
@@ -210,20 +296,17 @@ async function processPlayer(
         .toFile(outPath);
 
       const elapsed = ((Date.now() - t0) / 1000).toFixed(1);
-      console.log(`${tag} — salvato in ${outPath} (${elapsed}s)`);
+      console.log(`${tag} — salvato (${elapsed}s)`);
 
-      // Aggiorna DB
       const relPath = `/avatars/${player.id}.webp`;
       await db
         .update(players)
         .set({ photoCartoonUrl: relPath })
         .where(eq(players.id, player.id));
-
       console.log(`${tag} — ✓ DB aggiornato: ${relPath}`);
-      return; // successo
+      return;
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      // Errori di input non ha senso riprovare
       if (msg.includes("422") || msg.includes("Unprocessable")) {
         console.error(`${tag} — ERRORE INPUT (non riprovabile): ${msg}`);
         return;
@@ -269,9 +352,10 @@ async function main() {
 
   const replicate = new Replicate({ auth: token });
 
-  console.log(`\n─── Cartoonize: ${playerIds.length} giocatori, concorrenza ${CONCURRENCY}${force ? ", --force" : ""} ───\n`);
+  console.log(
+    `\n─── Cartoonize: ${playerIds.length} giocatori, concorrenza ${CONCURRENCY}${force ? ", --force" : ""} ───\n`,
+  );
 
-  // Carica dati dal DB
   const rows = await db
     .select({
       id: players.id,
@@ -283,15 +367,16 @@ async function main() {
     .where(inArray(players.id, playerIds));
 
   const rowMap = new Map(rows.map((r) => [r.id, r]));
-
-  const targets = playerIds.map((id) => {
-    const r = rowMap.get(id);
-    if (!r) {
-      console.warn(`Player ${id} non trovato in DB — skip`);
-      return null;
-    }
-    return r;
-  }).filter((r): r is NonNullable<typeof r> => r !== null);
+  const targets = playerIds
+    .map((id) => {
+      const r = rowMap.get(id);
+      if (!r) {
+        console.warn(`Player ${id} non trovato in DB — skip`);
+        return null;
+      }
+      return r;
+    })
+    .filter((r): r is NonNullable<typeof r> => r !== null);
 
   await runWithConcurrency(
     targets,
@@ -299,7 +384,6 @@ async function main() {
     CONCURRENCY,
   );
 
-  // Sommario finale
   console.log("\n─── Sommario ───");
   for (const player of targets) {
     const updated = await db
