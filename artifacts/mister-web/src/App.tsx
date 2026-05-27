@@ -6,6 +6,7 @@ import LeagueDetail from "@/pages/league-detail";
 import FederationRules from "@/pages/federation";
 import CompetitionDetail from "@/pages/competition-detail";
 import TemplatesManager from "@/pages/templates-manager";
+import VotoAlgorithm from "@/pages/voto-algorithm";
 import { Switch, Route, Router as WouterRouter } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -28,6 +29,7 @@ function Router() {
         <Route path="/leagues/:leagueId/competitions/:id" component={CompetitionDetail} />
         <Route path="/players" component={PlayersList} />
         <Route path="/superadmin/templates" component={TemplatesManager} />
+        <Route path="/superadmin/algoritmo-voto" component={VotoAlgorithm} />
         <Route component={NotFound} />
       </Switch>
     </AppLayout>

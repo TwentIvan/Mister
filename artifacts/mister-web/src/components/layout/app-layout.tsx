@@ -4,8 +4,8 @@ import {
   Trophy, 
   Users, 
   LayoutDashboard, 
-  Settings, 
   ShieldAlert,
+  Sliders,
   Moon,
   Sun
 } from "lucide-react";
@@ -17,13 +17,14 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const { theme, setTheme } = useTheme();
 
   const navItems = [
-    { href: "/", label: "Dashboard", icon: LayoutDashboard },
-    { href: "/leagues", label: "My Leagues", icon: Trophy },
-    { href: "/players", label: "Players", icon: Users },
+    { href: "/", label: "Cruscotto", icon: LayoutDashboard },
+    { href: "/leagues", label: "Le mie leghe", icon: Trophy },
+    { href: "/players", label: "Giocatori", icon: Users },
   ];
 
   const adminItems = [
-    { href: "/superadmin/templates", label: "Templates", icon: ShieldAlert },
+    { href: "/superadmin/templates", label: "Profili", icon: ShieldAlert },
+    { href: "/superadmin/algoritmo-voto", label: "Algoritmo voto", icon: Sliders },
   ];
 
   return (
@@ -56,7 +57,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           ))}
 
           <div className="px-3 mt-8 mb-2 text-xs font-semibold text-sidebar-foreground/50 uppercase tracking-wider">
-            System Admin
+            Amministrazione
           </div>
           {adminItems.map((item) => (
             <Link key={item.href} href={item.href}>

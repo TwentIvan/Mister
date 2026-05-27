@@ -1,0 +1,96 @@
+Step 4 — UI panel per la configurazione algoritmo voto. Dividiamo in 2 batch, stop in mezzo per verifica visiva.
+Prima di iniziare: carica le skill frontend-design e mockup (e qualunque skill UI custom del progetto). Leggi AGENT_BRIEF.md e DESIGN_SYSTEM.md se non li hai già in contesto recente — è UI sensibile, deve seguire palette/tipografia/tono Mister al millimetro.
+Constraint non negoziabili (riassunto):
+
+Lingua: italiano ovunque, niente inglese (mai "Save", "Active", "Draft")
+Tipografia: Fraunces per H1/H2, JetBrains Mono per TUTTI i numeri (anche gli input numerici e i valori default mostrati), Inter per body
+Palette: green-deep #1f4733, cream #efe6d3, sidebar dark #0d1f1a. Niente gradient, niente oro, niente colori squillanti
+Tono: sobrio, tecnico. Niente emoji, niente esclamativi, niente "Ti diamo il benvenuto"
+Densità alta: non lasciare 1000px di whitespace, riempire con info utile (sub-pannelli, hint, badge)
+
+
+Batch 1 — Struttura pagina + lettura config
+Task 50 — Voce di menu + route
+Aggiungi alla sidebar "Amministrazione" la voce "Algoritmo voto", sotto le voci esistenti (es. dopo "Profili"). Route: /admin/algoritmo-voto o convenzione equivalente del progetto.
+Task 51 — Pagina con header + selettore versione + 3 tab
+Layout della pagina:
+[h1 Fraunces] Algoritmo voto
+[p sobrio]    Pesi e soglie che producono il voto base Mister.
+              Le modifiche non hanno effetto finché non si attiva una versione.
+
+─────────────────────────────────────────────────
+
+[Riga "versione corrente"]
+Versione attiva: v1.0 [badge "sistema" piccolo cream]
+Note: Configurazione algoritmo voto Mister v1.0. Calibrata su backtest...
+[Seleziona versione ▾]  ← dropdown con tutte le versioni, sezionate per stato
+
+─────────────────────────────────────────────────
+
+[Tab navigation orizzontale, stile Linear/Stripe]
+┌───────────────────┬───────────────────┬───────────────────┐
+│ Calibrazione base │ Stripping eventi  │ Pesi performance  │
+└───────────────────┴───────────────────┴───────────────────┘
+
+[Tab content: form con righe label/input/default/reset]
+Tab 1 — Calibrazione base (sezioni):
+
+Sezione "Anchor": 1 campo (anchor)
+Sezione "Minuti giocati": 3 campi (minutes.threshold, minutes.fullSample, minutes.extrapolationCap)
+Sezione "Blend voto": 2 campi (blend.alphaStats, blend.betaRating)
+
+Tab 2 — Stripping eventi (sezioni):
+
+Sezione "Gol e assist": stripping.goalFirst, stripping.goalIncremental, stripping.penaltyExtraOverGoal, stripping.assist
+Sezione "Rigori": stripping.penaltyMissed, stripping.penaltyCommitted, stripping.savePrior
+Sezione "Cartellini": stripping.redCardPrior
+
+Tab 3 — Pesi performance (sezioni — questa è la riprogettazione che l'agente aveva suggerito):
+
+Sezione "Indicatori di qualità": passAccuracy (3 campi: neutral/weightPerPoint/minPasses), duelWinRate (3 campi), dribbleSuccessRate (3 campi)
+Sezione "Contributi di volume": keyPass, tackle, block, interception, shotOn, save, foulDrawn (2 campi ciascuno: perUnit/cap)
+Sezione "Penalità": shotOffTarget, foulCommitted, dribbledPast (2 campi ciascuno)
+
+Struttura di una riga form:
+┌────────────────────────────────────────────────────────────────────────┐
+│ [Label IT]                                          [input JBM] [↺ def] │
+│ [descrizione 1 riga grigia con il default tra parentesi mono]          │
+└────────────────────────────────────────────────────────────────────────┘
+Esempio concreto:
+Anchor (sufficienza italiana)                              [ 6.0 ] [↺]
+Voto di partenza prima di applicare modificatori           (default: 6.0)
+Soglia minuti minimi                                       [ 15  ] [↺]
+Sotto questo numero di minuti il voto non viene calcolato  (default: 15)
+Peso unitario passaggio chiave                             [ 0.12 ] [↺]
+Punti aggiunti al voto per ogni key pass (fino al cap)     (default: 0.12)
+Per le label dei campi: traducile in italiano comprensibile. Esempi di mapping (espandi tu il resto):
+Chiave configLabel ITanchorAnchor (sufficienza italiana)minutes.thresholdSoglia minuti minimiminutes.fullSampleMinuti per voto pienominutes.extrapolationCapLimite estrapolazione subentriblend.alphaStatsPeso componente statblend.betaRatingPeso componente ratingstripping.goalFirstStripping primo golstripping.goalIncrementalStripping gol successivistripping.assistStripping assist......stats.passAccuracy.neutralPrecisione passaggi neutrastats.passAccuracy.weightPerPointPeso per punto precisionestats.passAccuracy.minPassesSoglia minima passaggistats.keyPass.perUnitPeso passaggio chiavestats.keyPass.capCap passaggi chiave......
+Le descrizioni le scrivi tu, breve (max 80 caratteri), tecnica ma comprensibile.
+Dropdown selettore versione: tre sezioni interne:
+
+"Attiva" (1 elemento, badge verde)
+"Bozze" (n elementi, badge cream)
+"Archivio" (n elementi, grigio)
+
+Se l'utente seleziona una versione diversa dalla attiva, il form si ripopola con i valori di QUELLA versione. Header in alto cambia per riflettere quale versione è visualizzata.
+Note sotto il form (lasciato vuoto per Batch 1, non collegato a niente ancora):
+
+Textarea con label "Note sulla versione" (max 200 caratteri visibili)
+
+Bottoni in fondo pagina (visibili ma DISABILITATI in Batch 1):
+
+Salva come bozza (secondary)
+Salva e attiva (primary verde)
+Ricalcola voti stagione corrente (terzo bottone, allineato a destra)
+
+Per Batch 1 i bottoni sono solo placeholder visivi — il wiring delle mutation viene in Batch 2.
+Dati: usa l'hook generato useListVotoAlgorithmConfigs per caricare tutte le configurazioni. Filtra in JS per stato (active/draft/archived). Tipi: import VotoAlgorithmConfig, VotoMisterConfigPayload, ecc. dai package generati. Per i tipi del configJson puoi anche importare VotoMisterConfig da @workspace/voto-engine se vuoi typesafety completa.
+Empty state non aspettato: per ora ci sarà sempre almeno v1.0 attiva. Ma codifica defensively: se la query torna 0 risultati, mostra "Nessuna configurazione trovata. Esegui il seed del database."
+STOP qui per il Batch 1. Riportami:
+
+Conferma route registrata e voce sidebar visibile
+Screenshot della pagina (o descrizione testuale dettagliata se screenshot non possibile): header, dropdown, 3 tab con i form popolati con i valori v1.0
+Verifica che i numeri nei campi sono in JetBrains Mono, i titoli in Fraunces, i body in Inter
+Conferma che selezionando una versione diversa nel dropdown (se esiste — per ora c'è solo v1.0, ma puoi simulare creando una bozza via curl come nel test precedente) il form si ripopola correttamente
+
+NON wire: niente onClick sui bottoni, niente onChange sui campi che invochi mutation. Tutto frozen, solo lettura, solo display. Stop al primo segnale verde per andare al Batch 2.
