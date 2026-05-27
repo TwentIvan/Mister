@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "sm3EvRqCmAlmu4eChdb3F"
+uri = "file://foto-originali-mario-squad.zip"
+type = "unspecified"
+title = "Foto originali Mario's Squad (25 giocatori)"
