@@ -24,14 +24,18 @@ const REPLICATE_MODEL =
 
 const REPLICATE_INPUT = {
   style: "3D",
-  prompt: "a person, close-up face portrait, white background, plain white background, face only, no neck, no shoulders, centered face, 3D animated Pixar style",
-  negative_prompt: "photorealistic, sketch, watermark, blurry, shoulders, neck, torso, body, colorful background, green background, dark background, gradient background, nature, leaves, outdoor, landscape, pattern, texture, shadow",
+  prompt: "a person, 3D animated Pixar style portrait, plain background",
+  negative_prompt: "photorealistic, sketch, watermark, blurry, text",
   lora_scale: 1.0,
   prompt_strength: 4.5,
   denoising_strength: 0.65,
   instant_id_strength: 0.85,
   control_depth_strength: 0.8,
 };
+
+// Remove.bg API key (opzionale — se assente, lo sfondo non viene rimosso)
+// Registrazione gratuita su https://www.remove.bg/ → 50 rimozioni/mese gratis
+const REMOVE_BG_KEY = process.env.REMOVE_BG_API_KEY ?? "";
 
 const CONCURRENCY = 3;
 const MAX_RETRIES = 3;
@@ -144,21 +148,66 @@ async function processPlayer(
       if (urls.length === 0) throw new Error("Replicate non ha restituito URL");
 
       const imageUrl = urls[0];
-      console.log(`${tag} — scarico immagine da ${imageUrl.slice(0, 60)}…`);
 
-      const buf = await downloadBuffer(imageUrl);
+      // Passo 1: rimozione sfondo via remove.bg (se API key disponibile)
+      let workingBuf: Buffer;
+      let hasTransparency = false;
+
+      if (REMOVE_BG_KEY) {
+        console.log(`${tag} — rimozione sfondo (remove.bg)…`);
+        try {
+          const formData = new FormData();
+          formData.append("image_url", imageUrl);
+          formData.append("size", "auto");
+          const rbgRes = await fetch("https://api.remove.bg/v1.0/removebg", {
+            method: "POST",
+            headers: { "X-Api-Key": REMOVE_BG_KEY },
+            body: formData,
+          });
+          if (!rbgRes.ok) {
+            const errText = await rbgRes.text();
+            throw new Error(`remove.bg ${rbgRes.status}: ${errText.slice(0, 80)}`);
+          }
+          const arrBuf = await rbgRes.arrayBuffer();
+          workingBuf = Buffer.from(arrBuf);
+          hasTransparency = true;
+          console.log(`${tag} — sfondo rimosso OK`);
+        } catch (rbgErr: unknown) {
+          const msg = rbgErr instanceof Error ? rbgErr.message : String(rbgErr);
+          console.warn(`${tag} — remove.bg fallito (${msg}), scarico immagine originale`);
+          workingBuf = await downloadBuffer(imageUrl);
+        }
+      } else {
+        console.log(`${tag} — scarico immagine (no REMOVE_BG_API_KEY)…`);
+        workingBuf = await downloadBuffer(imageUrl);
+      }
+
       fs.mkdirSync(AVATARS_DIR, { recursive: true });
 
-      // Converti in webp 512×512
-      // Ritaglio: prendi il 60% superiore dell'immagine (zona viso),
-      // poi ridimensiona a 512×512 per uniformità nel cerchio.
-      const meta = await sharp(buf).metadata();
-      const imgW = meta.width ?? 512;
-      const imgH = meta.height ?? 512;
-      const cropH = Math.round(imgH * 0.60);
-      await sharp(buf)
-        .extract({ left: 0, top: 0, width: imgW, height: cropH })
-        .resize(512, 512, { fit: "cover", position: "centre" })
+      // Passo 2: trim bordi → bounding-box stretto della persona
+      // Con trasparenza: rimuove bordi alpha=0. Senza: rimuove bordi del colore dell'angolo.
+      // Il crop 62% è relativo alla persona, non al frame originale → molto più robusto.
+      const trimmedBuf = await sharp(workingBuf)
+        .trim({ threshold: hasTransparency ? 5 : 20 })
+        .toBuffer();
+
+      const trimMeta = await sharp(trimmedBuf).metadata();
+      const personH = trimMeta.height ?? 512;
+      const personW = trimMeta.width ?? 512;
+      const faceH = Math.round(personH * 0.62);
+
+      // Passo 3: estrai zona testa (62% superiore del bounding-box)
+      const faceBuf = await sharp(trimmedBuf)
+        .extract({ left: 0, top: 0, width: personW, height: faceH })
+        .toBuffer();
+
+      // Passo 4: ridimensiona a 512×512 — fit contain con sfondo bianco
+      await sharp(faceBuf)
+        .resize(512, 512, {
+          fit: "contain",
+          background: { r: 255, g: 255, b: 255, alpha: 1 },
+        })
+        .flatten({ background: { r: 255, g: 255, b: 255 } })
         .webp({ quality: 85 })
         .toFile(outPath);
 
