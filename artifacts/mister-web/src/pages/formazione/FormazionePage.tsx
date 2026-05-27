@@ -9,13 +9,12 @@ const MODULI = [
   "4-2-3-1", "4-3-1-2", "3-4-1-2", "3-4-2-1",
 ];
 
-// ─── Parsing formazione ───────────────────────────────────────────────────────
+// ─── Parsing e helpers formazione ────────────────────────────────────────────
 
 function parseFormation(modulo: string): number[] {
   return [1, ...modulo.split("-").map(Number)];
 }
 
-// row 0→"P", row 1→"D", row last→"A", row (last-1) se ≥5 righe→"T", resto→"C"
 function getRowLabel(rowIdx: number, totalRows: number): string {
   if (rowIdx === 0) return "P";
   if (rowIdx === 1) return "D";
@@ -24,13 +23,12 @@ function getRowLabel(rowIdx: number, totalRows: number): string {
   return "C";
 }
 
-// Mappa label → RoleClassic per compatibilità giocatore
 function labelToRole(label: string): RoleClassic {
   switch (label) {
     case "P": return "GK";
     case "D": return "DEF";
     case "A": return "ATT";
-    default:  return "MID"; // C e T
+    default:  return "MID";
   }
 }
 
@@ -39,14 +37,130 @@ function getSlotRole(slotId: string, formation: number[]): RoleClassic {
   return labelToRole(getRowLabel(rowIdx, formation.length));
 }
 
-// Abbrevia cognome per i token nel pitch
+function isBenchSlot(slotId: string): boolean {
+  return slotId.startsWith("bench-");
+}
+
+// Abbrevia cognome per i token sul pitch
 function lastName(name: string): string {
   const parts = name.trim().split(/\s+/);
   const last = parts[parts.length - 1];
   return last.length > 9 ? last.slice(0, 8) + "." : last;
 }
 
-// ─── Costanti badge ruolo ─────────────────────────────────────────────────────
+// ─── Posizioni verticali delle righe sul pitch ────────────────────────────────
+// Percentuali (top) dentro il container del pitch (inset 4% top/bottom)
+
+function rowPositionsForFormation(formation: number[]): number[] {
+  const n = formation.length;
+  if (n === 4) return [9, 30, 55, 78];
+  if (n === 5) return [9, 25, 42, 58, 78];
+  // fallback distribuzione uniforme per n diverso
+  return formation.map((_, i) => 9 + (i / (n - 1)) * 69);
+}
+
+// ─── Migrazione lineup al cambio modulo (Task 87) ────────────────────────────
+
+function migrateLineup(
+  oldAllSlots: Record<string, number>,
+  oldFormation: number[],
+  newFormation: number[],
+): { newAllSlots: Record<string, number>; message: string } {
+  // Estrae giocatori per gruppo di ruolo dalla lineup titolari
+  const getFieldPlayers = (labelFilter: (l: string) => boolean): number[] => {
+    const result: number[] = [];
+    oldFormation.forEach((count, rowIdx) => {
+      const label = getRowLabel(rowIdx, oldFormation.length);
+      if (labelFilter(label)) {
+        for (let si = 0; si < count; si++) {
+          const pid = oldAllSlots[`${rowIdx}-${si}`];
+          if (pid !== undefined) result.push(pid);
+        }
+      }
+    });
+    return result;
+  };
+
+  const oldGKs  = getFieldPlayers(l => l === "P");
+  const oldDEFs = getFieldPlayers(l => l === "D");
+  const oldMIDs = getFieldPlayers(l => l === "C" || l === "T");
+  const oldATTs = getFieldPlayers(l => l === "A");
+
+  // Panchina vecchia: preservata invariata
+  const oldBench: Record<string, number> = {};
+  for (const [id, pid] of Object.entries(oldAllSlots)) {
+    if (isBenchSlot(id)) oldBench[id] = pid;
+  }
+
+  const newSlots: Record<string, number> = {};
+  const surplus: number[] = [];
+
+  const getNewSlotIds = (labelFilter: (l: string) => boolean): string[] => {
+    const result: string[] = [];
+    newFormation.forEach((count, rowIdx) => {
+      const label = getRowLabel(rowIdx, newFormation.length);
+      if (labelFilter(label)) {
+        for (let si = 0; si < count; si++) result.push(`${rowIdx}-${si}`);
+      }
+    });
+    return result;
+  };
+
+  // GK (sempre 1)
+  if (oldGKs.length > 0) newSlots["0-0"] = oldGKs[0];
+  surplus.push(...oldGKs.slice(1));
+
+  // DEF
+  const newDEFSlots = getNewSlotIds(l => l === "D");
+  oldDEFs.forEach((pid, i) => {
+    if (i < newDEFSlots.length) newSlots[newDEFSlots[i]] = pid;
+    else surplus.push(pid);
+  });
+
+  // MID + T (interscambiabili)
+  const newMIDSlots = getNewSlotIds(l => l === "C" || l === "T");
+  oldMIDs.forEach((pid, i) => {
+    if (i < newMIDSlots.length) newSlots[newMIDSlots[i]] = pid;
+    else surplus.push(pid);
+  });
+
+  // ATT
+  const newATTSlots = getNewSlotIds(l => l === "A");
+  oldATTs.forEach((pid, i) => {
+    if (i < newATTSlots.length) newSlots[newATTSlots[i]] = pid;
+    else surplus.push(pid);
+  });
+
+  // Surplus → panchina (primo slot libero), altrimenti rosa
+  const newBench = { ...oldBench };
+  let toBench = 0;
+  let toRosa = 0;
+  for (const pid of surplus) {
+    let placed = false;
+    for (let i = 0; i < 7; i++) {
+      const bId = `bench-${i}`;
+      if (newBench[bId] === undefined) {
+        newBench[bId] = pid;
+        placed = true;
+        toBench++;
+        break;
+      }
+    }
+    if (!placed) toRosa++;
+  }
+
+  const newAllSlots = { ...newSlots, ...newBench };
+  const titolariCount = Object.keys(newSlots).length;
+
+  let message = `Modulo cambiato. ${titolariCount} giocatori mantenuti`;
+  if (toBench > 0) message += `, ${toBench} in panchina`;
+  if (toRosa > 0) message += `, ${toRosa} in rosa`;
+  message += ".";
+
+  return { newAllSlots, message };
+}
+
+// ─── Costanti UI ──────────────────────────────────────────────────────────────
 
 type RoleFilter = "tutti" | RoleClassic;
 
@@ -65,20 +179,22 @@ const ROLE_BADGE: Record<RoleClassic, { label: string; bg: string }> = {
   ATT: { label: "A", bg: "#8b2c2c" },
 };
 
-const SLOT_PX = 62; // dimensione slot in pixel — STESSA per width e height → cerchio perfetto
+const SLOT_SIZE  = "clamp(72px, 9vh, 96px)";  // titolari
+const BENCH_SIZE = 56;                          // px, panchina più piccola
 
-// ─── Componente Pitch ─────────────────────────────────────────────────────────
+// ─── Componente Pitch (Task 85) ────────────────────────────────────────────────
 
 interface PitchProps {
   modulo: string;
-  slots: Record<string, number>;
+  allSlots: Record<string, number>;
   selectedSlot: string | null;
   onSlotClick: (slotId: string) => void;
   onSlotDoubleClick: (slotId: string) => void;
 }
 
-function Pitch({ modulo, slots, selectedSlot, onSlotClick, onSlotDoubleClick }: PitchProps) {
+function Pitch({ modulo, allSlots, selectedSlot, onSlotClick, onSlotDoubleClick }: PitchProps) {
   const formation = parseFormation(modulo);
+  const rowPositions = rowPositionsForFormation(formation);
 
   return (
     <div
@@ -86,161 +202,306 @@ function Pitch({ modulo, slots, selectedSlot, onSlotClick, onSlotDoubleClick }: 
         position: "relative",
         width: "100%",
         aspectRatio: "5 / 7",
-        backgroundColor: "#1f4733",
         borderRadius: "var(--r-lg)",
         overflow: "hidden",
         border: "1px solid rgba(239, 230, 211, 0.15)",
         userSelect: "none",
       }}
     >
-      {/* ── Linee campo (SVG) ── */}
+      {/* ── Campo SVG: strisce + linee ── */}
       <svg
         style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none" }}
         viewBox="0 0 100 140"
         preserveAspectRatio="none"
       >
-        <rect x="5"  y="5"   width="90" height="130" fill="none" stroke="rgba(239,230,211,0.25)" strokeWidth="0.6" />
-        <line x1="5" y1="70" x2="95"   y2="70"       stroke="rgba(239,230,211,0.25)" strokeWidth="0.6" />
-        <circle cx="50" cy="70" r="12"  fill="none" stroke="rgba(239,230,211,0.25)" strokeWidth="0.6" />
-        <circle cx="50" cy="70" r="0.8" fill="rgba(239,230,211,0.4)" />
-        {/* Area rigore alto */}
-        <rect x="22" y="5"   width="56" height="20" fill="none" stroke="rgba(239,230,211,0.25)" strokeWidth="0.6" />
-        <rect x="36" y="5"   width="28" height="9"  fill="none" stroke="rgba(239,230,211,0.25)" strokeWidth="0.6" />
-        <circle cx="50" cy="17" r="0.8" fill="rgba(239,230,211,0.4)" />
-        {/* Area rigore basso */}
-        <rect x="22" y="115" width="56" height="20" fill="none" stroke="rgba(239,230,211,0.25)" strokeWidth="0.6" />
-        <rect x="36" y="126" width="28" height="9"  fill="none" stroke="rgba(239,230,211,0.25)" strokeWidth="0.6" />
-        <circle cx="50" cy="123" r="0.8" fill="rgba(239,230,211,0.4)" />
+        <defs>
+          {/* Strisce orizzontali alternanti — effetto campo pro */}
+          <pattern id="pitch-stripes" x="0" y="0" width="100" height="8.75" patternUnits="userSpaceOnUse">
+            <rect x="0" y="0"     width="100" height="4.375" fill="#1f4733" />
+            <rect x="0" y="4.375" width="100" height="4.375" fill="#234e38" />
+          </pattern>
+        </defs>
+        {/* Sfondo a strisce */}
+        <rect x="0" y="0" width="100" height="140" fill="url(#pitch-stripes)" />
+
+        {/* Linee campo */}
+        <rect x="5"  y="5"   width="90" height="130" fill="none" stroke="rgba(239,230,211,0.28)" strokeWidth="0.6" />
+        <line x1="5" y1="70" x2="95"   y2="70"       stroke="rgba(239,230,211,0.28)" strokeWidth="0.6" />
+        <circle cx="50" cy="70" r="12"  fill="none" stroke="rgba(239,230,211,0.28)" strokeWidth="0.6" />
+        <circle cx="50" cy="70" r="0.8" fill="rgba(239,230,211,0.45)" />
+        {/* Area rigore nostra (alto) */}
+        <rect x="22" y="5"   width="56" height="20" fill="none" stroke="rgba(239,230,211,0.28)" strokeWidth="0.6" />
+        <rect x="36" y="5"   width="28" height="9"  fill="none" stroke="rgba(239,230,211,0.28)" strokeWidth="0.6" />
+        <circle cx="50" cy="17" r="0.8" fill="rgba(239,230,211,0.45)" />
+        {/* Area rigore avversaria (basso) */}
+        <rect x="22" y="115" width="56" height="20" fill="none" stroke="rgba(239,230,211,0.28)" strokeWidth="0.6" />
+        <rect x="36" y="126" width="28" height="9"  fill="none" stroke="rgba(239,230,211,0.28)" strokeWidth="0.6" />
+        <circle cx="50" cy="123" r="0.8" fill="rgba(239,230,211,0.45)" />
       </svg>
 
-      {/* ── Righe formazione ── */}
-      <div
-        style={{
-          position: "absolute",
-          inset: "4% 2%",
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "space-evenly",
-        }}
-      >
-        {formation.map((slotsInRow, rowIdx) => (
-          <div
-            key={rowIdx}
-            style={{
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              gap: 10,
-            }}
-          >
-            {Array.from({ length: slotsInRow }).map((_, slotIdx) => {
-              const slotId = `${rowIdx}-${slotIdx}`;
-              const playerId = slots[slotId];
-              const player = playerId !== undefined ? PLAYER_BY_ID.get(playerId) : undefined;
-              const isSelected = selectedSlot === slotId;
-              const isOccupied = player !== undefined;
-              const roleLabel = getRowLabel(rowIdx, formation.length);
+      {/* ── Overlay righe formazione (posizionamento assoluto per righe) ── */}
+      <div style={{ position: "absolute", inset: "4% 0" }}>
+        {formation.map((slotsInRow, rowIdx) => {
+          const topPct = rowPositions[rowIdx];
+          const roleLabel = getRowLabel(rowIdx, formation.length);
 
-              // colore bordo: selezionato = verde chiaro, occupato = ruolo, vuoto = cream dashed
-              let borderStyle: string;
-              let borderColor: string;
-              if (isSelected) {
-                borderStyle = "solid";
-                borderColor = "rgba(239,230,211,1)";
-              } else if (isOccupied) {
-                borderStyle = "solid";
-                borderColor = "rgba(239,230,211,0.7)";
-              } else {
-                borderStyle = "dashed";
-                borderColor = "rgba(239,230,211,0.35)";
-              }
+          return (
+            <div
+              key={rowIdx}
+              style={{
+                position: "absolute",
+                left: "6%",
+                right: "6%",
+                top: `${topPct}%`,
+                transform: "translateY(-50%)",
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+                gap: 16,
+              }}
+            >
+              {Array.from({ length: slotsInRow }).map((_, slotIdx) => {
+                const slotId = `${rowIdx}-${slotIdx}`;
+                const playerId = allSlots[slotId];
+                const player = playerId !== undefined ? PLAYER_BY_ID.get(playerId) : undefined;
+                const isSelected = selectedSlot === slotId;
+                const isOccupied = player !== undefined;
 
-              return (
-                // wrapper flex-col per nome sotto il cerchio
-                <div
-                  key={slotId}
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    gap: 3,
-                    flexShrink: 0,
-                  }}
-                >
-                  <button
-                    onClick={() => onSlotClick(slotId)}
-                    onDoubleClick={() => onSlotDoubleClick(slotId)}
-                    title={isOccupied ? `${player!.name} — doppio click per rimuovere` : `Slot ${roleLabel}`}
+                return (
+                  <div
+                    key={slotId}
                     style={{
-                      width:  SLOT_PX,   // ← stesso valore per width…
-                      height: SLOT_PX,   // ← …e height → cerchio perfetto
-                      flexShrink: 0,
-                      borderRadius: "50%",
-                      border: `2px ${borderStyle} ${borderColor}`,
-                      background: isSelected
-                        ? "rgba(239,230,211,0.18)"
-                        : isOccupied
-                          ? "rgba(239,230,211,0.08)"
-                          : "rgba(239,230,211,0.04)",
                       display: "flex",
+                      flexDirection: "column",
                       alignItems: "center",
-                      justifyContent: "center",
-                      cursor: "pointer",
-                      overflow: "hidden",
-                      padding: 0,
-                      boxShadow: isSelected ? "0 0 0 3px rgba(45,107,79,0.6)" : "none",
-                      transition: "box-shadow 0.15s, border-color 0.15s, background 0.15s",
+                      gap: 4,
+                      flexShrink: 0,
                     }}
-                    aria-label={`Slot ${roleLabel} riga ${rowIdx + 1}${isOccupied ? ` — ${player!.name}` : ""}`}
                   >
-                    {isOccupied && player!.photoUrl ? (
-                      <img
-                        src={player!.photoUrl}
-                        alt={player!.name}
-                        style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                        onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
-                      />
-                    ) : (
-                      <span
-                        style={{
-                          fontFamily: "var(--font-mono)",
-                          fontSize: isOccupied ? 9 : 11,
-                          fontWeight: 700,
-                          color: isSelected
-                            ? "rgba(239,230,211,0.95)"
-                            : "rgba(239,230,211,0.5)",
-                          letterSpacing: "0.05em",
-                        }}
-                      >
-                        {isOccupied ? player!.name[0].toUpperCase() : roleLabel}
-                      </span>
-                    )}
-                  </button>
+                    <button
+                      onClick={() => onSlotClick(slotId)}
+                      onDoubleClick={() => onSlotDoubleClick(slotId)}
+                      title={isOccupied ? `${player!.name} — doppio click per rimuovere` : `Slot ${roleLabel}`}
+                      style={{
+                        width: SLOT_SIZE,
+                        height: SLOT_SIZE,
+                        flexShrink: 0,
+                        borderRadius: "50%",
+                        border: `2px ${isOccupied ? "solid" : "dashed"} ${
+                          isSelected
+                            ? "rgba(239,230,211,1)"
+                            : isOccupied
+                              ? "rgba(239,230,211,0.75)"
+                              : "rgba(239,230,211,0.38)"
+                        }`,
+                        background: isSelected
+                          ? "rgba(239,230,211,0.2)"
+                          : isOccupied
+                            ? "rgba(0,0,0,0.25)"
+                            : "rgba(239,230,211,0.05)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        cursor: "pointer",
+                        overflow: "hidden",
+                        padding: 0,
+                        boxShadow: isSelected ? "0 0 0 3px rgba(45,107,79,0.65)" : "none",
+                        transition: "box-shadow 0.15s, border-color 0.15s, background 0.15s",
+                      }}
+                      aria-label={`Slot ${roleLabel} riga ${rowIdx + 1}${isOccupied ? ` — ${player!.name}` : ""}`}
+                    >
+                      {isOccupied && player!.photoUrl ? (
+                        <img
+                          src={player!.photoUrl}
+                          alt={player!.name}
+                          style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                          onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+                        />
+                      ) : (
+                        <span
+                          style={{
+                            fontFamily: "var(--font-mono)",
+                            fontSize: isOccupied ? 10 : 13,
+                            fontWeight: 700,
+                            color: isSelected
+                              ? "rgba(239,230,211,0.95)"
+                              : "rgba(239,230,211,0.55)",
+                            letterSpacing: "0.05em",
+                          }}
+                        >
+                          {isOccupied ? player!.name[0] : roleLabel}
+                        </span>
+                      )}
+                    </button>
 
-                  {/* Nome giocatore sotto il cerchio */}
-                  {isOccupied && (
+                    {/* Nome giocatore sotto il cerchio — solo quando occupato */}
                     <span
                       style={{
-                        fontSize: 9,
+                        fontSize: 10,
                         fontWeight: 600,
-                        color: "rgba(239,230,211,0.85)",
+                        color: "rgba(239,230,211,0.9)",
                         fontFamily: "var(--font-sans)",
                         textAlign: "center",
                         lineHeight: 1.2,
-                        maxWidth: SLOT_PX + 8,
+                        maxWidth: 80,
                         overflow: "hidden",
                         textOverflow: "ellipsis",
                         whiteSpace: "nowrap",
+                        textShadow: "0 1px 3px rgba(0,0,0,0.6)",
+                        pointerEvents: "none",
+                        visibility: isOccupied ? "visible" : "hidden",
+                        height: 14,
                       }}
                     >
-                      {lastName(player!.name)}
+                      {isOccupied ? lastName(player!.name) : ""}
                     </span>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        ))}
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ─── Componente Panchina (Task 86) ────────────────────────────────────────────
+
+interface BenchProps {
+  allSlots: Record<string, number>;
+  selectedSlot: string | null;
+  onSlotClick: (slotId: string) => void;
+  onSlotDoubleClick: (slotId: string) => void;
+}
+
+function Bench({ allSlots, selectedSlot, onSlotClick, onSlotDoubleClick }: BenchProps) {
+  return (
+    <div>
+      {/* Separatore + label */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          marginBottom: 14,
+        }}
+      >
+        <div style={{ flex: 1, height: 1, background: "rgba(239,230,211,0.12)" }} />
+        <span
+          style={{
+            fontSize: 11,
+            fontWeight: 500,
+            color: "rgba(239,230,211,0.5)",
+            fontFamily: "var(--font-sans)",
+            letterSpacing: "0.07em",
+            textTransform: "uppercase",
+          }}
+        >
+          Panchina
+        </span>
+        <div style={{ flex: 1, height: 1, background: "rgba(239,230,211,0.12)" }} />
+      </div>
+
+      {/* 7 slot panchina */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          gap: 14,
+          flexWrap: "wrap",
+        }}
+      >
+        {Array.from({ length: 7 }).map((_, i) => {
+          const slotId = `bench-${i}`;
+          const playerId = allSlots[slotId];
+          const player = playerId !== undefined ? PLAYER_BY_ID.get(playerId) : undefined;
+          const isSelected = selectedSlot === slotId;
+          const isOccupied = player !== undefined;
+
+          return (
+            <div
+              key={slotId}
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: 4,
+              }}
+            >
+              <button
+                onClick={() => onSlotClick(slotId)}
+                onDoubleClick={() => onSlotDoubleClick(slotId)}
+                title={isOccupied ? `${player!.name} (panchina ${i + 1}) — doppio click per rimuovere` : `Panchina ${i + 1}`}
+                style={{
+                  width: BENCH_SIZE,
+                  height: BENCH_SIZE,
+                  flexShrink: 0,
+                  borderRadius: "50%",
+                  border: `2px ${isOccupied ? "solid" : "dashed"} ${
+                    isSelected
+                      ? "rgba(239,230,211,0.95)"
+                      : isOccupied
+                        ? "rgba(239,230,211,0.6)"
+                        : "rgba(239,230,211,0.28)"
+                  }`,
+                  background: isSelected
+                    ? "rgba(239,230,211,0.18)"
+                    : isOccupied
+                      ? "rgba(0,0,0,0.22)"
+                      : "rgba(239,230,211,0.04)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  cursor: "pointer",
+                  overflow: "hidden",
+                  padding: 0,
+                  boxShadow: isSelected ? "0 0 0 2px rgba(45,107,79,0.55)" : "none",
+                  transition: "box-shadow 0.15s, border-color 0.15s",
+                }}
+                aria-label={`Panchina ${i + 1}${isOccupied ? ` — ${player!.name}` : ""}`}
+              >
+                {isOccupied && player!.photoUrl ? (
+                  <img
+                    src={player!.photoUrl}
+                    alt={player!.name}
+                    style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                    onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+                  />
+                ) : (
+                  <span
+                    style={{
+                      fontFamily: "var(--font-mono)",
+                      fontSize: 10,
+                      fontWeight: 700,
+                      color: isSelected ? "rgba(239,230,211,0.95)" : "rgba(239,230,211,0.4)",
+                    }}
+                  >
+                    {isOccupied ? player!.name[0] : String(i + 1)}
+                  </span>
+                )}
+              </button>
+
+              {/* Nome sotto */}
+              <span
+                style={{
+                  fontSize: 9,
+                  fontWeight: 600,
+                  color: isOccupied ? "rgba(239,230,211,0.8)" : "rgba(239,230,211,0.3)",
+                  fontFamily: "var(--font-sans)",
+                  textAlign: "center",
+                  maxWidth: BENCH_SIZE + 4,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                  textShadow: "0 1px 2px rgba(0,0,0,0.5)",
+                }}
+              >
+                {isOccupied ? lastName(player!.name) : "—"}
+              </span>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -270,9 +531,9 @@ function PlayerRow({ player, isAssigned, isCompatible, hasSlotSelected, onClick 
         padding: "7px 12px",
         borderBottom: "1px solid var(--border)",
         cursor: clickable ? "pointer" : "default",
-        opacity: isAssigned ? 0.38 : hasSlotSelected && !isCompatible ? 0.45 : 1,
+        opacity: isAssigned ? 0.35 : hasSlotSelected && !isCompatible ? 0.4 : 1,
         background: "transparent",
-        transition: "background 0.1s",
+        transition: "background 0.1s, opacity 0.15s",
       }}
       onMouseEnter={(e) => {
         if (clickable) (e.currentTarget as HTMLDivElement).style.background = "var(--green-pale)";
@@ -316,7 +577,6 @@ function PlayerRow({ player, isAssigned, isCompatible, hasSlotSelected, onClick 
         >
           {player.name}
         </div>
-        {/* Riga secondaria: Squadra · icona vs AVVERSARIO */}
         <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 1 }}>
           <span style={{ fontSize: 11, color: "var(--ink-dim)" }}>{player.realTeam}</span>
           {player.nextOpponentShort !== null && (
@@ -327,14 +587,7 @@ function PlayerRow({ player, isAssigned, isCompatible, hasSlotSelected, onClick 
               ) : (
                 <Plane size={10} style={{ color: "var(--ink-dim)", flexShrink: 0 }} />
               )}
-              <span
-                style={{
-                  fontFamily: "var(--font-mono)",
-                  fontSize: 10,
-                  fontWeight: 600,
-                  color: "var(--ink-dim)",
-                }}
-              >
+              <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, fontWeight: 600, color: "var(--ink-dim)" }}>
                 {player.nextOpponentShort}
               </span>
             </>
@@ -381,19 +634,26 @@ function PlayerRow({ player, isAssigned, isCompatible, hasSlotSelected, onClick 
 
 export default function FormazionePage() {
   const [modulo, setModulo] = useState("4-3-3");
-  // slotId → playerId (solo slot occupati sono presenti)
-  const [slotMap, setSlotMap] = useState<Record<string, number>>({});
+  // Stato unificato: slot campo ("rowIdx-slotIdx") + panchina ("bench-N")
+  const [allSlots, setAllSlots] = useState<Record<string, number>>({});
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
   const [manualRoleFilter, setManualRoleFilter] = useState<RoleFilter>("tutti");
+  const [moduleChangeMsg, setModuleChangeMsg] = useState<string | null>(null);
 
   const formation = useMemo(() => parseFormation(modulo), [modulo]);
 
-  // Set di playerId già schierati
-  const assignedIds = useMemo(() => new Set(Object.values(slotMap)), [slotMap]);
+  // Set di tutti i giocatori già schierati (titolari + panchina)
+  const assignedIds = useMemo(() => new Set(Object.values(allSlots)), [allSlots]);
 
-  // Ruolo richiesto dallo slot selezionato (per auto-filtro rosa)
+  // Conteggio titolari (slot campo, non panchina)
+  const starterCount = useMemo(
+    () => Object.keys(allSlots).filter(id => !isBenchSlot(id)).length,
+    [allSlots],
+  );
+
+  // Ruolo richiesto dallo slot selezionato (null per bench → nessun vincolo)
   const selectedSlotRole: RoleClassic | null = useMemo(() => {
-    if (!selectedSlot) return null;
+    if (!selectedSlot || isBenchSlot(selectedSlot)) return null;
     return getSlotRole(selectedSlot, formation);
   }, [selectedSlot, formation]);
 
@@ -404,35 +664,34 @@ export default function FormazionePage() {
     return ROSA_MARIO.filter(p => p.roleClassic === effectiveFilter);
   }, [effectiveFilter]);
 
-  // ── Cambio modulo: reset tutto ──────────────────────────────────────────────
+  // ── Cambio modulo con migrazione intelligente ────────────────────────────────
   function handleModuloChange(newModulo: string) {
+    if (newModulo === modulo) return;
+    const { newAllSlots, message } = migrateLineup(allSlots, formation, parseFormation(newModulo));
     setModulo(newModulo);
-    setSlotMap({});
+    setAllSlots(newAllSlots);
     setSelectedSlot(null);
+    setModuleChangeMsg(message);
+    setTimeout(() => setModuleChangeMsg(null), 3500);
   }
 
-  // ── Click su slot nel pitch ─────────────────────────────────────────────────
+  // ── Click su slot (campo o panchina) ────────────────────────────────────────
   function handleSlotClick(slotId: string) {
-    // Deselect se si clicca lo stesso slot
     if (slotId === selectedSlot) {
       setSelectedSlot(null);
       return;
     }
 
     if (selectedSlot !== null) {
-      const sourcePlayerId = slotMap[selectedSlot];
-
+      const sourcePlayerId = allSlots[selectedSlot];
       if (sourcePlayerId !== undefined) {
-        // Slot sorgente occupato → swap/move verso slotId
-        const targetPlayerId = slotMap[slotId];
-        setSlotMap(prev => {
+        const targetPlayerId = allSlots[slotId];
+        setAllSlots(prev => {
           const next = { ...prev };
           if (targetPlayerId !== undefined) {
-            // Swap: i due si scambiano
             next[selectedSlot] = targetPlayerId;
             next[slotId] = sourcePlayerId;
           } else {
-            // Move: sposta il giocatore allo slot vuoto
             delete next[selectedSlot];
             next[slotId] = sourcePlayerId;
           }
@@ -441,19 +700,17 @@ export default function FormazionePage() {
         setSelectedSlot(null);
         return;
       }
-
-      // Slot sorgente vuoto → cambia selezione al nuovo slot
+      // Sorgente vuota → sposta selezione al nuovo slot
       setSelectedSlot(slotId);
       return;
     }
 
-    // Nessuna selezione attiva → seleziona questo slot
     setSelectedSlot(slotId);
   }
 
-  // ── Doppio click su slot → rimuove giocatore ────────────────────────────────
+  // ── Doppio click su slot → rimuove giocatore ─────────────────────────────────
   function handleSlotDoubleClick(slotId: string) {
-    setSlotMap(prev => {
+    setAllSlots(prev => {
       const next = { ...prev };
       delete next[slotId];
       return next;
@@ -461,23 +718,27 @@ export default function FormazionePage() {
     if (selectedSlot === slotId) setSelectedSlot(null);
   }
 
-  // ── Click su giocatore nella rosa ───────────────────────────────────────────
+  // ── Click su giocatore nella rosa ────────────────────────────────────────────
   function handlePlayerClick(playerId: number) {
     if (selectedSlot === null) return;
-    if (assignedIds.has(playerId)) return; // già schierato
+    if (assignedIds.has(playerId)) return;
 
     const player = PLAYER_BY_ID.get(playerId);
     if (!player) return;
 
-    const requiredRole = getSlotRole(selectedSlot, formation);
-    if (player.roleClassic !== requiredRole) return; // ruolo incompatibile
+    // Bench: nessun vincolo di ruolo. Campo: ruolo deve corrispondere.
+    if (!isBenchSlot(selectedSlot)) {
+      const requiredRole = getSlotRole(selectedSlot, formation);
+      if (player.roleClassic !== requiredRole) return;
+    }
 
-    setSlotMap(prev => ({ ...prev, [selectedSlot]: playerId }));
+    setAllSlots(prev => ({ ...prev, [selectedSlot]: playerId }));
     setSelectedSlot(null);
   }
 
-  const { avversario, fieldStatus } = MATCH_GIORNATA_2;
   const hasSlotSelected = selectedSlot !== null;
+  const { avversario, fieldStatus } = MATCH_GIORNATA_2;
+  const salvaEnabled = starterCount === 11;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "var(--sp-5)" }}>
@@ -565,8 +826,11 @@ export default function FormazionePage() {
         <div style={{ width: 1, height: 20, background: "var(--border)", flexShrink: 0 }} />
 
         <div style={{ fontSize: 13, color: "var(--ink-mid)" }}>
-          Capitano:{" "}
-          <span style={{ fontFamily: "var(--font-mono)", color: "var(--ink-dim)" }}>—</span>
+          Titolari:{" "}
+          <span style={{ fontFamily: "var(--font-mono)", color: starterCount === 11 ? "var(--green-deep)" : "var(--ink)" }}>
+            {starterCount}
+          </span>
+          <span style={{ color: "var(--ink-dim)" }}>/11</span>
         </div>
 
         <div style={{ fontSize: 13, color: "var(--ink-mid)" }}>
@@ -574,8 +838,24 @@ export default function FormazionePage() {
           <span style={{ fontFamily: "var(--font-mono)", color: "var(--ink-dim)" }}>—</span>
         </div>
 
-        {/* Feedback selezione attiva */}
-        {hasSlotSelected && selectedSlotRole && (
+        {/* Toast cambio modulo */}
+        {moduleChangeMsg && (
+          <div
+            style={{
+              padding: "3px 10px",
+              borderRadius: 99,
+              background: "rgba(45,107,79,0.1)",
+              border: "1px solid var(--green-mid)",
+              fontSize: 12,
+              color: "var(--green-deep)",
+            }}
+          >
+            {moduleChangeMsg}
+          </div>
+        )}
+
+        {/* Feedback selezione slot attiva */}
+        {hasSlotSelected && (
           <div
             style={{
               padding: "3px 10px",
@@ -587,11 +867,10 @@ export default function FormazionePage() {
               fontWeight: 500,
             }}
           >
-            Scegli un{" "}
-            <strong style={{ fontFamily: "var(--font-mono)" }}>
-              {ROLE_BADGE[selectedSlotRole].label}
-            </strong>
-            {" "}dalla rosa
+            {isBenchSlot(selectedSlot!)
+              ? "Scegli un giocatore dalla rosa"
+              : <>Scegli un <strong style={{ fontFamily: "var(--font-mono)" }}>{selectedSlotRole && ROLE_BADGE[selectedSlotRole].label}</strong> dalla rosa</>
+            }
           </div>
         )}
 
@@ -599,22 +878,33 @@ export default function FormazionePage() {
 
         <div style={{ display: "flex", gap: 8 }}>
           <button
-            disabled
+            disabled={!salvaEnabled}
             style={{
-              padding: "6px 16px", borderRadius: "var(--r-sm)", border: "none",
-              background: "var(--green-deep)", color: "#fff",
-              fontSize: 13, fontWeight: 600, cursor: "not-allowed", opacity: 0.45,
+              padding: "6px 16px",
+              borderRadius: "var(--r-sm)",
+              border: "none",
+              background: "var(--green-deep)",
+              color: "#fff",
+              fontSize: 13,
+              fontWeight: 600,
+              cursor: salvaEnabled ? "pointer" : "not-allowed",
+              opacity: salvaEnabled ? 1 : 0.45,
+              transition: "opacity 0.2s",
             }}
           >
             Salva
           </button>
           <button
-            disabled
+            onClick={() => { setAllSlots({}); setSelectedSlot(null); }}
             style={{
-              padding: "6px 16px", borderRadius: "var(--r-sm)",
-              border: "1px solid var(--border-strong)", background: "transparent",
-              color: "var(--ink-mid)", fontSize: 13, fontWeight: 500,
-              cursor: "not-allowed", opacity: 0.45,
+              padding: "6px 16px",
+              borderRadius: "var(--r-sm)",
+              border: "1px solid var(--border-strong)",
+              background: "transparent",
+              color: "var(--ink-mid)",
+              fontSize: 13,
+              fontWeight: 500,
+              cursor: "pointer",
             }}
           >
             Reset
@@ -622,19 +912,45 @@ export default function FormazionePage() {
         </div>
       </div>
 
-      {/* ── Layout pitch + rosa ── */}
+      {/* ── Layout principale: pitch+panchina / rosa ── */}
       <div
         className="formazione-grid"
-        style={{ display: "grid", gridTemplateColumns: "1fr 300px", gap: "var(--sp-5)", alignItems: "start" }}
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 300px",
+          gap: "var(--sp-5)",
+          alignItems: "start",
+        }}
       >
-        {/* Pitch */}
-        <Pitch
-          modulo={modulo}
-          slots={slotMap}
-          selectedSlot={selectedSlot}
-          onSlotClick={handleSlotClick}
-          onSlotDoubleClick={handleSlotDoubleClick}
-        />
+        {/* Colonna sinistra: pitch + panchina */}
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 28,
+            background: "#17332a",
+            borderRadius: "var(--r-lg)",
+            padding: "0 0 24px",
+            border: "1px solid rgba(239,230,211,0.12)",
+            overflow: "hidden",
+          }}
+        >
+          <Pitch
+            modulo={modulo}
+            allSlots={allSlots}
+            selectedSlot={selectedSlot}
+            onSlotClick={handleSlotClick}
+            onSlotDoubleClick={handleSlotDoubleClick}
+          />
+          <div style={{ padding: "0 20px" }}>
+            <Bench
+              allSlots={allSlots}
+              selectedSlot={selectedSlot}
+              onSlotClick={handleSlotClick}
+              onSlotDoubleClick={handleSlotDoubleClick}
+            />
+          </div>
+        </div>
 
         {/* Pannello rosa */}
         <div
@@ -658,8 +974,12 @@ export default function FormazionePage() {
           >
             <span
               style={{
-                fontFamily: "var(--font-sans)", fontSize: 12, fontWeight: 700,
-                letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--ink-dim)",
+                fontFamily: "var(--font-sans)",
+                fontSize: 12,
+                fontWeight: 700,
+                letterSpacing: "0.08em",
+                textTransform: "uppercase",
+                color: "var(--ink-dim)",
               }}
             >
               Rosa
@@ -669,18 +989,21 @@ export default function FormazionePage() {
             </span>
           </div>
 
-          {/* Filtri ruolo — disabilitati quando uno slot è selezionato (auto-filter attivo) */}
+          {/* Filtri ruolo */}
           <div
             style={{
-              display: "flex", gap: 4, padding: "8px 12px",
-              borderBottom: "1px solid var(--border)", flexWrap: "wrap",
+              display: "flex",
+              gap: 4,
+              padding: "8px 12px",
+              borderBottom: "1px solid var(--border)",
+              flexWrap: "wrap",
             }}
           >
             {ROLE_FILTERS.map(rf => (
               <button
                 key={rf.value}
                 onClick={() => {
-                  if (!hasSlotSelected) setManualRoleFilter(rf.value);
+                  if (!hasSlotSelected || isBenchSlot(selectedSlot!)) setManualRoleFilter(rf.value);
                 }}
                 style={{
                   padding: "3px 10px",
@@ -692,8 +1015,8 @@ export default function FormazionePage() {
                   fontFamily: "var(--font-mono)",
                   fontSize: 11,
                   fontWeight: 600,
-                  cursor: hasSlotSelected ? "default" : "pointer",
-                  opacity: hasSlotSelected && effectiveFilter !== rf.value ? 0.4 : 1,
+                  cursor: (hasSlotSelected && !isBenchSlot(selectedSlot!)) ? "default" : "pointer",
+                  opacity: (hasSlotSelected && !isBenchSlot(selectedSlot!) && effectiveFilter !== rf.value) ? 0.38 : 1,
                   transition: "all 0.12s",
                 }}
               >
@@ -714,7 +1037,11 @@ export default function FormazionePage() {
                   key={player.id}
                   player={player}
                   isAssigned={assignedIds.has(player.id)}
-                  isCompatible={selectedSlotRole ? player.roleClassic === selectedSlotRole : true}
+                  isCompatible={
+                    !hasSlotSelected
+                    || isBenchSlot(selectedSlot!)
+                    || player.roleClassic === selectedSlotRole
+                  }
                   hasSlotSelected={hasSlotSelected}
                   onClick={() => handlePlayerClick(player.id)}
                 />

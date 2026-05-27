@@ -1,0 +1,119 @@
+Iterazione visiva + funzionale sulla pagina Formazione. Tre task indipendenti, con stop in mezzo.
+Task 85 — Pitch refresh visivo
+Lo screenshot attuale mostra il pitch troppo "piatto" e con rows mal distribuite. Da raddrizzare:
+1. Verde con strisce (effetto campo pro)
+Background del pitch a strisce orizzontali alternate, 2 tonalità verdi vicine ma distinguibili:
+
+Base: #1f4733 (verde-deep brand)
+Strisce alternate: leggermente più chiara, es. #244f3a o #1d503a
+Numero strisce: 12-16 across full pitch height (decidi in base alle proporzioni)
+L'alternanza deve essere visibile ma non aggressiva (è uno sfondo, non protagonista)
+Implementazione: SVG <pattern> con due <rect> alternati, oppure CSS background: repeating-linear-gradient(...)
+
+2. Distribuzione verticale delle rows più naturale
+Le rows del modulo devono spostarsi su tutta l'altezza utile del campo, non clusterizzarsi al centro come ora. Per un 4-3-3:
+
+Row P (1 slot): centrato dentro l'area piccola superiore, ~8-12% dall'alto
+Row DEF (4 slot): ~22-28% dall'alto
+Row MID (3 slot): ~42-52% dall'alto (a cavallo del centrocampo)
+Row ATT (3 slot): ~72-80% dall'alto
+
+Per moduli con T (es. 4-3-1-2):
+
+P ~10% · DEF ~25% · MID ~42% · T ~58% · ATT ~78%
+
+Più rows ci sono nel modulo, più si distribuiscono uniformemente. Algoritmo possibile:
+typescriptfunction rowPositionsForFormation(formation: number[]): number[] {
+  // formation[0] è sempre 1 (P)
+  // restituisce array di percentuali (top) per ogni riga
+  const n = formation.length;
+  if (n === 4) return [10, 30, 55, 78];   // P-D-C-A
+  if (n === 5) return [10, 25, 42, 58, 78]; // P-D-C-T-A o P-D-C-D-A
+  // fallback distribuzione uniforme
+}
+3. Token più grandi e spaziatura ariosa
+
+Slot/Token diameter: clamp(72px, 9vh, 96px) (era 62px fisso, troppo piccolo)
+Gap orizzontale tra slot nella stessa row: gap: 14-20px (più aria che ora)
+Container row: padding orizzontale che assicuri che non tocchino mai i bordi del campo (es. padding-inline: 6%)
+
+4. Portiere DENTRO l'area piccola
+Visivamente verifica: lo slot P deve essere centrato sull'asse verticale ALL'INTERNO del rettangolo dell'area piccola (il box stretto vicino alla porta), non sotto. L'area piccola superiore è disegnata sopra il portiere — adatta la coordinata Y del slot P perché ci stia dentro.
+Riportami screenshot del modulo 4-3-3 e del modulo 4-3-1-2 dopo il refresh.
+Stop. Riportami screenshot.
+Task 86 — Panchina sotto il campo
+Aggiungi sotto il pitch (fuori dall'SVG del campo, in un container separato) una zona panchina con 7 slot:
+Layout:
+┌──────────── PITCH ─────────────────┐
+│                                    │
+│  formazione titolari               │
+│                                    │
+└────────────────────────────────────┘
+          PANCHINA  
+   ① ② ③ ④ ⑤ ⑥ ⑦    
+   (7 slot più piccoli, tutti su una riga)
+
+Label "Panchina" piccola, font Inter weight 500, color secondary
+7 slot circolari, diameter ≈ 56-64px (più piccoli dei titolari)
+Sotto ogni slot: numero priorità (1-7) in JBM small, indica l'ordine di sostituzione
+Sono tappable come quelli sul campo — stesso comportamento: tap su slot vuoto → selectedSlot, scegli dalla rosa
+A differenza dei titolari, i bench slot non hanno vincolo di ruolo — accettano qualunque giocatore
+Quando un giocatore è in panchina, nella rosa appare greyed-out (come per i titolari)
+
+Layout estendi: il container sotto il pitch deve fare gap chiaro col campo (separatore o solo spaziatura verticale ~24-32px). La panchina occupa la larghezza del pitch.
+Comportamento swap:
+
+Tap su slot panchina pieno → selectedSlot per swap
+Se l'altro tap è su slot campo: i due giocatori si scambiano (no vincolo ruolo per il movimento)
+Se l'altro tap è su slot panchina: cambia l'ordine di priorità (slot 3 ↔ slot 1)
+Doppio tap su slot panchina pieno → rimuove, torna in rosa
+
+Voto previsto: NON include i panchinari (solo i titolari sommano voti). La regola di sostituzione (panchinaro entra al posto di un titolare che non gioca) la implementeremo in Step 5 (scoring).
+Salva: ora abilitato quando ci sono 11 titolari schierati. La panchina è opzionale per ora.
+Stop. Riportami screenshot con qualche slot riempito sia in campo che in panchina, e conferma del flusso tap di swap campo↔panchina.
+Task 87 — Preserve giocatori al cambio modulo
+Attualmente cambiando modulo si chiede conferma e si resetta tutto. Migliora con un algoritmo che preserva i giocatori compatibili per ruolo:
+typescriptfunction migrateLineup(
+  oldLineup: SlotState[],
+  oldModule: number[],   // es. [1, 4, 3, 3]
+  newModule: number[],   // es. [1, 4, 4, 2]
+  oldCaptainId: number | null
+): { newLineup: SlotState[]; benchAdditions: number[]; lostPlayers: number[]; captainStillValid: boolean } {
+  // Mappa ruolo → giocatori attualmente schierati
+  // Per ogni ruolo, tieni min(oldCount, newCount) giocatori, riassegnali ai nuovi slot di quel ruolo
+  // I giocatori in eccesso vanno spostati alla panchina (se ci sono slot liberi) o ritornano in rosa
+  // I nuovi slot non riempiti restano vuoti
+  // Caso speciale T: T accetta MID, quindi un MID in eccesso può andare in T se disponibile
+  // Capitano: se ancora schierato → resta capitano; se finito in panchina o rosa → captainStillValid = false
+}
+Regole dettagliate:
+
+GK→GK: keep
+DEF→DEF: keep min(old, new), surplus → panchina (se libera) o rosa
+MID→MID + T: distribuisci. Per esempio:
+
+Old 4-4-2 (4 MID) → New 4-3-1-2 (3 MID + 1 T): tieni 3 MID nei nuovi slot MID, il 4° va in T (T accetta MID)
+Old 3-4-1-2 (4 MID + 1 T) → New 3-5-2 (5 MID): tieni i 4 MID nei 4 primi slot MID, il T (un MID) va nel 5° slot MID
+
+
+ATT→ATT: keep min(old, new), surplus → panchina o rosa
+
+Surplus → destinazioni in ordine:
+
+Primo posto libero in panchina (mantenendo il vecchio ordine se già stava in panchina)
+Altrimenti torna in rosa (non schierato)
+
+Capitano:
+
+Se il capitano resta titolare → resta capitano
+Se il capitano va in panchina o rosa → captainId = null, mostra hint nella toolbar "Capitano resettato"
+
+UI feedback: al cambio modulo, mostra un toast informativo brevemente "Modulo cambiato. X giocatori riassegnati, Y rimasti in rosa" — sobrio, no emoji.
+Nessuna conferma più: il cambio modulo è ora "soft" — non distrugge la formazione, ridistribuisce intelligentemente. Solo se l'utente clicca Reset esplicitamente si azzera tutto.
+Riportami:
+
+Test scenario A: lineup 4-3-3 pieno (P + 4D + 3C + 3A), cambia a 4-4-2 → atteso: P, 4D, 3C (1 slot C vuoto), 2A (1 A spostato in panchina o rosa). Riporta il risultato esatto.
+Test scenario B: lineup 4-4-2 pieno con capitano = un MID. Cambia a 4-3-1-2 → atteso: 3 MID + il 4° MID nel T slot. Capitano: se era uno dei 3 che restano in MID, resta capitano; se era il 4°, resta capitano (perché ora è in T ma sempre titolare).
+Test scenario C: lineup 3-5-2 pieno con capitano = un attaccante. Cambia a 4-3-3 → atteso: P, 3 dei vecchi DEF + 1 slot DEF vuoto, 3 dei 5 MID + 2 MID in panchina, 2 vecchi ATT + 1 slot ATT vuoto. Capitano: resta se era uno dei 2 ATT che restano.
+
+NON toccare il rendering del campo sopra (è già stato sistemato in Task 85), né il roster panel a destra (è già a posto da Batch 2 fix). Solo: pitch visual refresh, bench, preserve logic.
