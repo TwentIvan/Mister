@@ -1,0 +1,77 @@
+Due correzioni puntuali sulla pagina Formazione. Stop dopo ogni task per riportarmi screenshot.
+Task 91 — Bench come pool unico (25 slot iniziali, dinamico)
+Cambia il modello mentale: la panchina è il pool unico di partenza, dove sono tutti i 25 giocatori della rosa. Da lì si schierano i titolari (passano in campo, escono dalla panchina); se vengono rimossi dal campo, tornano in panchina.
+Stato iniziale:
+
+11 slot campo vuoti (formazione default 4-3-3 o l'ultima scelta)
+25 slot panchina, tutti pieni, ordinati per default per ruolo poi cognome alfabetico
+
+Comportamento:
+
+Quando un giocatore va dal campo alla panchina: si inserisce in coda alla panchina (slot più alto disponibile)
+Quando un panchinaro va in campo: scompare dalla panchina, lo slot non resta "vuoto" — gli altri si compattano (shift verso sinistra)
+La panchina riduce visivamente i suoi slot man mano che si riempie il campo: 25 iniziali → 24 → ... → 14 a campo pieno
+Niente "slot vuoti" in panchina: la panchina contiene solo giocatori reali, l'array si riduce
+Numerazione priorità 1-N dinamica (mostra il numero solo se è una rosa effettiva, scala con la lunghezza)
+
+Layout panchina:
+
+Wrap automatico, ~7-8 token per riga (decidi tu in base alla larghezza disponibile)
+Inizialmente con 25 token: 3-4 righe
+Con 11 titolari schierati: 14 token = 2 righe
+L'area panchina occupa naturalmente più o meno altezza in base al pool corrente. Il container ha flex-wrap: wrap + gap per arrangiamento
+
+Eliminazione concetto "disponibili":
+
+Il roster panel a destra mostra sempre tutti i 25 giocatori con il loro stato corrente:
+
+Status TIT (verde) se titolare
+Status PAN #N (cream) se panchinaro, con N = posizione di priorità
+Niente più stato "—" o "disponibile". Tutti hanno uno status (TIT o PAN)
+
+
+Il roster resta una vista secondaria utile per filtrare/cercare; non più "luogo dove i giocatori non assegnati vivono"
+
+Riordino panchina:
+
+Tap su un panchinaro → diventa selectedSlot (in panchina)
+Tap su un altro panchinaro → swap delle posizioni (cambia priorità)
+Tap su slot campo compatibile → il panchinaro va in campo, l'altro torna in panchina (se c'era)
+Tap su slot campo vuoto → il panchinaro entra in campo, esce dalla panchina
+
+Screenshot da riportarmi:
+
+Pagina caricata, modulo 4-3-3, 0 titolari → 25 in panchina su 3-4 righe
+Dopo aver schierato i 11 titolari → 14 in panchina su 2 righe
+Conferma riordino panchina: scambiare il giocatore al posto 1 con quello al posto 7, verifica che il numero priorità si aggiorna correttamente
+Verifica roster destra: tutti i 25 giocatori hanno status TIT o PAN #N, niente vuoto
+
+Stop. Riportami i 4 punti sopra.
+Task 92 — Aggiungi codice 3-lettere avversario accanto a casa/aereo
+Attualmente sul token (sia campo sia panchina) il badge in alto a sinistra mostra solo l'icona casa o aereo. Manca il codice dell'avversario Serie A (la sigla 3 lettere già usata nel roster panel: "LEC", "JUV", "INT", ecc.).
+Modifica al badge in alto a sinistra del token (entrambe le varianti):
+Invece di un singolo cerchietto con solo icona, diventa una pill orizzontale compatta che mostra [icona] [TRE_LETTERE]. Esempio per F. Rossi (Atalanta vs Lazio in casa):
+┌─────────────┐
+│ 🏠 LAZ      │
+└─────────────┘
+Specifiche:
+
+Background: bianco semi-trasparente rgba(255, 255, 255, 0.85) con backdrop-blur leggero, oppure scuro rgba(0,0,0,0.7) se l'utente preferisce contrasto
+Icona casa/aereo: Lucide Home / Plane, ~12px, color --text-primary
+Testo 3 lettere: font JBM 9-10px, color --text-primary, weight 500
+Padding: ~3px verticale, 5px orizzontale
+Border-radius: 3-4px (sobrio)
+Posizione: stesso angolo top-left del token, leggermente sovrapposta alla foto come prima
+
+Varianti dimensione:
+
+Field variant: pill ~52-58px larghezza × ~18px altezza
+Bench variant: pill ~38-42px larghezza × ~14px altezza (più piccola, font 8-9px)
+
+Riusa lo stesso component. Aggiungi una prop opponentCode: string (es. "LAZ") al PlayerToken. Il valore arriva dal mock data già preparato (SERIE_A_ROUND_2_FIXTURES[teamId].opponentShort).
+Verifica visiva: schiera 11 titolari di varie squadre e controlla che ogni token mostri correttamente la pill con icona + codice. Esempio:
+
+Pepe Reina (Como vs Parma in casa): pill 🏠 PAR
+Belotti (Roma vs ?): pill secondo i dati mock
+
+Riportami screenshot del pitch con 11 titolari completi.
