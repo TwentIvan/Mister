@@ -4,6 +4,7 @@ import { seedSystemTemplates } from "./templates";
 import { seedVotoAlgorithmConfig } from "./voto-algorithm-config";
 import { seedTeamColors } from "./team-colors";
 import { seedTestLeagueMvp } from "./test-league-mvp";
+import { seedTestCompetition } from "./test-competition";
 
 const { Pool } = pg;
 
@@ -19,6 +20,7 @@ Promise.resolve()
   .then(() => seedVotoAlgorithmConfig(db))
   .then(() => seedTeamColors(db))
   .then(() => seedTestLeagueMvp(db))
+  .then(() => seedTestCompetition(db))
   .then(() => {
     console.log("Seed completato.");
     process.exit(0);

@@ -1,0 +1,139 @@
+Step 2 di 6 — Schema partite fanta-team + competizione campionato + generazione calendario.
+Task 67 — Schema competition_matches + push
+Crea lib/db/src/schema/competition-matches.ts:
+typescriptimport { pgTable, serial, integer, text, numeric, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { competitions } from "./competitions";
+import { fantaTeams } from "./fanta-teams";
+
+export const competitionMatches = pgTable("competition_matches", {
+  id: serial("id").primaryKey(),
+  competitionId: integer("competition_id").notNull().references(() => competitions.id, { onDelete: "cascade" }),
+  giornata: integer("giornata").notNull(),       // 1-38, corrisponde alla giornata Serie A
+  matchOrder: integer("match_order").notNull(),  // 1-4, ordine partita nella giornata
+  homeFantaTeamId: text("home_fanta_team_id").notNull().references(() => fantaTeams.id, { onDelete: "cascade" }),
+  awayFantaTeamId: text("away_fanta_team_id").notNull().references(() => fantaTeams.id, { onDelete: "cascade" }),
+  homeScore: numeric("home_score", { precision: 5, scale: 2 }),   // NULL finché non giocata
+  awayScore: numeric("away_score", { precision: 5, scale: 2 }),
+  playedAt: timestamp("played_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  uniqueMatch: uniqueIndex("competition_match_unique").on(table.competitionId, table.giornata, table.matchOrder),
+}));
+Adatta il tipo della FK competitionId se competitions.id è text (come per le altre tabelle del progetto) invece di integer — verifica prima dello schema. Aggiungi export * a index.ts. Esegui pnpm --filter @workspace/db run push.
+Stop. Riportami push output + \d+ competition_matches.
+Task 68 — Creazione competizione + calendario round-robin (7 giornate)
+Crea lib/db/src/seeds/test-competition.ts con:
+
+Crea competizione di tipo campionato nella "Lega Test MVP" (idempotente: se ne esiste già una, skip):
+
+typescript// Verifica schema competitions effettivo per i campi NOT NULL
+// Tipici: id, league_id, type, name, season, status
+const leagueId = await getLeagueIdByName("Lega Test MVP");
+
+const competition = await db.insert(competitions).values({
+  // id se manuale (slug-style) o auto
+  leagueId,
+  type: 'campionato',
+  name: 'Campionato 2024-25',
+  season: 2024,
+  status: 'active',  // o 'scheduled', adatta al CHECK constraint del schema
+  // altri campi NOT NULL con defaults sensati
+}).returning();
+
+Genera calendario round-robin con il "circle method":
+
+typescriptfunction generateRoundRobin(teamIds: string[]): [string, string][][] {
+  const n = teamIds.length;
+  if (n % 2 !== 0) throw new Error("Numero squadre dev'essere pari");
+  
+  const arr = [...teamIds];
+  const rounds: [string, string][][] = [];
+  
+  for (let r = 0; r < n - 1; r++) {
+    const matches: [string, string][] = [];
+    for (let i = 0; i < n / 2; i++) {
+      matches.push([arr[i], arr[n - 1 - i]]);
+    }
+    rounds.push(matches);
+    // Rotate: fix arr[0], gli altri ruotano
+    const last = arr.pop()!;
+    arr.splice(1, 0, last);
+  }
+  
+  return rounds;  // 7 giornate, 4 matches per giornata = 28 matches totali
+}
+
+Insert delle 28 matches mappate a Serie A giornata 1-7:
+
+typescriptconst teams = await db.select().from(fantaTeams)
+  .where(eq(fantaTeams.leagueId, leagueId))
+  .orderBy(asc(fantaTeams.id));
+
+const calendar = generateRoundRobin(teams.map(t => t.id));
+
+for (let g = 0; g < 7; g++) {
+  const matches = calendar[g];
+  for (let i = 0; i < matches.length; i++) {
+    await db.insert(competitionMatches).values({
+      competitionId: competition.id,
+      giornata: g + 1,        // 1-7
+      matchOrder: i + 1,      // 1-4
+      homeFantaTeamId: matches[i][0],
+      awayFantaTeamId: matches[i][1],
+      // homeScore, awayScore, playedAt restano NULL
+    });
+  }
+}
+Aggiungi seedTestCompetition(db) a run.ts. Esegui seed.
+Verifiche (riporta tutti e 4 gli output):
+sql-- 1. Competizione creata
+SELECT id, name, type, season, status
+FROM competitions
+WHERE league_id = (SELECT id FROM leagues WHERE name = 'Lega Test MVP');
+-- Atteso: 1 riga, type='campionato'
+
+-- 2. Distribuzione matches per giornata
+SELECT giornata, COUNT(*) AS n_matches
+FROM competition_matches
+WHERE competition_id = (
+  SELECT id FROM competitions WHERE league_id = (SELECT id FROM leagues WHERE name = 'Lega Test MVP')
+)
+GROUP BY giornata
+ORDER BY giornata;
+-- Atteso: 7 righe, ognuna con n_matches=4
+
+-- 3. Ogni team gioca esattamente 1 partita per giornata (sanity check)
+SELECT giornata, ft.name, COUNT(*) AS partite
+FROM competition_matches cm
+JOIN fanta_teams ft ON ft.id = cm.home_fanta_team_id OR ft.id = cm.away_fanta_team_id
+WHERE cm.competition_id = (
+  SELECT id FROM competitions WHERE league_id = (SELECT id FROM leagues WHERE name = 'Lega Test MVP')
+)
+GROUP BY giornata, ft.id, ft.name
+HAVING COUNT(*) <> 1;
+-- Atteso: 0 righe (se ne escono, l'algoritmo è rotto)
+
+-- 4. Nessuna coppia di squadre gioca due volte
+SELECT 
+  LEAST(home_fanta_team_id, away_fanta_team_id) AS team_a,
+  GREATEST(home_fanta_team_id, away_fanta_team_id) AS team_b,
+  COUNT(*) AS volte
+FROM competition_matches
+WHERE competition_id = (
+  SELECT id FROM competitions WHERE league_id = (SELECT id FROM leagues WHERE name = 'Lega Test MVP')
+)
+GROUP BY 1, 2
+HAVING COUNT(*) > 1;
+-- Atteso: 0 righe
+
+-- 5. Lettura amichevole calendario giornata 1
+SELECT match_order,
+       (SELECT name FROM fanta_teams WHERE id = home_fanta_team_id) AS home,
+       (SELECT name FROM fanta_teams WHERE id = away_fanta_team_id) AS away
+FROM competition_matches
+WHERE competition_id = (
+  SELECT id FROM competitions WHERE league_id = (SELECT id FROM leagues WHERE name = 'Lega Test MVP')
+) AND giornata = 1
+ORDER BY match_order;
+-- Atteso: 4 righe, accoppiamenti leggibili
+NON popolare i homeScore / awayScore. Restano NULL — i match sono "schedulati", non ancora "giocati". Lo scoring arriva nello Step 5.

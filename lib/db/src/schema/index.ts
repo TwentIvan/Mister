@@ -15,3 +15,4 @@ export * from "./voto-algorithm-config";
 export * from "./team-colors";
 export * from "./lineups";
 export * from "./lineup-players";
+export * from "./competition-matches";
