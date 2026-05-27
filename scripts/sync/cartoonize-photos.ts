@@ -24,8 +24,8 @@ const REPLICATE_MODEL =
 
 const REPLICATE_INPUT = {
   style: "3D",
-  prompt: "a person, 3D animated character portrait, Pixar style",
-  negative_prompt: "photorealistic, sketch, watermark, blurry",
+  prompt: "a person, close-up face portrait, white background, plain white background, face only, no neck, no shoulders, centered face, 3D animated Pixar style",
+  negative_prompt: "photorealistic, sketch, watermark, blurry, shoulders, neck, torso, body, colorful background, green background, dark background, gradient background, nature, leaves, outdoor, landscape, pattern, texture, shadow",
   lora_scale: 1.0,
   prompt_strength: 4.5,
   denoising_strength: 0.65,
@@ -150,7 +150,14 @@ async function processPlayer(
       fs.mkdirSync(AVATARS_DIR, { recursive: true });
 
       // Converti in webp 512×512
+      // Ritaglio: prendi il 60% superiore dell'immagine (zona viso),
+      // poi ridimensiona a 512×512 per uniformità nel cerchio.
+      const meta = await sharp(buf).metadata();
+      const imgW = meta.width ?? 512;
+      const imgH = meta.height ?? 512;
+      const cropH = Math.round(imgH * 0.60);
       await sharp(buf)
+        .extract({ left: 0, top: 0, width: imgW, height: cropH })
         .resize(512, 512, { fit: "cover", position: "centre" })
         .webp({ quality: 85 })
         .toFile(outPath);
