@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useLayoutEffect } from "react";
 import { Home, Plane } from "lucide-react";
 import {
   ROSA_MARIO, MATCH_GIORNATA_2, PLAYER_BY_ID,
@@ -758,6 +758,16 @@ export default function FormazionePage() {
     }
   }
 
+  // ── Altezza pitch fissa = altezza del roster al primo render (25 elementi) ────
+  const rosterCardRef = useRef<HTMLDivElement>(null);
+  const [fixedPitchHeight, setFixedPitchHeight] = useState<number | undefined>(undefined);
+
+  useLayoutEffect(() => {
+    if (rosterCardRef.current) {
+      setFixedPitchHeight(rosterCardRef.current.getBoundingClientRect().height);
+    }
+  }, []);
+
   const hasFieldSelected = selection?.kind === "field";
   const { avversario, fieldStatus } = MATCH_GIORNATA_2;
   const salvaEnabled = starterCount === 11;
@@ -842,7 +852,7 @@ export default function FormazionePage() {
       <div className="formazione-grid" style={{ display: "grid", gridTemplateColumns: "280px 1fr", gap: "var(--sp-5)", alignItems: "stretch" }}>
 
         {/* Colonna sinistra: roster / panchina */}
-        <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--r-md)", boxShadow: "var(--shadow-card)", overflow: "hidden", display: "flex", flexDirection: "column" }}>
+        <div ref={rosterCardRef} style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--r-md)", boxShadow: "var(--shadow-card)", overflow: "hidden", display: "flex", flexDirection: "column" }}>
           {/* Header */}
           <div style={{ padding: "10px 12px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <span style={{ fontFamily: "var(--font-sans)", fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--ink-dim)" }}>Rosa</span>
@@ -900,8 +910,8 @@ export default function FormazionePage() {
           </div>
         </div>
 
-        {/* Colonna destra: pitch */}
-        <div style={{ background: "#17332a", borderRadius: "var(--r-lg)", border: "1px solid rgba(239,230,211,0.1)", overflow: "hidden", height: "100%" }}>
+        {/* Colonna destra: pitch — altezza fissa = misurata dal roster al mount */}
+        <div style={{ background: "#17332a", borderRadius: "var(--r-lg)", border: "1px solid rgba(239,230,211,0.1)", overflow: "hidden", height: fixedPitchHeight ?? "100%" }}>
           <Pitch
             modulo={modulo}
             fieldSlots={fieldSlots}
