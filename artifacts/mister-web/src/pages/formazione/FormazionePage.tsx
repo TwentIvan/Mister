@@ -588,10 +588,21 @@ function Pitch({ modulo, fieldSlots, selection, captainId, onSlotClick, onSlotDo
         <rect x="31" y="115" width="51" height="20" fill="none" stroke="#ffffff" strokeWidth="0.6" />
         <rect x="44" y="126" width="25" height="9" fill="none" stroke="#ffffff" strokeWidth="0.6" />
         <circle cx="56.5" cy="123" r="0.8" fill="#ffffff" />
+        {/* Archi D delle aree di rigore */}
+        <path d="M 49 25 A 11 11 0 0 1 64 25" fill="none" stroke="#ffffff" strokeWidth="0.6" />
+        <path d="M 64 115 A 11 11 0 0 1 49 115" fill="none" stroke="#ffffff" strokeWidth="0.6" />
+        {/* Archi d'angolo (r=1.25 unità SVG ≈ 1m) */}
+        <path d="M 18 6.25 A 1.25 1.25 0 0 1 19.25 5"   fill="none" stroke="#ffffff" strokeWidth="0.6" />
+        <path d="M 93.75 5 A 1.25 1.25 0 0 1 95 6.25"   fill="none" stroke="#ffffff" strokeWidth="0.6" />
+        <path d="M 19.25 135 A 1.25 1.25 0 0 1 18 133.75" fill="none" stroke="#ffffff" strokeWidth="0.6" />
+        <path d="M 95 133.75 A 1.25 1.25 0 0 1 93.75 135" fill="none" stroke="#ffffff" strokeWidth="0.6" />
         {/* Area tecnica — ampliata: x=0→16, y=85→119; 5 tratti sui lati corti, 10 sul lato lungo */}
         <line x1="0" y1="85"  x2="16" y2="85"  stroke="#ffffff" strokeWidth="0.6" strokeDasharray="1.8 1.4" />
         <line x1="0" y1="119" x2="16" y2="119" stroke="#ffffff" strokeWidth="0.6" strokeDasharray="1.8 1.4" />
         <line x1="16" y1="85" x2="16" y2="119" stroke="#ffffff" strokeWidth="0.6" strokeDasharray="1.8 1.6" />
+        {/* Segni angolari ai 2 vertici interni dell'area tecnica (r=2 unità SVG) */}
+        <path d="M 16 87 A 2 2 0 0 1 14 85"   fill="none" stroke="#ffffff" strokeWidth="0.6" />
+        <path d="M 14 119 A 2 2 0 0 1 16 117"  fill="none" stroke="#ffffff" strokeWidth="0.6" />
       </svg>
 
       {/* MiniCoachToken — area tecnica ampliata: x=0→16%, y=60.7→85% */}
@@ -1049,7 +1060,7 @@ export default function FormazionePage() {
           <div style={{ height: 28, width: 180, borderRadius: "var(--r-sm)", background: "var(--border)", marginBottom: 6 }} />
           <div style={{ height: 16, width: 200, borderRadius: "var(--r-sm)", background: "var(--border)" }} />
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "280px 1fr", gap: "var(--sp-5)" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "220px 1fr", gap: "var(--sp-5)" }}>
           <div style={{ height: 620, borderRadius: "var(--r-md)", background: "var(--surface)", border: "1px solid var(--border)" }} />
           <div style={{ height: 620, borderRadius: "var(--r-md)", background: "#17332a", border: "1px solid rgba(239,230,211,0.1)" }} />
         </div>
@@ -1118,7 +1129,7 @@ export default function FormazionePage() {
       </div>
 
       {/* ── Layout: [Filtri+Roster | Pitch] ── */}
-      <div className="formazione-grid" style={{ display: "grid", gridTemplateColumns: "188px 1fr", gap: "var(--sp-5)", alignItems: "start" }}>
+      <div className="formazione-grid" style={{ display: "grid", gridTemplateColumns: "220px 1fr", gap: "var(--sp-5)", alignItems: "start" }}>
 
         {/* ── Colonna sinistra: filtri + lista ── */}
         <div style={{ display: "flex", flexDirection: "column", gap: 6, height: COLUMN_HEIGHT }}>
