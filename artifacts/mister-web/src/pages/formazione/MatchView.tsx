@@ -168,6 +168,16 @@ function MatchPlayerToken({ player, isCaptain = false }: { player: MatchPlayer; 
             {hasVoto ? player.votoMister!.toFixed(1) : "—"}
           </span>
         </div>
+        {player.opponentCode && (
+          <div style={{ position: "absolute", top: -2, left: -2, display: "flex", alignItems: "center", gap: 2, padding: "2px 4px", borderRadius: 8, background: "rgba(0,0,0,0.68)", boxShadow: "0 0 0 1px rgba(239,230,211,0.22), 0 1px 3px rgba(0,0,0,0.6)", zIndex: 2 }}>
+            {player.opponentIsHome
+              ? <Home  size={7} color="rgba(239,230,211,0.75)" />
+              : <Plane size={7} color="rgba(239,230,211,0.75)" />}
+            <span style={{ fontFamily: "var(--font-mono)", fontSize: 7, fontWeight: 600, color: "rgba(239,230,211,0.9)", lineHeight: 1, letterSpacing: "0.04em" }}>
+              {player.opponentCode}
+            </span>
+          </div>
+        )}
         {isCaptain && (
           <div style={{ position: "absolute", bottom: -2, right: -2, width: 14, height: 14, borderRadius: "50%", background: "#F4C430", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 1px 3px rgba(0,0,0,0.5)" }}>
             <span style={{ fontFamily: "var(--font-mono)", fontSize: 7, fontWeight: 800, color: "#333" }}>C</span>
@@ -186,16 +196,6 @@ function MatchPlayerToken({ player, isCaptain = false }: { player: MatchPlayer; 
       <span style={{ fontSize: 12, fontWeight: 600, color: "rgba(239,230,211,0.92)", fontFamily: "var(--font-sans)", textAlign: "center", lineHeight: 1.2, maxWidth: Math.max(OUTER, PILL_W) + 6, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textShadow: "0 1px 3px rgba(0,0,0,0.7)" }}>
         {lastName(player.name)}
       </span>
-      {player.opponentCode && (
-        <div style={{ display: "flex", alignItems: "center", gap: 2, padding: "1px 4px", borderRadius: 3, background: "rgba(0,0,0,0.62)", backdropFilter: "blur(4px)", boxShadow: "0 1px 3px rgba(0,0,0,0.45)" }}>
-          {player.opponentIsHome
-            ? <Home  size={7} color="rgba(239,230,211,0.75)" />
-            : <Plane size={7} color="rgba(239,230,211,0.75)" />}
-          <span style={{ fontFamily: "var(--font-mono)", fontSize: 7, fontWeight: 600, color: "rgba(239,230,211,0.85)", lineHeight: 1, letterSpacing: "0.04em" }}>
-            {player.opponentCode}
-          </span>
-        </div>
-      )}
     </div>
   );
 }
