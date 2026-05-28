@@ -1085,26 +1085,25 @@ export default function FormazionePage() {
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
 
       {/* ── Intestazione ── */}
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          {/* Logo squadra */}
-          <div style={{ width: 38, height: 38, borderRadius: 7, background: MY_TEAM_INFO.logoColori.bg, border: "2px solid var(--green-mid)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-            <span style={{ fontFamily: "var(--font-mono)", fontSize: 12, fontWeight: 700, color: MY_TEAM_INFO.logoColori.fg, letterSpacing: "0.04em" }}>{MY_TEAM_INFO.sigla}</span>
+          {/* Logo squadra — tondo */}
+          <div style={{ width: 38, height: 38, borderRadius: "50%", background: MY_TEAM_INFO.logoColori.bg, border: "2px solid var(--green-mid)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, fontWeight: 700, color: MY_TEAM_INFO.logoColori.fg, letterSpacing: "0.04em" }}>{MY_TEAM_INFO.sigla}</span>
           </div>
           {/* Maglia */}
           <JerseyIcon primary={MY_TEAM_INFO.magliaPrimary} secondary={MY_TEAM_INFO.magliaSecondary} size={26} />
-          <div>
-            <div style={{ fontFamily: "var(--font-serif)", fontSize: 22, fontWeight: 700, color: "var(--ink)", lineHeight: 1.15, marginBottom: 4 }}>
-              Mario&apos;s Squad
-            </div>
-            <span style={{ padding: "2px 8px", borderRadius: 99, background: fieldStatus === "casa" ? "var(--green-deep)" : "var(--ink-mid)", color: "#fff", fontFamily: "var(--font-mono)", fontSize: 10, fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase" }}>
-              {fieldStatus === "casa" ? "Casa" : "Trasferta"}
-            </span>
-          </div>
+          {/* Nome — stessa riga, stesso font mono */}
+          <span style={{ fontFamily: "var(--font-mono)", fontSize: 15, fontWeight: 700, color: "var(--ink)", letterSpacing: "0.04em", whiteSpace: "nowrap" }}>
+            Mario&apos;s Squad
+          </span>
+          <span style={{ padding: "2px 8px", borderRadius: 99, background: fieldStatus === "casa" ? "var(--green-deep)" : "var(--ink-mid)", color: "#fff", fontFamily: "var(--font-mono)", fontSize: 10, fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase" }}>
+            {fieldStatus === "casa" ? "Casa" : "Trasferta"}
+          </span>
         </div>
 
         {/* Messaggi + azioni */}
-        <div style={{ display: "flex", gap: 8, alignItems: "center", paddingTop: 6, flexWrap: "wrap", justifyContent: "flex-end" }}>
+        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end" }}>
           {moduleChangeMsg && (
             <div style={{ padding: "3px 10px", borderRadius: 99, background: "rgba(45,107,79,0.1)", border: "1px solid var(--green-mid)", fontSize: 12, color: "var(--green-deep)" }}>
               {moduleChangeMsg}
@@ -1265,6 +1264,7 @@ export default function FormazionePage() {
             <div style={{
               fontFamily: "var(--font-mono)", fontSize: 13,
               color: "var(--ink)", letterSpacing: "0.07em", textTransform: "uppercase",
+              whiteSpace: "nowrap",
             }}>
               {competizione}{" "}
               <span style={{ fontWeight: 700 }}>Giornata {MATCH_GIORNATA_2.giornata}</span>
@@ -1272,14 +1272,14 @@ export default function FormazionePage() {
             {/* Dx: icona casa/trasferta · stadio · avversario · logo · maglia */}
             <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
               {fieldStatus === "casa"
-                ? <Home size={11} style={{ color: "var(--ink-mid)", flexShrink: 0 }} />
-                : <Plane size={11} style={{ color: "var(--ink-mid)", flexShrink: 0 }} />
+                ? <Home size={13} style={{ color: "var(--ink-mid)", flexShrink: 0 }} />
+                : <Plane size={13} style={{ color: "var(--ink-mid)", flexShrink: 0 }} />
               }
-              <span style={{ fontFamily: "var(--font-sans)", fontSize: 11, color: "var(--ink-mid)", whiteSpace: "nowrap" }}>{stadio}</span>
+              <span style={{ fontFamily: "var(--font-sans)", fontSize: 13, color: "var(--ink-mid)", whiteSpace: "nowrap" }}>{stadio}</span>
               <span style={{ color: "var(--ink-mid)", fontSize: 11, lineHeight: 1 }}>·</span>
               <span style={{ fontFamily: "var(--font-mono)", fontSize: 13, fontWeight: 700, color: "var(--ink)", letterSpacing: "0.05em", textTransform: "uppercase", whiteSpace: "nowrap" }}>{avversario}</span>
-              {/* Logo avversario */}
-              <div style={{ width: 24, height: 24, borderRadius: 5, background: avversarioColori.primary, border: "1.5px solid rgba(0,0,0,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              {/* Logo avversario — tondo */}
+              <div style={{ width: 24, height: 24, borderRadius: "50%", background: avversarioColori.primary, border: "1.5px solid rgba(0,0,0,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                 <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, fontWeight: 700, color: avversarioColori.secondary, letterSpacing: "0.03em" }}>{avversarioSigla}</span>
               </div>
               {/* Maglia avversario */}
