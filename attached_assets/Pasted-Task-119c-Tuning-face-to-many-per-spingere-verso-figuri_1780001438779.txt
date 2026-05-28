@@ -1,0 +1,69 @@
+Task 119c — Tuning face-to-many per spingere verso figurina plastica
+
+OBIETTIVO
+Sui 5 cutout matted del Task 119, ri-eseguire face-to-many con parametri
+tuned per ottenere un look piu' decisamente "figurina di plastica lucida"
+e uniforme tra i 5 giocatori (oggi Reina e altri restano troppo umani).
+
+CONTESTO TECNICO
+face-to-many usa InstantID + un LoRA "Toy". Il preset Toy gia' attiva
+l'estetica, ma su input fotografici con identita' forte InstantID
+"trattiene" troppi tratti realistici. Per spingere piu' verso toy:
+- abbassiamo la forza di InstantID (meno preservazione viso = piu' liberta'
+  stilistica)
+- alziamo un filo il denoising/prompt strength (piu' trasformazione)
+- aggiungiamo prompt e negative_prompt espliciti
+
+INPUT
+mister-web/public/avatars/matted-test/<id>.png (i 5 matted del Task 119)
+
+PRIMO PASSO
+Verifica su Replicate lo schema input attuale di fofr/face-to-many. I nomi
+parametri possono cambiare tra versioni; riportami i nomi esatti che usi.
+Tipicamente esistono: style, prompt, negative_prompt, instant_id_strength
+(o nome simile), denoising_strength o prompt_strength.
+
+TEST 2 COMBO SUI 5 SAMPLE
+
+Combo A - moderata
+  style: "Toy"
+  prompt: "plastic toy figurine, vinyl figure, glossy plastic, smooth,
+    action figure, stylized cartoon"
+  negative_prompt: "realistic, photo, photographic, photorealistic,
+    human skin, real person, detailed pores, hyperrealism"
+  instant_id_strength: ~0.65 (giu' dal default ~0.80)
+  denoising_strength: ~0.72
+
+Combo B - aggressiva
+  Come A ma con:
+  instant_id_strength: ~0.55
+  denoising_strength: ~0.78
+  prompt esteso: aggiungi "uniform plastic sheen, matte plastic figurine,
+    smooth surface, no skin texture"
+
+Per ogni combo, esegui sui 5 cutout matted, poi rimozione sfondo BiRefNet
+come Task 119 (per mantenere fondo trasparente e bordi puliti).
+
+Salva:
+  toy-tuning-A/<id>.webp
+  toy-tuning-B/<id>.webp
+
+VERIFICA INTERNA prima di consegnare
+Confronta A vs B sui 5 player. Valuta:
+- Quale ha aspetto "plastica/figurina" piu' netto (lucido, niente texture
+  pelle, niente realismo)
+- Quale ha uniformita' stilistica migliore tra i 5 (Reina non dovrebbe
+  essere visibilmente piu' umano di Belotti o Petagna)
+- Quale mantiene comunque l'identita' riconoscibile (volti distinguibili,
+  non over-stilizzati al punto da sembrare tutti uguali)
+
+Se Combo B e' ancora troppo umana su 1-2 player, prova una Combo C con
+instant_id_strength 0.45-0.50 (ma attenzione a non perdere l'identita').
+
+RIPORTAMI
+- I path di toy-tuning-A/ e toy-tuning-B/ (eventualmente C)
+- Lo schema input del modello (nomi esatti dei parametri usati)
+- La tua valutazione: quale combo consigli e perche'
+- Costo Replicate totale (face-to-many * N * 5 + BG remove)
+
+STOP. Decido la combo finale prima del Task 120 (batch sui 25).

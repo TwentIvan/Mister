@@ -22,7 +22,8 @@
     "sync:fixtures-persist": "tsx ./src/seeds/sync-serie-a-fixtures.ts",
     "sync:test-picwish": "tsx ./sync/test-picwish-cutout.ts",
     "sync:test-toy": "tsx ./sync/test-toy-style.ts",
-    "sync:test-toy-pipeline": "tsx ./sync/test-toy-pipeline.ts"
+    "sync:test-toy-pipeline": "tsx ./sync/test-toy-pipeline.ts",
+    "sync:test-toy-tuning": "tsx ./sync/test-toy-tuning.ts"
   },
   "dependencies": {
     "@tensorflow-models/blazeface": "^0.1.0",

@@ -36,3 +36,15 @@ id = "joJfNPZjE1Woqx-G3jUoX"
 uri = "file://toy-normalized-test.zip"
 type = "unspecified"
 title = "Task 119 — Toy normalizzato + trasparente (1358, 1624, 6409, 30509, 35544)"
+
+[[outputs]]
+id = "pEBT32oSdYYKLmPxKaFlb"
+uri = "file://toy-tuning-A.zip"
+type = "unspecified"
+title = "Combo A — instant_id=0.65, denoising=0.72 (1358, 1624, 6409, 30509, 35544)"
+
+[[outputs]]
+id = "OKnzmpAq5V-722-vrsaIo"
+uri = "file://toy-tuning-B.zip"
+type = "unspecified"
+title = "Combo B — instant_id=0.55, denoising=0.78 (1358, 1624, 6409, 30509, 35544)"
