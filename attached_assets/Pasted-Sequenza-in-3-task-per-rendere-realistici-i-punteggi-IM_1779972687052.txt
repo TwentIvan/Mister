@@ -1,0 +1,64 @@
+Sequenza in 3 task per rendere realistici i punteggi. IMPORTANTE: fermati a ogni STOP e aspetta il mio via. NON concatenare i task. Ogni stop serve a validare prima di procedere.Piano generale (per tuo contesto):
+
+Diagnostica pool attivi per ruolo → verifica fattibilità
+Endpoint /api/roster + cablaggio UI sul DB + rimozione mock
+Re-seed rose (attive) + re-seed lineup + ricalcolo
+TASK 111 — Diagnostica: pool giocatori attivi per ruolo (giornata 2)Dobbiamo sapere se ci sono abbastanza giocatori con voto in giornata 2 per riempire 8 rose con titolari attivi. Query (adatta i nomi colonna allo schema reale — il ruolo in players potrebbe essere position con valori tipo Goalkeeper/Defender/... mentre i lineup usano GK/DEF/MID/T/ATT; riporta la mappatura):sqlSELECT p.position AS ruolo,
+       COUNT(DISTINCT p.id) FILTER (WHERE pgs.voto_mister IS NOT NULL) AS attivi_r2,
+       COUNT(DISTINCT p.id) AS totali
+FROM players p
+LEFT JOIN player_giornata_stats pgs
+  ON pgs.player_id = p.id AND pgs.season = 2024 AND pgs.round = 2
+GROUP BY p.position;Riportami il conteggio attivi per ruolo. Soglie che ci servono per 8 rose (3P/8D/8C/6A ciascuna) con titolari attivi:
+
+GK attivi ≥ 8 (uno titolare per squadra)
+DEF attivi ≥ 32
+MID attivi ≥ 32
+ATT attivi ≥ 24
+STOP. Riportami i numeri + la mappatura ruoli. Ti dico io se procedere.TASK 112 — Endpoint /api/roster + cablaggio UI + rimozione mock
+Endpoint GET /api/fanta-teams/{id}/roster?season=2024&round=N → array dei 25 giocatori della rosa, ciascuno con:
+
+id, name, surname, role (mappato a GK/DEF/MID/ATT)
+photoUrl, photoCartoonUrl
+team: { id, name, colorPrimary, colorSecondary, code3 } (da team_colors)
+votoMister (number | null) per il round richiesto
+opponent: { code3, isHome } solo se derivabile a basso costo dai dati esistenti (es. fixture_id in player_giornata_stats → squadre della partita). Se richiede una tabella fixtures nuova, ometti per ora — lo ripristiniamo con lo Step 5b che costruirà i risultati Serie A. Non bloccare il task su questo.
+Aggiungi a openapi.yaml, rigenera Orval
+
+
+
+Cabla la UI sul DB:
+
+Builder (FormazionePage) → usa /api/roster per ft-mvp-1 invece del mock
+Match view → usa /api/roster per entrambe ft-mvp-1 e ft-mvp-7
+Rimuovi la dipendenza da mock-data.ts (puoi tenere il file ma smetti di importarlo; meglio rimozione pulita)
+
+
+
+Screenshot di builder + match view: devono apparire come prima (stessi giocatori), ma ora i dati arrivano dal DB invece che dal mock. Se l'opponent token sparisce (perché derivazione differita), va bene — lo ripristiniamo con 5b.
+STOP. Riportami screenshot di builder + match view alimentati dal DB.TASK 113 — Re-seed rose attive + re-seed lineup + ricalcolo
+Re-seed delle 8 rose (200 contracts):
+
+Deterministico (PRNG mulberry32 con seed fisso documentato — riproducibile)
+Distribuzione ruoli invariata: 3 GK / 8 DEF / 8 MID / 6 ATT per squadra
+Priorità ai giocatori attivi in giornata 2 (voto_mister NOT NULL)
+Distribuisci gli attivi equamente tra le 8 squadre (nessuna squadra affamata)
+Garanzia: ogni squadra deve poter schierare un 11 titolare quasi tutto attivo nel suo modulo → almeno 1 GK attivo, ≥4 DEF attivi, ≥4 MID attivi, ≥3 ATT attivi per rosa
+Dove il pool attivo di un ruolo è insufficiente, riempi i restanti slot (riserve) con S.V. — accettabile per la profondità panchina, purché i titolari siano attivi
+Nessun giocatore su due rose (proprietà unica nella lega)
+
+
+
+Re-seed di tutti gli 8 lineup (incluso Mario's Squad):
+
+Titolari = giocatori attivi nel modulo scelto
+Panchina: priorità ad attivi per realismo delle sostituzioni, ma S.V. ammessi
+Capitano = un titolare attivo (es. quello col voto più alto)
+Nota: questo sovrascrive il lineup di Mario's Squad che l'utente aveva costruito a mano — va bene, è per avere un demo realistico, l'utente potrà ri-costruirlo dal builder quando vuole
+
+
+
+Ri-esegui pnpm --filter @workspace/scripts run scoring:round -- --round 2
+
+Riportami i nuovi punteggi dei 4 match (attesi ~65-80) + conferma se restano sostituzioni naturali in qualche lineup (per mostrare che la feature gira). Screenshot della vista match Mario's vs Atletico coi punteggi realistici.
+STOP. Riportami punteggi + screenshot.Quando chiude il 113 con punteggi sensati, abbiamo: loop gameplay completo + realistico + mock ucciso + endpoint roster reale. Poi attacchiamo lo Step 5b (coach), che
