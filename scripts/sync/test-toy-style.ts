@@ -1,7 +1,7 @@
 /**
  * test-toy-style.ts
  * Chiama fofr/face-to-many con style="Toy" sui 5 cutout PicWish del Task 117.
- * NON tocca cartoonize-photos.ts né gli avatar di produzione.
+ * NON tocca gli avatar di produzione.
  *
  * Uso:
  *   pnpm --filter @workspace/scripts run sync:test-toy

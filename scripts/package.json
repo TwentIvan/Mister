@@ -13,7 +13,6 @@
     "sync:all": "tsx ./sync/run-all.ts",
     "voto:backtest": "tsx ./voto-mister/run-backtest.ts",
     "voto:persist": "tsx ./voto-mister/persist-voto-mister.ts",
-    "sync:cartoonize": "tsx ./sync/cartoonize-photos.ts",
     "sync:coaches": "tsx ./sync/coaches.ts",
     "scoring:round": "tsx ./src/scoring/compute-round.ts",
     "scoring:test": "tsx ./src/scoring/test-engine.ts",
@@ -23,11 +22,10 @@
     "sync:test-picwish": "tsx ./sync/test-picwish-cutout.ts",
     "sync:test-toy": "tsx ./sync/test-toy-style.ts",
     "sync:test-toy-pipeline": "tsx ./sync/test-toy-pipeline.ts",
-    "sync:test-toy-tuning": "tsx ./sync/test-toy-tuning.ts"
+    "sync:test-toy-tuning": "tsx ./sync/test-toy-tuning.ts",
+    "sync:batch-avatars": "tsx ./sync/batch-avatars.ts"
   },
   "dependencies": {
-    "@tensorflow-models/blazeface": "^0.1.0",
-    "@tensorflow/tfjs-node": "^4.22.0",
     "@workspace/db": "workspace:*",
     "@workspace/scoring": "workspace:*",
     "@workspace/voto-engine": "workspace:*",

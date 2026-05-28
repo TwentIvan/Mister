@@ -1,7 +1,7 @@
 /**
  * test-picwish-cutout.ts
  * Valida la qualità del face cutout PicWish su 5 giocatori sample.
- * NON tocca la pipeline cartoonize-photos.ts e NON sovrascrive avatar di produzione.
+ * NON sovrascrive avatar di produzione.
  *
  * Uso:
  *   pnpm --filter @workspace/scripts run sync:test-picwish

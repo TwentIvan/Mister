@@ -1,0 +1,84 @@
+Task 120 — Refactor pipeline avatar e batch su Mario's Squad (25 giocatori)
+
+CONTESTO
+Nuova pipeline avatar validata su 5 sample: PicWish face cutout +
+normalizzazione + matte su bianco + face-to-many style=Toy (combo B) +
+BiRefNet background removal. Risultato in
+mister-web/public/avatars/toy-tuning-B/ - 5 figurine plastiche uniformi.
+Ora batch sui 25 giocatori di Mario's Squad e sostituzione degli avatar
+di produzione, smantellando il vecchio codice BlazeFace.
+
+DA FARE
+
+1. SCRIPT PIPELINE NUOVA
+   Sostituisci scripts/src/sync/cartoonize-photos.ts con la pipeline nuova
+   (oppure crea uno script nuovo e archivia il vecchio). La pipeline per
+   ogni player_id:
+   a. SELECT photo_url FROM players WHERE id = ?
+   b. PicWish face cutout (POST async, polling, scarica risultato PNG)
+      Endpoint: https://techhk.aoscdn.com/api/tasks/visual/self-face-cutout
+      Auth: $PICWISH_API_KEY (gia' nei secrets)
+   c. NORMALIZZAZIONE con sharp:
+      - bbox dei pixel con alpha > 16
+      - headSize = max(width, height); margine 15% per lato
+      - crop quadrato centrato sulla testa
+      - resize 512x512, fit:"contain", background trasparente
+   d. MATTE su bianco:
+      sharp(...).flatten({ background: { r: 255, g: 255, b: 255 } })
+   e. face-to-many su Replicate, model fofr/face-to-many, parametri:
+        style: "Toy"
+        prompt: "plastic toy figurine, vinyl figure, glossy plastic, smooth,
+          action figure, stylized cartoon, uniform plastic sheen, matte
+          plastic figurine, smooth surface, no skin texture"
+        negative_prompt: "realistic, photo, photographic, photorealistic,
+          human skin, real person, detailed pores, hyperrealism"
+        instant_id_strength: 0.55
+        denoising_strength: 0.78
+      (verifica i nomi esatti dei parametri nello schema input del modello;
+       riportami eventuali nomi diversi)
+   f. BiRefNet background removal su Replicate (stessa variant usata nel
+      Task 119, quella che ha funzionato bene per i 5 sample)
+   g. Salva come WebP in mister-web/public/avatars/<id>.webp
+      (path di produzione, SOVRASCRIVE l'avatar esistente)
+
+2. BATCH SUI 25 DI MARIO'S SQUAD
+   - Query: SELECT player_id FROM contracts WHERE fanta_team_id = 'ft-mvp-1'
+     (sono 25, distribuiti 3 GK / 8 DEF / 8 MID / 6 ATT)
+   - Per i 5 gia' fatti (1624, 35544, 6409, 1358, 30509), COPIA i file
+     toy-tuning-B/<id>.webp -> avatars/<id>.webp (no riprocessamento,
+     risparmiamo crediti e otteniamo gli stessi identici risultati gia'
+     validati)
+   - Per i 20 restanti, esegui la pipeline completa.
+   - Salva ad ogni step intermedio (cutout, normalized, matted) in cartelle
+     /tmp o sotto-cartelle, cosi' se qualcosa va storto su uno specifico
+     player puoi ri-runnare singoli step senza partire da zero.
+
+3. GESTIONE CREDITI / COSTI
+   - Prima di partire stampa: crediti PicWish residui e costo per face cutout.
+   - 20 cutout PicWish dovrebbero stare nei crediti gratuiti rimanenti.
+   - 25 face-to-many ~$0.25 + 25 BiRefNet ~$0.13 = ~$0.40 Replicate.
+   - Se uno step fallisce su un singolo player, logga e prosegui col resto
+     (non bloccare l'intero batch); riportami quali sono falliti.
+
+4. CLEANUP CODICE VECCHIO
+   - Rimuovi il codice BlazeFace e le dipendenze legate (tfjs-node, canvas,
+     il patch a @tensorflow/tfjs-node) da package.json e dai relativi script.
+   - Rimuovi il file cartoonize-photos.ts vecchio (o sostituiscine il
+     contenuto integralmente con la pipeline nuova).
+   - Verifica il typecheck dopo la rimozione.
+
+VERIFICA INTERNA prima di consegnare
+- Tutti i 25 file /avatars/<id>.webp esistono e sono visibili come figurine
+  plastica uniformi
+- I 5 gia' validati sono identici a toy-tuning-B/<id>.webp (perche'
+  copiati, non riprocessati)
+- Nessun residuo BlazeFace nel codice; typecheck pulito
+- Nessuna dipendenza tfjs/canvas in package.json
+
+RIPORTAMI
+- Numero di avatar generati con successo / falliti (con motivo del fail)
+- Costo Replicate effettivo + crediti PicWish consumati / residui
+- Conferma cleanup BlazeFace completato (lista file modificati/rimossi)
+
+STOP. Apriro' il builder e la match view per verifica visiva sui 25 prima
+di decidere se replicare il batch sui 25 di Atletico Caffeina (ft-mvp-7).
