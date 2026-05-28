@@ -6,16 +6,13 @@
  * Distribuzione per squadra (25 giocatori, 200 contratti totali):
  *   3 GK / 8 DEF / 8 MID / 6 ATT
  *
- * Lineup 4-3-3 per ogni squadra:
- *   Slot 0      GK   titolare  (attivo)
- *   Slot 1-2,4  DEF  titolari  (attivi)
- *   Slot 3      DEF  titolare  *** S.V. deliberato → scatta sostituzione
- *   Slot 5-7    MID  titolari  (attivi)
- *   Slot 8-10   ATT  titolari  (attivi)  — slot 8 = capitano
- *   Slot 11-12  GK   panchina
- *   Slot 13-16  DEF  panchina  (slot 13 benchOrder=1 → entra per slot 3)
- *   Slot 17-21  MID  panchina
- *   Slot 22-24  ATT  panchina
+ * Lineup 4-3-3 per ogni squadra (slotIndex 1-based):
+ *   Slot 1      GK   titolare  (attivo)
+ *   Slot 2,3,5  DEF  titolari  (attivi)
+ *   Slot 4      DEF  titolare  *** S.V. deliberato → scatta sostituzione
+ *   Slot 6-8    MID  titolari  (attivi)
+ *   Slot 9-11   ATT  titolari  (attivi)  — slot 9 = capitano
+ *   Slot 12-25  Panchina (benchOrder globale 1-14, ruolo P→D→C→A, voto DESC)
  */
 
 import { db } from "@workspace/db";
@@ -24,8 +21,9 @@ import {
   lineups,
   lineupPlayers,
   fantaTeams,
+  playerGiornataStats,
 } from "@workspace/db";
-import { eq, inArray } from "drizzle-orm";
+import { eq, inArray, and } from "drizzle-orm";
 import { randomUUID } from "crypto";
 
 // ─── PRNG ────────────────────────────────────────────────────────────────────
@@ -195,6 +193,23 @@ async function main() {
   }
   console.log(`Pool assegnati: ${allIds.length} giocatori unici ✓\n`);
 
+  // 2b. Recupera voti giornata 2 per ordinare la panchina per voto DESC
+  console.log("Recupero voti giornata 2 per ordinamento panchina…");
+  const votoRows = await db
+    .select({ playerId: playerGiornataStats.playerId, voto: playerGiornataStats.votoMister })
+    .from(playerGiornataStats)
+    .where(
+      and(
+        eq(playerGiornataStats.season, SEASON),
+        eq(playerGiornataStats.round, ROUND),
+        inArray(playerGiornataStats.playerId, allIds),
+      ),
+    );
+  const votoMap = new Map<number, number | null>(
+    votoRows.map(r => [r.playerId, r.voto ?? null]),
+  );
+  console.log(`Voti recuperati: ${votoMap.size} giocatori con stat ✓\n`);
+
   // 3. Costruisci contratti e lineup per ogni squadra
   const contractRows = [];
   const lineupInserts = [];
@@ -304,7 +319,7 @@ async function main() {
       teamId,
       module: "4-3-3",
       captainPlayerId,
-      players: buildLineupPlayers(teamGks, teamDefsActive, teamDefSv, teamMids, teamAtts),
+      players: buildLineupPlayers(teamGks, teamDefsActive, teamDefSv, teamMids, teamAtts, votoMap),
     });
   }
 
@@ -364,22 +379,25 @@ type SlotEntry = {
   benchOrder: number | null;
 };
 
+const BENCH_ROLE_ORDER: Record<string, number> = { GK: 0, DEF: 1, MID: 2, ATT: 3 };
+
 function buildLineupPlayers(
   gks: number[],
   defsActive: number[],
   defSv: number,
   mids: number[],
   atts: number[],
+  votoMap: Map<number, number | null>,
 ): SlotEntry[] {
   // gks[0] = titolare, gks[1-2] = panchina
-  // defsActive[0-2] = titolari (slots 1,2,4), defsActive[3-6] = panchina
-  // defSv = titolare SV (slot 3)
+  // defsActive[0-2] = titolari (slots 2,3,5), defsActive[3-6] = panchina
+  // defSv = titolare SV (slot 4)
   // mids[0-2] = titolari, mids[3-7] = panchina
   // atts[0-2] = titolari, atts[3-5] = panchina
 
   const slots: SlotEntry[] = [];
 
-  // Titolari
+  // Titolari (slotIndex 1-11)
   slots.push({ playerId: gks[0],          slotPosition: "GK",  slotIndex: 1,  isStarter: true, benchOrder: null });
   slots.push({ playerId: defsActive[0],   slotPosition: "DEF", slotIndex: 2,  isStarter: true, benchOrder: null });
   slots.push({ playerId: defsActive[1],   slotPosition: "DEF", slotIndex: 3,  isStarter: true, benchOrder: null });
@@ -392,21 +410,35 @@ function buildLineupPlayers(
   slots.push({ playerId: atts[1],         slotPosition: "ATT", slotIndex: 10, isStarter: true, benchOrder: null });
   slots.push({ playerId: atts[2],         slotPosition: "ATT", slotIndex: 11, isStarter: true, benchOrder: null });
 
-  // Panchina (slotIndex 12-25, coerente con buildPutPayload che usa 12+idx)
-  slots.push({ playerId: gks[1],          slotPosition: "GK",  slotIndex: 12, isStarter: false, benchOrder: 1 });
-  slots.push({ playerId: gks[2],          slotPosition: "GK",  slotIndex: 13, isStarter: false, benchOrder: 2 });
-  slots.push({ playerId: defsActive[3],   slotPosition: "DEF", slotIndex: 14, isStarter: false, benchOrder: 1 }); // entra per DEF SV
-  slots.push({ playerId: defsActive[4],   slotPosition: "DEF", slotIndex: 15, isStarter: false, benchOrder: 2 });
-  slots.push({ playerId: defsActive[5],   slotPosition: "DEF", slotIndex: 16, isStarter: false, benchOrder: 3 });
-  slots.push({ playerId: defsActive[6],   slotPosition: "DEF", slotIndex: 17, isStarter: false, benchOrder: 4 });
-  slots.push({ playerId: mids[3],         slotPosition: "MID", slotIndex: 18, isStarter: false, benchOrder: 1 });
-  slots.push({ playerId: mids[4],         slotPosition: "MID", slotIndex: 19, isStarter: false, benchOrder: 2 });
-  slots.push({ playerId: mids[5],         slotPosition: "MID", slotIndex: 20, isStarter: false, benchOrder: 3 });
-  slots.push({ playerId: mids[6],         slotPosition: "MID", slotIndex: 21, isStarter: false, benchOrder: 4 });
-  slots.push({ playerId: mids[7],         slotPosition: "MID", slotIndex: 22, isStarter: false, benchOrder: 5 });
-  slots.push({ playerId: atts[3],         slotPosition: "ATT", slotIndex: 23, isStarter: false, benchOrder: 1 });
-  slots.push({ playerId: atts[4],         slotPosition: "ATT", slotIndex: 24, isStarter: false, benchOrder: 2 });
-  slots.push({ playerId: atts[5],         slotPosition: "ATT", slotIndex: 25, isStarter: false, benchOrder: 3 });
+  // Panchina: raggruppa per ruolo, ordina per voto DESC (null in fondo), assegna benchOrder globale 1-14
+  const benchCandidates: { playerId: number; slotPosition: string }[] = [
+    ...gks.slice(1).map(id => ({ playerId: id, slotPosition: "GK" })),
+    ...defsActive.slice(3).map(id => ({ playerId: id, slotPosition: "DEF" })),
+    ...mids.slice(3).map(id => ({ playerId: id, slotPosition: "MID" })),
+    ...atts.slice(3).map(id => ({ playerId: id, slotPosition: "ATT" })),
+  ];
+
+  benchCandidates.sort((a, b) => {
+    const rA = BENCH_ROLE_ORDER[a.slotPosition] ?? 99;
+    const rB = BENCH_ROLE_ORDER[b.slotPosition] ?? 99;
+    if (rA !== rB) return rA - rB;
+    const vA = votoMap.get(a.playerId) ?? null;
+    const vB = votoMap.get(b.playerId) ?? null;
+    if (vA === null && vB === null) return 0;
+    if (vA === null) return 1;
+    if (vB === null) return -1;
+    return vB - vA; // DESC
+  });
+
+  benchCandidates.forEach((p, idx) => {
+    slots.push({
+      playerId: p.playerId,
+      slotPosition: p.slotPosition,
+      slotIndex: 12 + idx,       // 12..25
+      isStarter: false,
+      benchOrder: idx + 1,       // 1..14 globale
+    });
+  });
 
   return slots;
 }
