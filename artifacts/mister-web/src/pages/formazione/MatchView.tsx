@@ -281,8 +281,8 @@ interface DugoutPanelProps {
 function DugoutPanel({ sigla, bgColor, fgColor, players }: DugoutPanelProps) {
   return (
     <div style={{
-      flex: "1 1 0",       // occupa metà della colonna sinistra
-      minHeight: 0,        // permette shrink sotto il contenuto
+      flex: "1 1 0",
+      minHeight: 0,
       borderRadius: 8,
       border: "1px solid rgba(255,255,255,0.08)",
       background: "rgba(10,24,20,0.75)",
@@ -291,30 +291,155 @@ function DugoutPanel({ sigla, bgColor, fgColor, players }: DugoutPanelProps) {
       display: "flex",
       flexDirection: "column",
     }}>
-      {/* ── Tettoia / header pensilina ── */}
+      {/* ── Tettoia: striscia sottile colorata con il colore squadra, solo crest ── */}
       <div style={{
         flexShrink: 0,
-        padding: "5px 9px",
-        background: "linear-gradient(180deg, rgba(0,0,0,0.50) 0%, rgba(0,0,0,0.22) 100%)",
-        borderBottom: "1px solid rgba(255,255,255,0.07)",
-        display: "flex", alignItems: "center", gap: 6,
-        // Accenno arco tettoia — box-shadow interna curva
-        boxShadow: "inset 0 -2px 6px rgba(0,0,0,0.25), 0 2px 4px rgba(0,0,0,0.2)",
+        height: 14,
+        background: `linear-gradient(90deg, ${bgColor}70 0%, ${bgColor}28 100%)`,
+        borderBottom: "1px solid rgba(255,255,255,0.06)",
+        display: "flex", alignItems: "center", paddingLeft: 5,
+        boxShadow: "0 1px 4px rgba(0,0,0,0.35)",
       }}>
-        <div style={{ width: 18, height: 18, borderRadius: "50%", background: bgColor, border: "1px solid rgba(255,255,255,0.18)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-          <span style={{ fontFamily: "var(--font-mono)", fontSize: 7, fontWeight: 800, color: fgColor }}>{sigla}</span>
+        <div style={{ width: 11, height: 11, borderRadius: "50%", background: bgColor, border: "1px solid rgba(255,255,255,0.22)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <span style={{ fontFamily: "var(--font-mono)", fontSize: 5.5, fontWeight: 800, color: fgColor, lineHeight: 1 }}>{sigla}</span>
         </div>
-        <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, fontWeight: 600, color: "rgba(239,230,211,0.45)", letterSpacing: "0.1em", textTransform: "uppercase" }}>
-          Panchina
-        </span>
       </div>
 
       {/* ── Lista panchinari (scrollabile) ── */}
-      <div style={{ flex: 1, overflowY: "auto", padding: "4px", display: "flex", flexDirection: "column", gap: 2 }}>
+      <div style={{ flex: 1, overflowY: "auto", padding: "3px", display: "flex", flexDirection: "column", gap: 2 }}>
         {players.map(p => <BenchRow key={p.id} player={p} />)}
         {players.length === 0 && (
           <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--ink-faint)", padding: "6px 4px" }}>Nessun panchinaro</span>
         )}
+      </div>
+    </div>
+  );
+}
+
+// ─── VotiTabellino — colonna destra: voti dei titolari ───────────────────────
+
+const ROLE_LETTER: Record<string, string> = { GK: "P", DEF: "D", MID: "C", ATT: "A" };
+
+function getStartersOrdered(rows: StarterRows, captainId: number | null) {
+  return ROLE_ORDER.flatMap(role =>
+    rows[role].map(p => ({
+      player: p,
+      role:   role as keyof StarterRows,
+      isCap:  p.id === captainId,
+    }))
+  );
+}
+
+interface VotiSectionProps {
+  label:     string;
+  sigla:     string;
+  bgColor:   string;
+  fgColor:   string;
+  starters:  ReturnType<typeof getStartersOrdered>;
+}
+
+function VotiSection({ label, sigla, bgColor, fgColor, starters }: VotiSectionProps) {
+  const validVoti = starters.filter(s => s.player.votoMister !== null).map(s => s.player.votoMister!);
+  const somma     = validVoti.reduce((a, b) => a + b, 0);
+  const hasSomma  = validVoti.length > 0;
+
+  return (
+    <div style={{ flex: "1 1 0", minHeight: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+      {/* Header sezione */}
+      <div style={{
+        flexShrink: 0,
+        display: "flex", alignItems: "center", gap: 6,
+        padding: "5px 8px 4px",
+        background: `linear-gradient(90deg, ${bgColor}55 0%, ${bgColor}18 100%)`,
+        borderBottom: "1px solid rgba(255,255,255,0.07)",
+      }}>
+        <div style={{ width: 16, height: 16, borderRadius: "50%", background: bgColor, border: "1px solid rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <span style={{ fontFamily: "var(--font-mono)", fontSize: 6.5, fontWeight: 800, color: fgColor }}>{sigla}</span>
+        </div>
+        <span style={{ fontFamily: "var(--font-mono)", fontSize: 8, fontWeight: 700, color: "rgba(239,230,211,0.6)", letterSpacing: "0.1em", textTransform: "uppercase", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          {label}
+        </span>
+      </div>
+
+      {/* Righe titolari */}
+      <div style={{ flex: 1, overflowY: "auto", padding: "2px 0" }}>
+        {starters.map(({ player, role, isCap }) => (
+          <div key={player.id} style={{ display: "flex", alignItems: "center", padding: "2px 8px", gap: 4 }}>
+            {/* Lettera ruolo */}
+            <span style={{ fontFamily: "var(--font-mono)", fontSize: 8, fontWeight: 700, color: ROLE_CHIP_COLOR[role], width: 8, flexShrink: 0 }}>
+              {ROLE_LETTER[role]}
+            </span>
+
+            {/* Cognome + capitano */}
+            <span style={{ flex: 1, minWidth: 0, fontSize: 10, fontWeight: 500, color: "rgba(239,230,211,0.85)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", fontFamily: "var(--font-sans)" }}>
+              {lastName(player.name)}
+              {isCap && (
+                <span style={{ marginLeft: 3, fontFamily: "var(--font-mono)", fontSize: 7, fontWeight: 800, color: "#F4C430", verticalAlign: "middle" }}>C</span>
+              )}
+            </span>
+
+            {/* Voto */}
+            <span style={{ flexShrink: 0, fontFamily: "var(--font-mono)", fontSize: 10, fontWeight: 700, color: player.votoMister !== null ? "#4ade80" : "rgba(239,230,211,0.28)", minWidth: 28, textAlign: "right" }}>
+              {player.votoMister !== null ? player.votoMister.toFixed(1) : "S.V."}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      {/* Riga somma */}
+      <div style={{
+        flexShrink: 0,
+        display: "flex", alignItems: "center",
+        padding: "4px 8px",
+        borderTop: "1px solid rgba(255,255,255,0.07)",
+        background: "rgba(0,0,0,0.18)",
+        gap: 4,
+      }}>
+        <span style={{ flex: 1, fontFamily: "var(--font-mono)", fontSize: 8, color: "rgba(239,230,211,0.38)", letterSpacing: "0.04em" }}>Totale*</span>
+        <span style={{ fontFamily: "var(--font-mono)", fontSize: 12, fontWeight: 700, color: hasSomma ? "rgba(239,230,211,0.75)" : "rgba(239,230,211,0.25)" }}>
+          {hasSomma ? somma.toFixed(1) : "—"}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+// Colori accento per lettera ruolo nel tabellino
+const ROLE_CHIP_COLOR: Record<string, string> = {
+  GK:  "#f59e0b",
+  DEF: "#60a5fa",
+  MID: "#4ade80",
+  ATT: "#f87171",
+};
+
+function VotiTabellino({
+  acStarters, myStarters, acCapId, myCapId,
+}: {
+  acStarters: ReturnType<typeof getStartersOrdered>;
+  myStarters: ReturnType<typeof getStartersOrdered>;
+  acCapId:    number | null;
+  myCapId:    number | null;
+}) {
+  return (
+    <div style={{
+      width: 170,
+      flexShrink: 0,
+      display: "flex",
+      flexDirection: "column",
+      gap: 6,
+      height: "100%",
+    }}>
+      {/* AC section */}
+      <div style={{ flex: "1 1 0", minHeight: 0, borderRadius: 8, border: "1px solid rgba(255,255,255,0.08)", background: "rgba(10,24,20,0.75)", backdropFilter: "blur(4px)", overflow: "hidden", display: "flex", flexDirection: "column" }}>
+        <VotiSection label="Atletico Caffeina" sigla="AC" bgColor="#C8102E" fgColor="#fff" starters={acStarters} />
+      </div>
+      {/* Nota asterisco */}
+      <span style={{ flexShrink: 0, textAlign: "center", fontFamily: "var(--font-mono)", fontSize: 8, color: "rgba(239,230,211,0.25)", lineHeight: 1.3 }}>
+        * somma provvisoria<br />calcolo completo allo step 5
+      </span>
+      {/* MS section */}
+      <div style={{ flex: "1 1 0", minHeight: 0, borderRadius: 8, border: "1px solid rgba(255,255,255,0.08)", background: "rgba(10,24,20,0.75)", backdropFilter: "blur(4px)", overflow: "hidden", display: "flex", flexDirection: "column" }}>
+        <VotiSection label="Mario's Squad" sigla={MY_TEAM_INFO.sigla} bgColor={MY_TEAM_INFO.logoColori.bg} fgColor={MY_TEAM_INFO.logoColori.fg} starters={myStarters} />
       </div>
     </div>
   );
@@ -336,12 +461,14 @@ export function MatchView() {
     );
   }
 
-  const myRows  = myLineup ? getStarterRows(myLineup.players, PLAYER_BY_ID)                   : emptyRows();
-  const acRows  = acLineup ? getStarterRows(acLineup.players, ATLETICO_CAFFEINA_PLAYER_BY_ID) : emptyRows();
-  const myBench = myLineup ? getBenchPlayers(myLineup.players, PLAYER_BY_ID)                  : [];
-  const acBench = acLineup ? getBenchPlayers(acLineup.players, ATLETICO_CAFFEINA_PLAYER_BY_ID): [];
-  const myCapId = myLineup?.captainPlayerId ?? null;
-  const acCapId = acLineup?.captainPlayerId ?? null;
+  const myRows     = myLineup ? getStarterRows(myLineup.players, PLAYER_BY_ID)                   : emptyRows();
+  const acRows     = acLineup ? getStarterRows(acLineup.players, ATLETICO_CAFFEINA_PLAYER_BY_ID) : emptyRows();
+  const myBench    = myLineup ? getBenchPlayers(myLineup.players, PLAYER_BY_ID)                  : [];
+  const acBench    = acLineup ? getBenchPlayers(acLineup.players, ATLETICO_CAFFEINA_PLAYER_BY_ID): [];
+  const myCapId    = myLineup?.captainPlayerId ?? null;
+  const acCapId    = acLineup?.captainPlayerId ?? null;
+  const myStarters = getStartersOrdered(myRows, myCapId);
+  const acStarters = getStartersOrdered(acRows, acCapId);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -370,11 +497,11 @@ export function MatchView() {
         </div>
       </div>
 
-      {/* ── Layout: [colonna panchine sinistra] [pitch] ── */}
+      {/* ── Layout: [dugout panchine] [pitch] [tabellino voti] ── */}
       <div style={{ display: "flex", gap: 8, height: "calc(100vh - 248px)", alignItems: "stretch" }}>
 
         {/* ── Colonna sinistra: dugout AC (metà alta) + dugout Mario's (metà bassa) ── */}
-        <div style={{ width: 204, flexShrink: 0, display: "flex", flexDirection: "column", gap: 8 }}>
+        <div style={{ width: 196, flexShrink: 0, display: "flex", flexDirection: "column", gap: 8 }}>
           <DugoutPanel sigla="AC" bgColor="#C8102E" fgColor="#fff" players={acBench} />
           <DugoutPanel sigla={MY_TEAM_INFO.sigla} bgColor={MY_TEAM_INFO.logoColori.bg} fgColor={MY_TEAM_INFO.logoColori.fg} players={myBench} />
         </div>
@@ -445,6 +572,14 @@ export function MatchView() {
           {/* Mario's Squad — metà bassa */}
           <PitchHalf rows={myRows} captainId={myCapId} rowY={{ GK: 92, DEF: 79, MID: 69, ATT: 59 }} />
         </div>
+
+        {/* ── Colonna destra: tabellino voti ── */}
+        <VotiTabellino
+          acStarters={acStarters}
+          myStarters={myStarters}
+          acCapId={acCapId}
+          myCapId={myCapId}
+        />
       </div>
     </div>
   );

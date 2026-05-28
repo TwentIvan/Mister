@@ -1,0 +1,44 @@
+Due interventi sulla Vista Match: rifinitura panchine (dugout senza label) + nuova colonna voti a destra.
+Task A — Dugout container leggero, SENZA label "Panchina"
+
+Avvolgi ciascuna delle 2 panchine in un contenitore "dugout" sobrio:
+
+Pannello con angoli arrotondati
+Accenno di "tettoia": una fascia superiore sottile (header strip) leggermente più scura, o un bordo superiore con curva leggera, che suggerisce il tetto della pensilina
+Niente 3D pesante — deve solo dare l'idea "panchina"
+
+
+Rimuovi completamente la label testuale "PANCHINA". Spreca una riga di altezza ed è ovvia dal contesto. Niente parola, niente riga dedicata.
+Identità squadra senza costare altezza: nella fascia-tetto sottile (orizzontale) del dugout, metti solo un piccolo crest/cerchio squadra (le sigle circolari "AC"/"MS" già usate altrove) a sinistra. Sta nella striscia orizzontale del tetto, non occupa una riga verticale propria. In alternativa: colora la fascia-tetto col colore della squadra. L'obiettivo è zero righe sprecate in verticale.
+I 14 badge compressi riempiono il dugout, massimizzando lo spazio verticale disponibile (che ora è più ampio senza la label).
+
+Task B — Colonna voti a destra (tabellino)
+La colonna destra (ora vuota) diventa il tabellino dei voti validi. Due sezioni, una per squadra.
+Struttura:
+┌─────────────────────────┐
+│ [crest] ATLETICO CAFFEINA│  ← header sezione (compatto)
+│ Gregorio (P)      7.3    │
+│ Pavard (D)        7.4    │
+│ Bremer (D)        8.2    │
+│ ... (gli 11 titolari)    │
+│ ─────────────────────    │
+│ Somma voti*      XX.X    │  ← preview parziale
+├─────────────────────────┤
+│ [crest] MARIO'S SQUAD    │
+│ Reina (P)         7.5    │
+│ ... (gli 11 titolari)    │
+│ ─────────────────────    │
+│ Somma voti*      XX.X    │
+└─────────────────────────┘
+Dettagli:
+
+Mostra gli 11 titolari di ogni squadra, ordine di reparto (P → D → C → A)
+Ogni riga: cognome + (lettera ruolo) a sinistra, voto in mono a destra
+Capitano: piccolo indicatore "C" giallo accanto al nome (il suo voto conterà ×1.5 nel calcolo finale)
+Voto NULL (<15min): mostra "S.V." invece del numero
+Somma voti: preview = somma semplice degli 11 voti, etichettata come provvisoria (asterisco "* calcolo completo in arrivo"). Il vero risultato fanta-team arriva con lo Step 5
+Stile compatto, voti in JetBrains Mono allineati a destra, header sezione con crest/colori squadra
+
+Layout 3 colonne: la pagina diventa [dugout panchine | pitch | tabellino voti]. Su desktop wide ci sta.
+Responsive: su viewport stretti il tabellino può andare sotto il pitch (stacked) o essere collassabile, idem le panchine. Priorità al pitch leggibile.
+Riportami screenshot con dugout (senza label, con crest nel tetto) + colonna voti popolata.
