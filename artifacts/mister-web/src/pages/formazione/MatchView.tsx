@@ -289,19 +289,25 @@ function DugoutPanel({ sigla, bgColor, fgColor, players }: DugoutPanelProps) {
       backdropFilter: "blur(4px)",
       overflow: "hidden",
       display: "flex",
-      flexDirection: "column",
+      flexDirection: "row",   // layout orizzontale: tettoia sinistra | giocatori destra
     }}>
-      {/* ── Tettoia: striscia sottile colorata con il colore squadra, solo crest ── */}
+      {/* ── Tettoia verticale: fascia sul lato sinistro (spalle al campo), tutta l'altezza ── */}
       <div style={{
+        width: 12,
         flexShrink: 0,
-        height: 14,
-        background: `linear-gradient(90deg, ${bgColor}70 0%, ${bgColor}28 100%)`,
-        borderBottom: "1px solid rgba(255,255,255,0.06)",
-        display: "flex", alignItems: "center", paddingLeft: 5,
-        boxShadow: "0 1px 4px rgba(0,0,0,0.35)",
+        background: `linear-gradient(180deg, ${bgColor}80 0%, ${bgColor}30 60%, ${bgColor}12 100%)`,
+        borderRight: "1px solid rgba(255,255,255,0.06)",
+        // Ombra sul bordo destro che evoca curvatura/profondità della pensilina
+        boxShadow: "inset -3px 0 8px rgba(0,0,0,0.45), 3px 0 6px rgba(0,0,0,0.3)",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        paddingTop: 5,
+        gap: 3,
       }}>
-        <div style={{ width: 11, height: 11, borderRadius: "50%", background: bgColor, border: "1px solid rgba(255,255,255,0.22)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-          <span style={{ fontFamily: "var(--font-mono)", fontSize: 5.5, fontWeight: 800, color: fgColor, lineHeight: 1 }}>{sigla}</span>
+        {/* Crest in cima alla fascia */}
+        <div style={{ width: 9, height: 9, borderRadius: "50%", background: bgColor, border: "1px solid rgba(255,255,255,0.25)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <span style={{ fontFamily: "var(--font-mono)", fontSize: 4.5, fontWeight: 800, color: fgColor, lineHeight: 1 }}>{sigla}</span>
         </div>
       </div>
 
