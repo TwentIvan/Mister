@@ -148,7 +148,7 @@ function photoOnError(player: MatchPlayer) {
 // ─── MatchPlayerToken (~63% del token "field" del builder) ───────────────────
 
 function MatchPlayerToken({ player, isCaptain = false }: { player: MatchPlayer; isCaptain?: boolean }) {
-  const PHOTO = 46, RING = 2, OUTER = PHOTO + RING * 2, PILL_W = 40, PILL_H = 10, VBADGE = 18;
+  const PHOTO = 54, RING = 2, OUTER = PHOTO + RING * 2, PILL_W = 46, PILL_H = 10, VBADGE = 20;
   const affinityColor = "rgba(74,222,128,0.9)";
   const colors  = player.colors;
   const code    = player.teamCode;
@@ -163,8 +163,8 @@ function MatchPlayerToken({ player, isCaptain = false }: { player: MatchPlayer; 
           {src && <img src={src} alt={player.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={photoOnError(player)} />}
         </div>
         <div style={{ position: "absolute", inset: 0, borderRadius: "50%", border: `${RING}px solid ${affinityColor}`, boxShadow: `0 0 5px ${affinityColor}55`, pointerEvents: "none" }} />
-        <div style={{ position: "absolute", top: -2, right: -2, width: VBADGE, height: VBADGE, borderRadius: "50%", background: hasVoto ? "#1f4733" : "rgba(0,0,0,0.45)", border: hasVoto ? "none" : "1px solid rgba(239,230,211,0.3)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 1px 3px rgba(0,0,0,0.5)" }}>
-          <span style={{ fontFamily: "var(--font-mono)", fontSize: 8, fontWeight: 700, color: "#fff", lineHeight: 1 }}>
+        <div style={{ position: "absolute", top: -2, right: -2, width: VBADGE, height: VBADGE, borderRadius: "50%", background: hasVoto ? "#1f4733" : "rgba(0,0,0,0.45)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: hasVoto ? "0 0 0 1.5px rgba(244,196,48,0.75), 0 1px 3px rgba(0,0,0,0.6)" : "0 0 0 1px rgba(239,230,211,0.3), 0 1px 3px rgba(0,0,0,0.5)" }}>
+          <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, fontWeight: 700, color: "#fff", lineHeight: 1 }}>
             {hasVoto ? player.votoMister!.toFixed(1) : "—"}
           </span>
         </div>
@@ -183,7 +183,7 @@ function MatchPlayerToken({ player, isCaptain = false }: { player: MatchPlayer; 
           <span style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "var(--font-mono)", fontSize: 7, fontWeight: 700, color: "#fff", letterSpacing: "0.04em" }}>{code}</span>
         )}
       </div>
-      <span style={{ fontSize: 10, fontWeight: 600, color: "rgba(239,230,211,0.92)", fontFamily: "var(--font-sans)", textAlign: "center", lineHeight: 1.2, maxWidth: Math.max(OUTER, PILL_W) + 6, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textShadow: "0 1px 3px rgba(0,0,0,0.7)" }}>
+      <span style={{ fontSize: 12, fontWeight: 600, color: "rgba(239,230,211,0.92)", fontFamily: "var(--font-sans)", textAlign: "center", lineHeight: 1.2, maxWidth: Math.max(OUTER, PILL_W) + 6, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textShadow: "0 1px 3px rgba(0,0,0,0.7)" }}>
         {lastName(player.name)}
       </span>
       {player.opponentCode && (
