@@ -847,6 +847,37 @@ paths:
         "403":
           description: Lineup bloccato — deadline passata
 
+  /roster:
+    get:
+      operationId: getRoster
+      tags: [roster]
+      summary: Recupera la rosa di una squadra fanta con voti di giornata
+      parameters:
+        - in: query
+          name: fantaTeamId
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: season
+          required: true
+          schema:
+            type: integer
+        - in: query
+          name: round
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Lista giocatori della rosa con voto di giornata
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RosterPlayer"
+
   /matches:
     get:
       operationId: getMatches
@@ -1794,3 +1825,36 @@ components:
           type: array
           items:
             type: string
+
+    RosterPlayer:
+      type: object
+      required: [id, name, roleClassic, photoUrl, photoCartoonUrl, realTeamName, realTeamId, realTeamColorPrimary, realTeamColorSecondary, votoMister]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        roleClassic:
+          type: string
+          enum: [GK, DEF, MID, ATT]
+        photoUrl:
+          type: string
+          nullable: true
+        photoCartoonUrl:
+          type: string
+          nullable: true
+        realTeamName:
+          type: string
+          nullable: true
+        realTeamId:
+          type: integer
+          nullable: true
+        realTeamColorPrimary:
+          type: string
+          nullable: true
+        realTeamColorSecondary:
+          type: string
+          nullable: true
+        votoMister:
+          type: number
+          nullable: true

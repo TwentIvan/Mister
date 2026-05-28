@@ -1257,6 +1257,30 @@ export const PutLineupResponse = zod.object({
 
 
 /**
+ * @summary Recupera la rosa di una squadra fanta con voti di giornata
+ */
+export const GetRosterQueryParams = zod.object({
+  "fantaTeamId": zod.coerce.string(),
+  "season": zod.coerce.number(),
+  "round": zod.coerce.number().optional()
+})
+
+export const GetRosterResponseItem = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "roleClassic": zod.enum(['GK', 'DEF', 'MID', 'ATT']),
+  "photoUrl": zod.string().nullable(),
+  "photoCartoonUrl": zod.string().nullable(),
+  "realTeamName": zod.string().nullable(),
+  "realTeamId": zod.number().nullable(),
+  "realTeamColorPrimary": zod.string().nullable(),
+  "realTeamColorSecondary": zod.string().nullable(),
+  "votoMister": zod.number().nullable()
+})
+export const GetRosterResponse = zod.array(GetRosterResponseItem)
+
+
+/**
  * @summary Recupera i match di una giornata con punteggi fanta
  */
 export const GetMatchesQueryParams = zod.object({

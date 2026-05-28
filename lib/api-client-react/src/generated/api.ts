@@ -35,6 +35,7 @@ import type {
   GetDashboardParams,
   GetLineupsParams,
   GetMatchesParams,
+  GetRosterParams,
   HealthStatus,
   League,
   LeagueInput,
@@ -53,6 +54,7 @@ import type {
   Player,
   PlayerList,
   RecalculateVotoMisterParams,
+  RosterPlayer,
   TemplateInput,
   TemplateProfile,
   TemplateUpdate,
@@ -3194,6 +3196,90 @@ export const usePutLineup = <TError = ErrorType<ValidationErrors | void>,
       > => {
       return useMutation(getPutLineupMutationOptions(options));
     }
+
+export const getGetRosterUrl = (params: GetRosterParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/roster?${stringifiedParams}` : `/api/roster`
+}
+
+/**
+ * @summary Recupera la rosa di una squadra fanta con voti di giornata
+ */
+export const getRoster = async (params: GetRosterParams, options?: RequestInit): Promise<RosterPlayer[]> => {
+
+  return customFetch<RosterPlayer[]>(getGetRosterUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetRosterQueryKey = (params?: GetRosterParams,) => {
+    return [
+    `/api/roster`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetRosterQueryOptions = <TData = Awaited<ReturnType<typeof getRoster>>, TError = ErrorType<unknown>>(params: GetRosterParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getRoster>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetRosterQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getRoster>>> = ({ signal }) => getRoster(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getRoster>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetRosterQueryResult = NonNullable<Awaited<ReturnType<typeof getRoster>>>
+export type GetRosterQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Recupera la rosa di una squadra fanta con voti di giornata
+ */
+
+export function useGetRoster<TData = Awaited<ReturnType<typeof getRoster>>, TError = ErrorType<unknown>>(
+ params: GetRosterParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getRoster>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetRosterQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 
 export const getGetMatchesUrl = (params: GetMatchesParams,) => {
   const normalizedParams = new URLSearchParams();

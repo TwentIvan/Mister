@@ -766,6 +766,29 @@ export interface ValidationErrors {
   errors: string[];
 }
 
+export type RosterPlayerRoleClassic = typeof RosterPlayerRoleClassic[keyof typeof RosterPlayerRoleClassic];
+
+
+export const RosterPlayerRoleClassic = {
+  GK: 'GK',
+  DEF: 'DEF',
+  MID: 'MID',
+  ATT: 'ATT',
+} as const;
+
+export interface RosterPlayer {
+  id: number;
+  name: string;
+  roleClassic: RosterPlayerRoleClassic;
+  photoUrl: string | null;
+  photoCartoonUrl: string | null;
+  realTeamName: string | null;
+  realTeamId: number | null;
+  realTeamColorPrimary: string | null;
+  realTeamColorSecondary: string | null;
+  votoMister: number | null;
+}
+
 export type ListTemplatesParams = {
 active_only?: boolean;
 };
@@ -812,6 +835,12 @@ export type GetLineupsParams = {
 fantaTeamId: string;
 season: number;
 round: number;
+};
+
+export type GetRosterParams = {
+fantaTeamId: string;
+season: number;
+round?: number;
 };
 
 export type GetMatchesParams = {

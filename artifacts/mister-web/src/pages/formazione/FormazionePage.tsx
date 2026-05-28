@@ -5,16 +5,51 @@ import {
   useGetLineups,
   usePutLineup,
   getGetLineupsQueryKey,
+  useGetRoster,
+  type RosterPlayer,
 } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
-// TODO: replace with /api/fanta-teams/{id}/roster endpoint when available
 import {
-  ROSA_MARIO, MATCH_GIORNATA_2, PLAYER_BY_ID, MY_TEAM_INFO,
-  TEAM_COLORS, TEAM_CODE, TEAM_LOGO_URL, TEAM_LOGO_BY_CODE, COACH_MARIO,
-  ATLETICO_CAFFEINA_ROSTER, ATLETICO_CAFFEINA_COACH,
-  type RoleClassic, type HeadCoach,
-} from "./mock-data";
+  MY_TEAM_INFO, MATCH_GIORNATA_2, TEAM_CODE, TEAM_COLORS, TEAM_LOGO_URL, COACH_MARIO,
+  type HeadCoach,
+} from "./team-constants";
 import { MatchView } from "./MatchView";
+
+// ─── Tipi locali ──────────────────────────────────────────────────────────────
+
+type RoleClassic = "GK" | "DEF" | "MID" | "ATT";
+
+type LocalRosterPlayer = {
+  id: number;
+  name: string;
+  realTeam: string;
+  roleClassic: RoleClassic;
+  photoUrl: string | null;
+  photoCartoonUrl: string | null;
+  votoMister: number | null;
+  colors: { primary: string; secondary: string };
+  teamCode: string;
+  logoUrl: string | null;
+};
+
+function adaptPlayer(p: RosterPlayer): LocalRosterPlayer {
+  const teamName = p.realTeamName ?? "";
+  return {
+    id: p.id,
+    name: p.name,
+    realTeam: teamName,
+    roleClassic: p.roleClassic as RoleClassic,
+    photoUrl: p.photoUrl,
+    photoCartoonUrl: p.photoCartoonUrl,
+    votoMister: p.votoMister,
+    colors: {
+      primary: p.realTeamColorPrimary ?? "#444",
+      secondary: p.realTeamColorSecondary ?? "#888",
+    },
+    teamCode: TEAM_CODE[teamName] ?? "???",
+    logoUrl: p.realTeamId != null ? `https://media.api-sports.io/football/teams/${p.realTeamId}.png` : null,
+  };
+}
 
 // ─── Costanti ────────────────────────────────────────────────────────────────
 
@@ -111,18 +146,6 @@ function rowPositionsForFormation(formation: number[]): number[] {
   return formation.map((_, i) => 91 - (i / (n - 1)) * 69);
 }
 
-// ─── Roster iniziale: tutti i 25, per ruolo poi nome ──────────────────────────
-
-function initialRoster(): number[] {
-  const ROLE_PRIO: Record<RoleClassic, number> = { GK: 0, DEF: 1, MID: 2, ATT: 3 };
-  return [...ROSA_MARIO]
-    .sort((a, b) => {
-      const d = ROLE_PRIO[a.roleClassic] - ROLE_PRIO[b.roleClassic];
-      return d !== 0 ? d : a.name.localeCompare(b.name);
-    })
-    .map(p => p.id);
-}
-
 // ─── Helpers payload API ──────────────────────────────────────────────────────
 
 /** Mappa slotIndex (1-11) → slotId campo (es. "2-1") dalla formazione */
@@ -163,6 +186,7 @@ function buildPutPayload(
   roster: number[],
   captainPlayerId: number | null,
   formation: number[],
+  playerById: Map<number, LocalRosterPlayer>,
 ) {
   type SlotPos = "GK" | "DEF" | "MID" | "T" | "ATT";
   const players: Array<{
@@ -187,7 +211,7 @@ function buildPutPayload(
   });
 
   roster.forEach((playerId, idx) => {
-    const player = PLAYER_BY_ID.get(playerId);
+    const player = playerById.get(playerId);
     if (!player) return;
     players.push({
       playerId,
@@ -271,7 +295,7 @@ function migrateLineup(
 // ─── PlayerToken ──────────────────────────────────────────────────────────────
 
 interface PlayerTokenProps {
-  player: typeof ROSA_MARIO[0];
+  player: LocalRosterPlayer;
   variant: "field" | "bench";
   affinityColor: string;
   isCaptain?: boolean;
@@ -292,11 +316,10 @@ function PlayerToken({
   const VBADGE  = isField ? 22 : 16;
   const CBADGE  = 18;
 
-  const colors = TEAM_COLORS[player.realTeam] ?? { primary: "#444", secondary: "#888" };
-  const code   = TEAM_CODE[player.realTeam] ?? "???";
+  const colors = player.colors;
+  const code   = player.teamCode;
   const hasVoto = player.votoMister !== null;
   const name = lastName(player.name);
-  const oppCode = player.nextOpponentShort;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: isField ? 5 : 3 }}>
@@ -323,36 +346,6 @@ function PlayerToken({
           pointerEvents: "none",
           transition: "border-color 0.15s, box-shadow 0.15s",
         }} />
-
-        {/* Pill avversario (casa/trasferta + 3 lettere) — top left */}
-        <div style={{
-          position: "absolute",
-          top: -4, left: -4,
-          display: "flex", alignItems: "center", gap: 2,
-          padding: isField ? "3px 5px" : "2px 3px",
-          borderRadius: 4,
-          background: "rgba(0,0,0,0.72)",
-          backdropFilter: "blur(4px)",
-          boxShadow: "0 1px 3px rgba(0,0,0,0.5)",
-          zIndex: 1,
-        }}>
-          {player.nextIsHome
-            ? <Home  size={isField ? 10 : 8} color="#fff" />
-            : <Plane size={isField ? 10 : 8} color="#fff" />
-          }
-          {oppCode && (
-            <span style={{
-              fontFamily: "var(--font-mono)",
-              fontSize: isField ? 9 : 7,
-              fontWeight: 600,
-              color: "#fff",
-              letterSpacing: "0.02em",
-              lineHeight: 1,
-            }}>
-              {oppCode}
-            </span>
-          )}
-        </div>
 
         {/* Badge voto — top right */}
         <div style={{
@@ -388,9 +381,9 @@ function PlayerToken({
       }}>
         <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: "50%", background: colors.primary }} />
         <div style={{ position: "absolute", right: 0, top: 0, bottom: 0, width: "50%", background: colors.secondary }} />
-        {TEAM_LOGO_URL[player.realTeam] ? (
+        {player.logoUrl ? (
           <img
-            src={TEAM_LOGO_URL[player.realTeam]} alt={code}
+            src={player.logoUrl} alt={code}
             style={{ position: "absolute", inset: 0, margin: "auto", width: isField ? 12 : 9, height: isField ? 12 : 9, objectFit: "contain", filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.8))" }}
             onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
           />
@@ -542,6 +535,7 @@ function MiniCoachToken({ coach, avversario, nextIsHome }: MiniCoachTokenProps) 
 interface PitchProps {
   modulo: string;
   fieldSlots: Record<string, number>;
+  playerById: Map<number, LocalRosterPlayer>;
   selection: Selection;
   captainId: number | null;
   onSlotClick: (slotId: string) => void;
@@ -553,12 +547,12 @@ interface PitchProps {
   fieldTeams?: Set<string>;
 }
 
-function Pitch({ modulo, fieldSlots, selection, captainId, onSlotClick, onSlotDoubleClick, coach, avversario, nextIsHome, fieldRoles = new Set<RoleClassic>(), fieldTeams = new Set<string>() }: PitchProps) {
+function Pitch({ modulo, fieldSlots, playerById, selection, captainId, onSlotClick, onSlotDoubleClick, coach, avversario, nextIsHome, fieldRoles = new Set<RoleClassic>(), fieldTeams = new Set<string>() }: PitchProps) {
   const formation = parseFormation(modulo);
   const rowPositions = rowPositionsForFormation(formation);
 
   const isFilterActive = fieldRoles.size > 0 || fieldTeams.size > 0;
-  const playerMatchesFilter = (p: typeof ROSA_MARIO[0]) =>
+  const playerMatchesFilter = (p: LocalRosterPlayer) =>
     (fieldRoles.size === 0 || fieldRoles.has(p.roleClassic)) &&
     (fieldTeams.size === 0 || fieldTeams.has(p.realTeam));
 
@@ -635,7 +629,7 @@ function Pitch({ modulo, fieldSlots, selection, captainId, onSlotClick, onSlotDo
               {Array.from({ length: slotsInRow }).map((_, slotIdx) => {
                 const slotId = `${rowIdx}-${slotIdx}`;
                 const playerId = fieldSlots[slotId];
-                const player = playerId !== undefined ? PLAYER_BY_ID.get(playerId) : undefined;
+                const player = playerId !== undefined ? playerById.get(playerId) : undefined;
                 const isOccupied = player !== undefined;
                 const isFieldSelected = selection?.kind === "field" && selection.slotId === slotId;
                 const hasRosterSelected = selection?.kind === "roster";
@@ -690,7 +684,7 @@ function Pitch({ modulo, fieldSlots, selection, captainId, onSlotClick, onSlotDo
 // ─── Riga giocatore nel roster ────────────────────────────────────────────────
 
 interface PlayerRowProps {
-  player: typeof ROSA_MARIO[0];
+  player: LocalRosterPlayer;
   priority: number;
   isSelected: boolean;
   isCompatible: boolean;
@@ -701,9 +695,9 @@ interface PlayerRowProps {
 function PlayerRow({ player, isSelected, isCompatible, hasFieldSelected, onClick }: PlayerRowProps) {
   const bg = ROLE_ROW_BG[player.roleClassic];
   const dimmed = hasFieldSelected && !isCompatible;
-  const colors = TEAM_COLORS[player.realTeam] ?? { primary: "#444", secondary: "#888" };
-  const code = TEAM_CODE[player.realTeam] ?? "???";
-  const logoUrl = TEAM_LOGO_URL[player.realTeam];
+  const colors = player.colors;
+  const code = player.teamCode;
+  const logoUrl = player.logoUrl;
 
   return (
     <div
@@ -795,29 +789,6 @@ function PlayerRow({ player, isSelected, isCompatible, hasFieldSelected, onClick
           {lastName(player.name)}
         </div>
 
-        {/* Avversario: icona casa/trasferta + 3 iniziali + logo in bianco/grigio */}
-        {player.nextOpponentShort && (() => {
-          const oppLogo = TEAM_LOGO_BY_CODE[player.nextOpponentShort];
-          return (
-            <div style={{ display: "flex", alignItems: "center", gap: 3, flexShrink: 0 }}>
-              {player.nextIsHome
-                ? <Home size={8} color="rgba(255,255,255,0.5)" />
-                : <Plane size={8} color="rgba(255,255,255,0.5)" />
-              }
-              <span style={{ fontFamily: "var(--font-mono)", fontSize: 8, fontWeight: 700, color: "rgba(255,255,255,0.5)", letterSpacing: "0.04em" }}>
-                {player.nextOpponentShort}
-              </span>
-              {oppLogo && (
-                <img
-                  src={oppLogo} alt={player.nextOpponentShort}
-                  style={{ width: 12, height: 12, objectFit: "contain", filter: "grayscale(100%) brightness(1.6)", opacity: 0.7 }}
-                  onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
-                />
-              )}
-            </div>
-          );
-        })()}
-
         {/* Voto */}
         <span style={{
           flexShrink: 0, fontFamily: "var(--font-mono)", fontSize: 12, fontWeight: 700,
@@ -850,7 +821,7 @@ const LINEUP_PARAMS = { fantaTeamId: "ft-mvp-1", season: 2024, round: 2 } as con
 export default function FormazionePage() {
   const [modulo, setModulo] = useState("4-3-3");
   const [fieldSlots, setFieldSlots] = useState<Record<string, number>>({});
-  const [roster, setRoster] = useState<number[]>(initialRoster);
+  const [roster, setRoster] = useState<number[]>([]);
   const [selection, setSelection] = useState<Selection>(null);
   const [selectedRoles, setSelectedRoles] = useState<Set<RoleClassic>>(new Set());
   const [selectedTeams, setSelectedTeams] = useState<Set<string>>(new Set());
@@ -862,14 +833,29 @@ export default function FormazionePage() {
   const { toast } = useToast();
 
   const { data: lineupData, isLoading: lineupLoading } = useGetLineups(LINEUP_PARAMS);
+  const { data: rosterData, isLoading: rosterLoading } = useGetRoster({ fantaTeamId: "ft-mvp-1", season: 2024 });
   const saveMutation = usePutLineup();
+
+  const allPlayers = useMemo(() => (rosterData ?? []).map(adaptPlayer), [rosterData]);
+  const playerById = useMemo(() => new Map(allPlayers.map(p => [p.id, p])), [allPlayers]);
 
   // Hydra stato da API al primo caricamento — non si riesegue dopo modifiche locali
   const hasHydrated = useRef(false);
   useEffect(() => {
-    if (hasHydrated.current || lineupData === undefined) return;
+    if (hasHydrated.current || lineupData === undefined || allPlayers.length === 0) return;
     hasHydrated.current = true;
-    if (lineupData === null) return; // nessun lineup salvato — stato fresco
+    if (lineupData === null) {
+      // nessun lineup salvato — init roster dalla rosa completa, ordinata per ruolo poi nome
+      const ROLE_PRIO: Record<RoleClassic, number> = { GK: 0, DEF: 1, MID: 2, ATT: 3 };
+      setRoster([...allPlayers]
+        .sort((a, b) => {
+          const d = ROLE_PRIO[a.roleClassic] - ROLE_PRIO[b.roleClassic];
+          return d !== 0 ? d : a.name.localeCompare(b.name);
+        })
+        .map(p => p.id),
+      );
+      return;
+    }
     const savedFormation = parseFormation(lineupData.module);
     setModulo(lineupData.module);
     setCaptainId(lineupData.captainPlayerId ?? null);
@@ -908,43 +894,50 @@ export default function FormazionePage() {
     return m;
   }, [fieldSlots]);
 
+  // Logo per squadra — ricavato dall'elenco dei giocatori
+  const teamLogoUrl = useMemo(() => {
+    const m = new Map<string, string>();
+    allPlayers.forEach(p => { if (p.logoUrl && !m.has(p.realTeam)) m.set(p.realTeam, p.logoUrl); });
+    return m;
+  }, [allPlayers]);
+
   // Conteggio ruoli nel roster (per i filtri)
   const rosterRoleCounts = useMemo(() => {
     const counts: Record<RoleClassic, number> = { GK: 0, DEF: 0, MID: 0, ATT: 0 };
     roster.forEach(pid => {
-      const p = PLAYER_BY_ID.get(pid);
+      const p = playerById.get(pid);
       if (p) counts[p.roleClassic]++;
     });
     return counts;
-  }, [roster]);
+  }, [roster, playerById]);
 
   // Squadre uniche nella rosa (ordine prima apparizione)
   const uniqueTeams = useMemo(() => {
     const seen = new Set<string>();
     const result: string[] = [];
-    ROSA_MARIO.forEach(p => { if (!seen.has(p.realTeam)) { seen.add(p.realTeam); result.push(p.realTeam); } });
+    allPlayers.forEach(p => { if (!seen.has(p.realTeam)) { seen.add(p.realTeam); result.push(p.realTeam); } });
     return result;
-  }, []);
+  }, [allPlayers]);
 
   // Conteggio giocatori in panchina per squadra
   const rosterTeamCounts = useMemo(() => {
     const counts: Record<string, number> = {};
     roster.forEach(pid => {
-      const p = PLAYER_BY_ID.get(pid);
+      const p = playerById.get(pid);
       if (p) counts[p.realTeam] = (counts[p.realTeam] ?? 0) + 1;
     });
     return counts;
-  }, [roster]);
+  }, [roster, playerById]);
 
   // Roster filtrato per ruolo + squadra + con priorità
   const filteredRosterRows = useMemo(() => {
     return roster
-      .map((pid, idx) => ({ player: PLAYER_BY_ID.get(pid)!, rosterIdx: idx, priority: idx + 1 }))
+      .map((pid, idx) => ({ player: playerById.get(pid)!, rosterIdx: idx, priority: idx + 1 }))
       .filter(({ player }) => player
         && (effectiveRoles.size === 0 || effectiveRoles.has(player.roleClassic))
         && (selectedTeams.size === 0 || selectedTeams.has(player.realTeam))
       );
-  }, [roster, effectiveRoles, selectedTeams]);
+  }, [roster, effectiveRoles, selectedTeams, playerById]);
 
   // ── Cambio modulo ────────────────────────────────────────────────────────────
   function handleModuloChange(newModulo: string) {
@@ -972,7 +965,7 @@ export default function FormazionePage() {
 
     if (selection.kind === "roster") {
       const pid = selection.playerId;
-      const player = PLAYER_BY_ID.get(pid)!;
+      const player = playerById.get(pid)!;
       const requiredRole = getSlotRole(slotId, formation);
       if (player.roleClassic !== requiredRole) {
         if (fieldSlots[slotId] === undefined) setSelection({ kind: "field", slotId });
@@ -1046,7 +1039,7 @@ export default function FormazionePage() {
     if (selection.kind === "field") {
       // Assegna questo giocatore allo slot campo selezionato
       const slotId = selection.slotId;
-      const player = PLAYER_BY_ID.get(playerId)!;
+      const player = playerById.get(playerId)!;
       const requiredRole = getSlotRole(slotId, formation);
       if (player.roleClassic !== requiredRole) {
         setSelection({ kind: "roster", rosterIdx, playerId }); return;
@@ -1069,7 +1062,7 @@ export default function FormazionePage() {
   const { avversario, avversarioSigla, avversarioColori, fieldStatus, competizione, stadio } = MATCH_GIORNATA_2;
   const salvaEnabled = starterCount === 11;
 
-  if (lineupLoading) {
+  if (lineupLoading || rosterLoading) {
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
         <div>
@@ -1128,7 +1121,7 @@ export default function FormazionePage() {
           {selection !== null && (
             <div style={{ padding: "3px 10px", borderRadius: 99, background: "rgba(74,222,128,0.1)", border: "1px solid rgba(74,222,128,0.4)", fontSize: 12, color: "var(--green-deep)", fontWeight: 500 }}>
               {selection.kind === "roster"
-                ? `${lastName(PLAYER_BY_ID.get(selection.playerId)?.name ?? "")} — scegli uno slot`
+                ? `${lastName(playerById.get(selection.playerId)?.name ?? "")} — scegli uno slot`
                 : <>Slot <strong style={{ fontFamily: "var(--font-mono)" }}>{selectedFieldSlotRole && ROLE_BADGE[selectedFieldSlotRole].label}</strong> — scegli dal roster</>
               }
             </div>
@@ -1136,7 +1129,7 @@ export default function FormazionePage() {
           <button
             disabled={!salvaEnabled || saveMutation.isPending}
             onClick={() => {
-              const payload = buildPutPayload(modulo, fieldSlots, roster, captainId, formation);
+              const payload = buildPutPayload(modulo, fieldSlots, roster, captainId, formation, playerById);
               saveMutation.mutate({ data: payload }, {
                 onSuccess: () => {
                   queryClient.invalidateQueries({ queryKey: getGetLineupsQueryKey(LINEUP_PARAMS) });
@@ -1152,7 +1145,7 @@ export default function FormazionePage() {
             {saveMutation.isPending ? "Salvataggio…" : "Salva"}
           </button>
           <button
-            onClick={() => { setFieldSlots({}); setRoster(initialRoster()); setSelection(null); setCaptainId(null); setSelectedRoles(new Set()); setSelectedTeams(new Set()); }}
+            onClick={() => { setFieldSlots({}); setRoster(allPlayers.map(p => p.id)); setSelection(null); setCaptainId(null); setSelectedRoles(new Set()); setSelectedTeams(new Set()); }}
             title="Reset formazione"
             style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 32, height: 32, borderRadius: "var(--r-sm)", border: "1px solid var(--border-strong)", background: "transparent", color: "var(--ink-mid)", cursor: "pointer", padding: 0 }}
           >
@@ -1213,7 +1206,7 @@ export default function FormazionePage() {
             {uniqueTeams.map(team => {
               const count = rosterTeamCounts[team] ?? 0;
               const isActive = selectedTeams.has(team);
-              const logoUrl = TEAM_LOGO_URL[team];
+              const logoUrl = teamLogoUrl.get(team);
               return (
                 <button
                   key={team}
@@ -1312,6 +1305,7 @@ export default function FormazionePage() {
               <Pitch
                 modulo={modulo}
                 fieldSlots={fieldSlots}
+                playerById={playerById}
                 selection={selection}
                 captainId={captainId}
                 onSlotClick={handleFieldSlotClick}

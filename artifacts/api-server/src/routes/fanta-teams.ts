@@ -2,7 +2,7 @@ import { Router, type IRouter } from "express";
 import { eq, and } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { db } from "@workspace/db";
-import { fantaTeams } from "@workspace/db";
+import { fantaTeams, players, contracts, teamColors, playerGiornataStats } from "@workspace/db";
 import {
   ListFantaTeamsParams,
   ListFantaTeamsResponse,
@@ -104,6 +104,78 @@ router.patch("/leagues/:leagueId/teams/:id", async (req, res): Promise<void> => 
     return;
   }
   res.json(UpdateFantaTeamResponse.parse(mapFantaTeam(row)));
+});
+
+router.get("/roster", async (req, res): Promise<void> => {
+  const fantaTeamId = req.query.fantaTeamId as string | undefined;
+  const season = parseInt(req.query.season as string, 10);
+
+  if (!fantaTeamId) {
+    res.status(400).json({ error: "fantaTeamId richiesto" });
+    return;
+  }
+  const round = req.query.round !== undefined ? parseInt(req.query.round as string, 10) : null;
+
+  if (isNaN(season)) {
+    res.status(400).json({ error: "season richiesto" });
+    return;
+  }
+
+  const baseRows = await db
+    .select({
+      id: players.id,
+      name: players.name,
+      roleClassic: players.roleClassic,
+      photoUrl: players.photoUrl,
+      photoCartoonUrl: players.photoCartoonUrl,
+      realTeamName: players.realTeam,
+      realTeamId: players.currentTeamId,
+      realTeamColorPrimary: teamColors.primaryHex,
+      realTeamColorSecondary: teamColors.secondaryHex,
+    })
+    .from(contracts)
+    .innerJoin(players, eq(players.id, contracts.playerId))
+    .leftJoin(teamColors, eq(teamColors.teamId, players.currentTeamId))
+    .where(
+      and(
+        eq(contracts.fantaTeamId, fantaTeamId),
+        eq(contracts.seasonStart, season),
+      ),
+    );
+
+  const votoMap = new Map<number, number | null>();
+  if (round !== null && !isNaN(round)) {
+    const pgsRows = await db
+      .select({
+        playerId: playerGiornataStats.playerId,
+        votoMister: playerGiornataStats.votoMister,
+      })
+      .from(playerGiornataStats)
+      .where(
+        and(
+          eq(playerGiornataStats.season, season),
+          eq(playerGiornataStats.round, round),
+        ),
+      );
+    for (const r of pgsRows) {
+      votoMap.set(r.playerId, r.votoMister !== null ? Number(r.votoMister) : null);
+    }
+  }
+
+  res.json(
+    baseRows.map(r => ({
+      id: r.id,
+      name: r.name,
+      roleClassic: r.roleClassic,
+      photoUrl: r.photoUrl,
+      photoCartoonUrl: r.photoCartoonUrl,
+      realTeamName: r.realTeamName,
+      realTeamId: r.realTeamId,
+      realTeamColorPrimary: r.realTeamColorPrimary,
+      realTeamColorSecondary: r.realTeamColorSecondary,
+      votoMister: votoMap.has(r.id) ? (votoMap.get(r.id) ?? null) : null,
+    })),
+  );
 });
 
 export default router;

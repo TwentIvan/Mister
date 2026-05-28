@@ -1,9 +1,6 @@
-import { Home, Plane } from "lucide-react";
-import { useGetLineups, useGetMatches } from "@workspace/api-client-react";
+import { useGetLineups, useGetMatches, useGetRoster, type RosterPlayer as ApiRosterPlayer } from "@workspace/api-client-react";
 import { computeFantaTeamScore, type SlotPosition } from "@workspace/scoring";
 import {
-  PLAYER_BY_ID,
-  ATLETICO_CAFFEINA_PLAYER_BY_ID,
   ATLETICO_CAFFEINA_COACH,
   COACH_MARIO,
   MATCH_GIORNATA_2,
@@ -11,12 +8,40 @@ import {
   TEAM_COLORS,
   TEAM_CODE,
   TEAM_LOGO_URL,
-  TEAM_LOGO_BY_CODE,
-  type RosterPlayer,
   type HeadCoach,
-} from "./mock-data";
+} from "./team-constants";
 
-// TODO: replace both rosters with /api/match/{matchId} endpoint
+type MatchPlayer = {
+  id: number;
+  name: string;
+  realTeam: string;
+  roleClassic: string;
+  photoUrl: string | null;
+  photoCartoonUrl: string | null;
+  votoMister: number | null;
+  colors: { primary: string; secondary: string };
+  teamCode: string;
+  logoUrl: string | null;
+};
+
+function adaptPlayer(p: ApiRosterPlayer): MatchPlayer {
+  const teamName = p.realTeamName ?? "";
+  return {
+    id: p.id,
+    name: p.name,
+    realTeam: teamName,
+    roleClassic: p.roleClassic,
+    photoUrl: p.photoUrl,
+    photoCartoonUrl: p.photoCartoonUrl,
+    votoMister: p.votoMister,
+    colors: {
+      primary: p.realTeamColorPrimary ?? TEAM_COLORS[teamName]?.primary ?? "#444",
+      secondary: p.realTeamColorSecondary ?? TEAM_COLORS[teamName]?.secondary ?? "#888",
+    },
+    teamCode: TEAM_CODE[teamName] ?? "???",
+    logoUrl: p.realTeamId != null ? `https://media.api-sports.io/football/teams/${p.realTeamId}.png` : (TEAM_LOGO_URL[teamName] ?? null),
+  };
+}
 
 const MY_PARAMS = { fantaTeamId: "ft-mvp-1", season: 2024, round: 2 };
 const AC_PARAMS = { fantaTeamId: "ft-mvp-7", season: 2024, round: 2 };
@@ -39,7 +64,7 @@ function lastName(name: string): string {
   return last.length > 10 ? last.slice(0, 9) + "." : last;
 }
 
-type StarterRows = { GK: RosterPlayer[]; DEF: RosterPlayer[]; MID: RosterPlayer[]; ATT: RosterPlayer[] };
+type StarterRows = { GK: MatchPlayer[]; DEF: MatchPlayer[]; MID: MatchPlayer[]; ATT: MatchPlayer[] };
 
 function emptyRows(): StarterRows { return { GK: [], DEF: [], MID: [], ATT: [] }; }
 
@@ -51,7 +76,7 @@ type LineupSlot = {
   benchOrder?:  number | null;
 };
 
-function getStarterRows(players: LineupSlot[], map: Map<number, RosterPlayer>): StarterRows {
+function getStarterRows(players: LineupSlot[], map: Map<number, MatchPlayer>): StarterRows {
   const rows = emptyRows();
   [...players]
     .filter(p => p.isStarter)
@@ -65,7 +90,7 @@ function getStarterRows(players: LineupSlot[], map: Map<number, RosterPlayer>): 
   return rows;
 }
 
-function getBenchPlayers(players: LineupSlot[], map: Map<number, RosterPlayer>): RosterPlayer[] {
+function getBenchPlayers(players: LineupSlot[], map: Map<number, MatchPlayer>): MatchPlayer[] {
   return [...players]
     .filter(p => !p.isStarter)
     .sort((a, b) => (a.benchOrder ?? 999) - (b.benchOrder ?? 999))
@@ -79,11 +104,11 @@ function xPositions(n: number): number[] {
 }
 
 // Fallback img: prova cartoon, se 404 prova la foto reale, altrimenti nascondi
-function photoSrc(player: RosterPlayer): string {
+function photoSrc(player: MatchPlayer): string {
   return (player.photoCartoonUrl ?? player.photoUrl) ?? "";
 }
 
-function photoOnError(player: RosterPlayer) {
+function photoOnError(player: MatchPlayer) {
   return (e: React.SyntheticEvent<HTMLImageElement>) => {
     const img = e.currentTarget;
     if (player.photoCartoonUrl && player.photoUrl && img.src !== player.photoUrl) {
@@ -96,13 +121,13 @@ function photoOnError(player: RosterPlayer) {
 
 // ─── MatchPlayerToken (~63% del token "field" del builder) ───────────────────
 
-function MatchPlayerToken({ player, isCaptain = false }: { player: RosterPlayer; isCaptain?: boolean }) {
+function MatchPlayerToken({ player, isCaptain = false }: { player: MatchPlayer; isCaptain?: boolean }) {
   const PHOTO = 46, RING = 2, OUTER = PHOTO + RING * 2, PILL_W = 40, PILL_H = 10, VBADGE = 14;
   const affinityColor = "rgba(74,222,128,0.9)";
-  const colors  = TEAM_COLORS[player.realTeam] ?? { primary: "#444", secondary: "#888" };
-  const code    = TEAM_CODE[player.realTeam] ?? "???";
+  const colors  = player.colors;
+  const code    = player.teamCode;
   const hasVoto = player.votoMister !== null;
-  const logoUrl = TEAM_LOGO_URL[player.realTeam];
+  const logoUrl = player.logoUrl;
   const src     = photoSrc(player);
 
   return (
@@ -197,12 +222,11 @@ function PitchHalf({ rows, captainId, rowY }: { rows: StarterRows; captainId: nu
 // ─── BenchRow — riga panchina fedele al design builder (Task 105), ~77% ──────
 // Stessa struttura di PlayerRow: banda colori sinistra + foto + nome + avversario + voto
 
-function BenchRow({ player }: { player: RosterPlayer }) {
+function BenchRow({ player }: { player: MatchPlayer }) {
   const bg      = ROLE_ROW_BG[player.roleClassic] ?? "#1a3d2b";
-  const colors  = TEAM_COLORS[player.realTeam] ?? { primary: "#444", secondary: "#888" };
-  const code    = TEAM_CODE[player.realTeam] ?? "???";
-  const logoUrl = TEAM_LOGO_URL[player.realTeam];
-  const oppLogo = player.nextOpponentShort ? TEAM_LOGO_BY_CODE[player.nextOpponentShort] : undefined;
+  const colors  = player.colors;
+  const code    = player.teamCode;
+  const logoUrl = player.logoUrl;
   const src     = photoSrc(player);
 
   return (
@@ -248,19 +272,6 @@ function BenchRow({ player }: { player: RosterPlayer }) {
           {lastName(player.name)}
         </div>
 
-        {/* Avversario */}
-        {player.nextOpponentShort && (
-          <div style={{ display: "flex", alignItems: "center", gap: 2, flexShrink: 0 }}>
-            {player.nextIsHome ? <Home size={7} color="rgba(255,255,255,0.5)" /> : <Plane size={7} color="rgba(255,255,255,0.5)" />}
-            <span style={{ fontFamily: "var(--font-mono)", fontSize: 7, fontWeight: 700, color: "rgba(255,255,255,0.5)", letterSpacing: "0.04em" }}>
-              {player.nextOpponentShort}
-            </span>
-            {oppLogo && (
-              <img src={oppLogo} alt="" style={{ width: 10, height: 10, objectFit: "contain", filter: "grayscale(100%) brightness(1.6)", opacity: 0.7 }} onError={e => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
-            )}
-          </div>
-        )}
-
         {/* Voto */}
         <span style={{ flexShrink: 0, fontFamily: "var(--font-mono)", fontSize: 10, fontWeight: 700, color: player.votoMister !== null ? "#4ade80" : "rgba(255,255,255,0.28)" }}>
           {player.votoMister !== null ? player.votoMister.toFixed(1) : "—"}
@@ -276,7 +287,7 @@ interface DugoutPanelProps {
   sigla:    string;
   bgColor:  string;
   fgColor:  string;
-  players:  RosterPlayer[];
+  players:  MatchPlayer[];
 }
 
 function DugoutPanel({ sigla, bgColor, fgColor, players }: DugoutPanelProps) {
@@ -347,7 +358,7 @@ interface VotiSectionProps {
   starters:        ReturnType<typeof getStartersOrdered>;
   totalScore?:     number | null;
   substitutions?:  SubEntry[];
-  benchById?:      Map<number, RosterPlayer>;
+  benchById?:      Map<number, MatchPlayer>;
 }
 
 function VotiSection({ label, sigla, bgColor, fgColor, starters, totalScore, substitutions, benchById }: VotiSectionProps) {
@@ -452,8 +463,8 @@ function VotiTabellino({
   myScore:      number | null | undefined;
   acSubs:       SubEntry[];
   mySubs:       SubEntry[];
-  acBenchById:  Map<number, RosterPlayer>;
-  myBenchById:  Map<number, RosterPlayer>;
+  acBenchById:  Map<number, MatchPlayer>;
+  myBenchById:  Map<number, MatchPlayer>;
 }) {
   return (
     <div style={{
@@ -494,22 +505,22 @@ const COMPETITION_ID = "comp-mvp-campionato-2024";
 const MY_TEAM_ID = "ft-mvp-1";
 const AC_TEAM_ID = "ft-mvp-7";
 
-function buildPlayerVoti(map: Map<number, RosterPlayer>): Map<number, number | null> {
+function buildPlayerVoti(map: Map<number, MatchPlayer>): Map<number, number | null> {
   return new Map(Array.from(map.entries()).map(([id, p]) => [id, p.votoMister]));
 }
 
-function buildBenchById(lineup: { players: LineupSlot[] } | null | undefined, playerMap: Map<number, RosterPlayer>): Map<number, RosterPlayer> {
+function buildBenchById(lineup: { players: LineupSlot[] } | null | undefined, playerMap: Map<number, MatchPlayer>): Map<number, MatchPlayer> {
   if (!lineup) return new Map();
   return new Map(
     lineup.players
       .filter(p => !p.isStarter)
-      .flatMap(p => { const rp = playerMap.get(p.playerId); return rp ? [[p.playerId, rp] as [number, RosterPlayer]] : []; })
+      .flatMap(p => { const rp = playerMap.get(p.playerId); return rp ? [[p.playerId, rp] as [number, MatchPlayer]] : []; })
   );
 }
 
 function computeSubs(
   lineup: { players: LineupSlot[]; module: string; captainPlayerId?: number | null } | null | undefined,
-  playerMap: Map<number, RosterPlayer>,
+  playerMap: Map<number, MatchPlayer>,
 ): SubEntry[] {
   if (!lineup) return [];
   const result = computeFantaTeamScore({
@@ -535,10 +546,15 @@ export function MatchView() {
   const { data: myLineup, isLoading: myLoading } = useGetLineups(MY_PARAMS);
   const { data: acLineup, isLoading: acLoading } = useGetLineups(AC_PARAMS);
   const { data: matchList } = useGetMatches({ competitionId: COMPETITION_ID, giornata: 2 });
+  const { data: myRosterData, isLoading: myRosterLoading } = useGetRoster({ fantaTeamId: MY_TEAM_ID, season: 2024 });
+  const { data: acRosterData, isLoading: acRosterLoading } = useGetRoster({ fantaTeamId: AC_TEAM_ID, season: 2024 });
 
   const { avversario, giornata, competizione } = MATCH_GIORNATA_2;
 
-  if (myLoading || acLoading) {
+  const myPlayerById: Map<number, MatchPlayer> = new Map((myRosterData ?? []).map(adaptPlayer).map(p => [p.id, p]));
+  const acPlayerById: Map<number, MatchPlayer> = new Map((acRosterData ?? []).map(adaptPlayer).map(p => [p.id, p]));
+
+  if (myLoading || acLoading || myRosterLoading || acRosterLoading) {
     return (
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "calc(100vh - 220px)", color: "var(--ink-mid)", fontFamily: "var(--font-mono)", fontSize: 13, letterSpacing: "0.06em" }}>
         Caricamento formazioni…
@@ -546,10 +562,10 @@ export function MatchView() {
     );
   }
 
-  const myRows     = myLineup ? getStarterRows(myLineup.players, PLAYER_BY_ID)                   : emptyRows();
-  const acRows     = acLineup ? getStarterRows(acLineup.players, ATLETICO_CAFFEINA_PLAYER_BY_ID) : emptyRows();
-  const myBench    = myLineup ? getBenchPlayers(myLineup.players, PLAYER_BY_ID)                  : [];
-  const acBench    = acLineup ? getBenchPlayers(acLineup.players, ATLETICO_CAFFEINA_PLAYER_BY_ID): [];
+  const myRows     = myLineup ? getStarterRows(myLineup.players, myPlayerById) : emptyRows();
+  const acRows     = acLineup ? getStarterRows(acLineup.players, acPlayerById) : emptyRows();
+  const myBench    = myLineup ? getBenchPlayers(myLineup.players, myPlayerById) : [];
+  const acBench    = acLineup ? getBenchPlayers(acLineup.players, acPlayerById) : [];
   const myCapId    = myLineup?.captainPlayerId ?? null;
   const acCapId    = acLineup?.captainPlayerId ?? null;
   const myStarters = getStartersOrdered(myRows, myCapId);
@@ -565,10 +581,10 @@ export function MatchView() {
   const acScore = match ? (isHome ? match.awayScore : match.homeScore) : null;
 
   // Sostituzioni calcolate client-side per il tabellino
-  const mySubs       = computeSubs(myLineup, PLAYER_BY_ID);
-  const acSubs       = computeSubs(acLineup, ATLETICO_CAFFEINA_PLAYER_BY_ID);
-  const myBenchById  = buildBenchById(myLineup, PLAYER_BY_ID);
-  const acBenchById  = buildBenchById(acLineup, ATLETICO_CAFFEINA_PLAYER_BY_ID);
+  const mySubs      = computeSubs(myLineup, myPlayerById);
+  const acSubs      = computeSubs(acLineup, acPlayerById);
+  const myBenchById = buildBenchById(myLineup, myPlayerById);
+  const acBenchById = buildBenchById(acLineup, acPlayerById);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
