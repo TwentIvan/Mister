@@ -1,4 +1,5 @@
 import { Home, Plane } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { useGetLineups, useGetMatches, useGetRoster, type RosterPlayer as ApiRosterPlayer } from "@workspace/api-client-react";
 import { computeFantaTeamScore, type SlotPosition } from "@workspace/scoring";
 import {
@@ -50,6 +51,26 @@ function adaptPlayer(p: ApiRosterPlayer): MatchPlayer {
 
 const MY_PARAMS = { fantaTeamId: "ft-mvp-1", season: 2024, round: 2 };
 const AC_PARAMS = { fantaTeamId: "ft-mvp-7", season: 2024, round: 2 };
+
+type CoachVotoData = {
+  coachName: string | null;
+  coachVoto: number;
+  coachDelta: number;
+  goalsFor: number | null;
+  goalsAgainst: number | null;
+};
+
+function useCoachVoto(fantaTeamId: string, season: number, round: number) {
+  return useQuery<CoachVotoData>({
+    queryKey: ["coach-voto", fantaTeamId, season, round],
+    queryFn: async () => {
+      const r = await fetch(`/api/coach-voto?fantaTeamId=${fantaTeamId}&season=${season}&round=${round}`);
+      if (!r.ok) throw new Error("coach-voto fetch failed");
+      return r.json() as Promise<CoachVotoData>;
+    },
+    staleTime: 60_000,
+  });
+}
 
 const AFFINITY_GREEN = "#4ade80";
 
@@ -181,8 +202,8 @@ function MatchPlayerToken({ player, isCaptain = false }: { player: MatchPlayer; 
 
 // ─── MatchMiniCoachToken — piccolo, per area tecnica in pitch ─────────────────
 
-function MatchMiniCoachToken({ coach }: { coach: HeadCoach }) {
-  const PHOTO = 34, RING = 2, OUTER = PHOTO + RING * 2;
+function MatchMiniCoachToken({ coach, coachVoto }: { coach: HeadCoach; coachVoto?: number }) {
+  const PHOTO = 34, RING = 2, OUTER = PHOTO + RING * 2, VBADGE = 13;
   const teamKey = coach.currentTeamName ?? "";
   const colors  = TEAM_COLORS[teamKey] ?? { primary: "#444", secondary: "#888" };
   const logoUrl = TEAM_LOGO_URL[teamKey];
@@ -193,6 +214,8 @@ function MatchMiniCoachToken({ coach }: { coach: HeadCoach }) {
     return last.length > 8 ? last.slice(0, 7) + "." : last;
   })();
 
+  const hasVoto = coachVoto !== undefined;
+
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, pointerEvents: "none" }}>
       <div style={{ position: "relative", width: OUTER, height: OUTER, flexShrink: 0 }}>
@@ -200,6 +223,14 @@ function MatchMiniCoachToken({ coach }: { coach: HeadCoach }) {
           {coach.photoCartoonUrl && <img src={coach.photoCartoonUrl} alt={coach.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={e => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />}
         </div>
         <div style={{ position: "absolute", inset: 0, borderRadius: "50%", border: `${RING}px solid rgba(244,196,48,0.82)`, boxShadow: "0 0 6px rgba(244,196,48,0.25)", pointerEvents: "none" }} />
+        {/* Badge voto — top right */}
+        {hasVoto && (
+          <div style={{ position: "absolute", top: -2, right: -2, width: VBADGE, height: VBADGE, borderRadius: "50%", background: "#1f4733", border: "1px solid rgba(244,196,48,0.5)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 1px 3px rgba(0,0,0,0.6)", zIndex: 2 }}>
+            <span style={{ fontFamily: "var(--font-mono)", fontSize: 6, fontWeight: 700, color: "#fff", lineHeight: 1 }}>
+              {coachVoto!.toFixed(1)}
+            </span>
+          </div>
+        )}
       </div>
       <div style={{ width: 30, height: 8, borderRadius: 3, overflow: "hidden", position: "relative", boxShadow: "0 1px 3px rgba(0,0,0,0.5)" }}>
         <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: "50%", background: colors.primary }} />
@@ -374,11 +405,15 @@ interface VotiSectionProps {
   totalScore?:     number | null;
   substitutions?:  SubEntry[];
   benchById?:      Map<number, MatchPlayer>;
+  coachName?:      string | null;
+  coachVoto?:      number;
+  coachDelta?:     number;
 }
 
-function VotiSection({ label, sigla, bgColor, fgColor, starters, totalScore, substitutions, benchById }: VotiSectionProps) {
+function VotiSection({ label, sigla, bgColor, fgColor, starters, totalScore, substitutions, benchById, coachName, coachVoto, coachDelta }: VotiSectionProps) {
   const subsMap = new Map((substitutions ?? []).map(s => [s.out, s.inId]));
   const hasRealScore = totalScore !== null && totalScore !== undefined;
+  const hasCoach = coachVoto !== undefined;
 
   return (
     <div style={{ flex: "1 1 0", minHeight: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}>
@@ -438,6 +473,29 @@ function VotiSection({ label, sigla, bgColor, fgColor, starters, totalScore, sub
         })}
       </div>
 
+      {/* Riga allenatore */}
+      {hasCoach && (
+        <div style={{
+          flexShrink: 0,
+          display: "flex", alignItems: "center",
+          padding: "3px 8px",
+          borderTop: "1px solid rgba(255,255,255,0.05)",
+          background: "rgba(244,196,48,0.06)",
+          gap: 4,
+        }}>
+          <span style={{ fontFamily: "var(--font-mono)", fontSize: 7.5, color: "rgba(244,196,48,0.55)", letterSpacing: "0.04em", flexShrink: 0 }}>MGR</span>
+          <span style={{ flex: 1, minWidth: 0, fontSize: 9, fontWeight: 500, color: "rgba(239,230,211,0.65)", fontFamily: "var(--font-sans)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+            {coachName ?? "—"}
+          </span>
+          <span style={{ flexShrink: 0, fontFamily: "var(--font-mono)", fontSize: 9, fontWeight: 700, color: "rgba(244,196,48,0.85)", minWidth: 24, textAlign: "right" }}>
+            {coachVoto!.toFixed(1)}
+          </span>
+          <span style={{ flexShrink: 0, fontFamily: "var(--font-mono)", fontSize: 9, fontWeight: 600, color: (coachDelta ?? 0) >= 0 ? "#4ade80" : "#f87171", minWidth: 28, textAlign: "right" }}>
+            {(coachDelta ?? 0) >= 0 ? "+" : ""}{(coachDelta ?? 0).toFixed(1)}
+          </span>
+        </div>
+      )}
+
       {/* Riga totale */}
       <div style={{
         flexShrink: 0,
@@ -471,6 +529,7 @@ function VotiTabellino({
   acScore, myScore,
   acSubs, mySubs,
   acBenchById, myBenchById,
+  acCoach, myCoach,
 }: {
   acStarters:   ReturnType<typeof getStartersOrdered>;
   myStarters:   ReturnType<typeof getStartersOrdered>;
@@ -480,6 +539,8 @@ function VotiTabellino({
   mySubs:       SubEntry[];
   acBenchById:  Map<number, MatchPlayer>;
   myBenchById:  Map<number, MatchPlayer>;
+  acCoach?:     CoachVotoData | null;
+  myCoach?:     CoachVotoData | null;
 }) {
   return (
     <div style={{
@@ -498,6 +559,9 @@ function VotiTabellino({
           totalScore={acScore}
           substitutions={acSubs}
           benchById={acBenchById}
+          coachName={acCoach?.coachName}
+          coachVoto={acCoach?.coachVoto}
+          coachDelta={acCoach?.coachDelta}
         />
       </div>
       {/* MS section */}
@@ -508,6 +572,9 @@ function VotiTabellino({
           totalScore={myScore}
           substitutions={mySubs}
           benchById={myBenchById}
+          coachName={myCoach?.coachName}
+          coachVoto={myCoach?.coachVoto}
+          coachDelta={myCoach?.coachDelta}
         />
       </div>
     </div>
@@ -563,6 +630,8 @@ export function MatchView() {
   const { data: matchList } = useGetMatches({ competitionId: COMPETITION_ID, giornata: 2 });
   const { data: myRosterData, isLoading: myRosterLoading } = useGetRoster({ fantaTeamId: MY_TEAM_ID, season: 2024, round: 2 });
   const { data: acRosterData, isLoading: acRosterLoading } = useGetRoster({ fantaTeamId: AC_TEAM_ID, season: 2024, round: 2 });
+  const { data: myCoachData } = useCoachVoto(MY_TEAM_ID, 2024, 2);
+  const { data: acCoachData } = useCoachVoto(AC_TEAM_ID, 2024, 2);
 
   const { avversario, giornata, competizione } = MATCH_GIORNATA_2;
 
@@ -693,12 +762,12 @@ export function MatchView() {
 
           {/* Coach AC — area tecnica superiore: y=21→55 / 140 = 15%→39.3% */}
           <div style={{ position: "absolute", left: "0%", top: "15%", width: "16%", height: "24.3%", display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none", zIndex: 2 }}>
-            <MatchMiniCoachToken coach={ATLETICO_CAFFEINA_COACH} />
+            <MatchMiniCoachToken coach={ATLETICO_CAFFEINA_COACH} coachVoto={acCoachData?.coachVoto} />
           </div>
 
           {/* Coach Mario's — area tecnica inferiore: y=85→119 / 140 = 60.7%→85% */}
           <div style={{ position: "absolute", left: "0%", top: "60.7%", width: "16%", height: "24.3%", display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none", zIndex: 2 }}>
-            <MatchMiniCoachToken coach={COACH_MARIO} />
+            <MatchMiniCoachToken coach={COACH_MARIO} coachVoto={myCoachData?.coachVoto} />
           </div>
 
           {/* Atletico Caffeina — metà alta */}
@@ -718,6 +787,8 @@ export function MatchView() {
           mySubs={mySubs}
           acBenchById={acBenchById}
           myBenchById={myBenchById}
+          acCoach={acCoachData ?? null}
+          myCoach={myCoachData ?? null}
         />
       </div>
     </div>

@@ -13,8 +13,11 @@ import {
   playerGiornataStats,
   players as playersTable,
   competitionMatches,
+  fantaTeams,
+  coaches,
+  serieAFixtures,
 } from "@workspace/db";
-import { computeFantaTeamScore, type SlotPosition } from "@workspace/scoring";
+import { computeFantaTeamScore, computeCoachVoto, type SlotPosition } from "@workspace/scoring";
 import { eq, and, inArray } from "drizzle-orm";
 
 function parseArgs() {
@@ -108,6 +111,47 @@ async function main() {
       ),
     );
 
+  // 5. Carica dati allenatori per tutti i fanta-team
+  const teamRows = await db
+    .select({ id: fantaTeams.id, headCoachId: fantaTeams.headCoachId })
+    .from(fantaTeams)
+    .where(inArray(fantaTeams.id, allTeamIds));
+
+  const coachIds = teamRows
+    .map(t => t.headCoachId)
+    .filter((id): id is number => id !== null);
+
+  const coachRows = coachIds.length > 0
+    ? await db.select().from(coaches).where(inArray(coaches.id, coachIds))
+    : [];
+
+  const coachById = new Map(coachRows.map(c => [c.id, c]));
+  const headCoachByTeam = new Map(
+    teamRows
+      .filter(t => t.headCoachId !== null)
+      .map(t => [t.id, coachById.get(t.headCoachId!)]),
+  );
+
+  // 6. Carica fixture Serie A per questa giornata
+  const fixtures = await db
+    .select()
+    .from(serieAFixtures)
+    .where(
+      and(
+        eq(serieAFixtures.season, season),
+        eq(serieAFixtures.round, round),
+      ),
+    );
+
+  // Mappa teamId → { goalsFor, goalsAgainst }
+  const fixtureResultByTeamId = new Map<number, { goalsFor: number; goalsAgainst: number }>();
+  for (const fx of fixtures) {
+    if (fx.homeGoals !== null && fx.awayGoals !== null) {
+      fixtureResultByTeamId.set(fx.homeTeamId, { goalsFor: fx.homeGoals, goalsAgainst: fx.awayGoals });
+      fixtureResultByTeamId.set(fx.awayTeamId, { goalsFor: fx.awayGoals, goalsAgainst: fx.homeGoals });
+    }
+  }
+
   // Mappa: fantaTeamId → { lineup, slotPlayers }
   type TeamData = {
     lineup: (typeof lineupRows)[0];
@@ -119,10 +163,18 @@ async function main() {
     lineupsByTeam.set(l.fantaTeamId, { lineup: l, slotPlayers });
   }
 
-  // 5. Calcola punteggio per ogni team
+  // 7. Calcola punteggio per ogni team (con fattore allenatore)
   const teamScores = new Map<string, number>();
 
+  console.log("─── Dettaglio per team ───────────────────────────────────────────");
+
   for (const [teamId, { lineup, slotPlayers }] of lineupsByTeam) {
+    const coach = headCoachByTeam.get(teamId);
+    const coachTeamId = coach?.currentTeamId ?? null;
+    const fixtureResult = coachTeamId !== null ? (fixtureResultByTeamId.get(coachTeamId) ?? null) : null;
+    const coachVoto = computeCoachVoto(fixtureResult);
+    const coachDelta = Math.round((coachVoto - 6.0) / 0.5) * 0.5;
+
     const result = computeFantaTeamScore({
       lineup: {
         module: lineup.module,
@@ -138,12 +190,21 @@ async function main() {
       playerVoti,
       playerRoles,
       config: { captainMultiplier: 1.5 },
+      coachVoto,
     });
 
     teamScores.set(teamId, result.totalScore);
 
+    const coachName = coach?.name ?? "(nessun allenatore)";
+    const risultato = fixtureResult
+      ? `${fixtureResult.goalsFor}:${fixtureResult.goalsAgainst}`
+      : "—";
+    const baseScore = result.totalScore - result.coachDelta;
+
     console.log(`${teamId}`);
-    console.log(`  Totale: ${result.totalScore.toFixed(2)}`);
+    console.log(`  Allenatore: ${coachName}  |  Risultato squadra: ${risultato}`);
+    console.log(`  VotoCoach: ${coachVoto.toFixed(1)}  |  CoachDelta: ${coachDelta >= 0 ? "+" : ""}${coachDelta.toFixed(1)}`);
+    console.log(`  Totale prima: ${baseScore.toFixed(2)}  →  Totale dopo: ${result.totalScore.toFixed(2)}`);
     if (result.captainBonus > 0) {
       console.log(`  Bonus capitano: +${result.captainBonus.toFixed(2)}`);
     }
@@ -153,9 +214,11 @@ async function main() {
     console.log();
   }
 
-  // 6. Aggiorna competition_matches con i punteggi
+  // 8. Aggiorna competition_matches con i nuovi punteggi
   const now = new Date();
   let updated = 0;
+
+  console.log("─── Aggiornamento partite ────────────────────────────────────────");
 
   for (const match of matches) {
     const homeScore = teamScores.get(match.homeFantaTeamId);

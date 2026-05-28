@@ -1,0 +1,56 @@
+Task 115 (Step 5b) — Voto allenatore + integrazione nel punteggio
+
+OBIETTIVO
+Calcolare un voto per ogni allenatore dai risultati Serie A (serie_a_fixtures)
+e applicarlo come fattore quantizzato 0.5 al punteggio fanta-team in modalita'
+Classic. Nessuna parte "efficacia sostituzioni" (richiede dati evento che non
+abbiamo).
+
+1. FUNZIONE computeCoachVoto (pura, in lib/scoring o @workspace/voto-engine)
+Input: { goalsFor, goalsAgainst } | null
+Output: votoCoach (number)
+Formula:
+  base = 6.0
+  esito:    goalsFor > goalsAgainst -> +0.5 (W)
+            goalsFor == goalsAgainst -> 0.0 (D)
+            goalsFor < goalsAgainst -> -0.5 (L)
+  goalDiff: clamp((goalsFor - goalsAgainst) * 0.1, -0.5, +0.5)
+  cleanSheet: goalsAgainst == 0 -> +0.3, altrimenti 0
+  concedeMalus: goalsAgainst >= 3 -> -0.3, altrimenti 0
+  votoCoach = base + esito + goalDiff + cleanSheet + concedeMalus
+  clamp finale votoCoach in [4.0, 8.0]
+Se input null (nessuna fixture per quella squadra) -> ritorna 6.0 (delta zero).
+Test unitari: vittoria larga con clean sheet, pareggio 0-0, sconfitta pesante
+0-3, input null.
+
+2. INTEGRAZIONE in computeFantaTeamScore
+- Aggiungi un parametro opzionale coachVoto.
+- Se presente, aggiungi al totale: quantize(coachVoto - 6.0, 0.5)
+  dove quantize(x, 0.5) = Math.round(x / 0.5) * 0.5
+- Restituisci nel risultato il coachVoto e il coachDelta applicato (per la UI).
+
+3. compute-round.ts
+Per ogni fanta-team:
+- head_coach_id -> coaches -> coaches.currentTeamId (id API-Football)
+- Trova in serie_a_fixtures (round richiesto) la partita dove la squadra del
+  coach e' home o away; ricava goalsFor/goalsAgainst dal punto di vista di
+  quella squadra.
+- computeCoachVoto(...) -> passa a computeFantaTeamScore come coachVoto.
+- Persisti i nuovi totali (con fattore coach) in competition_matches.
+Edge case: fanta-team senza head_coach_id, oppure currentTeamId non presente
+nelle fixture (es. squadra non in Serie A 2024-25, o Cagliari il cui coach non
+fu sincronizzato) -> coachVoto 6.0, delta 0, nessun impatto.
+Log: per ogni team -> nome coach, risultato squadra, votoCoach, coachDelta,
+totale prima e dopo.
+
+4. UI - match view
+- Mostra il voto coach nell'area tecnica, sul token allenatore (un badge voto
+  come quello dei giocatori). Solo nella MATCH VIEW (consuntivo), NON nel
+  builder (li' non c'e' ancora un risultato).
+- Nel tabellino, aggiungi una riga sotto i titolari: "Allenatore [nome] voto
+  X.X (+/-Y.Y)" che mostra voto e delta applicato.
+
+STOP. Riporta: per i 4 match di giornata 2 -> votoCoach + coachDelta di
+ciascuna delle 8 squadre, e i nuovi totali (prima/dopo il fattore coach).
+Screenshot match view col voto coach nell'area tecnica + riga allenatore nel
+tabellino.

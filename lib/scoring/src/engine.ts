@@ -8,6 +8,11 @@ export type LineupPlayerInput = {
   benchOrder?: number | null;
 };
 
+export type CoachMatchResult = {
+  goalsFor: number;
+  goalsAgainst: number;
+} | null;
+
 export type ScoringInput = {
   lineup: {
     module: string;
@@ -17,6 +22,7 @@ export type ScoringInput = {
   playerVoti: Map<number, number | null>;
   playerRoles: Map<number, SlotPosition>;
   config: { captainMultiplier: number };
+  coachVoto?: number;
 };
 
 export type EffectivePlayer = {
@@ -30,6 +36,7 @@ export type ScoringResult = {
   effectiveEleven: EffectivePlayer[];
   substitutions: Array<{ out: number; inId: number }>;
   captainBonus: number;
+  coachDelta: number;
   totalScore: number;
 };
 
@@ -38,8 +45,29 @@ function roleGroup(pos: SlotPosition): string {
   return pos;
 }
 
+/**
+ * Calcola il voto allenatore in base al risultato della sua squadra reale.
+ * Se input è null (nessuna fixture) ritorna 6.0 (delta zero).
+ */
+export function computeCoachVoto(match: CoachMatchResult): number {
+  if (match === null) return 6.0;
+  const { goalsFor, goalsAgainst } = match;
+  const base = 6.0;
+  const esito = goalsFor > goalsAgainst ? 0.5 : goalsFor < goalsAgainst ? -0.5 : 0.0;
+  const goalDiff = Math.min(0.5, Math.max(-0.5, (goalsFor - goalsAgainst) * 0.1));
+  const cleanSheet = goalsAgainst === 0 ? 0.3 : 0;
+  const concedeMalus = goalsAgainst >= 3 ? -0.3 : 0;
+  const raw = base + esito + goalDiff + cleanSheet + concedeMalus;
+  return Math.min(8.0, Math.max(4.0, raw));
+}
+
+/** Quantizza x al multiplo più vicino di step. */
+function quantize(x: number, step: number): number {
+  return Math.round(x / step) * step;
+}
+
 export function computeFantaTeamScore(input: ScoringInput): ScoringResult {
-  const { lineup, playerVoti, config } = input;
+  const { lineup, playerVoti, config, coachVoto } = input;
   const { captainPlayerId, players } = lineup;
   const { captainMultiplier } = config;
 
@@ -103,10 +131,15 @@ export function computeFantaTeamScore(input: ScoringInput): ScoringResult {
     }
   }
 
+  const coachDelta = coachVoto !== undefined
+    ? quantize(coachVoto - 6.0, 0.5)
+    : 0;
+
   return {
     effectiveEleven,
     substitutions,
     captainBonus,
-    totalScore: baseSum + captainBonus,
+    coachDelta,
+    totalScore: baseSum + captainBonus + coachDelta,
   };
 }

@@ -1,8 +1,9 @@
 import { Router, type IRouter } from "express";
-import { eq, and, or } from "drizzle-orm";
+import { eq, and, or, inArray } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { db } from "@workspace/db";
-import { fantaTeams, players, contracts, teamColors, playerGiornataStats, serieAFixtures } from "@workspace/db";
+import { fantaTeams, players, contracts, teamColors, playerGiornataStats, serieAFixtures, coaches } from "@workspace/db";
+import { computeCoachVoto } from "@workspace/scoring";
 import {
   ListFantaTeamsParams,
   ListFantaTeamsResponse,
@@ -240,6 +241,51 @@ router.get("/roster", async (req, res): Promise<void> => {
       };
     }),
   );
+});
+
+router.get("/coach-voto", async (req, res): Promise<void> => {
+  const fantaTeamId = req.query.fantaTeamId as string | undefined;
+  const season = parseInt(req.query.season as string, 10);
+  const round  = parseInt(req.query.round as string, 10);
+
+  if (!fantaTeamId || isNaN(season) || isNaN(round)) {
+    res.status(400).json({ error: "fantaTeamId, season, round richiesti" });
+    return;
+  }
+
+  const teamRow = await db.select({ headCoachId: fantaTeams.headCoachId })
+    .from(fantaTeams).where(eq(fantaTeams.id, fantaTeamId)).limit(1);
+  const headCoachId = teamRow[0]?.headCoachId ?? null;
+
+  if (!headCoachId) {
+    res.json({ coachName: null, coachVoto: 6.0, coachDelta: 0, goalsFor: null, goalsAgainst: null });
+    return;
+  }
+
+  const coachRow = await db.select().from(coaches).where(eq(coaches.id, headCoachId)).limit(1);
+  const coach = coachRow[0] ?? null;
+  if (!coach?.currentTeamId) {
+    res.json({ coachName: coach?.name ?? null, coachVoto: 6.0, coachDelta: 0, goalsFor: null, goalsAgainst: null });
+    return;
+  }
+
+  const fixtures = await db.select().from(serieAFixtures).where(
+    and(eq(serieAFixtures.season, season), eq(serieAFixtures.round, round)),
+  );
+  const fx = fixtures.find(f => f.homeTeamId === coach.currentTeamId || f.awayTeamId === coach.currentTeamId);
+
+  if (!fx || fx.homeGoals === null || fx.awayGoals === null) {
+    res.json({ coachName: coach.name, coachVoto: 6.0, coachDelta: 0, goalsFor: null, goalsAgainst: null });
+    return;
+  }
+
+  const isHome = fx.homeTeamId === coach.currentTeamId;
+  const goalsFor     = isHome ? fx.homeGoals : fx.awayGoals;
+  const goalsAgainst = isHome ? fx.awayGoals : fx.homeGoals;
+  const coachVoto    = computeCoachVoto({ goalsFor, goalsAgainst });
+  const coachDelta   = Math.round((coachVoto - 6.0) / 0.5) * 0.5;
+
+  res.json({ coachName: coach.name, coachVoto, coachDelta, goalsFor, goalsAgainst });
 });
 
 export default router;
