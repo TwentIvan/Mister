@@ -833,7 +833,7 @@ export default function FormazionePage() {
   const { toast } = useToast();
 
   const { data: lineupData, isLoading: lineupLoading } = useGetLineups(LINEUP_PARAMS);
-  const { data: rosterData, isLoading: rosterLoading } = useGetRoster({ fantaTeamId: "ft-mvp-1", season: 2024 });
+  const { data: rosterData, isLoading: rosterLoading } = useGetRoster({ fantaTeamId: "ft-mvp-1", season: 2024, round: 2 });
   const saveMutation = usePutLineup();
 
   const allPlayers = useMemo(() => (rosterData ?? []).map(adaptPlayer), [rosterData]);

@@ -546,8 +546,8 @@ export function MatchView() {
   const { data: myLineup, isLoading: myLoading } = useGetLineups(MY_PARAMS);
   const { data: acLineup, isLoading: acLoading } = useGetLineups(AC_PARAMS);
   const { data: matchList } = useGetMatches({ competitionId: COMPETITION_ID, giornata: 2 });
-  const { data: myRosterData, isLoading: myRosterLoading } = useGetRoster({ fantaTeamId: MY_TEAM_ID, season: 2024 });
-  const { data: acRosterData, isLoading: acRosterLoading } = useGetRoster({ fantaTeamId: AC_TEAM_ID, season: 2024 });
+  const { data: myRosterData, isLoading: myRosterLoading } = useGetRoster({ fantaTeamId: MY_TEAM_ID, season: 2024, round: 2 });
+  const { data: acRosterData, isLoading: acRosterLoading } = useGetRoster({ fantaTeamId: AC_TEAM_ID, season: 2024, round: 2 });
 
   const { avversario, giornata, competizione } = MATCH_GIORNATA_2;
 
