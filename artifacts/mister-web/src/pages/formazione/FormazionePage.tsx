@@ -10,7 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 // TODO: replace with /api/fanta-teams/{id}/roster endpoint when available
 import {
   ROSA_MARIO, MATCH_GIORNATA_2, PLAYER_BY_ID,
-  TEAM_COLORS, TEAM_CODE, TEAM_LOGO_URL, COACH_MARIO,
+  TEAM_COLORS, TEAM_CODE, TEAM_LOGO_URL, TEAM_LOGO_BY_CODE, COACH_MARIO,
   type RoleClassic, type HeadCoach,
 } from "./mock-data";
 
@@ -686,8 +686,8 @@ function PlayerRow({ player, isSelected, isCompatible, hasFieldSelected, onClick
         )}
       </div>
 
-      {/* ── Contenuto: foto + nome + avversario + voto ── */}
-      <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 10px 7px 8px", flex: 1, minWidth: 0 }}>
+      {/* ── Contenuto: foto + nome + avversario + voto — tutto su una riga ── */}
+      <div style={{ display: "flex", alignItems: "center", gap: 7, padding: "5px 8px 5px 7px", flex: 1, minWidth: 0 }}>
         {/* Foto con ring verde affinità */}
         <div style={{ position: "relative", width: 34, height: 34, flexShrink: 0 }}>
           <div style={{
@@ -713,27 +713,34 @@ function PlayerRow({ player, isSelected, isCompatible, hasFieldSelected, onClick
           }} />
         </div>
 
-        {/* Nome + avversario */}
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{
-            fontSize: 12, fontWeight: 500, color: "#fff",
-            whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
-            lineHeight: 1.2, marginBottom: 2,
-          }}>
-            {lastName(player.name)}
-          </div>
-          {player.nextOpponentShort && (
-            <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
-              {player.nextIsHome
-                ? <Home  size={7} color="rgba(255,255,255,0.55)" />
-                : <Plane size={7} color="rgba(255,255,255,0.55)" />
-              }
-              <span style={{ fontFamily: "var(--font-mono)", fontSize: 8, fontWeight: 600, color: "rgba(255,255,255,0.65)", letterSpacing: "0.04em" }}>
+        {/* Nome */}
+        <div style={{
+          flex: 1, minWidth: 0,
+          fontSize: 12, fontWeight: 500, color: "#fff",
+          whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+          lineHeight: 1,
+        }}>
+          {lastName(player.name)}
+        </div>
+
+        {/* Avversario: 3 iniziali + logo in bianco/grigio */}
+        {player.nextOpponentShort && (() => {
+          const oppLogo = TEAM_LOGO_BY_CODE[player.nextOpponentShort];
+          return (
+            <div style={{ display: "flex", alignItems: "center", gap: 3, flexShrink: 0 }}>
+              <span style={{ fontFamily: "var(--font-mono)", fontSize: 8, fontWeight: 700, color: "rgba(255,255,255,0.5)", letterSpacing: "0.04em" }}>
                 {player.nextOpponentShort}
               </span>
+              {oppLogo && (
+                <img
+                  src={oppLogo} alt={player.nextOpponentShort}
+                  style={{ width: 12, height: 12, objectFit: "contain", filter: "grayscale(100%) brightness(1.6)", opacity: 0.7 }}
+                  onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+                />
+              )}
             </div>
-          )}
-        </div>
+          );
+        })()}
 
         {/* Voto */}
         <span style={{

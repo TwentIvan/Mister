@@ -178,6 +178,13 @@ export const TEAM_LOGO_URL: Record<string, string> = {
   "Venezia":       "https://media.api-sports.io/football/teams/517.png",
 };
 
+// Mappa inversa: 3 iniziali → URL logo (per logo avversario nei badge)
+export const TEAM_LOGO_BY_CODE: Record<string, string> = Object.fromEntries(
+  Object.entries(TEAM_CODE)
+    .filter(([name]) => TEAM_LOGO_URL[name])
+    .map(([name, code]) => [code, TEAM_LOGO_URL[name]])
+);
+
 // ─── Allenatore Mario's Squad ─────────────────────────────────────────────────
 // M. Allegri (id 3386) — allena il Milan (team_id 489) nella stagione corrente
 
