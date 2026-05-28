@@ -39,7 +39,7 @@ function adaptPlayer(p: ApiRosterPlayer): MatchPlayer {
       secondary: p.realTeamColorSecondary ?? TEAM_COLORS[teamName]?.secondary ?? "#888",
     },
     teamCode: TEAM_CODE[teamName] ?? "???",
-    logoUrl: p.realTeamId != null ? `https://media.api-sports.io/football/teams/${p.realTeamId}.png` : (TEAM_LOGO_URL[teamName] ?? null),
+    logoUrl: p.logoUrl ?? (TEAM_LOGO_URL[teamName] ?? null),
   };
 }
 

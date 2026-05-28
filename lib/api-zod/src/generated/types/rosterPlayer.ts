@@ -17,5 +17,6 @@ export interface RosterPlayer {
   realTeamId: number | null;
   realTeamColorPrimary: string | null;
   realTeamColorSecondary: string | null;
+  logoUrl: string | null;
   votoMister: number | null;
 }

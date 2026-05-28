@@ -380,33 +380,33 @@ function buildLineupPlayers(
   const slots: SlotEntry[] = [];
 
   // Titolari
-  slots.push({ playerId: gks[0],          slotPosition: "GK",  slotIndex: 0,  isStarter: true, benchOrder: null });
-  slots.push({ playerId: defsActive[0],   slotPosition: "DEF", slotIndex: 1,  isStarter: true, benchOrder: null });
-  slots.push({ playerId: defsActive[1],   slotPosition: "DEF", slotIndex: 2,  isStarter: true, benchOrder: null });
-  slots.push({ playerId: defSv,           slotPosition: "DEF", slotIndex: 3,  isStarter: true, benchOrder: null }); // *** SV
-  slots.push({ playerId: defsActive[2],   slotPosition: "DEF", slotIndex: 4,  isStarter: true, benchOrder: null });
-  slots.push({ playerId: mids[0],         slotPosition: "MID", slotIndex: 5,  isStarter: true, benchOrder: null });
-  slots.push({ playerId: mids[1],         slotPosition: "MID", slotIndex: 6,  isStarter: true, benchOrder: null });
-  slots.push({ playerId: mids[2],         slotPosition: "MID", slotIndex: 7,  isStarter: true, benchOrder: null });
-  slots.push({ playerId: atts[0],         slotPosition: "ATT", slotIndex: 8,  isStarter: true, benchOrder: null }); // capitano
-  slots.push({ playerId: atts[1],         slotPosition: "ATT", slotIndex: 9,  isStarter: true, benchOrder: null });
-  slots.push({ playerId: atts[2],         slotPosition: "ATT", slotIndex: 10, isStarter: true, benchOrder: null });
+  slots.push({ playerId: gks[0],          slotPosition: "GK",  slotIndex: 1,  isStarter: true, benchOrder: null });
+  slots.push({ playerId: defsActive[0],   slotPosition: "DEF", slotIndex: 2,  isStarter: true, benchOrder: null });
+  slots.push({ playerId: defsActive[1],   slotPosition: "DEF", slotIndex: 3,  isStarter: true, benchOrder: null });
+  slots.push({ playerId: defSv,           slotPosition: "DEF", slotIndex: 4,  isStarter: true, benchOrder: null }); // *** SV
+  slots.push({ playerId: defsActive[2],   slotPosition: "DEF", slotIndex: 5,  isStarter: true, benchOrder: null });
+  slots.push({ playerId: mids[0],         slotPosition: "MID", slotIndex: 6,  isStarter: true, benchOrder: null });
+  slots.push({ playerId: mids[1],         slotPosition: "MID", slotIndex: 7,  isStarter: true, benchOrder: null });
+  slots.push({ playerId: mids[2],         slotPosition: "MID", slotIndex: 8,  isStarter: true, benchOrder: null });
+  slots.push({ playerId: atts[0],         slotPosition: "ATT", slotIndex: 9,  isStarter: true, benchOrder: null }); // capitano
+  slots.push({ playerId: atts[1],         slotPosition: "ATT", slotIndex: 10, isStarter: true, benchOrder: null });
+  slots.push({ playerId: atts[2],         slotPosition: "ATT", slotIndex: 11, isStarter: true, benchOrder: null });
 
-  // Panchina
-  slots.push({ playerId: gks[1],          slotPosition: "GK",  slotIndex: 11, isStarter: false, benchOrder: 1 });
-  slots.push({ playerId: gks[2],          slotPosition: "GK",  slotIndex: 12, isStarter: false, benchOrder: 2 });
-  slots.push({ playerId: defsActive[3],   slotPosition: "DEF", slotIndex: 13, isStarter: false, benchOrder: 1 }); // entra per DEF SV
-  slots.push({ playerId: defsActive[4],   slotPosition: "DEF", slotIndex: 14, isStarter: false, benchOrder: 2 });
-  slots.push({ playerId: defsActive[5],   slotPosition: "DEF", slotIndex: 15, isStarter: false, benchOrder: 3 });
-  slots.push({ playerId: defsActive[6],   slotPosition: "DEF", slotIndex: 16, isStarter: false, benchOrder: 4 });
-  slots.push({ playerId: mids[3],         slotPosition: "MID", slotIndex: 17, isStarter: false, benchOrder: 1 });
-  slots.push({ playerId: mids[4],         slotPosition: "MID", slotIndex: 18, isStarter: false, benchOrder: 2 });
-  slots.push({ playerId: mids[5],         slotPosition: "MID", slotIndex: 19, isStarter: false, benchOrder: 3 });
-  slots.push({ playerId: mids[6],         slotPosition: "MID", slotIndex: 20, isStarter: false, benchOrder: 4 });
-  slots.push({ playerId: mids[7],         slotPosition: "MID", slotIndex: 21, isStarter: false, benchOrder: 5 });
-  slots.push({ playerId: atts[3],         slotPosition: "ATT", slotIndex: 22, isStarter: false, benchOrder: 1 });
-  slots.push({ playerId: atts[4],         slotPosition: "ATT", slotIndex: 23, isStarter: false, benchOrder: 2 });
-  slots.push({ playerId: atts[5],         slotPosition: "ATT", slotIndex: 24, isStarter: false, benchOrder: 3 });
+  // Panchina (slotIndex 12-25, coerente con buildPutPayload che usa 12+idx)
+  slots.push({ playerId: gks[1],          slotPosition: "GK",  slotIndex: 12, isStarter: false, benchOrder: 1 });
+  slots.push({ playerId: gks[2],          slotPosition: "GK",  slotIndex: 13, isStarter: false, benchOrder: 2 });
+  slots.push({ playerId: defsActive[3],   slotPosition: "DEF", slotIndex: 14, isStarter: false, benchOrder: 1 }); // entra per DEF SV
+  slots.push({ playerId: defsActive[4],   slotPosition: "DEF", slotIndex: 15, isStarter: false, benchOrder: 2 });
+  slots.push({ playerId: defsActive[5],   slotPosition: "DEF", slotIndex: 16, isStarter: false, benchOrder: 3 });
+  slots.push({ playerId: defsActive[6],   slotPosition: "DEF", slotIndex: 17, isStarter: false, benchOrder: 4 });
+  slots.push({ playerId: mids[3],         slotPosition: "MID", slotIndex: 18, isStarter: false, benchOrder: 1 });
+  slots.push({ playerId: mids[4],         slotPosition: "MID", slotIndex: 19, isStarter: false, benchOrder: 2 });
+  slots.push({ playerId: mids[5],         slotPosition: "MID", slotIndex: 20, isStarter: false, benchOrder: 3 });
+  slots.push({ playerId: mids[6],         slotPosition: "MID", slotIndex: 21, isStarter: false, benchOrder: 4 });
+  slots.push({ playerId: mids[7],         slotPosition: "MID", slotIndex: 22, isStarter: false, benchOrder: 5 });
+  slots.push({ playerId: atts[3],         slotPosition: "ATT", slotIndex: 23, isStarter: false, benchOrder: 1 });
+  slots.push({ playerId: atts[4],         slotPosition: "ATT", slotIndex: 24, isStarter: false, benchOrder: 2 });
+  slots.push({ playerId: atts[5],         slotPosition: "ATT", slotIndex: 25, isStarter: false, benchOrder: 3 });
 
   return slots;
 }

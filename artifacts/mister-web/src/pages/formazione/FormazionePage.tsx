@@ -47,7 +47,7 @@ function adaptPlayer(p: RosterPlayer): LocalRosterPlayer {
       secondary: p.realTeamColorSecondary ?? "#888",
     },
     teamCode: TEAM_CODE[teamName] ?? "???",
-    logoUrl: p.realTeamId != null ? `https://media.api-sports.io/football/teams/${p.realTeamId}.png` : null,
+    logoUrl: p.logoUrl ?? null,
   };
 }
 

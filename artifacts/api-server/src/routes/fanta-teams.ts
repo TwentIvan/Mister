@@ -132,10 +132,11 @@ router.get("/roster", async (req, res): Promise<void> => {
       realTeamId: players.currentTeamId,
       realTeamColorPrimary: teamColors.primaryHex,
       realTeamColorSecondary: teamColors.secondaryHex,
+      realTeamApiId: teamColors.teamId,
     })
     .from(contracts)
     .innerJoin(players, eq(players.id, contracts.playerId))
-    .leftJoin(teamColors, eq(teamColors.teamId, players.currentTeamId))
+    .leftJoin(teamColors, eq(teamColors.teamName, players.realTeam))
     .where(
       and(
         eq(contracts.fantaTeamId, fantaTeamId),
@@ -170,9 +171,12 @@ router.get("/roster", async (req, res): Promise<void> => {
       photoUrl: r.photoUrl,
       photoCartoonUrl: r.photoCartoonUrl,
       realTeamName: r.realTeamName,
-      realTeamId: r.realTeamId,
+      realTeamId: r.realTeamApiId ?? r.realTeamId,
       realTeamColorPrimary: r.realTeamColorPrimary,
       realTeamColorSecondary: r.realTeamColorSecondary,
+      logoUrl: r.realTeamApiId != null
+        ? `https://media.api-sports.io/football/teams/${r.realTeamApiId}.png`
+        : null,
       votoMister: votoMap.has(r.id) ? (votoMap.get(r.id) ?? null) : null,
     })),
   );

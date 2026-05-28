@@ -1828,7 +1828,7 @@ components:
 
     RosterPlayer:
       type: object
-      required: [id, name, roleClassic, photoUrl, photoCartoonUrl, realTeamName, realTeamId, realTeamColorPrimary, realTeamColorSecondary, votoMister]
+      required: [id, name, roleClassic, photoUrl, photoCartoonUrl, realTeamName, realTeamId, realTeamColorPrimary, realTeamColorSecondary, logoUrl, votoMister]
       properties:
         id:
           type: integer
@@ -1853,6 +1853,9 @@ components:
           type: string
           nullable: true
         realTeamColorSecondary:
+          type: string
+          nullable: true
+        logoUrl:
           type: string
           nullable: true
         votoMister:
