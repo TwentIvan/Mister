@@ -1861,3 +1861,9 @@ components:
         votoMister:
           type: number
           nullable: true
+        opponentCode:
+          type: string
+          nullable: true
+        opponentIsHome:
+          type: boolean
+          nullable: true

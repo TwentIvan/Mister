@@ -1,3 +1,4 @@
+import { Home, Plane } from "lucide-react";
 import { useGetLineups, useGetMatches, useGetRoster, type RosterPlayer as ApiRosterPlayer } from "@workspace/api-client-react";
 import { computeFantaTeamScore, type SlotPosition } from "@workspace/scoring";
 import {
@@ -22,6 +23,8 @@ type MatchPlayer = {
   colors: { primary: string; secondary: string };
   teamCode: string;
   logoUrl: string | null;
+  opponentCode: string | null;
+  opponentIsHome: boolean | null;
 };
 
 function adaptPlayer(p: ApiRosterPlayer): MatchPlayer {
@@ -40,6 +43,8 @@ function adaptPlayer(p: ApiRosterPlayer): MatchPlayer {
     },
     teamCode: TEAM_CODE[teamName] ?? "???",
     logoUrl: p.logoUrl ?? (TEAM_LOGO_URL[teamName] ?? null),
+    opponentCode: p.opponentCode ?? null,
+    opponentIsHome: p.opponentIsHome ?? null,
   };
 }
 
@@ -160,6 +165,16 @@ function MatchPlayerToken({ player, isCaptain = false }: { player: MatchPlayer; 
       <span style={{ fontSize: 10, fontWeight: 600, color: "rgba(239,230,211,0.92)", fontFamily: "var(--font-sans)", textAlign: "center", lineHeight: 1.2, maxWidth: Math.max(OUTER, PILL_W) + 6, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textShadow: "0 1px 3px rgba(0,0,0,0.7)" }}>
         {lastName(player.name)}
       </span>
+      {player.opponentCode && (
+        <div style={{ display: "flex", alignItems: "center", gap: 2, padding: "1px 4px", borderRadius: 3, background: "rgba(0,0,0,0.62)", backdropFilter: "blur(4px)", boxShadow: "0 1px 3px rgba(0,0,0,0.45)" }}>
+          {player.opponentIsHome
+            ? <Home  size={7} color="rgba(239,230,211,0.75)" />
+            : <Plane size={7} color="rgba(239,230,211,0.75)" />}
+          <span style={{ fontFamily: "var(--font-mono)", fontSize: 7, fontWeight: 600, color: "rgba(239,230,211,0.85)", lineHeight: 1, letterSpacing: "0.04em" }}>
+            {player.opponentCode}
+          </span>
+        </div>
+      )}
     </div>
   );
 }

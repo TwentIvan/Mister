@@ -30,6 +30,8 @@ type LocalRosterPlayer = {
   colors: { primary: string; secondary: string };
   teamCode: string;
   logoUrl: string | null;
+  opponentCode: string | null;
+  opponentIsHome: boolean | null;
 };
 
 function adaptPlayer(p: RosterPlayer): LocalRosterPlayer {
@@ -48,6 +50,8 @@ function adaptPlayer(p: RosterPlayer): LocalRosterPlayer {
     },
     teamCode: TEAM_CODE[teamName] ?? "???",
     logoUrl: p.logoUrl ?? null,
+    opponentCode: p.opponentCode ?? null,
+    opponentIsHome: p.opponentIsHome ?? null,
   };
 }
 
@@ -409,6 +413,25 @@ function PlayerToken({
       }}>
         {name}
       </span>
+
+      {/* Pill avversario */}
+      {player.opponentCode && (
+        <div style={{
+          display: "flex", alignItems: "center", gap: 2,
+          padding: isField ? "2px 5px" : "1px 4px",
+          borderRadius: 3,
+          background: "rgba(0,0,0,0.62)",
+          backdropFilter: "blur(4px)",
+          boxShadow: "0 1px 3px rgba(0,0,0,0.45)",
+        }}>
+          {player.opponentIsHome
+            ? <Home  size={isField ? 8 : 7} color="rgba(239,230,211,0.75)" />
+            : <Plane size={isField ? 8 : 7} color="rgba(239,230,211,0.75)" />}
+          <span style={{ fontFamily: "var(--font-mono)", fontSize: isField ? 8 : 7, fontWeight: 600, color: "rgba(239,230,211,0.85)", lineHeight: 1, letterSpacing: "0.04em" }}>
+            {player.opponentCode}
+          </span>
+        </div>
+      )}
 
       {benchPriority !== undefined && (
         <span style={{
@@ -788,6 +811,22 @@ function PlayerRow({ player, isSelected, isCompatible, hasFieldSelected, onClick
         }}>
           {lastName(player.name)}
         </div>
+
+        {/* Pill avversario */}
+        {player.opponentCode && (
+          <div style={{
+            display: "flex", alignItems: "center", gap: 2,
+            padding: "1px 4px", borderRadius: 3, flexShrink: 0,
+            background: "rgba(0,0,0,0.45)",
+          }}>
+            {player.opponentIsHome
+              ? <Home  size={8} color="rgba(239,230,211,0.65)" />
+              : <Plane size={8} color="rgba(239,230,211,0.65)" />}
+            <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, fontWeight: 600, color: "rgba(239,230,211,0.75)", lineHeight: 1, letterSpacing: "0.04em" }}>
+              {player.opponentCode}
+            </span>
+          </div>
+        )}
 
         {/* Voto */}
         <span style={{

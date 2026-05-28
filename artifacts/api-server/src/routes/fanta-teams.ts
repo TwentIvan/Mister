@@ -1,8 +1,8 @@
 import { Router, type IRouter } from "express";
-import { eq, and } from "drizzle-orm";
+import { eq, and, or } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { db } from "@workspace/db";
-import { fantaTeams, players, contracts, teamColors, playerGiornataStats } from "@workspace/db";
+import { fantaTeams, players, contracts, teamColors, playerGiornataStats, serieAFixtures } from "@workspace/db";
 import {
   ListFantaTeamsParams,
   ListFantaTeamsResponse,
@@ -106,6 +106,30 @@ router.patch("/leagues/:leagueId/teams/:id", async (req, res): Promise<void> => 
   res.json(UpdateFantaTeamResponse.parse(mapFantaTeam(row)));
 });
 
+const SERIE_A_TEAM_CODE: Record<string, string> = {
+  "Atalanta":      "ATA",
+  "Bologna":       "BOL",
+  "Cagliari":      "CAG",
+  "Como":          "COM",
+  "Empoli":        "EMP",
+  "Fiorentina":    "FIO",
+  "Genoa":         "GEN",
+  "Inter":         "INT",
+  "Juventus":      "JUV",
+  "Lazio":         "LAZ",
+  "Lecce":         "LEC",
+  "Milan":         "MIL",
+  "AC Milan":      "MIL",
+  "Monza":         "MON",
+  "Napoli":        "NAP",
+  "Parma":         "PAR",
+  "AS Roma":       "ROM",
+  "Torino":        "TOR",
+  "Udinese":       "UDI",
+  "Venezia":       "VEN",
+  "Hellas Verona": "VER",
+};
+
 router.get("/roster", async (req, res): Promise<void> => {
   const fantaTeamId = req.query.fantaTeamId as string | undefined;
   const season = parseInt(req.query.season as string, 10);
@@ -163,22 +187,58 @@ router.get("/roster", async (req, res): Promise<void> => {
     }
   }
 
+  // Mappa teamId → { opponentCode, isHome } per la giornata richiesta
+  const opponentMap = new Map<number, { opponentCode: string; isHome: boolean }>();
+  if (round !== null && !isNaN(round)) {
+    const allTeamIds = baseRows
+      .map(r => r.realTeamApiId)
+      .filter((id): id is number => id !== null);
+
+    if (allTeamIds.length > 0) {
+      const fixtures = await db
+        .select()
+        .from(serieAFixtures)
+        .where(
+          and(
+            eq(serieAFixtures.season, season),
+            eq(serieAFixtures.round, round),
+          ),
+        );
+
+      for (const fx of fixtures) {
+        const homeCode = SERIE_A_TEAM_CODE[fx.homeTeamName] ?? fx.homeTeamName.slice(0, 3).toUpperCase();
+        const awayCode = SERIE_A_TEAM_CODE[fx.awayTeamName] ?? fx.awayTeamName.slice(0, 3).toUpperCase();
+        if (allTeamIds.includes(fx.homeTeamId)) {
+          opponentMap.set(fx.homeTeamId, { opponentCode: awayCode, isHome: true });
+        }
+        if (allTeamIds.includes(fx.awayTeamId)) {
+          opponentMap.set(fx.awayTeamId, { opponentCode: homeCode, isHome: false });
+        }
+      }
+    }
+  }
+
   res.json(
-    baseRows.map(r => ({
-      id: r.id,
-      name: r.name,
-      roleClassic: r.roleClassic,
-      photoUrl: r.photoUrl,
-      photoCartoonUrl: r.photoCartoonUrl,
-      realTeamName: r.realTeamName,
-      realTeamId: r.realTeamApiId ?? r.realTeamId,
-      realTeamColorPrimary: r.realTeamColorPrimary,
-      realTeamColorSecondary: r.realTeamColorSecondary,
-      logoUrl: r.realTeamApiId != null
-        ? `https://media.api-sports.io/football/teams/${r.realTeamApiId}.png`
-        : null,
-      votoMister: votoMap.has(r.id) ? (votoMap.get(r.id) ?? null) : null,
-    })),
+    baseRows.map(r => {
+      const opp = r.realTeamApiId != null ? (opponentMap.get(r.realTeamApiId) ?? null) : null;
+      return {
+        id: r.id,
+        name: r.name,
+        roleClassic: r.roleClassic,
+        photoUrl: r.photoUrl,
+        photoCartoonUrl: r.photoCartoonUrl,
+        realTeamName: r.realTeamName,
+        realTeamId: r.realTeamApiId ?? r.realTeamId,
+        realTeamColorPrimary: r.realTeamColorPrimary,
+        realTeamColorSecondary: r.realTeamColorSecondary,
+        logoUrl: r.realTeamApiId != null
+          ? `https://media.api-sports.io/football/teams/${r.realTeamApiId}.png`
+          : null,
+        votoMister: votoMap.has(r.id) ? (votoMap.get(r.id) ?? null) : null,
+        opponentCode: opp?.opponentCode ?? null,
+        opponentIsHome: opp?.isHome ?? null,
+      };
+    }),
   );
 });
 

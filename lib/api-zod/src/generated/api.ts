@@ -1276,7 +1276,9 @@ export const GetRosterResponseItem = zod.object({
   "realTeamColorPrimary": zod.string().nullable(),
   "realTeamColorSecondary": zod.string().nullable(),
   "logoUrl": zod.string().nullable(),
-  "votoMister": zod.number().nullable()
+  "votoMister": zod.number().nullable(),
+  "opponentCode": zod.string().nullish(),
+  "opponentIsHome": zod.boolean().nullish()
 })
 export const GetRosterResponse = zod.array(GetRosterResponseItem)
 
