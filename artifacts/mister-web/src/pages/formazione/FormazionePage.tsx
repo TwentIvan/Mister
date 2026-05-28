@@ -37,6 +37,15 @@ const ROLE_BADGE: Record<RoleClassic, { label: string; bg: string }> = {
   ATT: { label: "A", bg: "#8b2c2c" },
 };
 
+// Colori per i badge filtro ruolo (inattivo / attivo)
+const ROLE_FILTER_COLORS: Record<RoleFilter, { bg: string; bgActive: string; border: string; text: string }> = {
+  tutti: { bg: "transparent",            bgActive: "var(--green-deep)", border: "var(--border-strong)", text: "var(--ink-mid)" },
+  GK:   { bg: "rgba(122,80,18,0.18)",    bgActive: "#7a5012",           border: "rgba(122,80,18,0.55)", text: "#8c6220" },
+  DEF:  { bg: "rgba(26,61,43,0.22)",     bgActive: "#1a3d2b",           border: "rgba(26,61,43,0.55)",  text: "#2d6b4f" },
+  MID:  { bg: "rgba(25,48,92,0.22)",     bgActive: "#19305c",           border: "rgba(25,48,92,0.6)",   text: "#2a4a8c" },
+  ATT:  { bg: "rgba(107,31,31,0.22)",    bgActive: "#6b1f1f",           border: "rgba(107,31,31,0.55)", text: "#8b2c2c" },
+};
+
 // Background colorato per riga del roster — leggermente desaturati per non essere "loud"
 const ROLE_ROW_BG: Record<RoleClassic, string> = {
   GK:  "#7a5012",
@@ -373,20 +382,28 @@ function PlayerToken({
         )}
       </div>
 
-      {/* Pill colori squadra (split left/right) */}
+      {/* Pill colori squadra (split left/right) + logo */}
       <div style={{
         width: PILL_W, height: PILL_H, borderRadius: 6, overflow: "hidden",
         position: "relative", flexShrink: 0, boxShadow: "0 1px 4px rgba(0,0,0,0.5)",
       }}>
         <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: "50%", background: colors.primary }} />
         <div style={{ position: "absolute", right: 0, top: 0, bottom: 0, width: "50%", background: colors.secondary }} />
-        <span style={{
-          position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center",
-          fontFamily: "var(--font-mono)", fontSize: isField ? 9 : 7, fontWeight: 700,
-          color: "#fff", textShadow: "0 1px 3px rgba(0,0,0,0.8)", letterSpacing: "0.04em",
-        }}>
-          {code}
-        </span>
+        {TEAM_LOGO_URL[player.realTeam] ? (
+          <img
+            src={TEAM_LOGO_URL[player.realTeam]} alt={code}
+            style={{ position: "absolute", inset: 0, margin: "auto", width: isField ? 12 : 9, height: isField ? 12 : 9, objectFit: "contain", filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.8))" }}
+            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+          />
+        ) : (
+          <span style={{
+            position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center",
+            fontFamily: "var(--font-mono)", fontSize: isField ? 9 : 7, fontWeight: 700,
+            color: "#fff", textShadow: "0 1px 3px rgba(0,0,0,0.8)", letterSpacing: "0.04em",
+          }}>
+            {code}
+          </span>
+        )}
       </div>
 
       {/* Cognome */}
@@ -418,17 +435,25 @@ function PlayerToken({
 interface MiniCoachTokenProps {
   coach: HeadCoach;
   avversario?: string;
+  nextIsHome?: boolean;
 }
 
-function MiniCoachToken({ coach, avversario }: MiniCoachTokenProps) {
-  const PHOTO = 44;
-  const RING  = 2;
-  const OUTER = PHOTO + RING * 2;
+function MiniCoachToken({ coach, avversario, nextIsHome }: MiniCoachTokenProps) {
+  const PHOTO  = 72;
+  const RING   = 3;
+  const OUTER  = PHOTO + RING * 2;
+  const PILL_W = 66;
+  const PILL_H = 16;
+
+  const teamKey = coach.currentTeamName ?? "";
+  const colors  = TEAM_COLORS[teamKey] ?? { primary: "#444", secondary: "#888" };
+  const code    = TEAM_CODE[teamKey] ?? "???";
+  const logoUrl = TEAM_LOGO_URL[teamKey];
 
   const shortName = (() => {
     const parts = coach.name.trim().split(/\s+/);
     const last = parts[parts.length - 1];
-    return last.length > 8 ? last.slice(0, 7) + "." : last;
+    return last.length > 9 ? last.slice(0, 8) + "." : last;
   })();
 
   const oppCode = avversario
@@ -436,17 +461,9 @@ function MiniCoachToken({ coach, avversario }: MiniCoachTokenProps) {
     : null;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2, pointerEvents: "none" }}>
-      <div style={{
-        padding: "1px 5px", borderRadius: 2,
-        background: "rgba(244,196,48,0.18)", border: "1px solid rgba(244,196,48,0.45)",
-        fontFamily: "var(--font-mono)", fontSize: 7, fontWeight: 700,
-        color: "#F4C430", letterSpacing: "0.08em", textTransform: "uppercase", lineHeight: 1.4,
-      }}>
-        Mister
-      </div>
-
-      <div style={{ position: "relative", width: OUTER, height: OUTER }}>
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 5, pointerEvents: "none" }}>
+      {/* Ring + foto (stessa struttura di PlayerToken field) */}
+      <div style={{ position: "relative", width: OUTER, height: OUTER, flexShrink: 0 }}>
         <div style={{ position: "absolute", inset: RING, borderRadius: "50%", overflow: "hidden", background: "rgba(0,0,0,0.35)" }}>
           {coach.photoCartoonUrl && (
             <img
@@ -456,33 +473,67 @@ function MiniCoachToken({ coach, avversario }: MiniCoachTokenProps) {
             />
           )}
         </div>
+        {/* Ring dorato (distingue il mister dai giocatori) */}
         <div style={{
           position: "absolute", inset: 0, borderRadius: "50%",
           border: `${RING}px solid rgba(244,196,48,0.75)`,
-          boxShadow: "0 0 6px rgba(244,196,48,0.22)",
+          boxShadow: "0 0 8px rgba(244,196,48,0.25)",
           pointerEvents: "none",
         }} />
+        {/* Pill avversario — top left */}
+        {oppCode && (
+          <div style={{
+            position: "absolute", top: -4, left: -4,
+            display: "flex", alignItems: "center", gap: 2,
+            padding: "3px 5px", borderRadius: 4,
+            background: "rgba(0,0,0,0.72)",
+            backdropFilter: "blur(4px)",
+            boxShadow: "0 1px 3px rgba(0,0,0,0.5)",
+            zIndex: 1,
+          }}>
+            {nextIsHome !== undefined && (
+              nextIsHome
+                ? <Home  size={10} color="#fff" />
+                : <Plane size={10} color="#fff" />
+            )}
+            <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, fontWeight: 600, color: "#fff", letterSpacing: "0.02em", lineHeight: 1 }}>
+              {oppCode}
+            </span>
+          </div>
+        )}
       </div>
 
+      {/* Pill bicolor con logo — stesso formato PlayerToken field */}
+      <div style={{
+        width: PILL_W, height: PILL_H, borderRadius: 6, overflow: "hidden",
+        position: "relative", flexShrink: 0, boxShadow: "0 1px 4px rgba(0,0,0,0.5)",
+      }}>
+        <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: "50%", background: colors.primary }} />
+        <div style={{ position: "absolute", right: 0, top: 0, bottom: 0, width: "50%", background: colors.secondary }} />
+        {logoUrl ? (
+          <img
+            src={logoUrl} alt={code}
+            style={{ position: "absolute", inset: 0, margin: "auto", width: 12, height: 12, objectFit: "contain", filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.8))" }}
+            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+          />
+        ) : (
+          <span style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "var(--font-mono)", fontSize: 9, fontWeight: 700, color: "#fff", textShadow: "0 1px 3px rgba(0,0,0,0.8)", letterSpacing: "0.04em" }}>
+            {code}
+          </span>
+        )}
+      </div>
+
+      {/* Cognome */}
       <span style={{
-        fontSize: 9, fontWeight: 600,
+        fontSize: 11, fontWeight: 600,
         color: "rgba(239,230,211,0.92)", fontFamily: "var(--font-sans)",
-        textAlign: "center", lineHeight: 1.1,
-        maxWidth: OUTER + 8,
+        textAlign: "center", lineHeight: 1.2,
+        maxWidth: Math.max(OUTER, PILL_W) + 8,
         overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
         textShadow: "0 1px 3px rgba(0,0,0,0.7)",
       }}>
         {shortName}
       </span>
-
-      {oppCode && (
-        <span style={{
-          fontFamily: "var(--font-mono)", fontSize: 8, fontWeight: 700,
-          color: "rgba(239,230,211,0.45)", letterSpacing: "0.06em",
-        }}>
-          vs {oppCode}
-        </span>
-      )}
     </div>
   );
 }
@@ -497,14 +548,20 @@ interface PitchProps {
   onSlotClick: (slotId: string) => void;
   onSlotDoubleClick: (slotId: string) => void;
   coach?: HeadCoach | null;
-  giornata?: number;
-  competizione?: string;
   avversario?: string;
+  nextIsHome?: boolean;
+  fieldRoleFilter?: RoleFilter;
+  fieldTeamFilter?: string | null;
 }
 
-function Pitch({ modulo, fieldSlots, selection, captainId, onSlotClick, onSlotDoubleClick, coach, giornata, competizione, avversario }: PitchProps) {
+function Pitch({ modulo, fieldSlots, selection, captainId, onSlotClick, onSlotDoubleClick, coach, avversario, nextIsHome, fieldRoleFilter = "tutti", fieldTeamFilter = null }: PitchProps) {
   const formation = parseFormation(modulo);
   const rowPositions = rowPositionsForFormation(formation);
+
+  const isFilterActive = fieldRoleFilter !== "tutti" || fieldTeamFilter !== null;
+  const playerMatchesFilter = (p: typeof ROSA_MARIO[0]) =>
+    (fieldRoleFilter === "tutti" || p.roleClassic === fieldRoleFilter) &&
+    (fieldTeamFilter === null || p.realTeam === fieldTeamFilter);
 
   return (
     <div style={{
@@ -521,7 +578,7 @@ function Pitch({ modulo, fieldSlots, selection, captainId, onSlotClick, onSlotDo
           </pattern>
         </defs>
         <rect x="0" y="0" width="100" height="140" fill="url(#pitch-stripes)" />
-        {/* Campo verde — spostato a destra (~14%) per lasciare spazio all'area tecnica */}
+        {/* Campo verde */}
         <rect x="14" y="5" width="81" height="130" fill="none" stroke="#ffffff" strokeWidth="0.6" />
         <line x1="14" y1="70" x2="95" y2="70" stroke="#ffffff" strokeWidth="0.6" />
         <circle cx="54.5" cy="70" r="11" fill="none" stroke="#ffffff" strokeWidth="0.6" />
@@ -534,48 +591,24 @@ function Pitch({ modulo, fieldSlots, selection, captainId, onSlotClick, onSlotDo
         <rect x="29" y="115" width="51" height="20" fill="none" stroke="#ffffff" strokeWidth="0.6" />
         <rect x="42" y="126" width="25" height="9" fill="none" stroke="#ffffff" strokeWidth="0.6" />
         <circle cx="54.5" cy="123" r="0.8" fill="#ffffff" />
-        {/* Area tecnica — 3 lati, quadrante basso-sinistra (propria metà campo = basso) */}
-        <line x1="3" y1="92" x2="11" y2="92" stroke="#ffffff" strokeWidth="0.6" strokeDasharray="4 3" />
-        <line x1="3" y1="112" x2="11" y2="112" stroke="#ffffff" strokeWidth="0.6" strokeDasharray="4 3" />
-        <line x1="11" y1="92" x2="11" y2="112" stroke="#ffffff" strokeWidth="0.6" strokeDasharray="4 3" />
+        {/* Area tecnica — 3 lati, tratteggio fitto (3 tratti sui lati corti, 6 sul lato lungo) */}
+        <line x1="3" y1="92"  x2="11" y2="92"  stroke="#ffffff" strokeWidth="0.6" strokeDasharray="1.6 1.6" />
+        <line x1="3" y1="112" x2="11" y2="112" stroke="#ffffff" strokeWidth="0.6" strokeDasharray="1.6 1.6" />
+        <line x1="11" y1="92" x2="11" y2="112" stroke="#ffffff" strokeWidth="0.6" strokeDasharray="1.8 1.5" />
       </svg>
 
-      {/* Overlay Giornata/Competizione — centrato sull'ampiezza del campo */}
-      {(giornata !== undefined || competizione) && (
-        <div style={{
-          position: "absolute", top: "2.2%", left: "14%", right: "7%",
-          textAlign: "center", pointerEvents: "none", zIndex: 5,
-        }}>
-          {giornata !== undefined && (
-            <div style={{
-              fontFamily: "var(--font-mono)", fontSize: 10, fontWeight: 700,
-              color: "rgba(239,230,211,0.62)", letterSpacing: "0.1em", textTransform: "uppercase",
-            }}>
-              Giornata <span>{giornata}</span>
-            </div>
-          )}
-          {competizione && (
-            <div style={{
-              fontFamily: "var(--font-sans)", fontSize: 8,
-              color: "rgba(239,230,211,0.36)", marginTop: 1, letterSpacing: "0.05em",
-            }}>
-              {competizione}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* MiniCoachToken — sovrapposto all'area tecnica */}
+      {/* MiniCoachToken — sovrapposto all'area tecnica, formato uguale ai giocatori */}
       {coach && (
         <div style={{
           position: "absolute",
-          left: "0%", top: "61%",
-          width: "15%", height: "24%",
-          display: "flex", alignItems: "center", justifyContent: "center",
+          left: "0%", top: "58%",
+          width: "16%", height: "34%",
+          display: "flex", alignItems: "flex-start", justifyContent: "center",
+          paddingTop: "2%",
           pointerEvents: "none",
           zIndex: 2,
         }}>
-          <MiniCoachToken coach={coach} avversario={avversario} />
+          <MiniCoachToken coach={coach} avversario={avversario} nextIsHome={nextIsHome} />
         </div>
       )}
 
@@ -597,6 +630,7 @@ function Pitch({ modulo, fieldSlots, selection, captainId, onSlotClick, onSlotDo
                 const isOccupied = player !== undefined;
                 const isFieldSelected = selection?.kind === "field" && selection.slotId === slotId;
                 const hasRosterSelected = selection?.kind === "roster";
+                const isFilteredOut = isFilterActive && isOccupied && !playerMatchesFilter(player!);
 
                 return (
                   <div
@@ -606,7 +640,12 @@ function Pitch({ modulo, fieldSlots, selection, captainId, onSlotClick, onSlotDo
                     role="button" tabIndex={0}
                     onKeyDown={(e) => { if (e.key === "Enter") onSlotClick(slotId); }}
                     title={isOccupied ? `${player!.name} — doppio click per togliere` : `Slot ${roleLabel}`}
-                    style={{ display: "flex", flexDirection: "column", alignItems: "center", cursor: "pointer", flexShrink: 0, outline: "none" }}
+                    style={{
+                      display: "flex", flexDirection: "column", alignItems: "center",
+                      cursor: "pointer", flexShrink: 0, outline: "none",
+                      opacity: isFilteredOut ? 0.18 : 1,
+                      transition: "opacity 0.18s",
+                    }}
                   >
                     {isOccupied ? (
                       <PlayerToken
@@ -747,11 +786,15 @@ function PlayerRow({ player, isSelected, isCompatible, hasFieldSelected, onClick
           {lastName(player.name)}
         </div>
 
-        {/* Avversario: 3 iniziali + logo in bianco/grigio */}
+        {/* Avversario: icona casa/trasferta + 3 iniziali + logo in bianco/grigio */}
         {player.nextOpponentShort && (() => {
           const oppLogo = TEAM_LOGO_BY_CODE[player.nextOpponentShort];
           return (
             <div style={{ display: "flex", alignItems: "center", gap: 3, flexShrink: 0 }}>
+              {player.nextIsHome
+                ? <Home size={8} color="rgba(255,255,255,0.5)" />
+                : <Plane size={8} color="rgba(255,255,255,0.5)" />
+              }
               <span style={{ fontFamily: "var(--font-mono)", fontSize: 8, fontWeight: 700, color: "rgba(255,255,255,0.5)", letterSpacing: "0.04em" }}>
                 {player.nextOpponentShort}
               </span>
@@ -1082,23 +1125,25 @@ export default function FormazionePage() {
         {/* ── Colonna sinistra: filtri + lista ── */}
         <div style={{ display: "flex", flexDirection: "column", gap: 6, height: COLUMN_HEIGHT }}>
 
-          {/* Filtri ruolo */}
+          {/* Filtri ruolo — colorati per ruolo */}
           <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
             {ROLE_FILTERS.map(rf => {
               const count = rf.value === "tutti" ? roster.length : rosterRoleCounts[rf.value as RoleClassic];
+              const colors = ROLE_FILTER_COLORS[rf.value];
+              const isActive = effectiveFilter === rf.value;
               return (
                 <button
                   key={rf.value}
                   onClick={() => { if (!hasFieldSelected) setManualRoleFilter(rf.value); }}
                   style={{
                     display: "flex", alignItems: "center", gap: 3,
-                    padding: "3px 7px", borderRadius: 99, border: "1px solid",
-                    borderColor: effectiveFilter === rf.value ? "var(--green-deep)" : "var(--border-strong)",
-                    background: effectiveFilter === rf.value ? "var(--green-deep)" : "transparent",
-                    color: effectiveFilter === rf.value ? "#fff" : "var(--ink-mid)",
+                    padding: "3px 7px", borderRadius: 99,
+                    border: `1px solid ${isActive ? colors.bgActive : colors.border}`,
+                    background: isActive ? colors.bgActive : colors.bg,
+                    color: isActive ? "#fff" : colors.text,
                     fontFamily: "var(--font-mono)", fontSize: 11, fontWeight: 600,
                     cursor: hasFieldSelected ? "default" : "pointer",
-                    opacity: hasFieldSelected && effectiveFilter !== rf.value ? 0.38 : 1,
+                    opacity: hasFieldSelected && !isActive ? 0.38 : 1,
                     transition: "all 0.12s",
                   }}
                 >
@@ -1109,8 +1154,8 @@ export default function FormazionePage() {
             })}
           </div>
 
-          {/* Filtri squadra: loghi + conteggio in panchina */}
-          <div style={{ display: "flex", gap: 3, flexWrap: "wrap", flexShrink: 0 }}>
+          {/* Filtri squadra: count sopra il badge, centrati */}
+          <div style={{ display: "flex", gap: 5, flexWrap: "wrap", flexShrink: 0, justifyContent: "center" }}>
             {uniqueTeams.map(team => {
               const count = rosterTeamCounts[team] ?? 0;
               const isActive = teamFilter === team;
@@ -1121,30 +1166,26 @@ export default function FormazionePage() {
                   onClick={() => setTeamFilter(prev => prev === team ? null : team)}
                   title={team}
                   style={{
-                    position: "relative", width: 26, height: 26, borderRadius: "50%", padding: 0,
-                    border: isActive ? "2px solid rgba(239,230,211,0.85)" : "2px solid rgba(239,230,211,0.12)",
-                    background: isActive ? "rgba(239,230,211,0.1)" : "rgba(239,230,211,0.04)",
-                    cursor: "pointer", outline: "none",
-                    opacity: count === 0 ? 0.25 : 1,
-                    transition: "border-color 0.12s, opacity 0.12s",
-                    display: "flex", alignItems: "center", justifyContent: "center",
+                    display: "flex", flexDirection: "column", alignItems: "center", gap: 1,
+                    background: "none", border: "none", padding: 0, cursor: "pointer", outline: "none",
+                    opacity: count === 0 ? 0.22 : 1, transition: "opacity 0.12s",
                   }}
                 >
-                  {logoUrl && (
-                    <img src={logoUrl} alt={team} style={{ width: 16, height: 16, objectFit: "contain" }} />
-                  )}
-                  {count > 0 && (
-                    <div style={{
-                      position: "absolute", bottom: -2, right: -2,
-                      width: 12, height: 12, borderRadius: "50%",
-                      background: "var(--green-deep)", color: "#fff",
-                      fontFamily: "var(--font-mono)", fontSize: 7, fontWeight: 800,
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      border: "1px solid var(--paper)", lineHeight: 1,
-                    }}>
-                      {count}
-                    </div>
-                  )}
+                  <span style={{
+                    fontFamily: "var(--font-mono)", fontSize: 8, fontWeight: 800, lineHeight: 1,
+                    color: isActive ? "var(--green-deep)" : "var(--ink-dim)",
+                  }}>
+                    {count}
+                  </span>
+                  <div style={{
+                    width: 24, height: 24, borderRadius: "50%",
+                    border: isActive ? "2px solid var(--green-deep)" : "2px solid var(--border-strong)",
+                    background: isActive ? "rgba(31,71,51,0.12)" : "transparent",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    transition: "border-color 0.12s, background 0.12s",
+                  }}>
+                    {logoUrl && <img src={logoUrl} alt={team} style={{ width: 15, height: 15, objectFit: "contain" }} />}
+                  </div>
                 </button>
               );
             })}
@@ -1172,44 +1213,66 @@ export default function FormazionePage() {
           </div>
         </div>
 
-        {/* ── Colonna destra: pitch con selettore modulo sovrapposto ── */}
-        {/* Il wrapper position:relative contiene il pitch (overflow:hidden) e il select come overlay esterno */}
-        <div style={{ position: "relative", width: "min(100%, calc((100vh - 160px) * 100 / 140))" }}>
-          <div style={{ background: "#17332a", borderRadius: "var(--r-lg)", border: "1px solid rgba(239,230,211,0.1)", overflow: "hidden", aspectRatio: "100/140" }}>
-            <Pitch
-              modulo={modulo}
-              fieldSlots={fieldSlots}
-              selection={selection}
-              captainId={captainId}
-              onSlotClick={handleFieldSlotClick}
-              onSlotDoubleClick={handleFieldSlotDoubleClick}
-              coach={COACH_MARIO}
-              giornata={MATCH_GIORNATA_2.giornata}
-              competizione="Campionato"
-              avversario={avversario}
-            />
+        {/* ── Colonna destra: Giornata + pitch con modulo select sovrapposto ── */}
+        <div style={{ width: "min(100%, calc((100vh - 160px) * 100 / 140))" }}>
+          {/* Giornata — sopra il campo, centrata sull'area verde (14% → 95%) */}
+          <div style={{
+            marginLeft: "14%", marginRight: "5%", marginBottom: 8,
+            textAlign: "center",
+          }}>
+            <div style={{
+              fontFamily: "var(--font-mono)", fontSize: 17, fontWeight: 700,
+              color: "var(--ink)", letterSpacing: "0.09em", textTransform: "uppercase", lineHeight: 1.15,
+            }}>
+              Giornata <span>{MATCH_GIORNATA_2.giornata}</span>
+            </div>
+            <div style={{
+              fontFamily: "var(--font-sans)", fontSize: 12,
+              color: "var(--ink-mid)", marginTop: 3, letterSpacing: "0.03em",
+            }}>
+              Campionato
+            </div>
           </div>
-          {/* Selettore modulo — sovrapposto sotto il badge Mister, fuori dal div overflow:hidden */}
-          <select
-            value={modulo}
-            onChange={e => handleModuloChange(e.target.value)}
-            style={{
-              position: "absolute",
-              left: "1.5%", top: "83%",
-              width: "14%",
-              fontFamily: "var(--font-mono)",
-              fontSize: 9, fontWeight: 700,
-              color: "rgba(239,230,211,0.88)",
-              background: "rgba(13,31,26,0.92)",
-              border: "1px solid rgba(239,230,211,0.22)",
-              borderRadius: 4,
-              padding: "2px 3px",
-              cursor: "pointer", outline: "none",
-              zIndex: 10,
-            }}
-          >
-            {MODULI.map(m => <option key={m} value={m}>{m}</option>)}
-          </select>
+
+          {/* Pitch + modulo select — position:relative isolato dal wrapper giornata */}
+          <div style={{ position: "relative" }}>
+            <div style={{ background: "#17332a", borderRadius: "var(--r-lg)", border: "1px solid rgba(239,230,211,0.1)", overflow: "hidden", aspectRatio: "100/140" }}>
+              <Pitch
+                modulo={modulo}
+                fieldSlots={fieldSlots}
+                selection={selection}
+                captainId={captainId}
+                onSlotClick={handleFieldSlotClick}
+                onSlotDoubleClick={handleFieldSlotDoubleClick}
+                coach={COACH_MARIO}
+                avversario={avversario}
+                nextIsHome={fieldStatus === "casa"}
+                fieldRoleFilter={manualRoleFilter}
+                fieldTeamFilter={teamFilter}
+              />
+            </div>
+            {/* Modulo select — dentro l'area tecnica (x:3-11%, y:65.7-80% del pitch) */}
+            <select
+              value={modulo}
+              onChange={e => handleModuloChange(e.target.value)}
+              style={{
+                position: "absolute",
+                left: "3%", top: "78%",
+                width: "8%",
+                fontFamily: "var(--font-mono)",
+                fontSize: 8, fontWeight: 700,
+                color: "rgba(239,230,211,0.9)",
+                background: "#1f4733",
+                border: "1px solid rgba(255,255,255,0.18)",
+                borderRadius: 3,
+                padding: "2px 2px",
+                cursor: "pointer", outline: "none",
+                zIndex: 10,
+              }}
+            >
+              {MODULI.map(m => <option key={m} value={m}>{m}</option>)}
+            </select>
+          </div>
         </div>
       </div>
 
