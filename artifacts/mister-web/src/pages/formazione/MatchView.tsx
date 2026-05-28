@@ -148,7 +148,7 @@ function photoOnError(player: MatchPlayer) {
 // ─── MatchPlayerToken (~63% del token "field" del builder) ───────────────────
 
 function MatchPlayerToken({ player, isCaptain = false }: { player: MatchPlayer; isCaptain?: boolean }) {
-  const PHOTO = 46, RING = 2, OUTER = PHOTO + RING * 2, PILL_W = 40, PILL_H = 10, VBADGE = 14;
+  const PHOTO = 46, RING = 2, OUTER = PHOTO + RING * 2, PILL_W = 40, PILL_H = 10, VBADGE = 18;
   const affinityColor = "rgba(74,222,128,0.9)";
   const colors  = player.colors;
   const code    = player.teamCode;
@@ -164,7 +164,7 @@ function MatchPlayerToken({ player, isCaptain = false }: { player: MatchPlayer; 
         </div>
         <div style={{ position: "absolute", inset: 0, borderRadius: "50%", border: `${RING}px solid ${affinityColor}`, boxShadow: `0 0 5px ${affinityColor}55`, pointerEvents: "none" }} />
         <div style={{ position: "absolute", top: -2, right: -2, width: VBADGE, height: VBADGE, borderRadius: "50%", background: hasVoto ? "#1f4733" : "rgba(0,0,0,0.45)", border: hasVoto ? "none" : "1px solid rgba(239,230,211,0.3)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 1px 3px rgba(0,0,0,0.5)" }}>
-          <span style={{ fontFamily: "var(--font-mono)", fontSize: 7, fontWeight: 700, color: "#fff", lineHeight: 1 }}>
+          <span style={{ fontFamily: "var(--font-mono)", fontSize: 8, fontWeight: 700, color: "#fff", lineHeight: 1 }}>
             {hasVoto ? player.votoMister!.toFixed(1) : "—"}
           </span>
         </div>
@@ -203,7 +203,7 @@ function MatchPlayerToken({ player, isCaptain = false }: { player: MatchPlayer; 
 // ─── MatchMiniCoachToken — piccolo, per area tecnica in pitch ─────────────────
 
 function MatchMiniCoachToken({ coach, coachVoto }: { coach: HeadCoach; coachVoto?: number }) {
-  const PHOTO = 34, RING = 2, OUTER = PHOTO + RING * 2, VBADGE = 18;
+  const PHOTO = 46, RING = 2, OUTER = PHOTO + RING * 2, VBADGE = 18;
   const teamKey = coach.currentTeamName ?? "";
   const colors  = TEAM_COLORS[teamKey] ?? { primary: "#444", secondary: "#888" };
   const logoUrl = TEAM_LOGO_URL[teamKey];
