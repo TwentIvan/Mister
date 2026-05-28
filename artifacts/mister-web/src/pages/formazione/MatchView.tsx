@@ -1,5 +1,6 @@
 import { Home, Plane } from "lucide-react";
-import { useGetLineups } from "@workspace/api-client-react";
+import { useGetLineups, useGetMatches } from "@workspace/api-client-react";
+import { computeFantaTeamScore, type SlotPosition } from "@workspace/scoring";
 import {
   PLAYER_BY_ID,
   ATLETICO_CAFFEINA_PLAYER_BY_ID,
@@ -336,18 +337,22 @@ function getStartersOrdered(rows: StarterRows, captainId: number | null) {
   );
 }
 
+interface SubEntry { out: number; inId: number }
+
 interface VotiSectionProps {
-  label:     string;
-  sigla:     string;
-  bgColor:   string;
-  fgColor:   string;
-  starters:  ReturnType<typeof getStartersOrdered>;
+  label:           string;
+  sigla:           string;
+  bgColor:         string;
+  fgColor:         string;
+  starters:        ReturnType<typeof getStartersOrdered>;
+  totalScore?:     number | null;
+  substitutions?:  SubEntry[];
+  benchById?:      Map<number, RosterPlayer>;
 }
 
-function VotiSection({ label, sigla, bgColor, fgColor, starters }: VotiSectionProps) {
-  const validVoti = starters.filter(s => s.player.votoMister !== null).map(s => s.player.votoMister!);
-  const somma     = validVoti.reduce((a, b) => a + b, 0);
-  const hasSomma  = validVoti.length > 0;
+function VotiSection({ label, sigla, bgColor, fgColor, starters, totalScore, substitutions, benchById }: VotiSectionProps) {
+  const subsMap = new Map((substitutions ?? []).map(s => [s.out, s.inId]));
+  const hasRealScore = totalScore !== null && totalScore !== undefined;
 
   return (
     <div style={{ flex: "1 1 0", minHeight: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}>
@@ -367,32 +372,47 @@ function VotiSection({ label, sigla, bgColor, fgColor, starters }: VotiSectionPr
         </span>
       </div>
 
-      {/* Righe titolari */}
+      {/* Righe titolari (+ righe sostituzione) */}
       <div style={{ flex: 1, overflowY: "auto", padding: "2px 0" }}>
-        {starters.map(({ player, role, isCap }) => (
-          <div key={player.id} style={{ display: "flex", alignItems: "center", padding: "2px 8px", gap: 4 }}>
-            {/* Lettera ruolo */}
-            <span style={{ fontFamily: "var(--font-mono)", fontSize: 8, fontWeight: 700, color: ROLE_CHIP_COLOR[role], width: 8, flexShrink: 0 }}>
-              {ROLE_LETTER[role]}
-            </span>
+        {starters.map(({ player, role, isCap }) => {
+          const isSv    = player.votoMister === null;
+          const subId   = subsMap.get(player.id);
+          const subPlayer = (subId !== undefined && benchById) ? benchById.get(subId) : undefined;
 
-            {/* Cognome + capitano */}
-            <span style={{ flex: 1, minWidth: 0, fontSize: 10, fontWeight: 500, color: "rgba(239,230,211,0.85)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", fontFamily: "var(--font-sans)" }}>
-              {lastName(player.name)}
-              {isCap && (
-                <span style={{ marginLeft: 3, fontFamily: "var(--font-mono)", fontSize: 7, fontWeight: 800, color: "#F4C430", verticalAlign: "middle" }}>C</span>
+          return (
+            <div key={player.id}>
+              {/* Riga titolare */}
+              <div style={{ display: "flex", alignItems: "center", padding: "2px 8px", gap: 4, opacity: (isSv && subPlayer) ? 0.45 : 1 }}>
+                <span style={{ fontFamily: "var(--font-mono)", fontSize: 8, fontWeight: 700, color: ROLE_CHIP_COLOR[role], width: 8, flexShrink: 0 }}>
+                  {ROLE_LETTER[role]}
+                </span>
+                <span style={{ flex: 1, minWidth: 0, fontSize: 10, fontWeight: 500, color: "rgba(239,230,211,0.85)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", fontFamily: "var(--font-sans)", textDecoration: (isSv && subPlayer) ? "line-through" : "none" }}>
+                  {lastName(player.name)}
+                  {isCap && <span style={{ marginLeft: 3, fontFamily: "var(--font-mono)", fontSize: 7, fontWeight: 800, color: "#F4C430", verticalAlign: "middle" }}>C</span>}
+                </span>
+                <span style={{ flexShrink: 0, fontFamily: "var(--font-mono)", fontSize: 10, fontWeight: 700, color: player.votoMister !== null ? "#4ade80" : "rgba(239,230,211,0.28)", minWidth: 28, textAlign: "right" }}>
+                  {player.votoMister !== null ? player.votoMister.toFixed(1) : "S.V."}
+                </span>
+              </div>
+
+              {/* Riga sostituto (solo se S.V. con sub) */}
+              {subPlayer && (
+                <div style={{ display: "flex", alignItems: "center", padding: "1px 8px 2px 16px", gap: 4 }}>
+                  <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, color: "#60a5fa", flexShrink: 0 }}>↑</span>
+                  <span style={{ flex: 1, minWidth: 0, fontSize: 9, fontWeight: 500, color: "rgba(239,230,211,0.65)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", fontFamily: "var(--font-sans)" }}>
+                    {lastName(subPlayer.name)}
+                  </span>
+                  <span style={{ flexShrink: 0, fontFamily: "var(--font-mono)", fontSize: 9, fontWeight: 700, color: "#4ade80", minWidth: 28, textAlign: "right" }}>
+                    {subPlayer.votoMister !== null ? subPlayer.votoMister.toFixed(1) : "S.V."}
+                  </span>
+                </div>
               )}
-            </span>
-
-            {/* Voto */}
-            <span style={{ flexShrink: 0, fontFamily: "var(--font-mono)", fontSize: 10, fontWeight: 700, color: player.votoMister !== null ? "#4ade80" : "rgba(239,230,211,0.28)", minWidth: 28, textAlign: "right" }}>
-              {player.votoMister !== null ? player.votoMister.toFixed(1) : "S.V."}
-            </span>
-          </div>
-        ))}
+            </div>
+          );
+        })}
       </div>
 
-      {/* Riga somma */}
+      {/* Riga totale */}
       <div style={{
         flexShrink: 0,
         display: "flex", alignItems: "center",
@@ -401,9 +421,11 @@ function VotiSection({ label, sigla, bgColor, fgColor, starters }: VotiSectionPr
         background: "rgba(0,0,0,0.18)",
         gap: 4,
       }}>
-        <span style={{ flex: 1, fontFamily: "var(--font-mono)", fontSize: 8, color: "rgba(239,230,211,0.38)", letterSpacing: "0.04em" }}>Totale*</span>
-        <span style={{ fontFamily: "var(--font-mono)", fontSize: 12, fontWeight: 700, color: hasSomma ? "rgba(239,230,211,0.75)" : "rgba(239,230,211,0.25)" }}>
-          {hasSomma ? somma.toFixed(1) : "—"}
+        <span style={{ flex: 1, fontFamily: "var(--font-mono)", fontSize: 8, color: "rgba(239,230,211,0.38)", letterSpacing: "0.04em" }}>
+          {hasRealScore ? "Totale" : "Totale (prov.)"}
+        </span>
+        <span style={{ fontFamily: "var(--font-mono)", fontSize: 12, fontWeight: 700, color: hasRealScore ? "rgba(239,230,211,0.88)" : "rgba(239,230,211,0.42)" }}>
+          {hasRealScore ? totalScore!.toFixed(2) : "—"}
         </span>
       </div>
     </div>
@@ -419,12 +441,19 @@ const ROLE_CHIP_COLOR: Record<string, string> = {
 };
 
 function VotiTabellino({
-  acStarters, myStarters, acCapId, myCapId,
+  acStarters, myStarters,
+  acScore, myScore,
+  acSubs, mySubs,
+  acBenchById, myBenchById,
 }: {
-  acStarters: ReturnType<typeof getStartersOrdered>;
-  myStarters: ReturnType<typeof getStartersOrdered>;
-  acCapId:    number | null;
-  myCapId:    number | null;
+  acStarters:   ReturnType<typeof getStartersOrdered>;
+  myStarters:   ReturnType<typeof getStartersOrdered>;
+  acScore:      number | null | undefined;
+  myScore:      number | null | undefined;
+  acSubs:       SubEntry[];
+  mySubs:       SubEntry[];
+  acBenchById:  Map<number, RosterPlayer>;
+  myBenchById:  Map<number, RosterPlayer>;
 }) {
   return (
     <div style={{
@@ -437,15 +466,23 @@ function VotiTabellino({
     }}>
       {/* AC section */}
       <div style={{ flex: "1 1 0", minHeight: 0, borderRadius: 8, border: "1px solid rgba(255,255,255,0.08)", background: "rgba(10,24,20,0.75)", backdropFilter: "blur(4px)", overflow: "hidden", display: "flex", flexDirection: "column" }}>
-        <VotiSection label="Atletico Caffeina" sigla="AC" bgColor="#C8102E" fgColor="#fff" starters={acStarters} />
+        <VotiSection
+          label="Atletico Caffeina" sigla="AC" bgColor="#C8102E" fgColor="#fff"
+          starters={acStarters}
+          totalScore={acScore}
+          substitutions={acSubs}
+          benchById={acBenchById}
+        />
       </div>
-      {/* Nota asterisco */}
-      <span style={{ flexShrink: 0, textAlign: "center", fontFamily: "var(--font-mono)", fontSize: 8, color: "rgba(239,230,211,0.25)", lineHeight: 1.3 }}>
-        * somma provvisoria<br />calcolo completo allo step 5
-      </span>
       {/* MS section */}
       <div style={{ flex: "1 1 0", minHeight: 0, borderRadius: 8, border: "1px solid rgba(255,255,255,0.08)", background: "rgba(10,24,20,0.75)", backdropFilter: "blur(4px)", overflow: "hidden", display: "flex", flexDirection: "column" }}>
-        <VotiSection label="Mario's Squad" sigla={MY_TEAM_INFO.sigla} bgColor={MY_TEAM_INFO.logoColori.bg} fgColor={MY_TEAM_INFO.logoColori.fg} starters={myStarters} />
+        <VotiSection
+          label="Mario's Squad" sigla={MY_TEAM_INFO.sigla} bgColor={MY_TEAM_INFO.logoColori.bg} fgColor={MY_TEAM_INFO.logoColori.fg}
+          starters={myStarters}
+          totalScore={myScore}
+          substitutions={mySubs}
+          benchById={myBenchById}
+        />
       </div>
     </div>
   );
@@ -453,9 +490,51 @@ function VotiTabellino({
 
 // ─── MatchView ────────────────────────────────────────────────────────────────
 
+const COMPETITION_ID = "comp-mvp-campionato-2024";
+const MY_TEAM_ID = "ft-mvp-1";
+const AC_TEAM_ID = "ft-mvp-7";
+
+function buildPlayerVoti(map: Map<number, RosterPlayer>): Map<number, number | null> {
+  return new Map(Array.from(map.entries()).map(([id, p]) => [id, p.votoMister]));
+}
+
+function buildBenchById(lineup: { players: LineupSlot[] } | null | undefined, playerMap: Map<number, RosterPlayer>): Map<number, RosterPlayer> {
+  if (!lineup) return new Map();
+  return new Map(
+    lineup.players
+      .filter(p => !p.isStarter)
+      .flatMap(p => { const rp = playerMap.get(p.playerId); return rp ? [[p.playerId, rp] as [number, RosterPlayer]] : []; })
+  );
+}
+
+function computeSubs(
+  lineup: { players: LineupSlot[]; module: string; captainPlayerId?: number | null } | null | undefined,
+  playerMap: Map<number, RosterPlayer>,
+): SubEntry[] {
+  if (!lineup) return [];
+  const result = computeFantaTeamScore({
+    lineup: {
+      module: lineup.module,
+      captainPlayerId: lineup.captainPlayerId ?? null,
+      players: lineup.players.map(p => ({
+        playerId: p.playerId,
+        slotPosition: p.slotPosition as SlotPosition,
+        slotIndex: p.slotIndex,
+        isStarter: p.isStarter,
+        benchOrder: p.benchOrder ?? null,
+      })),
+    },
+    playerVoti: buildPlayerVoti(playerMap),
+    playerRoles: new Map(),
+    config: { captainMultiplier: 1.5 },
+  });
+  return result.substitutions;
+}
+
 export function MatchView() {
   const { data: myLineup, isLoading: myLoading } = useGetLineups(MY_PARAMS);
   const { data: acLineup, isLoading: acLoading } = useGetLineups(AC_PARAMS);
+  const { data: matchList } = useGetMatches({ competitionId: COMPETITION_ID, giornata: 2 });
 
   const { avversario, giornata, competizione } = MATCH_GIORNATA_2;
 
@@ -476,6 +555,21 @@ export function MatchView() {
   const myStarters = getStartersOrdered(myRows, myCapId);
   const acStarters = getStartersOrdered(acRows, acCapId);
 
+  // Score reale dall'API
+  const match = matchList?.find(
+    m => (m.homeFantaTeamId === MY_TEAM_ID && m.awayFantaTeamId === AC_TEAM_ID) ||
+         (m.homeFantaTeamId === AC_TEAM_ID && m.awayFantaTeamId === MY_TEAM_ID),
+  );
+  const isHome = match?.homeFantaTeamId === MY_TEAM_ID;
+  const myScore = match ? (isHome ? match.homeScore : match.awayScore) : null;
+  const acScore = match ? (isHome ? match.awayScore : match.homeScore) : null;
+
+  // Sostituzioni calcolate client-side per il tabellino
+  const mySubs       = computeSubs(myLineup, PLAYER_BY_ID);
+  const acSubs       = computeSubs(acLineup, ATLETICO_CAFFEINA_PLAYER_BY_ID);
+  const myBenchById  = buildBenchById(myLineup, PLAYER_BY_ID);
+  const acBenchById  = buildBenchById(acLineup, ATLETICO_CAFFEINA_PLAYER_BY_ID);
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
 
@@ -489,7 +583,11 @@ export function MatchView() {
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
-          <span style={{ fontFamily: "var(--font-mono)", fontSize: 22, fontWeight: 700, color: "var(--ink)", letterSpacing: "0.14em" }}>— : —</span>
+          <span style={{ fontFamily: "var(--font-mono)", fontSize: 22, fontWeight: 700, color: "var(--ink)", letterSpacing: "0.14em" }}>
+            {myScore !== null && myScore !== undefined ? myScore.toFixed(2) : "—"}
+            {" : "}
+            {acScore !== null && acScore !== undefined ? acScore.toFixed(2) : "—"}
+          </span>
           <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--ink-mid)", letterSpacing: "0.07em", textTransform: "uppercase" }}>
             {competizione} · Giornata {giornata}
           </span>
@@ -583,8 +681,12 @@ export function MatchView() {
         <VotiTabellino
           acStarters={acStarters}
           myStarters={myStarters}
-          acCapId={acCapId}
-          myCapId={myCapId}
+          acScore={acScore}
+          myScore={myScore}
+          acSubs={acSubs}
+          mySubs={mySubs}
+          acBenchById={acBenchById}
+          myBenchById={myBenchById}
         />
       </div>
     </div>

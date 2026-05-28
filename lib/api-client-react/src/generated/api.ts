@@ -34,6 +34,7 @@ import type {
   FederationUpdate,
   GetDashboardParams,
   GetLineupsParams,
+  GetMatchesParams,
   HealthStatus,
   League,
   LeagueInput,
@@ -48,6 +49,7 @@ import type {
   MarketEvent,
   MarketEventInput,
   MarketEventUpdate,
+  MatchInfo,
   Player,
   PlayerList,
   RecalculateVotoMisterParams,
@@ -3192,4 +3194,88 @@ export const usePutLineup = <TError = ErrorType<ValidationErrors | void>,
       > => {
       return useMutation(getPutLineupMutationOptions(options));
     }
+
+export const getGetMatchesUrl = (params: GetMatchesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/matches?${stringifiedParams}` : `/api/matches`
+}
+
+/**
+ * @summary Recupera i match di una giornata con punteggi fanta
+ */
+export const getMatches = async (params: GetMatchesParams, options?: RequestInit): Promise<MatchInfo[]> => {
+
+  return customFetch<MatchInfo[]>(getGetMatchesUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetMatchesQueryKey = (params?: GetMatchesParams,) => {
+    return [
+    `/api/matches`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetMatchesQueryOptions = <TData = Awaited<ReturnType<typeof getMatches>>, TError = ErrorType<void>>(params: GetMatchesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMatches>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetMatchesQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMatches>>> = ({ signal }) => getMatches(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMatches>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetMatchesQueryResult = NonNullable<Awaited<ReturnType<typeof getMatches>>>
+export type GetMatchesQueryError = ErrorType<void>
+
+
+/**
+ * @summary Recupera i match di una giornata con punteggi fanta
+ */
+
+export function useGetMatches<TData = Awaited<ReturnType<typeof getMatches>>, TError = ErrorType<void>>(
+ params: GetMatchesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMatches>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetMatchesQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 

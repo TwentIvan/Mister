@@ -28,6 +28,8 @@ tags:
     description: Contratti pluriennali
   - name: lineups
     description: Formazioni giornata
+  - name: matches
+    description: Partite con punteggi fanta
 
 paths:
   /healthz:
@@ -844,6 +846,34 @@ paths:
                 $ref: "#/components/schemas/ValidationErrors"
         "403":
           description: Lineup bloccato — deadline passata
+
+  /matches:
+    get:
+      operationId: getMatches
+      tags: [matches]
+      summary: Recupera i match di una giornata con punteggi fanta
+      parameters:
+        - in: query
+          name: competitionId
+          schema:
+            type: string
+          required: true
+        - in: query
+          name: giornata
+          schema:
+            type: integer
+          required: true
+      responses:
+        "200":
+          description: Lista partite con punteggi (null se non ancora calcolati)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MatchInfo"
+        "400":
+          description: Parametri non validi
 
 components:
   parameters:
@@ -1664,6 +1694,32 @@ components:
           type: integer
 
     # ─── LINEUPS ──────────────────────────────────────────────
+    MatchInfo:
+      type: object
+      required: [id, giornata, matchOrder, homeFantaTeamId, homeTeamName, awayFantaTeamId, awayTeamName]
+      properties:
+        id:
+          type: integer
+        giornata:
+          type: integer
+        matchOrder:
+          type: integer
+        homeFantaTeamId:
+          type: string
+        homeTeamName:
+          type: string
+        homeScore:
+          type: ["number", "null"]
+        awayFantaTeamId:
+          type: string
+        awayTeamName:
+          type: string
+        awayScore:
+          type: ["number", "null"]
+        playedAt:
+          type: ["string", "null"]
+          format: date-time
+
     LineupPlayer:
       type: object
       required: [playerId, slotPosition, slotIndex, isStarter]

@@ -179,6 +179,9 @@ importers:
       '@workspace/db':
         specifier: workspace:*
         version: link:../../lib/db
+      '@workspace/scoring':
+        specifier: workspace:*
+        version: link:../../lib/scoring
       '@workspace/voto-engine':
         specifier: workspace:*
         version: link:../../lib/voto-engine
@@ -348,6 +351,9 @@ importers:
       '@workspace/api-client-react':
         specifier: workspace:*
         version: link:../../lib/api-client-react
+      '@workspace/scoring':
+        specifier: workspace:*
+        version: link:../../lib/scoring
       class-variance-authority:
         specifier: 'catalog:'
         version: 0.7.1
@@ -650,6 +656,8 @@ importers:
         specifier: 'catalog:'
         version: 4.21.0
 
+  lib/scoring: {}
+
   lib/voto-engine:
     dependencies:
       '@workspace/db':
@@ -670,6 +678,9 @@ importers:
       '@workspace/db':
         specifier: workspace:*
         version: link:../lib/db
+      '@workspace/scoring':
+        specifier: workspace:*
+        version: link:../lib/scoring
       '@workspace/voto-engine':
         specifier: workspace:*
         version: link:../lib/voto-engine

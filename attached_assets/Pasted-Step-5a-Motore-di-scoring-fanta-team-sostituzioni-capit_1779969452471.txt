@@ -1,0 +1,90 @@
+Step 5a — Motore di scoring fanta-team (sostituzioni + capitano + somma), persistenza, API, wiring UI. Senza fattore coach (arriva in 5b).
+Task 108 — Scoring engine (funzione pura)
+Crea una funzione computeFantaTeamScore in un modulo condiviso (valuta se in @workspace/voto-engine o un nuovo lib/scoring). Firma:
+typescripttype ScoringInput = {
+  lineup: { module: string; captainPlayerId: number | null; players: LineupPlayer[] };
+  playerVoti: Map<number, number | null>;  // playerId → voto_mister round X (null = S.V.)
+  playerRoles: Map<number, 'GK'|'DEF'|'MID'|'T'|'ATT'>;
+  config: { captainMultiplier: number };   // default 1.5
+};
+
+type ScoringResult = {
+  effectiveEleven: Array<{ playerId: number; voto: number; wasSubstitute: boolean; replacedPlayerId?: number }>;
+  substitutions: Array<{ out: number; in: number }>;
+  captainBonus: number;
+  totalScore: number;
+};
+Logica:
+
+Identifica i titolari (isStarter=true, 11 giocatori)
+Per ogni titolare, leggi il suo voto da playerVoti:
+
+Se ha voto valido → conta
+Se NULL (S.V., non ha giocato ≥15min o squadra non in campo) → sostituzione
+
+
+Regola sostituzione (fantacalcio classico):
+
+Per ogni titolare S.V., scorri la panchina in ordine di priorità (benchOrder ascendente)
+Trova il primo panchinaro dello stesso ruolo (slotPosition, con T che accetta MID) che abbia voto valido E che non sia già entrato per un altro titolare
+Quel panchinaro sostituisce il titolare S.V. nel calcolo
+Se nessun panchinaro eligibile → il titolare resta S.V. e conta come 0 (o secondo regola: in classico un titolare S.V. senza sostituto vale 0... ma verifica, alcune leghe danno 4 o 5. Per MVP: vale 0)
+
+
+Calcolo somma:
+
+Somma i voti degli 11 effettivi (titolari validi + sostituti entrati)
+Capitano: se il capitano ha voto valido (ha giocato), il suo voto conta ×captainMultiplier (1.5). Se il capitano è S.V. ed è stato sostituito, nessun bonus capitano (il sostituto entra a ×1)
+totalScore = somma_voti_effettivi + (voto_capitano × (multiplier - 1)) se capitano valido
+
+
+
+Restituisci ScoringResult completo (utile per debug e per mostrare le sostituzioni in UI poi).
+Test unitari (scrivi almeno questi casi):
+
+Lineup con tutti voti validi, capitano valido → somma + bonus capitano corretti
+Lineup con 2 titolari S.V., panchina con sostituti dello stesso ruolo → 2 sostituzioni applicate
+Capitano S.V. → nessun bonus, sostituto entra a ×1
+Titolare S.V. senza panchinaro eligibile → conta 0
+
+Stop. Riportami i test che passano + un esempio di output ScoringResult per il lineup reale di Mario's Squad round 2.
+Task 109 — Computa e persisti i risultati di round 2
+Script scripts/scoring/compute-round.ts (parametrizzato per round):
+
+Carica i voto_mister di tutti i giocatori per round 2 da player_giornata_stats → costruisci la Map
+Carica i ruoli giocatori → Map
+Per ognuno degli 8 fanta_team: carica il lineup round 2, chiama computeFantaTeamScore, ottieni totalScore
+Per ognuno dei 4 matchup di round 2 (da competition_matches):
+
+home_score = score del fanta_team home
+away_score = score del fanta_team away
+played_at = NOW()
+UPDATE la riga competition_matches
+
+
+Logging: stampa ogni match con i due score + le sostituzioni applicate per debug
+
+Esegui: pnpm --filter @workspace/scripts run scoring:round -- --round 2
+Verifica:
+sqlSELECT cm.giornata, cm.match_order,
+       hft.name AS home, cm.home_score,
+       aft.name AS away, cm.away_score
+FROM competition_matches cm
+JOIN fanta_teams hft ON hft.id = cm.home_fanta_team_id
+JOIN fanta_teams aft ON aft.id = cm.away_fanta_team_id
+WHERE cm.competition_id = 'comp-mvp-campionato-2024' AND cm.giornata = 2
+ORDER BY cm.match_order;
+Atteso: 4 match con score numerici (non più NULL).
+Stop. Riportami la tabella dei 4 risultati + per Mario's Squad vs Atletico Caffeina il dettaglio delle sostituzioni applicate.
+Task 110 — API endpoint + wiring UI Vista Match
+
+Endpoint GET /api/matches con query competitionId, giornata → restituisce i match della giornata con score + i due fanta_team. Aggiungi a openapi.yaml, rigenera Orval
+Wiring Vista Match:
+
+Header "— : —" → mostra i veri home_score : away_score del match Mario's Squad vs Atletico Caffeina (recuperati via il nuovo endpoint o calcolati on-the-fly dai voti già in mock)
+Tabellino "Totale*" → mostra il vero totalScore per ogni squadra (non più la somma semplice provvisoria). Rimuovi l'asterisco "provvisorio" visto che ora è il calcolo vero (modulo coach, che arriva in 5b)
+Mostra le sostituzioni nel tabellino: se un titolare era S.V. ed è entrato un panchinaro, indicalo (es. il titolare S.V. barrato + il sostituto con una freccia ↑, o una piccola nota)
+
+
+
+Stop. Riportami screenshot della Vista Match con header e totali popolati dai numeri reali.

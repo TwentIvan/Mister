@@ -11,6 +11,7 @@ import contractsRouter from "./contracts";
 import dashboardRouter from "./dashboard";
 import votoAlgorithmConfigRouter from "./voto-algorithm-config";
 import lineupsRouter from "./lineups";
+import matchesRouter from "./matches";
 
 const router: IRouter = Router();
 
@@ -26,5 +27,6 @@ router.use(contractsRouter);
 router.use(dashboardRouter);
 router.use(votoAlgorithmConfigRouter);
 router.use(lineupsRouter);
+router.use(matchesRouter);
 
 export default router;

@@ -1256,3 +1256,26 @@ export const PutLineupResponse = zod.object({
 })
 
 
+/**
+ * @summary Recupera i match di una giornata con punteggi fanta
+ */
+export const GetMatchesQueryParams = zod.object({
+  "competitionId": zod.coerce.string(),
+  "giornata": zod.coerce.number()
+})
+
+export const GetMatchesResponseItem = zod.object({
+  "id": zod.number(),
+  "giornata": zod.number(),
+  "matchOrder": zod.number(),
+  "homeFantaTeamId": zod.string(),
+  "homeTeamName": zod.string(),
+  "homeScore": zod.number().nullish(),
+  "awayFantaTeamId": zod.string(),
+  "awayTeamName": zod.string(),
+  "awayScore": zod.number().nullish(),
+  "playedAt": zod.coerce.date().nullish()
+})
+export const GetMatchesResponse = zod.array(GetMatchesResponseItem)
+
+

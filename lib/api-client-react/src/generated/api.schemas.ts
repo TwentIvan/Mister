@@ -697,6 +697,22 @@ export interface VotoAlgorithmRecalculateResponse {
   durationMs: number;
 }
 
+export interface MatchInfo {
+  id: number;
+  giornata: number;
+  matchOrder: number;
+  homeFantaTeamId: string;
+  homeTeamName: string;
+  /** @nullable */
+  homeScore?: number | null;
+  awayFantaTeamId: string;
+  awayTeamName: string;
+  /** @nullable */
+  awayScore?: number | null;
+  /** @nullable */
+  playedAt?: string | null;
+}
+
 export type LineupPlayerSlotPosition = typeof LineupPlayerSlotPosition[keyof typeof LineupPlayerSlotPosition];
 
 
@@ -796,5 +812,10 @@ export type GetLineupsParams = {
 fantaTeamId: string;
 season: number;
 round: number;
+};
+
+export type GetMatchesParams = {
+competitionId: string;
+giornata: number;
 };
 
