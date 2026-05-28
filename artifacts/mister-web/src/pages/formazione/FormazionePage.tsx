@@ -10,7 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 // TODO: replace with /api/fanta-teams/{id}/roster endpoint when available
 import {
   ROSA_MARIO, MATCH_GIORNATA_2, PLAYER_BY_ID,
-  TEAM_COLORS, TEAM_CODE, COACH_MARIO,
+  TEAM_COLORS, TEAM_CODE, TEAM_LOGO_URL, COACH_MARIO,
   type RoleClassic, type HeadCoach,
 } from "./mock-data";
 
@@ -631,104 +631,118 @@ function PlayerRow({ player, isSelected, isCompatible, hasFieldSelected, onClick
   const dimmed = hasFieldSelected && !isCompatible;
   const colors = TEAM_COLORS[player.realTeam] ?? { primary: "#444", secondary: "#888" };
   const code = TEAM_CODE[player.realTeam] ?? "???";
+  const logoUrl = TEAM_LOGO_URL[player.realTeam];
 
   return (
     <div
       onClick={onClick}
       style={{
-        display: "flex", alignItems: "center", gap: 10,
-        padding: "10px 14px",
-        borderRadius: 10,
+        display: "flex", alignItems: "stretch",
+        borderRadius: 8,
         border: isSelected ? "2px solid rgba(255,255,255,0.72)" : "2px solid transparent",
         cursor: "pointer",
         opacity: dimmed ? 0.32 : 1,
         background: bg,
+        overflow: "hidden",
         transition: "opacity 0.15s, filter 0.1s",
         flexShrink: 0,
       }}
       onMouseEnter={(e) => {
-        if (!dimmed) (e.currentTarget as HTMLDivElement).style.filter = "brightness(1.18)";
+        if (!dimmed) (e.currentTarget as HTMLDivElement).style.filter = "brightness(1.15)";
       }}
       onMouseLeave={(e) => {
         (e.currentTarget as HTMLDivElement).style.filter = "none";
       }}
     >
-      {/* Foto con ring verde affinità */}
-      <div style={{ position: "relative", width: 40, height: 40, flexShrink: 0 }}>
-        <div style={{
-          position: "absolute", inset: 2, borderRadius: "50%",
-          overflow: "hidden", background: "rgba(0,0,0,0.4)",
-        }}>
-          {(player.photoCartoonUrl ?? player.photoUrl) ? (
-            <img
-              src={player.photoCartoonUrl ?? player.photoUrl!} alt={player.name}
-              style={{ width: "100%", height: "100%", objectFit: "cover" }}
-              onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
-            />
-          ) : (
-            <span style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", fontSize: 11, color: "rgba(255,255,255,0.7)", fontFamily: "var(--font-mono)" }}>
-              {player.name[0]}
-            </span>
-          )}
-        </div>
-        {/* Ring verde affinità */}
-        <div style={{
-          position: "absolute", inset: 0, borderRadius: "50%",
-          border: `2px solid ${AFFINITY_GREEN}`,
-          boxShadow: `0 0 6px ${AFFINITY_GREEN}55`,
-          pointerEvents: "none",
-        }} />
+      {/* ── Banda verticale sinistra: colori squadra + logo/sigla ── */}
+      <div style={{ width: 22, flexShrink: 0, position: "relative", overflow: "hidden" }}>
+        {/* Metà superiore: colore primario */}
+        <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "50%", background: colors.primary }} />
+        {/* Metà inferiore: colore secondario */}
+        <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: "50%", background: colors.secondary }} />
+        {/* Logo squadra (o sigla verticale come fallback) */}
+        {logoUrl ? (
+          <img
+            src={logoUrl} alt={code}
+            style={{
+              position: "absolute", inset: 0, margin: "auto",
+              width: 16, height: 16, objectFit: "contain",
+              filter: "drop-shadow(0 1px 3px rgba(0,0,0,0.85))",
+            }}
+            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+          />
+        ) : (
+          <div style={{
+            position: "absolute", inset: 0,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            writingMode: "vertical-rl", transform: "rotate(180deg)",
+            fontFamily: "var(--font-mono)", fontSize: 6, fontWeight: 800,
+            color: "rgba(255,255,255,0.92)",
+            textShadow: "0 1px 2px rgba(0,0,0,0.9)",
+            letterSpacing: "0.14em",
+          }}>
+            {code}
+          </div>
+        )}
       </div>
 
-      {/* Nome + pill + avversario */}
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{
-          fontSize: 13, fontWeight: 500, color: "#fff",
-          whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
-          lineHeight: 1.2, marginBottom: 4,
-        }}>
-          {lastName(player.name)}
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-          {/* Pill bicolore squadra */}
+      {/* ── Contenuto: foto + nome + avversario + voto ── */}
+      <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 10px 7px 8px", flex: 1, minWidth: 0 }}>
+        {/* Foto con ring verde affinità */}
+        <div style={{ position: "relative", width: 34, height: 34, flexShrink: 0 }}>
           <div style={{
-            width: 36, height: 13, borderRadius: 4, overflow: "hidden",
-            position: "relative", flexShrink: 0, boxShadow: "0 1px 3px rgba(0,0,0,0.5)",
+            position: "absolute", inset: 1, borderRadius: "50%",
+            overflow: "hidden", background: "rgba(0,0,0,0.4)",
           }}>
-            <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: "50%", background: colors.primary }} />
-            <div style={{ position: "absolute", right: 0, top: 0, bottom: 0, width: "50%", background: colors.secondary }} />
-            <span style={{
-              position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center",
-              fontFamily: "var(--font-mono)", fontSize: 7, fontWeight: 700,
-              color: "#fff", textShadow: "0 1px 3px rgba(0,0,0,0.8)", letterSpacing: "0.04em",
-            }}>
-              {code}
-            </span>
+            {(player.photoCartoonUrl ?? player.photoUrl) ? (
+              <img
+                src={player.photoCartoonUrl ?? player.photoUrl!} alt={player.name}
+                style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+              />
+            ) : (
+              <span style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", fontSize: 10, color: "rgba(255,255,255,0.7)", fontFamily: "var(--font-mono)" }}>
+                {player.name[0]}
+              </span>
+            )}
           </div>
+          <div style={{
+            position: "absolute", inset: 0, borderRadius: "50%",
+            border: `2px solid ${AFFINITY_GREEN}`,
+            pointerEvents: "none",
+          }} />
+        </div>
 
+        {/* Nome + avversario */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{
+            fontSize: 12, fontWeight: 500, color: "#fff",
+            whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+            lineHeight: 1.2, marginBottom: 2,
+          }}>
+            {lastName(player.name)}
+          </div>
           {player.nextOpponentShort && (
-            <>
-              <span style={{ fontSize: 9, color: "rgba(255,255,255,0.45)" }}>·</span>
+            <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
               {player.nextIsHome
-                ? <Home  size={8} color="rgba(255,255,255,0.65)" />
-                : <Plane size={8} color="rgba(255,255,255,0.65)" />
+                ? <Home  size={7} color="rgba(255,255,255,0.55)" />
+                : <Plane size={7} color="rgba(255,255,255,0.55)" />
               }
-              <span style={{ fontFamily: "var(--font-mono)", fontSize: 8, fontWeight: 600, color: "rgba(255,255,255,0.75)", letterSpacing: "0.04em" }}>
+              <span style={{ fontFamily: "var(--font-mono)", fontSize: 8, fontWeight: 600, color: "rgba(255,255,255,0.65)", letterSpacing: "0.04em" }}>
                 {player.nextOpponentShort}
               </span>
-            </>
+            </div>
           )}
         </div>
-      </div>
 
-      {/* Voto */}
-      <span style={{
-        flexShrink: 0, fontFamily: "var(--font-mono)", fontSize: 13, fontWeight: 700,
-        color: player.votoMister !== null ? "#4ade80" : "rgba(255,255,255,0.35)",
-        alignSelf: "flex-start",
-      }}>
-        {player.votoMister !== null ? player.votoMister.toFixed(1) : "—"}
-      </span>
+        {/* Voto */}
+        <span style={{
+          flexShrink: 0, fontFamily: "var(--font-mono)", fontSize: 12, fontWeight: 700,
+          color: player.votoMister !== null ? "#4ade80" : "rgba(255,255,255,0.28)",
+        }}>
+          {player.votoMister !== null ? player.votoMister.toFixed(1) : "—"}
+        </span>
+      </div>
     </div>
   );
 }
@@ -1039,7 +1053,7 @@ export default function FormazionePage() {
       </div>
 
       {/* ── Layout: [Roster | Pitch] ── */}
-      <div className="formazione-grid" style={{ display: "grid", gridTemplateColumns: "280px 1fr", gap: "var(--sp-5)", alignItems: "stretch" }}>
+      <div className="formazione-grid" style={{ display: "grid", gridTemplateColumns: "280px 1fr", gap: "var(--sp-5)", alignItems: "start" }}>
 
         {/* Colonna sinistra: roster / panchina */}
         <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--r-md)", boxShadow: "var(--shadow-card)", overflow: "hidden", display: "flex", flexDirection: "column", height: COLUMN_HEIGHT }}>
@@ -1100,8 +1114,8 @@ export default function FormazionePage() {
           </div>
         </div>
 
-        {/* Colonna destra: pitch — altezza fissa = misurata dal roster al mount */}
-        <div style={{ background: "#17332a", borderRadius: "var(--r-lg)", border: "1px solid rgba(239,230,211,0.1)", overflow: "hidden", height: COLUMN_HEIGHT }}>
+        {/* Colonna destra: pitch — aspect-ratio 100/140 (= viewBox SVG) garantisce proporzioni costanti a qualunque zoom */}
+        <div style={{ background: "#17332a", borderRadius: "var(--r-lg)", border: "1px solid rgba(239,230,211,0.1)", overflow: "hidden", width: "min(100%, calc((100vh - 240px) * 100 / 140))", aspectRatio: "100/140" }}>
           <Pitch
             modulo={modulo}
             fieldSlots={fieldSlots}

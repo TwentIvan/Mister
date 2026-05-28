@@ -152,6 +152,32 @@ export const ROSA_MARIO: RosterPlayer[] = [
 
 export const PLAYER_BY_ID = new Map<number, RosterPlayer>(ROSA_MARIO.map(p => [p.id, p]));
 
+// ─── Loghi squadre Serie A (API-Football media CDN) ──────────────────────────
+// URL: https://media.api-sports.io/football/teams/{id}.png
+
+export const TEAM_LOGO_URL: Record<string, string> = {
+  "Atalanta":      "https://media.api-sports.io/football/teams/499.png",
+  "Bologna":       "https://media.api-sports.io/football/teams/500.png",
+  "Cagliari":      "https://media.api-sports.io/football/teams/490.png",
+  "Como":          "https://media.api-sports.io/football/teams/895.png",
+  "Empoli":        "https://media.api-sports.io/football/teams/511.png",
+  "Fiorentina":    "https://media.api-sports.io/football/teams/502.png",
+  "Genoa":         "https://media.api-sports.io/football/teams/495.png",
+  "Hellas Verona": "https://media.api-sports.io/football/teams/504.png",
+  "Inter":         "https://media.api-sports.io/football/teams/505.png",
+  "Juventus":      "https://media.api-sports.io/football/teams/496.png",
+  "Lazio":         "https://media.api-sports.io/football/teams/487.png",
+  "Lecce":         "https://media.api-sports.io/football/teams/867.png",
+  "Milan":         "https://media.api-sports.io/football/teams/489.png",
+  "Monza":         "https://media.api-sports.io/football/teams/1579.png",
+  "Napoli":        "https://media.api-sports.io/football/teams/492.png",
+  "Parma":         "https://media.api-sports.io/football/teams/523.png",
+  "AS Roma":       "https://media.api-sports.io/football/teams/497.png",
+  "Torino":        "https://media.api-sports.io/football/teams/503.png",
+  "Udinese":       "https://media.api-sports.io/football/teams/494.png",
+  "Venezia":       "https://media.api-sports.io/football/teams/517.png",
+};
+
 // ─── Allenatore Mario's Squad ─────────────────────────────────────────────────
 // M. Allegri (id 3386) — allena il Milan (team_id 489) nella stagione corrente
 
