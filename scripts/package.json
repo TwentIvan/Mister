@@ -17,7 +17,8 @@
     "sync:coaches": "tsx ./sync/coaches.ts",
     "scoring:round": "tsx ./src/scoring/compute-round.ts",
     "scoring:test": "tsx ./src/scoring/test-engine.ts",
-    "scoring:detail": "tsx ./src/scoring/match-detail.ts"
+    "scoring:detail": "tsx ./src/scoring/match-detail.ts",
+    "seed:rosters": "tsx ./src/seeds/seed-rosters-lineups.ts"
   },
   "dependencies": {
     "@tensorflow-models/blazeface": "^0.1.0",
