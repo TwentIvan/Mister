@@ -282,13 +282,13 @@ function PlayerToken({
   isCaptain = false, isSelected = false, benchPriority,
 }: PlayerTokenProps) {
   const isField = variant === "field";
-  const PHOTO   = isField ? 48 : 40;
-  const RING    = 2;
+  const PHOTO   = isField ? 76 : 40;
+  const RING    = isField ? 3  : 2;
   const OUTER   = PHOTO + RING * 2;
-  const PILL_W  = isField ? 40 : 36;
-  const PILL_H  = isField ? 11 : 12;
-  const VBADGE  = isField ? 16 : 16;
-  const CBADGE  = 14;
+  const PILL_W  = isField ? 66 : 36;
+  const PILL_H  = isField ? 16 : 12;
+  const VBADGE  = isField ? 22 : 16;
+  const CBADGE  = 18;
 
   const colors = TEAM_COLORS[player.realTeam] ?? { primary: "#444", secondary: "#888" };
   const code   = TEAM_CODE[player.realTeam] ?? "???";
@@ -1118,13 +1118,13 @@ export default function FormazionePage() {
       </div>
 
       {/* ── Layout: [Filtri+Roster | Pitch] ── */}
-      <div className="formazione-grid" style={{ display: "grid", gridTemplateColumns: "280px 1fr", gap: "var(--sp-5)", alignItems: "start" }}>
+      <div className="formazione-grid" style={{ display: "grid", gridTemplateColumns: "188px 1fr", gap: "var(--sp-5)", alignItems: "start" }}>
 
         {/* ── Colonna sinistra: filtri + lista ── */}
         <div style={{ display: "flex", flexDirection: "column", gap: 6, height: COLUMN_HEIGHT }}>
 
           {/* Filtri ruolo — multi-selezione, colorati per ruolo */}
-          <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
+          <div style={{ display: "flex", gap: 4, flexShrink: 0, justifyContent: "center" }}>
             {ROLE_FILTERS.map(rf => {
               const count = rosterRoleCounts[rf.value];
               const colors = ROLE_FILTER_COLORS[rf.value];
@@ -1144,7 +1144,7 @@ export default function FormazionePage() {
                   }}
                   style={{
                     display: "flex", alignItems: "center", gap: 3,
-                    padding: "3px 7px", borderRadius: 99,
+                    padding: "4px 12px", borderRadius: 99,
                     border: `1px solid ${isActive ? colors.bgActive : colors.border}`,
                     background: isActive ? colors.bgActive : colors.bg,
                     color: isActive ? "#fff" : colors.text,
