@@ -872,7 +872,7 @@ export default function FormazionePage() {
       .filter(p => !p.isStarter)
       .sort((a, b) => (a.benchOrder ?? 999) - (b.benchOrder ?? 999));
     setRoster(bench.map(p => p.playerId));
-  }, [lineupData]);
+  }, [lineupData, allPlayers]);
 
   const formation = useMemo(() => parseFormation(modulo), [modulo]);
   const starterCount = useMemo(() => Object.keys(fieldSlots).length, [fieldSlots]);
