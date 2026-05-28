@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from "react";
-import { Home, Plane } from "lucide-react";
+import { Home, Plane, RotateCcw } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   useGetLineups,
@@ -417,21 +417,23 @@ function PlayerToken({
 
 interface MiniCoachTokenProps {
   coach: HeadCoach;
+  avversario?: string;
 }
 
-function MiniCoachToken({ coach }: MiniCoachTokenProps) {
-  const PHOTO = 34;
+function MiniCoachToken({ coach, avversario }: MiniCoachTokenProps) {
+  const PHOTO = 44;
   const RING  = 2;
   const OUTER = PHOTO + RING * 2;
-
-  const colors = TEAM_COLORS[coach.currentTeamName ?? ""] ?? { primary: "#444", secondary: "#888" };
-  const code   = TEAM_CODE[coach.currentTeamName ?? ""] ?? "???";
 
   const shortName = (() => {
     const parts = coach.name.trim().split(/\s+/);
     const last = parts[parts.length - 1];
     return last.length > 8 ? last.slice(0, 7) + "." : last;
   })();
+
+  const oppCode = avversario
+    ? avversario.trim().split(/\s+/).map((w: string) => w[0]).join("").toUpperCase().slice(0, 3)
+    : null;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2, pointerEvents: "none" }}>
@@ -462,31 +464,25 @@ function MiniCoachToken({ coach }: MiniCoachTokenProps) {
         }} />
       </div>
 
-      <div style={{
-        width: 28, height: 10, borderRadius: 3, overflow: "hidden",
-        position: "relative", flexShrink: 0, boxShadow: "0 1px 3px rgba(0,0,0,0.5)",
-      }}>
-        <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: "50%", background: colors.primary }} />
-        <div style={{ position: "absolute", right: 0, top: 0, bottom: 0, width: "50%", background: colors.secondary }} />
-        <span style={{
-          position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center",
-          fontFamily: "var(--font-mono)", fontSize: 6, fontWeight: 700,
-          color: "#fff", textShadow: "0 1px 3px rgba(0,0,0,0.8)", letterSpacing: "0.04em",
-        }}>
-          {code}
-        </span>
-      </div>
-
       <span style={{
-        fontSize: 8, fontWeight: 600,
+        fontSize: 9, fontWeight: 600,
         color: "rgba(239,230,211,0.92)", fontFamily: "var(--font-sans)",
         textAlign: "center", lineHeight: 1.1,
-        maxWidth: OUTER + 6,
+        maxWidth: OUTER + 8,
         overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
         textShadow: "0 1px 3px rgba(0,0,0,0.7)",
       }}>
         {shortName}
       </span>
+
+      {oppCode && (
+        <span style={{
+          fontFamily: "var(--font-mono)", fontSize: 8, fontWeight: 700,
+          color: "rgba(239,230,211,0.45)", letterSpacing: "0.06em",
+        }}>
+          vs {oppCode}
+        </span>
+      )}
     </div>
   );
 }
@@ -501,9 +497,12 @@ interface PitchProps {
   onSlotClick: (slotId: string) => void;
   onSlotDoubleClick: (slotId: string) => void;
   coach?: HeadCoach | null;
+  giornata?: number;
+  competizione?: string;
+  avversario?: string;
 }
 
-function Pitch({ modulo, fieldSlots, selection, captainId, onSlotClick, onSlotDoubleClick, coach }: PitchProps) {
+function Pitch({ modulo, fieldSlots, selection, captainId, onSlotClick, onSlotDoubleClick, coach, giornata, competizione, avversario }: PitchProps) {
   const formation = parseFormation(modulo);
   const rowPositions = rowPositionsForFormation(formation);
 
@@ -541,17 +540,42 @@ function Pitch({ modulo, fieldSlots, selection, captainId, onSlotClick, onSlotDo
         <line x1="11" y1="92" x2="11" y2="112" stroke="#ffffff" strokeWidth="0.6" strokeDasharray="4 3" />
       </svg>
 
+      {/* Overlay Giornata/Competizione — centrato sull'ampiezza del campo */}
+      {(giornata !== undefined || competizione) && (
+        <div style={{
+          position: "absolute", top: "2.2%", left: "14%", right: "7%",
+          textAlign: "center", pointerEvents: "none", zIndex: 5,
+        }}>
+          {giornata !== undefined && (
+            <div style={{
+              fontFamily: "var(--font-mono)", fontSize: 10, fontWeight: 700,
+              color: "rgba(239,230,211,0.62)", letterSpacing: "0.1em", textTransform: "uppercase",
+            }}>
+              Giornata <span>{giornata}</span>
+            </div>
+          )}
+          {competizione && (
+            <div style={{
+              fontFamily: "var(--font-sans)", fontSize: 8,
+              color: "rgba(239,230,211,0.36)", marginTop: 1, letterSpacing: "0.05em",
+            }}>
+              {competizione}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* MiniCoachToken — sovrapposto all'area tecnica */}
       {coach && (
         <div style={{
           position: "absolute",
-          left: "3%", top: "65.7%",
-          width: "8%", height: "14.3%",
+          left: "0%", top: "61%",
+          width: "15%", height: "24%",
           display: "flex", alignItems: "center", justifyContent: "center",
           pointerEvents: "none",
           zIndex: 2,
         }}>
-          <MiniCoachToken coach={coach} />
+          <MiniCoachToken coach={coach} avversario={avversario} />
         </div>
       )}
 
@@ -764,6 +788,7 @@ export default function FormazionePage() {
   const [roster, setRoster] = useState<number[]>(initialRoster);
   const [selection, setSelection] = useState<Selection>(null);
   const [manualRoleFilter, setManualRoleFilter] = useState<RoleFilter>("tutti");
+  const [teamFilter, setTeamFilter] = useState<string | null>(null);
   const [moduleChangeMsg, setModuleChangeMsg] = useState<string | null>(null);
   const [captainId, setCaptainId] = useState<number | null>(null);
 
@@ -825,12 +850,33 @@ export default function FormazionePage() {
     return counts;
   }, [roster]);
 
-  // Roster filtrato per ruolo + con priorità
+  // Squadre uniche nella rosa (ordine prima apparizione)
+  const uniqueTeams = useMemo(() => {
+    const seen = new Set<string>();
+    const result: string[] = [];
+    ROSA_MARIO.forEach(p => { if (!seen.has(p.realTeam)) { seen.add(p.realTeam); result.push(p.realTeam); } });
+    return result;
+  }, []);
+
+  // Conteggio giocatori in panchina per squadra
+  const rosterTeamCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    roster.forEach(pid => {
+      const p = PLAYER_BY_ID.get(pid);
+      if (p) counts[p.realTeam] = (counts[p.realTeam] ?? 0) + 1;
+    });
+    return counts;
+  }, [roster]);
+
+  // Roster filtrato per ruolo + squadra + con priorità
   const filteredRosterRows = useMemo(() => {
     return roster
       .map((pid, idx) => ({ player: PLAYER_BY_ID.get(pid)!, rosterIdx: idx, priority: idx + 1 }))
-      .filter(({ player }) => player && (effectiveFilter === "tutti" || player.roleClassic === effectiveFilter));
-  }, [roster, effectiveFilter]);
+      .filter(({ player }) => player
+        && (effectiveFilter === "tutti" || player.roleClassic === effectiveFilter)
+        && (teamFilter === null || player.realTeam === teamFilter)
+      );
+  }, [roster, effectiveFilter, teamFilter]);
 
   // ── Cambio modulo ────────────────────────────────────────────────────────────
   function handleModuloChange(newModulo: string) {
@@ -948,8 +994,8 @@ export default function FormazionePage() {
     }
   }
 
-  // Altezza delle due colonne: viewport meno offset fisso (padding + header + toolbar + gap)
-  const COLUMN_HEIGHT = "calc(100vh - 240px)";
+  // Altezza colonne: viewport meno offset (padding + header senza toolbar)
+  const COLUMN_HEIGHT = "calc(100vh - 160px)";
 
   const hasFieldSelected = selection?.kind === "field";
   const { avversario, fieldStatus } = MATCH_GIORNATA_2;
@@ -957,81 +1003,51 @@ export default function FormazionePage() {
 
   if (lineupLoading) {
     return (
-      <div style={{ display: "flex", flexDirection: "column", gap: "var(--sp-5)" }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
         <div>
-          <div style={{ height: 28, width: 180, borderRadius: "var(--r-sm)", background: "var(--border)", marginBottom: 8 }} />
-          <div style={{ height: 16, width: 280, borderRadius: "var(--r-sm)", background: "var(--border)" }} />
+          <div style={{ height: 28, width: 180, borderRadius: "var(--r-sm)", background: "var(--border)", marginBottom: 6 }} />
+          <div style={{ height: 16, width: 200, borderRadius: "var(--r-sm)", background: "var(--border)" }} />
         </div>
-        <div style={{ height: 48, borderRadius: "var(--r-md)", background: "var(--surface)", border: "1px solid var(--border)" }} />
         <div style={{ display: "grid", gridTemplateColumns: "280px 1fr", gap: "var(--sp-5)" }}>
           <div style={{ height: 620, borderRadius: "var(--r-md)", background: "var(--surface)", border: "1px solid var(--border)" }} />
-          <div style={{ height: 620, borderRadius: "var(--r-md)", background: "var(--surface)", border: "1px solid var(--border)" }} />
+          <div style={{ height: 620, borderRadius: "var(--r-md)", background: "#17332a", border: "1px solid rgba(239,230,211,0.1)" }} />
         </div>
       </div>
     );
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "var(--sp-5)" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
 
       {/* ── Intestazione ── */}
-      <div>
-        <h1 style={{ fontFamily: "var(--font-serif)", fontSize: "var(--text-2xl)", fontWeight: 600, color: "var(--green-deep)", lineHeight: "var(--leading-tight)", marginBottom: 4 }}>
-          Formazione
-        </h1>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-          <span style={{ fontSize: 14, color: "var(--ink-mid)" }}>
-            Mario&apos;s Squad · Giornata <span style={{ fontFamily: "var(--font-mono)" }}>{MATCH_GIORNATA_2.giornata}</span> · vs {avversario}
-          </span>
-          <span style={{ padding: "2px 10px", borderRadius: 99, background: fieldStatus === "casa" ? "var(--green-deep)" : "var(--ink-mid)", color: "#fff", fontFamily: "var(--font-mono)", fontSize: 11, fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase" }}>
-            {fieldStatus === "casa" ? "Casa" : "Trasferta"}
-          </span>
-        </div>
-      </div>
-
-      {/* ── Toolbar ── */}
-      <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", padding: "10px 14px", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--r-md)", boxShadow: "var(--shadow-card)" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <label htmlFor="modulo-select" style={{ fontSize: 13, fontWeight: 500, color: "var(--ink-mid)", whiteSpace: "nowrap" }}>Modulo</label>
-          <select
-            id="modulo-select" value={modulo}
-            onChange={e => handleModuloChange(e.target.value)}
-            style={{ fontFamily: "var(--font-mono)", fontSize: 13, fontWeight: 600, color: "var(--ink)", background: "var(--paper)", border: "1px solid var(--border-strong)", borderRadius: "var(--r-sm)", padding: "4px 8px", cursor: "pointer", outline: "none" }}
-          >
-            {MODULI.map(m => <option key={m} value={m}>{m}</option>)}
-          </select>
-        </div>
-
-        <div style={{ width: 1, height: 20, background: "var(--border)", flexShrink: 0 }} />
-
-        <div style={{ fontSize: 13, color: "var(--ink-mid)" }}>
-          Titolari:{" "}
-          <span style={{ fontFamily: "var(--font-mono)", fontWeight: 600, color: starterCount === 11 ? "var(--green-deep)" : "var(--ink)" }}>{starterCount}</span>
-          <span style={{ color: "var(--ink-dim)" }}>/11</span>
-        </div>
-
-        <div style={{ fontSize: 13, color: "var(--ink-mid)" }}>
-          Voto previsto: <span style={{ fontFamily: "var(--font-mono)", color: "var(--ink-dim)" }}>—</span>
-        </div>
-
-        {moduleChangeMsg && (
-          <div style={{ padding: "3px 10px", borderRadius: 99, background: "rgba(45,107,79,0.1)", border: "1px solid var(--green-mid)", fontSize: 12, color: "var(--green-deep)" }}>
-            {moduleChangeMsg}
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+        <div>
+          <h1 style={{ fontFamily: "var(--font-serif)", fontSize: "var(--text-2xl)", fontWeight: 600, color: "var(--green-deep)", lineHeight: "var(--leading-tight)", marginBottom: 4 }}>
+            Formazione
+          </h1>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ fontSize: 13, color: "var(--ink-mid)" }}>Mario&apos;s Squad</span>
+            <span style={{ padding: "2px 8px", borderRadius: 99, background: fieldStatus === "casa" ? "var(--green-deep)" : "var(--ink-mid)", color: "#fff", fontFamily: "var(--font-mono)", fontSize: 10, fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase" }}>
+              {fieldStatus === "casa" ? "Casa" : "Trasferta"}
+            </span>
           </div>
-        )}
+        </div>
 
-        {selection !== null && (
-          <div style={{ padding: "3px 10px", borderRadius: 99, background: "rgba(74,222,128,0.1)", border: "1px solid rgba(74,222,128,0.4)", fontSize: 12, color: "var(--green-deep)", fontWeight: 500 }}>
-            {selection.kind === "roster"
-              ? `${lastName(PLAYER_BY_ID.get(selection.playerId)?.name ?? "")} selezionato — scegli uno slot o un'altra riga`
-              : <>Slot <strong style={{ fontFamily: "var(--font-mono)" }}>{selectedFieldSlotRole && ROLE_BADGE[selectedFieldSlotRole].label}</strong> — scegli dal roster</>
-            }
-          </div>
-        )}
-
-        <div style={{ flex: 1 }} />
-
-        <div style={{ display: "flex", gap: 8 }}>
+        {/* Messaggi + azioni */}
+        <div style={{ display: "flex", gap: 8, alignItems: "center", paddingTop: 6, flexWrap: "wrap", justifyContent: "flex-end" }}>
+          {moduleChangeMsg && (
+            <div style={{ padding: "3px 10px", borderRadius: 99, background: "rgba(45,107,79,0.1)", border: "1px solid var(--green-mid)", fontSize: 12, color: "var(--green-deep)" }}>
+              {moduleChangeMsg}
+            </div>
+          )}
+          {selection !== null && (
+            <div style={{ padding: "3px 10px", borderRadius: 99, background: "rgba(74,222,128,0.1)", border: "1px solid rgba(74,222,128,0.4)", fontSize: 12, color: "var(--green-deep)", fontWeight: 500 }}>
+              {selection.kind === "roster"
+                ? `${lastName(PLAYER_BY_ID.get(selection.playerId)?.name ?? "")} — scegli uno slot`
+                : <>Slot <strong style={{ fontFamily: "var(--font-mono)" }}>{selectedFieldSlotRole && ROLE_BADGE[selectedFieldSlotRole].label}</strong> — scegli dal roster</>
+              }
+            </div>
+          )}
           <button
             disabled={!salvaEnabled || saveMutation.isPending}
             onClick={() => {
@@ -1046,34 +1062,28 @@ export default function FormazionePage() {
                 },
               });
             }}
-            style={{ padding: "6px 16px", borderRadius: "var(--r-sm)", border: "none", background: "var(--green-deep)", color: "#fff", fontSize: 13, fontWeight: 600, cursor: (salvaEnabled && !saveMutation.isPending) ? "pointer" : "not-allowed", opacity: (salvaEnabled && !saveMutation.isPending) ? 1 : 0.45, transition: "opacity 0.2s" }}
+            style={{ padding: "6px 14px", borderRadius: "var(--r-sm)", border: "none", background: "var(--green-deep)", color: "#fff", fontSize: 13, fontWeight: 600, cursor: (salvaEnabled && !saveMutation.isPending) ? "pointer" : "not-allowed", opacity: (salvaEnabled && !saveMutation.isPending) ? 1 : 0.45, transition: "opacity 0.2s", whiteSpace: "nowrap" }}
           >
             {saveMutation.isPending ? "Salvataggio…" : "Salva"}
           </button>
           <button
-            onClick={() => { setFieldSlots({}); setRoster(initialRoster()); setSelection(null); setCaptainId(null); }}
-            style={{ padding: "6px 16px", borderRadius: "var(--r-sm)", border: "1px solid var(--border-strong)", background: "transparent", color: "var(--ink-mid)", fontSize: 13, fontWeight: 500, cursor: "pointer" }}
+            onClick={() => { setFieldSlots({}); setRoster(initialRoster()); setSelection(null); setCaptainId(null); setTeamFilter(null); }}
+            title="Reset formazione"
+            style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 32, height: 32, borderRadius: "var(--r-sm)", border: "1px solid var(--border-strong)", background: "transparent", color: "var(--ink-mid)", cursor: "pointer", padding: 0 }}
           >
-            Reset
+            <RotateCcw size={14} />
           </button>
         </div>
       </div>
 
-      {/* ── Layout: [Roster | Pitch] ── */}
+      {/* ── Layout: [Filtri+Roster | Pitch] ── */}
       <div className="formazione-grid" style={{ display: "grid", gridTemplateColumns: "280px 1fr", gap: "var(--sp-5)", alignItems: "start" }}>
 
-        {/* Colonna sinistra: roster / panchina */}
-        <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--r-md)", boxShadow: "var(--shadow-card)", overflow: "hidden", display: "flex", flexDirection: "column", height: COLUMN_HEIGHT }}>
-          {/* Header */}
-          <div style={{ padding: "10px 12px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <span style={{ fontFamily: "var(--font-sans)", fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--ink-dim)" }}>Rosa</span>
-            <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--ink-dim)" }}>
-              <span style={{ fontWeight: 600, color: roster.length === 0 ? "var(--ink-dim)" : "var(--ink)" }}>{roster.length}</span> rimanenti
-            </span>
-          </div>
+        {/* ── Colonna sinistra: filtri + lista ── */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 6, height: COLUMN_HEIGHT }}>
 
-          {/* Filtri ruolo con conteggio */}
-          <div style={{ display: "flex", gap: 4, padding: "8px 12px", borderBottom: "1px solid var(--border)", flexWrap: "wrap" }}>
+          {/* Filtri ruolo */}
+          <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
             {ROLE_FILTERS.map(rf => {
               const count = rf.value === "tutti" ? roster.length : rosterRoleCounts[rf.value as RoleClassic];
               return (
@@ -1081,8 +1091,8 @@ export default function FormazionePage() {
                   key={rf.value}
                   onClick={() => { if (!hasFieldSelected) setManualRoleFilter(rf.value); }}
                   style={{
-                    display: "flex", alignItems: "center", gap: 4,
-                    padding: "3px 8px", borderRadius: 99, border: "1px solid",
+                    display: "flex", alignItems: "center", gap: 3,
+                    padding: "3px 7px", borderRadius: 99, border: "1px solid",
                     borderColor: effectiveFilter === rf.value ? "var(--green-deep)" : "var(--border-strong)",
                     background: effectiveFilter === rf.value ? "var(--green-deep)" : "transparent",
                     color: effectiveFilter === rf.value ? "#fff" : "var(--ink-mid)",
@@ -1093,16 +1103,57 @@ export default function FormazionePage() {
                   }}
                 >
                   {rf.label}
-                  <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, opacity: 0.75 }}>{count}</span>
+                  <span style={{ fontSize: 10, opacity: 0.75 }}>{count}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Filtri squadra: loghi + conteggio in panchina */}
+          <div style={{ display: "flex", gap: 3, flexWrap: "wrap", flexShrink: 0 }}>
+            {uniqueTeams.map(team => {
+              const count = rosterTeamCounts[team] ?? 0;
+              const isActive = teamFilter === team;
+              const logoUrl = TEAM_LOGO_URL[team];
+              return (
+                <button
+                  key={team}
+                  onClick={() => setTeamFilter(prev => prev === team ? null : team)}
+                  title={team}
+                  style={{
+                    position: "relative", width: 26, height: 26, borderRadius: "50%", padding: 0,
+                    border: isActive ? "2px solid rgba(239,230,211,0.85)" : "2px solid rgba(239,230,211,0.12)",
+                    background: isActive ? "rgba(239,230,211,0.1)" : "rgba(239,230,211,0.04)",
+                    cursor: "pointer", outline: "none",
+                    opacity: count === 0 ? 0.25 : 1,
+                    transition: "border-color 0.12s, opacity 0.12s",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                  }}
+                >
+                  {logoUrl && (
+                    <img src={logoUrl} alt={team} style={{ width: 16, height: 16, objectFit: "contain" }} />
+                  )}
+                  {count > 0 && (
+                    <div style={{
+                      position: "absolute", bottom: -2, right: -2,
+                      width: 12, height: 12, borderRadius: "50%",
+                      background: "var(--green-deep)", color: "#fff",
+                      fontFamily: "var(--font-mono)", fontSize: 7, fontWeight: 800,
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      border: "1px solid var(--paper)", lineHeight: 1,
+                    }}>
+                      {count}
+                    </div>
+                  )}
                 </button>
               );
             })}
           </div>
 
           {/* Lista roster */}
-          <div style={{ overflowY: "auto", minHeight: 300, padding: "8px 8px", display: "flex", flexDirection: "column", gap: 7 }}>
+          <div style={{ overflowY: "auto", flex: 1, display: "flex", flexDirection: "column", gap: 6, paddingRight: 2 }}>
             {filteredRosterRows.length === 0 ? (
-              <div style={{ padding: "24px 16px", textAlign: "center", fontSize: 12, color: "var(--ink-dim)" }}>
+              <div style={{ padding: "24px 12px", textAlign: "center", fontSize: 12, color: "var(--ink-dim)" }}>
                 {starterCount === 11 ? "Tutti i giocatori sono in campo" : "Nessun giocatore in questa posizione"}
               </div>
             ) : (
@@ -1121,17 +1172,44 @@ export default function FormazionePage() {
           </div>
         </div>
 
-        {/* Colonna destra: pitch — aspect-ratio 100/140 (= viewBox SVG) garantisce proporzioni costanti a qualunque zoom */}
-        <div style={{ background: "#17332a", borderRadius: "var(--r-lg)", border: "1px solid rgba(239,230,211,0.1)", overflow: "hidden", width: "min(100%, calc((100vh - 240px) * 100 / 140))", aspectRatio: "100/140" }}>
-          <Pitch
-            modulo={modulo}
-            fieldSlots={fieldSlots}
-            selection={selection}
-            captainId={captainId}
-            onSlotClick={handleFieldSlotClick}
-            onSlotDoubleClick={handleFieldSlotDoubleClick}
-            coach={COACH_MARIO}
-          />
+        {/* ── Colonna destra: pitch con selettore modulo sovrapposto ── */}
+        {/* Il wrapper position:relative contiene il pitch (overflow:hidden) e il select come overlay esterno */}
+        <div style={{ position: "relative", width: "min(100%, calc((100vh - 160px) * 100 / 140))" }}>
+          <div style={{ background: "#17332a", borderRadius: "var(--r-lg)", border: "1px solid rgba(239,230,211,0.1)", overflow: "hidden", aspectRatio: "100/140" }}>
+            <Pitch
+              modulo={modulo}
+              fieldSlots={fieldSlots}
+              selection={selection}
+              captainId={captainId}
+              onSlotClick={handleFieldSlotClick}
+              onSlotDoubleClick={handleFieldSlotDoubleClick}
+              coach={COACH_MARIO}
+              giornata={MATCH_GIORNATA_2.giornata}
+              competizione="Campionato"
+              avversario={avversario}
+            />
+          </div>
+          {/* Selettore modulo — sovrapposto sotto il badge Mister, fuori dal div overflow:hidden */}
+          <select
+            value={modulo}
+            onChange={e => handleModuloChange(e.target.value)}
+            style={{
+              position: "absolute",
+              left: "1.5%", top: "83%",
+              width: "14%",
+              fontFamily: "var(--font-mono)",
+              fontSize: 9, fontWeight: 700,
+              color: "rgba(239,230,211,0.88)",
+              background: "rgba(13,31,26,0.92)",
+              border: "1px solid rgba(239,230,211,0.22)",
+              borderRadius: 4,
+              padding: "2px 3px",
+              cursor: "pointer", outline: "none",
+              zIndex: 10,
+            }}
+          >
+            {MODULI.map(m => <option key={m} value={m}>{m}</option>)}
+          </select>
         </div>
       </div>
 
