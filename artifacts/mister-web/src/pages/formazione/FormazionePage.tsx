@@ -1118,8 +1118,8 @@ export default function FormazionePage() {
           ))}
         </div>
 
-        {/* Messaggi + azioni */}
-        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end" }}>
+        {/* Messaggi + azioni (solo in modalità builder) */}
+        {viewMode === 'builder' && <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end" }}>
           {moduleChangeMsg && (
             <div style={{ padding: "3px 10px", borderRadius: 99, background: "rgba(45,107,79,0.1)", border: "1px solid var(--green-mid)", fontSize: 12, color: "var(--green-deep)" }}>
               {moduleChangeMsg}
@@ -1158,7 +1158,7 @@ export default function FormazionePage() {
           >
             <RotateCcw size={14} />
           </button>
-        </div>
+        </div>}
       </div>
 
       {viewMode === 'match' && <MatchView />}
