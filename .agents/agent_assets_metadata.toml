@@ -18,3 +18,9 @@ id = "HxuX2ZrvpLnNsJuR49-Qs"
 uri = "file://toy-test.zip"
 type = "unspecified"
 title = "face-to-many Toy — 5 WebP (1358, 1624, 6409, 30509, 35544)"
+
+[[outputs]]
+id = "FdGcohPon_LmKMu54_J2n"
+uri = "file://toy-test-white.zip"
+type = "unspecified"
+title = "face-to-many Toy — sfondo bianco (1358, 1624, 6409, 30509, 35544)"
