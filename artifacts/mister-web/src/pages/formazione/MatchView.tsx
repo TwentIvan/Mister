@@ -1,3 +1,4 @@
+import { Home, Plane } from "lucide-react";
 import { useGetLineups } from "@workspace/api-client-react";
 import {
   PLAYER_BY_ID,
@@ -9,6 +10,7 @@ import {
   TEAM_COLORS,
   TEAM_CODE,
   TEAM_LOGO_URL,
+  TEAM_LOGO_BY_CODE,
   type RosterPlayer,
   type HeadCoach,
 } from "./mock-data";
@@ -18,6 +20,16 @@ import {
 const MY_PARAMS = { fantaTeamId: "ft-mvp-1", season: 2024, round: 2 };
 const AC_PARAMS = { fantaTeamId: "ft-mvp-7", season: 2024, round: 2 };
 
+const AFFINITY_GREEN = "#4ade80";
+
+// Stessi colori di sfondo del builder (Task 105)
+const ROLE_ROW_BG: Record<string, string> = {
+  GK:  "#7a5012",
+  DEF: "#1a3d2b",
+  MID: "#19305c",
+  ATT: "#6b1f1f",
+};
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function lastName(name: string): string {
@@ -26,23 +38,16 @@ function lastName(name: string): string {
   return last.length > 10 ? last.slice(0, 9) + "." : last;
 }
 
-type StarterRows = {
-  GK:  RosterPlayer[];
-  DEF: RosterPlayer[];
-  MID: RosterPlayer[];
-  ATT: RosterPlayer[];
-};
+type StarterRows = { GK: RosterPlayer[]; DEF: RosterPlayer[]; MID: RosterPlayer[]; ATT: RosterPlayer[] };
 
-function emptyRows(): StarterRows {
-  return { GK: [], DEF: [], MID: [], ATT: [] };
-}
+function emptyRows(): StarterRows { return { GK: [], DEF: [], MID: [], ATT: [] }; }
 
 type LineupSlot = {
-  playerId:      number;
-  slotPosition:  string;
-  slotIndex:     number;
-  isStarter:     boolean;
-  benchOrder?:   number | null;
+  playerId:     number;
+  slotPosition: string;
+  slotIndex:    number;
+  isStarter:    boolean;
+  benchOrder?:  number | null;
 };
 
 function getStarterRows(players: LineupSlot[], map: Map<number, RosterPlayer>): StarterRows {
@@ -66,42 +71,44 @@ function getBenchPlayers(players: LineupSlot[], map: Map<number, RosterPlayer>):
     .flatMap(s => { const p = map.get(s.playerId); return p ? [p] : []; });
 }
 
-// x% per N giocatori equidistribuiti sul campo (campo: ~20% → 93% del container)
+// X% per N giocatori equidistribuiti sul campo (campo: ~20%→93% del container)
 function xPositions(n: number): number[] {
   const L = 20, R = 93;
   return Array.from({ length: n }, (_, i) => L + ((i + 1) / (n + 1)) * (R - L));
 }
 
-// ─── MatchPlayerToken (~63% del token "field" del builder) ───────────────────
-
-interface MatchTokenProps {
-  player:    RosterPlayer;
-  isCaptain?: boolean;
+// Fallback img: prova cartoon, se 404 prova la foto reale, altrimenti nascondi
+function photoSrc(player: RosterPlayer): string {
+  return (player.photoCartoonUrl ?? player.photoUrl) ?? "";
 }
 
-function MatchPlayerToken({ player, isCaptain = false }: MatchTokenProps) {
-  const PHOTO   = 46;
-  const RING    = 2;
-  const OUTER   = PHOTO + RING * 2;
-  const PILL_W  = 40;
-  const PILL_H  = 10;
-  const VBADGE  = 14;
+function photoOnError(player: RosterPlayer) {
+  return (e: React.SyntheticEvent<HTMLImageElement>) => {
+    const img = e.currentTarget;
+    if (player.photoCartoonUrl && player.photoUrl && img.src !== player.photoUrl) {
+      img.src = player.photoUrl;
+    } else {
+      img.style.display = "none";
+    }
+  };
+}
 
+// ─── MatchPlayerToken (~63% del token "field" del builder) ───────────────────
+
+function MatchPlayerToken({ player, isCaptain = false }: { player: RosterPlayer; isCaptain?: boolean }) {
+  const PHOTO = 46, RING = 2, OUTER = PHOTO + RING * 2, PILL_W = 40, PILL_H = 10, VBADGE = 14;
   const affinityColor = "rgba(74,222,128,0.9)";
   const colors  = TEAM_COLORS[player.realTeam] ?? { primary: "#444", secondary: "#888" };
-  const code    = TEAM_CODE[player.realTeam]   ?? "???";
+  const code    = TEAM_CODE[player.realTeam] ?? "???";
   const hasVoto = player.votoMister !== null;
   const logoUrl = TEAM_LOGO_URL[player.realTeam];
+  const src     = photoSrc(player);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, transform: "translate(-50%, -50%)", pointerEvents: "none" }}>
       <div style={{ position: "relative", width: OUTER, height: OUTER, flexShrink: 0 }}>
         <div style={{ position: "absolute", inset: RING, borderRadius: "50%", overflow: "hidden", background: "rgba(0,0,0,0.35)" }}>
-          {(player.photoCartoonUrl ?? player.photoUrl) && (
-            <img src={player.photoCartoonUrl ?? player.photoUrl!} alt={player.name}
-              style={{ width: "100%", height: "100%", objectFit: "cover" }}
-              onError={e => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
-          )}
+          {src && <img src={src} alt={player.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={photoOnError(player)} />}
         </div>
         <div style={{ position: "absolute", inset: 0, borderRadius: "50%", border: `${RING}px solid ${affinityColor}`, boxShadow: `0 0 5px ${affinityColor}55`, pointerEvents: "none" }} />
         <div style={{ position: "absolute", top: -2, right: -2, width: VBADGE, height: VBADGE, borderRadius: "50%", background: hasVoto ? "#1f4733" : "rgba(0,0,0,0.45)", border: hasVoto ? "none" : "1px solid rgba(239,230,211,0.3)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 1px 3px rgba(0,0,0,0.5)" }}>
@@ -134,13 +141,9 @@ function MatchPlayerToken({ player, isCaptain = false }: MatchTokenProps) {
 // ─── MatchMiniCoachToken — piccolo, per area tecnica in pitch ─────────────────
 
 function MatchMiniCoachToken({ coach }: { coach: HeadCoach }) {
-  const PHOTO  = 34;
-  const RING   = 2;
-  const OUTER  = PHOTO + RING * 2;
-
+  const PHOTO = 34, RING = 2, OUTER = PHOTO + RING * 2;
   const teamKey = coach.currentTeamName ?? "";
   const colors  = TEAM_COLORS[teamKey] ?? { primary: "#444", secondary: "#888" };
-  const code    = TEAM_CODE[teamKey] ?? "—";
   const logoUrl = TEAM_LOGO_URL[teamKey];
 
   const shortName = (() => {
@@ -153,23 +156,15 @@ function MatchMiniCoachToken({ coach }: { coach: HeadCoach }) {
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, pointerEvents: "none" }}>
       <div style={{ position: "relative", width: OUTER, height: OUTER, flexShrink: 0 }}>
         <div style={{ position: "absolute", inset: RING, borderRadius: "50%", overflow: "hidden", background: "rgba(0,0,0,0.4)" }}>
-          {coach.photoCartoonUrl && (
-            <img src={coach.photoCartoonUrl} alt={coach.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={e => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
-          )}
+          {coach.photoCartoonUrl && <img src={coach.photoCartoonUrl} alt={coach.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={e => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />}
         </div>
-        {/* Ring dorato — distingue il mister dai giocatori */}
         <div style={{ position: "absolute", inset: 0, borderRadius: "50%", border: `${RING}px solid rgba(244,196,48,0.82)`, boxShadow: "0 0 6px rgba(244,196,48,0.25)", pointerEvents: "none" }} />
       </div>
-
-      {/* Mini pill colori squadra reale */}
       <div style={{ width: 30, height: 8, borderRadius: 3, overflow: "hidden", position: "relative", boxShadow: "0 1px 3px rgba(0,0,0,0.5)" }}>
         <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: "50%", background: colors.primary }} />
         <div style={{ position: "absolute", right: 0, top: 0, bottom: 0, width: "50%", background: colors.secondary }} />
-        {logoUrl && (
-          <img src={logoUrl} alt={code} style={{ position: "absolute", inset: 0, margin: "auto", width: 7, height: 7, objectFit: "contain", filter: "drop-shadow(0 1px 1px rgba(0,0,0,0.9))" }} onError={e => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
-        )}
+        {logoUrl && <img src={logoUrl} alt="" style={{ position: "absolute", inset: 0, margin: "auto", width: 7, height: 7, objectFit: "contain", filter: "drop-shadow(0 1px 1px rgba(0,0,0,0.9))" }} onError={e => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />}
       </div>
-
       <span style={{ fontSize: 9, fontWeight: 600, color: "rgba(239,230,211,0.88)", fontFamily: "var(--font-sans)", textShadow: "0 1px 3px rgba(0,0,0,0.8)", whiteSpace: "nowrap" }}>
         {shortName}
       </span>
@@ -177,24 +172,17 @@ function MatchMiniCoachToken({ coach }: { coach: HeadCoach }) {
   );
 }
 
-// ─── PitchHalf — una squadra sui propri slot di campo ────────────────────────
+// ─── PitchHalf ────────────────────────────────────────────────────────────────
 
 const ROLE_ORDER = ["GK", "DEF", "MID", "ATT"] as const;
 
-interface PitchHalfProps {
-  rows:      StarterRows;
-  captainId: number | null;
-  rowY:      Record<(typeof ROLE_ORDER)[number], number>;
-}
-
-function PitchHalf({ rows, captainId, rowY }: PitchHalfProps) {
+function PitchHalf({ rows, captainId, rowY }: { rows: StarterRows; captainId: number | null; rowY: Record<(typeof ROLE_ORDER)[number], number> }) {
   return (
     <>
       {ROLE_ORDER.map(role => {
         const players = rows[role];
         if (players.length === 0) return null;
-        const y  = rowY[role];
-        const xs = xPositions(players.length);
+        const y = rowY[role], xs = xPositions(players.length);
         return players.map((player, i) => (
           <div key={player.id} style={{ position: "absolute", left: `${xs[i]}%`, top: `${y}%`, zIndex: 2 }}>
             <MatchPlayerToken player={player} isCaptain={player.id === captainId} />
@@ -205,112 +193,127 @@ function PitchHalf({ rows, captainId, rowY }: PitchHalfProps) {
   );
 }
 
-// ─── BenchCard — riga compatta per il dugout laterale ────────────────────────
+// ─── BenchRow — riga panchina fedele al design builder (Task 105), ~77% ──────
+// Stessa struttura di PlayerRow: banda colori sinistra + foto + nome + avversario + voto
 
-const ROLE_CHIP: Record<string, { label: string; bg: string }> = {
-  GK:  { label: "P", bg: "#f59e0b" },
-  DEF: { label: "D", bg: "#3b82f6" },
-  MID: { label: "C", bg: "#22c55e" },
-  ATT: { label: "A", bg: "#ef4444" },
-};
-
-function BenchCard({ player, rank }: { player: RosterPlayer; rank: number }) {
+function BenchRow({ player }: { player: RosterPlayer }) {
+  const bg      = ROLE_ROW_BG[player.roleClassic] ?? "#1a3d2b";
   const colors  = TEAM_COLORS[player.realTeam] ?? { primary: "#444", secondary: "#888" };
-  const hasVoto = player.votoMister !== null;
-  const chip    = ROLE_CHIP[player.roleClassic] ?? { label: "?", bg: "#888" };
+  const code    = TEAM_CODE[player.realTeam] ?? "???";
   const logoUrl = TEAM_LOGO_URL[player.realTeam];
+  const oppLogo = player.nextOpponentShort ? TEAM_LOGO_BY_CODE[player.nextOpponentShort] : undefined;
+  const src     = photoSrc(player);
 
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "4px 6px", borderRadius: "var(--r-sm)", background: "var(--surface)", border: "1px solid var(--border)", flexShrink: 0 }}>
-      {/* Numero panchina */}
-      <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, color: "var(--ink-faint)", width: 12, textAlign: "right", flexShrink: 0 }}>{rank}</span>
-
-      {/* Foto */}
-      <div style={{ position: "relative", width: 28, height: 28, borderRadius: "50%", overflow: "hidden", flexShrink: 0, background: "rgba(0,0,0,0.35)", border: "1.5px solid var(--border)" }}>
-        {(player.photoCartoonUrl ?? player.photoUrl) && (
-          <img src={player.photoCartoonUrl ?? player.photoUrl!} alt={player.name}
-            style={{ width: "100%", height: "100%", objectFit: "cover" }}
-            onError={e => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
+    <div style={{
+      display: "flex", alignItems: "stretch",
+      borderRadius: 6,
+      border: "1.5px solid transparent",
+      background: bg,
+      overflow: "hidden",
+      flexShrink: 0,
+    }}>
+      {/* Banda verticale sinistra: colori squadra + logo */}
+      <div style={{ width: 17, flexShrink: 0, position: "relative", overflow: "hidden" }}>
+        <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "50%", background: colors.primary }} />
+        <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: "50%", background: colors.secondary }} />
+        {logoUrl ? (
+          <img src={logoUrl} alt={code} style={{ position: "absolute", inset: 0, margin: "auto", width: 12, height: 12, objectFit: "contain", filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.85))" }} onError={e => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
+        ) : (
+          <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", writingMode: "vertical-rl", transform: "rotate(180deg)", fontFamily: "var(--font-mono)", fontSize: 5, fontWeight: 800, color: "rgba(255,255,255,0.92)", letterSpacing: "0.14em" }}>
+            {code}
+          </div>
         )}
       </div>
 
-      {/* Info */}
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-          {/* Chip ruolo */}
-          <span style={{ fontFamily: "var(--font-mono)", fontSize: 8, fontWeight: 700, color: "#fff", background: chip.bg, borderRadius: 3, padding: "1px 3px", flexShrink: 0 }}>
-            {chip.label}
-          </span>
-          {/* Cognome */}
-          <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, fontWeight: 600, color: "var(--ink)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-            {lastName(player.name)}
-          </span>
-        </div>
-        {/* Pill bicolor + voto */}
-        <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 2 }}>
-          <div style={{ width: 24, height: 6, borderRadius: 2, overflow: "hidden", position: "relative", flexShrink: 0 }}>
-            <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: "50%", background: colors.primary }} />
-            <div style={{ position: "absolute", right: 0, top: 0, bottom: 0, width: "50%", background: colors.secondary }} />
-            {logoUrl && (
-              <img src={logoUrl} alt="" style={{ position: "absolute", inset: 0, margin: "auto", width: 5, height: 5, objectFit: "contain", filter: "drop-shadow(0 1px 1px rgba(0,0,0,0.9))" }} onError={e => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
+      {/* Contenuto: foto + nome + avversario + voto */}
+      <div style={{ display: "flex", alignItems: "center", gap: 5, padding: "3px 6px 3px 5px", flex: 1, minWidth: 0 }}>
+        {/* Foto circolare con ring verde affinità */}
+        <div style={{ position: "relative", width: 26, height: 26, flexShrink: 0 }}>
+          <div style={{ position: "absolute", inset: 1, borderRadius: "50%", overflow: "hidden", background: "rgba(0,0,0,0.4)" }}>
+            {src ? (
+              <img src={src} alt={player.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={photoOnError(player)} />
+            ) : (
+              <span style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", fontSize: 9, color: "rgba(255,255,255,0.7)", fontFamily: "var(--font-mono)" }}>
+                {player.name[0]}
+              </span>
             )}
           </div>
-          {hasVoto && (
-            <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, fontWeight: 700, color: "var(--green-mid)" }}>
-              {player.votoMister!.toFixed(1)}
-            </span>
-          )}
+          <div style={{ position: "absolute", inset: 0, borderRadius: "50%", border: `1.5px solid ${AFFINITY_GREEN}`, pointerEvents: "none" }} />
         </div>
+
+        {/* Cognome */}
+        <div style={{ flex: 1, minWidth: 0, fontSize: 10, fontWeight: 500, color: "#fff", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", lineHeight: 1 }}>
+          {lastName(player.name)}
+        </div>
+
+        {/* Avversario */}
+        {player.nextOpponentShort && (
+          <div style={{ display: "flex", alignItems: "center", gap: 2, flexShrink: 0 }}>
+            {player.nextIsHome ? <Home size={7} color="rgba(255,255,255,0.5)" /> : <Plane size={7} color="rgba(255,255,255,0.5)" />}
+            <span style={{ fontFamily: "var(--font-mono)", fontSize: 7, fontWeight: 700, color: "rgba(255,255,255,0.5)", letterSpacing: "0.04em" }}>
+              {player.nextOpponentShort}
+            </span>
+            {oppLogo && (
+              <img src={oppLogo} alt="" style={{ width: 10, height: 10, objectFit: "contain", filter: "grayscale(100%) brightness(1.6)", opacity: 0.7 }} onError={e => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
+            )}
+          </div>
+        )}
+
+        {/* Voto */}
+        <span style={{ flexShrink: 0, fontFamily: "var(--font-mono)", fontSize: 10, fontWeight: 700, color: player.votoMister !== null ? "#4ade80" : "rgba(255,255,255,0.28)" }}>
+          {player.votoMister !== null ? player.votoMister.toFixed(1) : "—"}
+        </span>
       </div>
     </div>
   );
 }
 
-// ─── BenchPanel — colonna laterale dugout ────────────────────────────────────
+// ─── DugoutPanel — contenitore "pensilina" con header tettoia ─────────────────
 
-interface BenchPanelProps {
-  sigla:   string;
-  bgColor: string;
-  fgColor: string;
-  players: RosterPlayer[];
-  coach:   HeadCoach;
+interface DugoutPanelProps {
+  sigla:    string;
+  bgColor:  string;
+  fgColor:  string;
+  players:  RosterPlayer[];
 }
 
-function BenchPanel({ sigla, bgColor, fgColor, players, coach }: BenchPanelProps) {
-  const shortCoach = (() => {
-    const parts = coach.name.trim().split(/\s+/);
-    const last = parts[parts.length - 1]!;
-    return last.length > 10 ? last.slice(0, 9) + "." : last;
-  })();
-
+function DugoutPanel({ sigla, bgColor, fgColor, players }: DugoutPanelProps) {
   return (
-    <div style={{ width: 155, flexShrink: 0, display: "flex", flexDirection: "column", gap: 4 }}>
-      {/* Intestazione panel */}
-      <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "4px 6px", borderRadius: "var(--r-sm)", background: "var(--surface)", border: "1px solid var(--border)" }}>
-        <div style={{ width: 22, height: 22, borderRadius: "50%", background: bgColor, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-          <span style={{ fontFamily: "var(--font-mono)", fontSize: 8, fontWeight: 700, color: fgColor }}>{sigla}</span>
+    <div style={{
+      flex: "1 1 0",       // occupa metà della colonna sinistra
+      minHeight: 0,        // permette shrink sotto il contenuto
+      borderRadius: 8,
+      border: "1px solid rgba(255,255,255,0.08)",
+      background: "rgba(10,24,20,0.75)",
+      backdropFilter: "blur(4px)",
+      overflow: "hidden",
+      display: "flex",
+      flexDirection: "column",
+    }}>
+      {/* ── Tettoia / header pensilina ── */}
+      <div style={{
+        flexShrink: 0,
+        padding: "5px 9px",
+        background: "linear-gradient(180deg, rgba(0,0,0,0.50) 0%, rgba(0,0,0,0.22) 100%)",
+        borderBottom: "1px solid rgba(255,255,255,0.07)",
+        display: "flex", alignItems: "center", gap: 6,
+        // Accenno arco tettoia — box-shadow interna curva
+        boxShadow: "inset 0 -2px 6px rgba(0,0,0,0.25), 0 2px 4px rgba(0,0,0,0.2)",
+      }}>
+        <div style={{ width: 18, height: 18, borderRadius: "50%", background: bgColor, border: "1px solid rgba(255,255,255,0.18)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <span style={{ fontFamily: "var(--font-mono)", fontSize: 7, fontWeight: 800, color: fgColor }}>{sigla}</span>
         </div>
-        <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, fontWeight: 600, color: "var(--ink-mid)", letterSpacing: "0.07em", textTransform: "uppercase" }}>Panchina</span>
+        <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, fontWeight: 600, color: "rgba(239,230,211,0.45)", letterSpacing: "0.1em", textTransform: "uppercase" }}>
+          Panchina
+        </span>
       </div>
 
-      {/* Coach info */}
-      <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "4px 6px", borderRadius: "var(--r-sm)", background: "var(--surface)", border: "1px solid var(--border-strong)" }}>
-        <div style={{ width: 24, height: 24, borderRadius: "50%", overflow: "hidden", background: "rgba(0,0,0,0.35)", border: "1.5px solid rgba(244,196,48,0.7)", flexShrink: 0 }}>
-          {coach.photoCartoonUrl && (
-            <img src={coach.photoCartoonUrl} alt={coach.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={e => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
-          )}
-        </div>
-        <div style={{ minWidth: 0 }}>
-          <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, color: "var(--ink-faint)", display: "block", letterSpacing: "0.05em", textTransform: "uppercase" }}>Allenatore</span>
-          <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, fontWeight: 600, color: "var(--ink)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", display: "block" }}>{shortCoach}</span>
-        </div>
-      </div>
-
-      {/* Lista panchinari */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 3, overflowY: "auto", flex: 1 }}>
-        {players.map((p, i) => <BenchCard key={p.id} player={p} rank={i + 1} />)}
+      {/* ── Lista panchinari (scrollabile) ── */}
+      <div style={{ flex: 1, overflowY: "auto", padding: "4px", display: "flex", flexDirection: "column", gap: 2 }}>
+        {players.map(p => <BenchRow key={p.id} player={p} />)}
         {players.length === 0 && (
-          <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--ink-faint)", padding: "8px 6px" }}>Nessun panchinaro</span>
+          <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--ink-faint)", padding: "6px 4px" }}>Nessun panchinaro</span>
         )}
       </div>
     </div>
@@ -333,12 +336,12 @@ export function MatchView() {
     );
   }
 
-  const myRows   = myLineup ? getStarterRows(myLineup.players, PLAYER_BY_ID)                   : emptyRows();
-  const acRows   = acLineup ? getStarterRows(acLineup.players, ATLETICO_CAFFEINA_PLAYER_BY_ID) : emptyRows();
-  const myBench  = myLineup ? getBenchPlayers(myLineup.players, PLAYER_BY_ID)                  : [];
-  const acBench  = acLineup ? getBenchPlayers(acLineup.players, ATLETICO_CAFFEINA_PLAYER_BY_ID): [];
-  const myCapId  = myLineup?.captainPlayerId ?? null;
-  const acCapId  = acLineup?.captainPlayerId ?? null;
+  const myRows  = myLineup ? getStarterRows(myLineup.players, PLAYER_BY_ID)                   : emptyRows();
+  const acRows  = acLineup ? getStarterRows(acLineup.players, ATLETICO_CAFFEINA_PLAYER_BY_ID) : emptyRows();
+  const myBench = myLineup ? getBenchPlayers(myLineup.players, PLAYER_BY_ID)                  : [];
+  const acBench = acLineup ? getBenchPlayers(acLineup.players, ATLETICO_CAFFEINA_PLAYER_BY_ID): [];
+  const myCapId = myLineup?.captainPlayerId ?? null;
+  const acCapId = acLineup?.captainPlayerId ?? null;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -367,21 +370,26 @@ export function MatchView() {
         </div>
       </div>
 
-      {/* ── Layout: [dugout AC] [pitch] [dugout Mario's] ── */}
-      <div style={{ display: "flex", gap: 8, height: "calc(100vh - 248px)", alignItems: "flex-start" }}>
+      {/* ── Layout: [colonna panchine sinistra] [pitch] ── */}
+      <div style={{ display: "flex", gap: 8, height: "calc(100vh - 248px)", alignItems: "stretch" }}>
 
-        {/* Dugout AC Caffeina (sinistra) */}
-        <BenchPanel
-          sigla="AC"
-          bgColor="#C8102E"
-          fgColor="#fff"
-          players={acBench}
-          coach={ATLETICO_CAFFEINA_COACH}
-        />
+        {/* ── Colonna sinistra: dugout AC (metà alta) + dugout Mario's (metà bassa) ── */}
+        <div style={{ width: 204, flexShrink: 0, display: "flex", flexDirection: "column", gap: 8 }}>
+          <DugoutPanel sigla="AC" bgColor="#C8102E" fgColor="#fff" players={acBench} />
+          <DugoutPanel sigla={MY_TEAM_INFO.sigla} bgColor={MY_TEAM_INFO.logoColori.bg} fgColor={MY_TEAM_INFO.logoColori.fg} players={myBench} />
+        </div>
 
         {/* ── Pitch ── */}
-        <div style={{ flex: "0 0 auto", height: "100%", aspectRatio: "100 / 140", position: "relative", borderRadius: "var(--r-lg)", overflow: "hidden", border: "1px solid rgba(239,230,211,0.12)", userSelect: "none" }}>
-
+        <div style={{
+          flex: "0 0 auto",
+          height: "100%",
+          aspectRatio: "100 / 140",
+          position: "relative",
+          borderRadius: "var(--r-lg)",
+          overflow: "hidden",
+          border: "1px solid rgba(239,230,211,0.12)",
+          userSelect: "none",
+        }}>
           {/* SVG campo */}
           <svg style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none" }} viewBox="0 0 100 140" preserveAspectRatio="none">
             <defs>
@@ -391,39 +399,34 @@ export function MatchView() {
               </pattern>
             </defs>
             <rect x="0" y="0" width="100" height="140" fill="url(#match-stripes)" />
-            {/* Bordi e linee campo */}
             <rect x="18" y="5"  width="77" height="130" fill="none" stroke="#ffffff" strokeWidth="0.6" />
             <line x1="18" y1="70" x2="95" y2="70" stroke="#ffffff" strokeWidth="0.6" />
             <circle cx="56.5" cy="70" r="11"  fill="none" stroke="#ffffff" strokeWidth="0.6" />
             <circle cx="56.5" cy="70" r="0.8" fill="#ffffff" />
-            {/* Area di rigore superiore */}
             <rect x="31" y="5"   width="51" height="20" fill="none" stroke="#ffffff" strokeWidth="0.6" />
             <rect x="44" y="5"   width="25" height="9"  fill="none" stroke="#ffffff" strokeWidth="0.6" />
             <circle cx="56.5" cy="17"  r="0.8" fill="#ffffff" />
-            {/* Area di rigore inferiore */}
             <rect x="31" y="115" width="51" height="20" fill="none" stroke="#ffffff" strokeWidth="0.6" />
             <rect x="44" y="126" width="25" height="9"  fill="none" stroke="#ffffff" strokeWidth="0.6" />
             <circle cx="56.5" cy="123" r="0.8" fill="#ffffff" />
-            {/* Archi D */}
             <path d="M 47 25 A 12.5 12.5 0 0 0 66 25"   fill="none" stroke="#ffffff" strokeWidth="0.6" />
             <path d="M 66 115 A 12.5 12.5 0 0 0 47 115"  fill="none" stroke="#ffffff" strokeWidth="0.6" />
-            {/* Angoli */}
             <path d="M 18 6.25 A 1.25 1.25 0 0 0 19.25 5"     fill="none" stroke="#ffffff" strokeWidth="0.6" />
             <path d="M 93.75 5 A 1.25 1.25 0 0 0 95 6.25"     fill="none" stroke="#ffffff" strokeWidth="0.6" />
             <path d="M 19.25 135 A 1.25 1.25 0 0 0 18 133.75"  fill="none" stroke="#ffffff" strokeWidth="0.6" />
             <path d="M 95 133.75 A 1.25 1.25 0 0 0 93.75 135"  fill="none" stroke="#ffffff" strokeWidth="0.6" />
-            {/* ── Area tecnica AC (top-left): x=0→16, y=21→55 ── */}
+            {/* Area tecnica AC (top-left): x=0→16, y=21→55 */}
             <line x1="0"  y1="21" x2="16" y2="21" stroke="#ffffff" strokeWidth="0.6" strokeDasharray="1.8 1.4" />
             <line x1="0"  y1="55" x2="16" y2="55" stroke="#ffffff" strokeWidth="0.6" strokeDasharray="1.8 1.4" />
             <line x1="16" y1="21" x2="16" y2="55" stroke="#ffffff" strokeWidth="0.6" strokeDasharray="1.8 1.6" />
             <polyline points="14,21 16,21 16,23"  fill="none" stroke="#ffffff" strokeWidth="0.6" />
             <polyline points="14,55 16,55 16,53"  fill="none" stroke="#ffffff" strokeWidth="0.6" />
-            {/* ── Area tecnica Mario's (bottom-left): x=0→16, y=85→119 ── */}
+            {/* Area tecnica Mario's (bottom-left): x=0→16, y=85→119 */}
             <line x1="0"  y1="85"  x2="16" y2="85"  stroke="#ffffff" strokeWidth="0.6" strokeDasharray="1.8 1.4" />
             <line x1="0"  y1="119" x2="16" y2="119" stroke="#ffffff" strokeWidth="0.6" strokeDasharray="1.8 1.4" />
             <line x1="16" y1="85"  x2="16" y2="119" stroke="#ffffff" strokeWidth="0.6" strokeDasharray="1.8 1.6" />
-            <polyline points="14,85  16,85  16,87"  fill="none" stroke="#ffffff" strokeWidth="0.6" />
-            <polyline points="14,119 16,119 16,117" fill="none" stroke="#ffffff" strokeWidth="0.6" />
+            <polyline points="14,85  16,85  16,87"   fill="none" stroke="#ffffff" strokeWidth="0.6" />
+            <polyline points="14,119 16,119 16,117"  fill="none" stroke="#ffffff" strokeWidth="0.6" />
           </svg>
 
           {/* Coach AC — area tecnica superiore: y=21→55 / 140 = 15%→39.3% */}
@@ -436,30 +439,12 @@ export function MatchView() {
             <MatchMiniCoachToken coach={COACH_MARIO} />
           </div>
 
-          {/* Atletico Caffeina — metà alta
-              GK lontano dall'area (y=8), DEF dopo linea area (y=21), MID/ATT verso centrocampo */}
-          <PitchHalf
-            rows={acRows}
-            captainId={acCapId}
-            rowY={{ GK: 8, DEF: 21, MID: 31, ATT: 41 }}
-          />
+          {/* Atletico Caffeina — metà alta */}
+          <PitchHalf rows={acRows} captainId={acCapId} rowY={{ GK: 8, DEF: 21, MID: 31, ATT: 41 }} />
 
-          {/* Mario's Squad — metà bassa (specchiata) */}
-          <PitchHalf
-            rows={myRows}
-            captainId={myCapId}
-            rowY={{ GK: 92, DEF: 79, MID: 69, ATT: 59 }}
-          />
+          {/* Mario's Squad — metà bassa */}
+          <PitchHalf rows={myRows} captainId={myCapId} rowY={{ GK: 92, DEF: 79, MID: 69, ATT: 59 }} />
         </div>
-
-        {/* Dugout Mario's Squad (destra) */}
-        <BenchPanel
-          sigla={MY_TEAM_INFO.sigla}
-          bgColor={MY_TEAM_INFO.logoColori.bg}
-          fgColor={MY_TEAM_INFO.logoColori.fg}
-          players={myBench}
-          coach={COACH_MARIO}
-        />
       </div>
     </div>
   );

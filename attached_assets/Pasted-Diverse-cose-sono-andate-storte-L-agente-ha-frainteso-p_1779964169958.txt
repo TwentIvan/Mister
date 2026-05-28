@@ -1,0 +1,37 @@
+Diverse cose sono andate storte. L'agente ha frainteso parecchio. Riallineo punto per punto.
+Cosa è sbagliato nello screenshot:
+
+Badge panchina stravolti — andavano SOLO ridimensionati (mantenendo il design del Task 105: background colore-ruolo, angoli smussati, foto con ring verde, pill bicolore). Invece li ha trasformati in cerchietti grigi + righe semplici. Vanno ripristinati al design esistente, solo più piccoli.
+Panchine divise left/right — andavano ENTRAMBE a sinistra (avversario in alto-sinistra, Mario's Squad in basso-sinistra). Invece ha messo AC a sinistra e MS a destra.
+Nessun contenitore dugout — non ha disegnato l'elemento di suggestione "pensilina" attorno alle liste.
+Allenatore ripetuto — c'è "ALLENATORE Baroni/Allegri" in testa a ogni panchina, ma il coach è già nell'area tecnica sul campo. Ridondante, va tolto dalla testata panchina.
+
+Bonus problema che noto io: i giocatori dell'Atletico Caffeina (sia in campo che in panchina) appaiono come cerchi vuoti/grigi — non hanno foto. Logico: abbiamo cartoonizzato solo i 25 di Mario's Squad, non quelli di AC. Il fallback a photoUrl originale o non è implementato o non rende.
+Task fix da incollare all'agente:
+
+Fix della Vista Match (107c). Quattro correzioni + un problema foto.
+Fix 1 — Ripristina il design dei badge panchina (solo compressi)
+I badge dei panchinari NON vanno reinventati. Riusa esattamente il design delle righe roster del builder (Task 105): background colorato per ruolo, angoli smussati, foto circolare con ring verde, pill bicolore squadra, cognome, voto. L'unica modifica consentita è ridurre le dimensioni (~75-80% della versione builder) per farne stare 14 nello spazio verticale di mezza colonna.
+Niente cerchietti grigi, niente righe semplificate. Stesso componente del roster builder, scalato.
+Fix 2 — Entrambe le panchine a SINISTRA
+Rimuovi la colonna panchina di destra. Entrambe le panchine vanno nella colonna sinistra, impilate verticalmente:
+
+Panchina Atletico Caffeina: metà superiore della colonna sinistra (allineata con la metà alta del campo, dove gioca AC)
+Panchina Mario's Squad: metà inferiore della colonna sinistra (allineata con la metà bassa)
+
+Layout orizzontale: [colonna panchine sinistra] [pitch con aree tecniche sul suo bordo sinistro]. La colonna destra sparisce completamente.
+Fix 3 — Contenitore "dugout" attorno a ogni panchina
+Disegna un elemento contenitore che evochi la pensilina della panchina vera, attorno a ciascuna delle 2 liste:
+
+Pannello con angoli arrotondati
+Accenno di "tettoia": un bordo superiore curvo (arco leggero) oppure una fascia header scura che suggerisce il tetto della panchina
+Sobrio, niente 3D letterale — deve solo dare l'idea "questa è la panchina"
+I 14 badge compressi vivono dentro questo contenitore
+Opzionale: piccola label "PANCHINA" o il logo squadra nell'header del dugout
+
+Fix 4 — Togli l'allenatore dalla testata panchina
+Rimuovi il blocco "ALLENATORE [nome]" + foto dalla testa di ogni lista panchina. Il coach è GIÀ renderizzato nell'area tecnica sul campo — è ridondante ripeterlo. La testata del dugout può avere al massimo una piccola label "PANCHINA" + sigla/logo squadra, niente coach.
+Fix 5 — Foto giocatori Atletico Caffeina
+I giocatori AC appaiono come cerchi vuoti perché non hanno photoCartoonUrl (solo Mario's Squad è stato cartoonizzato). Implementa il fallback corretto: photoCartoonUrl ?? photoUrl in TUTTI i token (campo + panchina), così gli AC mostrano almeno la foto originale API-Football.
+Verifica che il fallback funzioni: i token AC devono mostrare la foto reale (non cartoon, ma almeno visibile) invece del cerchio vuoto.
+Riportami screenshot dopo i 5 fix.
