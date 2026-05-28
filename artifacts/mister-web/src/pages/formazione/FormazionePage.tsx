@@ -9,7 +9,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 // TODO: replace with /api/fanta-teams/{id}/roster endpoint when available
 import {
-  ROSA_MARIO, MATCH_GIORNATA_2, PLAYER_BY_ID,
+  ROSA_MARIO, MATCH_GIORNATA_2, PLAYER_BY_ID, MY_TEAM_INFO,
   TEAM_COLORS, TEAM_CODE, TEAM_LOGO_URL, TEAM_LOGO_BY_CODE, COACH_MARIO,
   type RoleClassic, type HeadCoach,
 } from "./mock-data";
@@ -601,8 +601,8 @@ function Pitch({ modulo, fieldSlots, selection, captainId, onSlotClick, onSlotDo
         <line x1="0" y1="119" x2="16" y2="119" stroke="#ffffff" strokeWidth="0.6" strokeDasharray="1.8 1.4" />
         <line x1="16" y1="85" x2="16" y2="119" stroke="#ffffff" strokeWidth="0.6" strokeDasharray="1.8 1.6" />
         {/* Marcatori angolari ai 2 vertici dell'area tecnica — L solida sul bordo */}
-        <polyline points="14,85 16,85 16,87"   fill="none" stroke="#ffffff" strokeWidth="0.9" />
-        <polyline points="14,119 16,119 16,117" fill="none" stroke="#ffffff" strokeWidth="0.9" />
+        <polyline points="14,85 16,85 16,87"   fill="none" stroke="#ffffff" strokeWidth="0.6" />
+        <polyline points="14,119 16,119 16,117" fill="none" stroke="#ffffff" strokeWidth="0.6" />
       </svg>
 
       {/* MiniCoachToken — area tecnica ampliata: x=0→16%, y=60.7→85% */}
@@ -828,6 +828,19 @@ function PlayerRow({ player, isSelected, isCompatible, hasFieldSelected, onClick
   );
 }
 
+// ─── JerseyIcon — maglia stilizzata SVG ───────────────────────────────────────
+
+function JerseyIcon({ primary, secondary, size = 24 }: { primary: string; secondary: string; size?: number }) {
+  return (
+    <svg viewBox="0 0 20 22" width={size} height={Math.round(size * 22 / 20)} style={{ flexShrink: 0, display: "block" }}>
+      {/* Corpo + maniche */}
+      <path d="M4,7 L0,11 L4,13.5 L4,21 L16,21 L16,13.5 L20,11 L16,7 C15,10 5,10 4,7 Z" fill={primary} />
+      {/* Colletto */}
+      <path d="M4,7 C5,10 15,10 16,7 C15,5 13,4 10,4 C7,4 5,5 4,7 Z" fill={secondary} />
+    </svg>
+  );
+}
+
 // ─── Pagina principale ────────────────────────────────────────────────────────
 
 const LINEUP_PARAMS = { fantaTeamId: "ft-mvp-1", season: 2024, round: 2 } as const;
@@ -1050,7 +1063,7 @@ export default function FormazionePage() {
   const COLUMN_HEIGHT = "calc(100vh - 160px)";
 
   const hasFieldSelected = selection?.kind === "field";
-  const { avversario, fieldStatus, competizione, stadio } = MATCH_GIORNATA_2;
+  const { avversario, avversarioSigla, avversarioColori, fieldStatus, competizione, stadio } = MATCH_GIORNATA_2;
   const salvaEnabled = starterCount === 11;
 
   if (lineupLoading) {
@@ -1073,11 +1086,13 @@ export default function FormazionePage() {
 
       {/* ── Intestazione ── */}
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          {/* Logo squadra — placeholder fino a quando non sarà caricato */}
-          <div style={{ width: 44, height: 44, borderRadius: 8, background: "var(--green-deep)", border: "2px solid var(--green-mid)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-            <span style={{ fontFamily: "var(--font-mono)", fontSize: 13, fontWeight: 700, color: "var(--cream)", letterSpacing: "0.04em" }}>MS</span>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          {/* Logo squadra */}
+          <div style={{ width: 38, height: 38, borderRadius: 7, background: MY_TEAM_INFO.logoColori.bg, border: "2px solid var(--green-mid)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <span style={{ fontFamily: "var(--font-mono)", fontSize: 12, fontWeight: 700, color: MY_TEAM_INFO.logoColori.fg, letterSpacing: "0.04em" }}>{MY_TEAM_INFO.sigla}</span>
           </div>
+          {/* Maglia */}
+          <JerseyIcon primary={MY_TEAM_INFO.magliaPrimary} secondary={MY_TEAM_INFO.magliaSecondary} size={26} />
           <div>
             <div style={{ fontFamily: "var(--font-serif)", fontSize: 22, fontWeight: 700, color: "var(--ink)", lineHeight: 1.15, marginBottom: 4 }}>
               Mario&apos;s Squad
@@ -1254,14 +1269,21 @@ export default function FormazionePage() {
               {competizione}{" "}
               <span style={{ fontWeight: 700 }}>Giornata {MATCH_GIORNATA_2.giornata}</span>
             </div>
-            {/* Dx: avversario + stadio */}
-            <div style={{ textAlign: "right" }}>
-              <div style={{ fontFamily: "var(--font-mono)", fontSize: 13, fontWeight: 700, color: "var(--ink)", letterSpacing: "0.05em", textTransform: "uppercase" }}>
-                {avversario}
+            {/* Dx: icona casa/trasferta · stadio · avversario · logo · maglia */}
+            <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+              {fieldStatus === "casa"
+                ? <Home size={11} style={{ color: "var(--ink-mid)", flexShrink: 0 }} />
+                : <Plane size={11} style={{ color: "var(--ink-mid)", flexShrink: 0 }} />
+              }
+              <span style={{ fontFamily: "var(--font-sans)", fontSize: 11, color: "var(--ink-mid)", whiteSpace: "nowrap" }}>{stadio}</span>
+              <span style={{ color: "var(--ink-mid)", fontSize: 11, lineHeight: 1 }}>·</span>
+              <span style={{ fontFamily: "var(--font-mono)", fontSize: 13, fontWeight: 700, color: "var(--ink)", letterSpacing: "0.05em", textTransform: "uppercase", whiteSpace: "nowrap" }}>{avversario}</span>
+              {/* Logo avversario */}
+              <div style={{ width: 24, height: 24, borderRadius: 5, background: avversarioColori.primary, border: "1.5px solid rgba(0,0,0,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, fontWeight: 700, color: avversarioColori.secondary, letterSpacing: "0.03em" }}>{avversarioSigla}</span>
               </div>
-              <div style={{ fontFamily: "var(--font-sans)", fontSize: 11, color: "var(--ink-mid)", marginTop: 1 }}>
-                {stadio}
-              </div>
+              {/* Maglia avversario */}
+              <JerseyIcon primary={avversarioColori.primary} secondary={avversarioColori.secondary} size={20} />
             </div>
           </div>
 

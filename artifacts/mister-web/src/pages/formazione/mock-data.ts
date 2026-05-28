@@ -24,10 +24,25 @@ export interface RosterPlayer {
   nextIsHome: boolean | null;
 }
 
+export interface TeamInfo {
+  sigla: string;
+  logoColori: { bg: string; fg: string };
+  magliaPrimary: string;
+  magliaSecondary: string;
+}
+
+export const MY_TEAM_INFO: TeamInfo = {
+  sigla: "MS",
+  logoColori: { bg: "#1f4733", fg: "#efe6d3" },
+  magliaPrimary: "#1f4733",
+  magliaSecondary: "#efe6d3",
+};
+
 export interface MatchInfo {
   giornata: number;
   avversario: string;
-  avversarioLogo?: string;
+  avversarioSigla: string;
+  avversarioColori: { primary: string; secondary: string };
   fieldStatus: FieldStatus;
   competizione: string;
   stadio: string;
@@ -38,6 +53,8 @@ export interface MatchInfo {
 export const MATCH_GIORNATA_2: MatchInfo = {
   giornata: 2,
   avversario: "Atletico Caffeina",
+  avversarioSigla: "AC",
+  avversarioColori: { primary: "#C8102E", secondary: "#FFFFFF" },
   fieldStatus: "casa",
   competizione: "Serie A",
   stadio: "Stadio Olimpico",
