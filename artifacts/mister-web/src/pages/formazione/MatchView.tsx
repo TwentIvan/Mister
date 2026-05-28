@@ -203,7 +203,7 @@ function MatchPlayerToken({ player, isCaptain = false }: { player: MatchPlayer; 
 // ─── MatchMiniCoachToken — piccolo, per area tecnica in pitch ─────────────────
 
 function MatchMiniCoachToken({ coach, coachVoto }: { coach: HeadCoach; coachVoto?: number }) {
-  const PHOTO = 34, RING = 2, OUTER = PHOTO + RING * 2, VBADGE = 14;
+  const PHOTO = 34, RING = 2, OUTER = PHOTO + RING * 2, VBADGE = 18;
   const teamKey = coach.currentTeamName ?? "";
   const colors  = TEAM_COLORS[teamKey] ?? { primary: "#444", secondary: "#888" };
   const logoUrl = TEAM_LOGO_URL[teamKey];
@@ -225,8 +225,8 @@ function MatchMiniCoachToken({ coach, coachVoto }: { coach: HeadCoach; coachVoto
         <div style={{ position: "absolute", inset: 0, borderRadius: "50%", border: `${RING}px solid rgba(244,196,48,0.82)`, boxShadow: "0 0 6px rgba(244,196,48,0.25)", pointerEvents: "none" }} />
         {/* Badge voto — top right */}
         {hasVoto && (
-          <div style={{ position: "absolute", top: -2, right: -2, width: VBADGE, height: VBADGE, borderRadius: "50%", background: "#1f4733", border: "1px solid rgba(244,196,48,0.5)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 1px 3px rgba(0,0,0,0.6)", zIndex: 2 }}>
-            <span style={{ fontFamily: "var(--font-mono)", fontSize: 7, fontWeight: 700, color: "#fff", lineHeight: 1 }}>
+          <div style={{ position: "absolute", top: -2, right: -2, width: VBADGE, height: VBADGE, borderRadius: "50%", background: "#1f4733", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 0 0 1.5px rgba(244,196,48,0.75), 0 1px 3px rgba(0,0,0,0.6)", zIndex: 2 }}>
+            <span style={{ fontFamily: "var(--font-mono)", fontSize: 8, fontWeight: 700, color: "#fff", lineHeight: 1 }}>
               {coachVoto!.toFixed(1)}
             </span>
           </div>
