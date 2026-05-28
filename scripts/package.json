@@ -20,7 +20,8 @@
     "scoring:detail": "tsx ./src/scoring/match-detail.ts",
     "seed:rosters": "tsx ./src/seeds/seed-rosters-lineups.ts",
     "sync:fixtures-persist": "tsx ./src/seeds/sync-serie-a-fixtures.ts",
-    "sync:test-picwish": "tsx ./sync/test-picwish-cutout.ts"
+    "sync:test-picwish": "tsx ./sync/test-picwish-cutout.ts",
+    "sync:test-toy": "tsx ./sync/test-toy-style.ts"
   },
   "dependencies": {
     "@tensorflow-models/blazeface": "^0.1.0",

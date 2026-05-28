@@ -12,3 +12,9 @@ id = "gKmqXCSmYgzVXagjmTdCH"
 uri = "file://picwish-test.zip"
 type = "unspecified"
 title = "PicWish cutout — 5 player sample (1358, 1624, 35544, 6409, 30509)"
+
+[[outputs]]
+id = "HxuX2ZrvpLnNsJuR49-Qs"
+uri = "file://toy-test.zip"
+type = "unspecified"
+title = "face-to-many Toy — 5 WebP (1358, 1624, 6409, 30509, 35544)"
