@@ -24,3 +24,9 @@ id = "FdGcohPon_LmKMu54_J2n"
 uri = "file://toy-test-white.zip"
 type = "unspecified"
 title = "face-to-many Toy — sfondo bianco (1358, 1624, 6409, 30509, 35544)"
+
+[[outputs]]
+id = "Apfv1-ttU3o8LzKJ4FwY2"
+uri = "file://toy-test-floodfill.zip"
+type = "unspecified"
+title = "face-to-many Toy — sfondo bianco flood-fill (1358, 1624, 6409, 30509, 35544)"
