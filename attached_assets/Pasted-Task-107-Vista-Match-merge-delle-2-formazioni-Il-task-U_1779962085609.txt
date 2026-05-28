@@ -1,0 +1,74 @@
+Task 107 — Vista Match (merge delle 2 formazioni)
+Il task UI più corposo finora. Lo strutturo in 3 sub-task con stop, così l'agente procede a tappe verificabili.
+Premessa dati: la vista match ha bisogno dei dettagli giocatore (foto, voto, colori) di ENTRAMBE le squadre. Oggi mock-data.ts contiene solo Mario's Squad. Quindi il primo sub-task estende il mock con l'avversario. I lineup veri vengono dall'API (li abbiamo appena seedati); i dettagli anagrafici dal mock (fino a quando non costruiremo un endpoint roster dedicato).
+Da incollare all'agente:
+
+Costruzione della Vista Match: due formazioni contrapposte sullo stesso campo, due allenatori, due panchine "dugout". Accesso tramite toggle "Formazione | Partita" sulla pagina esistente. 3 sub-task con stop.
+Task 107a — Estendi mock data + toggle scaffold
+
+Estendi mock-data.ts con la rosa di Atletico Caffeina (ft-mvp-7, l'avversario di Mario's Squad in giornata 2). Query DB:
+
+sqlSELECT p.id, p.name, p.real_team, p.role_classic, p.photo_url, p.photo_cartoon_url,
+       p.current_team_id, tc.primary_hex, tc.secondary_hex, tc.text_hex,
+       pgs.voto_mister
+FROM contracts c
+JOIN players p ON p.id = c.player_id
+LEFT JOIN team_colors tc ON tc.team_id = p.current_team_id
+LEFT JOIN player_giornata_stats pgs ON pgs.player_id = p.id AND pgs.round = 2
+WHERE c.fanta_team_id = 'ft-mvp-7'
+ORDER BY CASE p.role_classic WHEN 'GK' THEN 1 WHEN 'DEF' THEN 2 WHEN 'MID' THEN 3 WHEN 'ATT' THEN 4 END, p.name;
+Embedda come costante ATLETICO_CAFFEINA_ROSTER. Aggiungi anche il coach di ft-mvp-7 (query coaches JOIN fanta_teams.head_coach_id) come ATLETICO_CAFFEINA_COACH, con gli stessi campi del coach di Mario's Squad. Includi anche il fieldStatus dei giocatori dell'avversario per round 2 (hardcoded plausibile come per Mario's Squad).
+Lascia commento // TODO: replace both rosters with /api/match/{matchId} endpoint.
+
+Toggle "Formazione | Partita" nell'header della pagina: due pill/tab. Stato viewMode: 'builder' | 'match'. Default 'builder'.
+
+builder → renderizza la pagina attuale (invariata)
+match → renderizza il nuovo componente MatchView (che costruiremo in 107b/c)
+
+
+Crea il file MatchView.tsx con uno scaffold minimo (solo un placeholder "Vista Match" centrato) per ora. Verifica che il toggle switcha correttamente tra builder e questo placeholder.
+
+Stop. Riportami: toggle funzionante + conferma che il mock ha le due rose (50 giocatori totali) + i due coach.
+Task 107b — Pitch dual-formation
+Nel MatchView.tsx, costruisci il pitch con le due formazioni contrapposte.
+Layout verticale del campo:
+
+Metà alta = avversario (Atletico Caffeina): porta in cima, formazione che attacca verso il basso
+
+GK ~5% dall'alto, DEF ~16%, MID ~28%, ATT ~40% (vicino al centrocampo)
+
+
+Linea di metà campo al 50%
+Metà bassa = Mario's Squad: porta in fondo, formazione che attacca verso l'alto
+
+ATT ~60% (vicino al centrocampo), MID ~72%, DEF ~84%, GK ~95%
+
+
+
+Ogni formazione è compressa nella propria metà. I moduli vengono parsati dai rispettivi lineup (recuperati via useGetLineups per ft-mvp-1 e ft-mvp-7, round 2, season 2024).
+Player token in modalità match: stesso componente, ma variant: 'match' → dimensioni ridotte (~60-65% del field token del builder) perché ci sono 22 giocatori invece di 11. Mostra: foto (ring verde), pill bicolore, voto badge (voto_mister reale del round 2), cognome. Casa/aereo opzionale se c'è spazio, altrimenti omettibile in questa densità.
+Orientamento token avversario: i token dell'avversario possono restare con lo stesso orientamento (non serve ruotarli a 180°, sarebbe straniante leggere i nomi capovolti). Solo la posizione nel campo li colloca nella metà alta.
+Stop. Riportami screenshot del pitch con le due formazioni piazzate (22 token totali), avversario sopra, Mario's Squad sotto.
+Task 107c — Due coach + due dugout + rifiniture
+
+Due aree tecniche:
+
+Avversario: sul bordo sinistro del pitch, a ~25% dall'alto (metà della metà alta)
+Mario's Squad: sul bordo sinistro, a ~75% dall'alto (metà della metà bassa)
+Entrambe rettangolo tratteggiato a 3 lati (lato aperto verso l'esterno/panchina), bianco pieno, stesso stroke delle altre linee
+Coach token dentro ciascuna (Allegri sotto per Mario's Squad, il coach di Atletico Caffeina sopra)
+
+
+Due panchine "dugout" nella colonna sinistra:
+
+Rimuovi i filtri ruolo P/D/C/A dalla testata (in modalità match non servono) per recuperare spazio
+Panchina avversario: in alto a sinistra, allineata con la metà alta
+Panchina Mario's Squad: in basso a sinistra, allineata con la metà bassa
+Ogni panchina è un contenitore "dugout": pannello arrotondato con un accenno di "tettoia" in cima (un arco/bordo superiore curvo o un header scuro che suggerisce la pensilina). Sobrio, niente 3D letterale — un rettangolo arrotondato con top-border stilizzato basta a evocare la panchina
+Dentro: i 14 panchinari in versione badge compressi (più piccoli dei roster badge del builder), che mostrano foto-mini + cognome + voto. Layout verticale denso
+
+
+Header match: mostra le due squadre + un'area risultato. Per ora il risultato aggregato è placeholder (— : — o "Risultato: in elaborazione") perché il calcolo vero è lo Step 5. Mostra i nomi: "Mario's Squad vs Atletico Caffeina · Giornata 2".
+Responsive: su mobile, le due panchine possono collassare sotto il pitch (stacked) invece che a sinistra, se lo spazio orizzontale non basta.
+
+Stop. Riportami screenshot finale: pitch dual-formation + due coach nelle aree tecniche + due dugout con panchinari + header con i nomi delle due squadre.

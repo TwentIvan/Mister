@@ -11,8 +11,10 @@ import { useToast } from "@/hooks/use-toast";
 import {
   ROSA_MARIO, MATCH_GIORNATA_2, PLAYER_BY_ID, MY_TEAM_INFO,
   TEAM_COLORS, TEAM_CODE, TEAM_LOGO_URL, TEAM_LOGO_BY_CODE, COACH_MARIO,
+  ATLETICO_CAFFEINA_ROSTER, ATLETICO_CAFFEINA_COACH,
   type RoleClassic, type HeadCoach,
 } from "./mock-data";
+import { MatchView } from "./MatchView";
 
 // ─── Costanti ────────────────────────────────────────────────────────────────
 
@@ -854,6 +856,7 @@ export default function FormazionePage() {
   const [selectedTeams, setSelectedTeams] = useState<Set<string>>(new Set());
   const [moduleChangeMsg, setModuleChangeMsg] = useState<string | null>(null);
   const [captainId, setCaptainId] = useState<number | null>(null);
+  const [viewMode, setViewMode] = useState<'builder' | 'match'>('builder');
 
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -1102,6 +1105,19 @@ export default function FormazionePage() {
           </span>
         </div>
 
+        {/* Toggle Formazione | Partita */}
+        <div style={{ display: "flex", alignItems: "center", padding: 3, gap: 1, borderRadius: 99, background: "var(--surface-raised)", border: "1px solid var(--border)" }}>
+          {(["builder", "match"] as const).map(mode => (
+            <button
+              key={mode}
+              onClick={() => setViewMode(mode)}
+              style={{ padding: "4px 14px", borderRadius: 99, border: "none", cursor: "pointer", fontFamily: "var(--font-mono)", fontSize: 11, fontWeight: 600, letterSpacing: "0.05em", textTransform: "uppercase", background: viewMode === mode ? "var(--green-deep)" : "transparent", color: viewMode === mode ? "#fff" : "var(--ink-mid)", transition: "background 0.15s, color 0.15s" }}
+            >
+              {mode === 'builder' ? "Formazione" : "Partita"}
+            </button>
+          ))}
+        </div>
+
         {/* Messaggi + azioni */}
         <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end" }}>
           {moduleChangeMsg && (
@@ -1144,6 +1160,9 @@ export default function FormazionePage() {
           </button>
         </div>
       </div>
+
+      {viewMode === 'match' && <MatchView />}
+      {viewMode === 'builder' && (<>
 
       {/* ── Layout: [Filtri+Roster | Pitch] ── */}
       <div className="formazione-grid" style={{ display: "grid", gridTemplateColumns: "220px 1fr", gap: "var(--sp-5)", alignItems: "start" }}>
@@ -1336,6 +1355,7 @@ export default function FormazionePage() {
           .formazione-grid > :last-child  { order: 2; }
         }
       `}</style>
+      </>)}
     </div>
   );
 }

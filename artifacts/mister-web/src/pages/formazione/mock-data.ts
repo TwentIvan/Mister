@@ -217,3 +217,53 @@ export const COACH_MARIO: HeadCoach = {
   nationality: "Italy",
   currentTeamName: "Milan",
 };
+
+// ─── Rosa Atletico Caffeina (ft-mvp-7) ───────────────────────────────────────
+// TODO: replace both rosters with /api/match/{matchId} endpoint
+
+export const ATLETICO_CAFFEINA_ROSTER: RosterPlayer[] = [
+  // ── GK (3) ────────────────────────────────────────────────────────────────
+  { id: 312,    name: "A. Meret",           realTeam: "Napoli",        roleClassic: "GK",  photoUrl: "https://media.api-sports.io/football/players/312.png",    photoCartoonUrl: "/avatars/312.webp",    votoMister: 7.08, fieldStatus: "casa",      nextOpponentShort: "TOR", nextIsHome: true  },
+  { id: 30670,  name: "M. Di Gregorio",     realTeam: "Juventus",      roleClassic: "GK",  photoUrl: "https://media.api-sports.io/football/players/30670.png",  photoCartoonUrl: "/avatars/30670.webp",  votoMister: 7.34, fieldStatus: "casa",      nextOpponentShort: "VER", nextIsHome: true  },
+  { id: 452398, name: "M. Piombino",        realTeam: "Como",          roleClassic: "GK",  photoUrl: "https://media.api-sports.io/football/players/452398.png", photoCartoonUrl: "/avatars/452398.webp", votoMister: null, fieldStatus: "casa",      nextOpponentShort: "PAR", nextIsHome: true  },
+  // ── DEF (8) ───────────────────────────────────────────────────────────────
+  { id: 288,    name: "A. Moreno",          realTeam: "Como",          roleClassic: "DEF", photoUrl: "https://media.api-sports.io/football/players/288.png",    photoCartoonUrl: "/avatars/288.webp",    votoMister: 7.21, fieldStatus: "casa",      nextOpponentShort: "PAR", nextIsHome: true  },
+  { id: 2725,   name: "B. Pavard",          realTeam: "Inter",         roleClassic: "DEF", photoUrl: "https://media.api-sports.io/football/players/2725.png",   photoCartoonUrl: "/avatars/2725.webp",   votoMister: 7.36, fieldStatus: "trasferta", nextOpponentShort: "MON", nextIsHome: false },
+  { id: 30497,  name: "Bremer",             realTeam: "Juventus",      roleClassic: "DEF", photoUrl: "https://media.api-sports.io/football/players/30497.png",  photoCartoonUrl: "/avatars/30497.webp",  votoMister: 8.17, fieldStatus: "casa",      nextOpponentShort: "VER", nextIsHome: true  },
+  { id: 317,    name: "E. Hysaj",           realTeam: "Lazio",         roleClassic: "DEF", photoUrl: "https://media.api-sports.io/football/players/317.png",    photoCartoonUrl: "/avatars/317.webp",    votoMister: null, fieldStatus: "casa",      nextOpponentShort: "UDI", nextIsHome: true  },
+  { id: 91352,  name: "F. Mezzoni",         realTeam: "Napoli",        roleClassic: "DEF", photoUrl: "https://media.api-sports.io/football/players/91352.png",  photoCartoonUrl: "/avatars/91352.webp",  votoMister: null, fieldStatus: "casa",      nextOpponentShort: "TOR", nextIsHome: true  },
+  { id: 136087, name: "F. Parisi",          realTeam: "Fiorentina",    roleClassic: "DEF", photoUrl: "https://media.api-sports.io/football/players/136087.png", photoCartoonUrl: "/avatars/136087.webp", votoMister: 7.27, fieldStatus: "casa",      nextOpponentShort: "CAG", nextIsHome: true  },
+  { id: 31079,  name: "F. Zampano",         realTeam: "Venezia",       roleClassic: "DEF", photoUrl: "https://media.api-sports.io/football/players/31079.png",  photoCartoonUrl: "/avatars/31079.webp",  votoMister: 6.62, fieldStatus: "trasferta", nextOpponentShort: "ROM", nextIsHome: false },
+  { id: 30498,  name: "L. De Silvestri",    realTeam: "Bologna",       roleClassic: "DEF", photoUrl: "https://media.api-sports.io/football/players/30498.png",  photoCartoonUrl: "/avatars/30498.webp",  votoMister: null, fieldStatus: "casa",      nextOpponentShort: "GEN", nextIsHome: true  },
+  // ── MID (8) ───────────────────────────────────────────────────────────────
+  { id: 275394, name: "A. Hainaut",         realTeam: "Parma",         roleClassic: "MID", photoUrl: "https://media.api-sports.io/football/players/275394.png", photoCartoonUrl: "/avatars/275394.webp", votoMister: null, fieldStatus: "trasferta", nextOpponentShort: "COM", nextIsHome: false },
+  { id: 451211, name: "F. Rispoli",         realTeam: "Como",          roleClassic: "MID", photoUrl: "https://media.api-sports.io/football/players/451211.png", photoCartoonUrl: "/avatars/451211.webp", votoMister: null, fieldStatus: "casa",      nextOpponentShort: "PAR", nextIsHome: true  },
+  { id: 30423,  name: "H. Hateboer",        realTeam: "Atalanta",      roleClassic: "MID", photoUrl: "https://media.api-sports.io/football/players/30423.png",  photoCartoonUrl: "/avatars/30423.webp",  votoMister: null, fieldStatus: "casa",      nextOpponentShort: "LEC", nextIsHome: true  },
+  { id: 15905,  name: "M. Kofod Andersen",  realTeam: "Venezia",       roleClassic: "MID", photoUrl: "https://media.api-sports.io/football/players/15905.png",  photoCartoonUrl: "/avatars/15905.webp",  votoMister: 7.07, fieldStatus: "trasferta", nextOpponentShort: "ROM", nextIsHome: false },
+  { id: 30432,  name: "M. de Roon",         realTeam: "Atalanta",      roleClassic: "MID", photoUrl: "https://media.api-sports.io/football/players/30432.png",  photoCartoonUrl: "/avatars/30432.webp",  votoMister: 7.34, fieldStatus: "casa",      nextOpponentShort: "LEC", nextIsHome: true  },
+  { id: 452430, name: "S. Perciun",         realTeam: "Torino",        roleClassic: "MID", photoUrl: "https://media.api-sports.io/football/players/452430.png", photoCartoonUrl: "/avatars/452430.webp", votoMister: null, fieldStatus: "trasferta", nextOpponentShort: "NAP", nextIsHome: false },
+  { id: 36902,  name: "T. Reijnders",       realTeam: "AC Milan",      roleClassic: "MID", photoUrl: "https://media.api-sports.io/football/players/36902.png",  photoCartoonUrl: "/avatars/36902.webp",  votoMister: 7.43, fieldStatus: "casa",      nextOpponentShort: "EMP", nextIsHome: true  },
+  { id: 80752,  name: "T. Tessmann",        realTeam: "Venezia",       roleClassic: "MID", photoUrl: "https://media.api-sports.io/football/players/80752.png",  photoCartoonUrl: "/avatars/80752.webp",  votoMister: null, fieldStatus: "trasferta", nextOpponentShort: "ROM", nextIsHome: false },
+  // ── ATT (6) ───────────────────────────────────────────────────────────────
+  { id: 505097, name: "A. Asmussen",        realTeam: "Empoli",        roleClassic: "ATT", photoUrl: "https://media.api-sports.io/football/players/505097.png", photoCartoonUrl: "/avatars/505097.webp", votoMister: null, fieldStatus: "trasferta", nextOpponentShort: "MIL", nextIsHome: false },
+  { id: 359100, name: "A. Cissè",           realTeam: "Hellas Verona", roleClassic: "ATT", photoUrl: "https://media.api-sports.io/football/players/359100.png", photoCartoonUrl: "/avatars/359100.webp", votoMister: null, fieldStatus: "trasferta", nextOpponentShort: "JUV", nextIsHome: false },
+  { id: 195512, name: "M. Satriano",        realTeam: "Inter",         roleClassic: "ATT", photoUrl: "https://media.api-sports.io/football/players/195512.png", photoCartoonUrl: "/avatars/195512.webp", votoMister: null, fieldStatus: "trasferta", nextOpponentShort: "MON", nextIsHome: false },
+  { id: 161900, name: "S. Diawara",         realTeam: "Udinese",       roleClassic: "ATT", photoUrl: "https://media.api-sports.io/football/players/161900.png", photoCartoonUrl: "/avatars/161900.webp", votoMister: null, fieldStatus: "trasferta", nextOpponentShort: "LAZ", nextIsHome: false },
+  { id: 162173, name: "S. Iling-Junior",    realTeam: "Bologna",       roleClassic: "ATT", photoUrl: "https://media.api-sports.io/football/players/162173.png", photoCartoonUrl: "/avatars/162173.webp", votoMister: null, fieldStatus: "casa",      nextOpponentShort: "GEN", nextIsHome: true  },
+  { id: 51016,  name: "T. Buchanan",        realTeam: "Inter",         roleClassic: "ATT", photoUrl: "https://media.api-sports.io/football/players/51016.png",  photoCartoonUrl: "/avatars/51016.webp",  votoMister: null, fieldStatus: "trasferta", nextOpponentShort: "MON", nextIsHome: false },
+];
+
+export const ATLETICO_CAFFEINA_PLAYER_BY_ID = new Map<number, RosterPlayer>(
+  ATLETICO_CAFFEINA_ROSTER.map(p => [p.id, p])
+);
+
+// ─── Allenatore Atletico Caffeina ─────────────────────────────────────────────
+// M. Baroni (id 2915)
+
+export const ATLETICO_CAFFEINA_COACH: HeadCoach = {
+  id: 2915,
+  name: "M. Baroni",
+  photoCartoonUrl: "/avatars/coaches/2915.webp",
+  nationality: "Italy",
+  currentTeamName: null,
+};
