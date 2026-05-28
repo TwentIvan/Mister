@@ -37,9 +37,8 @@ const ROLE_BADGE: Record<RoleClassic, { label: string; bg: string }> = {
   ATT: { label: "A", bg: "#8b2c2c" },
 };
 
-// Colori per i badge filtro ruolo (inattivo / attivo)
-const ROLE_FILTER_COLORS: Record<RoleFilter, { bg: string; bgActive: string; border: string; text: string }> = {
-  tutti: { bg: "transparent",            bgActive: "var(--green-deep)", border: "var(--border-strong)", text: "var(--ink-mid)" },
+// Colori per i badge filtro ruolo (inattivo / attivo) — multi-selezione, no "tutti"
+const ROLE_FILTER_COLORS: Record<RoleClassic, { bg: string; bgActive: string; border: string; text: string }> = {
   GK:   { bg: "rgba(122,80,18,0.18)",    bgActive: "#7a5012",           border: "rgba(122,80,18,0.55)", text: "#8c6220" },
   DEF:  { bg: "rgba(26,61,43,0.22)",     bgActive: "#1a3d2b",           border: "rgba(26,61,43,0.55)",  text: "#2d6b4f" },
   MID:  { bg: "rgba(25,48,92,0.22)",     bgActive: "#19305c",           border: "rgba(25,48,92,0.6)",   text: "#2a4a8c" },
@@ -54,13 +53,11 @@ const ROLE_ROW_BG: Record<RoleClassic, string> = {
   ATT: "#6b1f1f",
 };
 
-type RoleFilter = "tutti" | RoleClassic;
-const ROLE_FILTERS: { label: string; value: RoleFilter }[] = [
-  { label: "Tutti", value: "tutti" },
-  { label: "P",     value: "GK"   },
-  { label: "D",     value: "DEF"  },
-  { label: "C",     value: "MID"  },
-  { label: "A",     value: "ATT"  },
+const ROLE_FILTERS: { label: string; value: RoleClassic }[] = [
+  { label: "P", value: "GK"  },
+  { label: "D", value: "DEF" },
+  { label: "C", value: "MID" },
+  { label: "A", value: "ATT" },
 ];
 
 // ─── Selezione attiva ─────────────────────────────────────────────────────────
@@ -285,13 +282,13 @@ function PlayerToken({
   isCaptain = false, isSelected = false, benchPriority,
 }: PlayerTokenProps) {
   const isField = variant === "field";
-  const PHOTO   = isField ? 76 : 40;
-  const RING    = isField ? 3  : 2;
+  const PHOTO   = isField ? 48 : 40;
+  const RING    = 2;
   const OUTER   = PHOTO + RING * 2;
-  const PILL_W  = isField ? 66 : 36;
-  const PILL_H  = isField ? 16 : 12;
-  const VBADGE  = isField ? 22 : 16;
-  const CBADGE  = 18;
+  const PILL_W  = isField ? 40 : 36;
+  const PILL_H  = isField ? 11 : 12;
+  const VBADGE  = isField ? 16 : 16;
+  const CBADGE  = 14;
 
   const colors = TEAM_COLORS[player.realTeam] ?? { primary: "#444", secondary: "#888" };
   const code   = TEAM_CODE[player.realTeam] ?? "???";
@@ -550,18 +547,18 @@ interface PitchProps {
   coach?: HeadCoach | null;
   avversario?: string;
   nextIsHome?: boolean;
-  fieldRoleFilter?: RoleFilter;
-  fieldTeamFilter?: string | null;
+  fieldRoles?: Set<RoleClassic>;
+  fieldTeams?: Set<string>;
 }
 
-function Pitch({ modulo, fieldSlots, selection, captainId, onSlotClick, onSlotDoubleClick, coach, avversario, nextIsHome, fieldRoleFilter = "tutti", fieldTeamFilter = null }: PitchProps) {
+function Pitch({ modulo, fieldSlots, selection, captainId, onSlotClick, onSlotDoubleClick, coach, avversario, nextIsHome, fieldRoles = new Set<RoleClassic>(), fieldTeams = new Set<string>() }: PitchProps) {
   const formation = parseFormation(modulo);
   const rowPositions = rowPositionsForFormation(formation);
 
-  const isFilterActive = fieldRoleFilter !== "tutti" || fieldTeamFilter !== null;
+  const isFilterActive = fieldRoles.size > 0 || fieldTeams.size > 0;
   const playerMatchesFilter = (p: typeof ROSA_MARIO[0]) =>
-    (fieldRoleFilter === "tutti" || p.roleClassic === fieldRoleFilter) &&
-    (fieldTeamFilter === null || p.realTeam === fieldTeamFilter);
+    (fieldRoles.size === 0 || fieldRoles.has(p.roleClassic)) &&
+    (fieldTeams.size === 0 || fieldTeams.has(p.realTeam));
 
   return (
     <div style={{
@@ -578,33 +575,32 @@ function Pitch({ modulo, fieldSlots, selection, captainId, onSlotClick, onSlotDo
           </pattern>
         </defs>
         <rect x="0" y="0" width="100" height="140" fill="url(#pitch-stripes)" />
-        {/* Campo verde */}
-        <rect x="14" y="5" width="81" height="130" fill="none" stroke="#ffffff" strokeWidth="0.6" />
-        <line x1="14" y1="70" x2="95" y2="70" stroke="#ffffff" strokeWidth="0.6" />
-        <circle cx="54.5" cy="70" r="11" fill="none" stroke="#ffffff" strokeWidth="0.6" />
-        <circle cx="54.5" cy="70" r="0.8" fill="#ffffff" />
+        {/* Campo verde — bordo sinistro a x=18 */}
+        <rect x="18" y="5" width="77" height="130" fill="none" stroke="#ffffff" strokeWidth="0.6" />
+        <line x1="18" y1="70" x2="95" y2="70" stroke="#ffffff" strokeWidth="0.6" />
+        <circle cx="56.5" cy="70" r="11" fill="none" stroke="#ffffff" strokeWidth="0.6" />
+        <circle cx="56.5" cy="70" r="0.8" fill="#ffffff" />
         {/* Area di rigore in alto */}
-        <rect x="29" y="5" width="51" height="20" fill="none" stroke="#ffffff" strokeWidth="0.6" />
-        <rect x="42" y="5" width="25" height="9" fill="none" stroke="#ffffff" strokeWidth="0.6" />
-        <circle cx="54.5" cy="17" r="0.8" fill="#ffffff" />
+        <rect x="31" y="5" width="51" height="20" fill="none" stroke="#ffffff" strokeWidth="0.6" />
+        <rect x="44" y="5" width="25" height="9" fill="none" stroke="#ffffff" strokeWidth="0.6" />
+        <circle cx="56.5" cy="17" r="0.8" fill="#ffffff" />
         {/* Area di rigore in basso */}
-        <rect x="29" y="115" width="51" height="20" fill="none" stroke="#ffffff" strokeWidth="0.6" />
-        <rect x="42" y="126" width="25" height="9" fill="none" stroke="#ffffff" strokeWidth="0.6" />
-        <circle cx="54.5" cy="123" r="0.8" fill="#ffffff" />
-        {/* Area tecnica — 3 lati, tratteggio fitto (3 tratti sui lati corti, 6 sul lato lungo) */}
-        <line x1="3" y1="92"  x2="11" y2="92"  stroke="#ffffff" strokeWidth="0.6" strokeDasharray="1.6 1.6" />
-        <line x1="3" y1="112" x2="11" y2="112" stroke="#ffffff" strokeWidth="0.6" strokeDasharray="1.6 1.6" />
-        <line x1="11" y1="92" x2="11" y2="112" stroke="#ffffff" strokeWidth="0.6" strokeDasharray="1.8 1.5" />
+        <rect x="31" y="115" width="51" height="20" fill="none" stroke="#ffffff" strokeWidth="0.6" />
+        <rect x="44" y="126" width="25" height="9" fill="none" stroke="#ffffff" strokeWidth="0.6" />
+        <circle cx="56.5" cy="123" r="0.8" fill="#ffffff" />
+        {/* Area tecnica — ampliata: x=0→16, y=85→119; 5 tratti sui lati corti, 10 sul lato lungo */}
+        <line x1="0" y1="85"  x2="16" y2="85"  stroke="#ffffff" strokeWidth="0.6" strokeDasharray="1.8 1.4" />
+        <line x1="0" y1="119" x2="16" y2="119" stroke="#ffffff" strokeWidth="0.6" strokeDasharray="1.8 1.4" />
+        <line x1="16" y1="85" x2="16" y2="119" stroke="#ffffff" strokeWidth="0.6" strokeDasharray="1.8 1.6" />
       </svg>
 
-      {/* MiniCoachToken — sovrapposto all'area tecnica, formato uguale ai giocatori */}
+      {/* MiniCoachToken — area tecnica ampliata: x=0→16%, y=60.7→85% */}
       {coach && (
         <div style={{
           position: "absolute",
-          left: "0%", top: "58%",
-          width: "16%", height: "34%",
-          display: "flex", alignItems: "flex-start", justifyContent: "center",
-          paddingTop: "2%",
+          left: "0%", top: "60%",
+          width: "16%", height: "26%",
+          display: "flex", alignItems: "center", justifyContent: "center",
           pointerEvents: "none",
           zIndex: 2,
         }}>
@@ -619,7 +615,7 @@ function Pitch({ modulo, fieldSlots, selection, captainId, onSlotClick, onSlotDo
 
           return (
             <div key={rowIdx} style={{
-              position: "absolute", left: "16%", right: "7%", top: `${topPct}%`,
+              position: "absolute", left: "19%", right: "5%", top: `${topPct}%`,
               transform: "translateY(-50%)",
               display: "flex", justifyContent: "center", alignItems: "flex-start", gap: 10,
             }}>
@@ -830,8 +826,8 @@ export default function FormazionePage() {
   const [fieldSlots, setFieldSlots] = useState<Record<string, number>>({});
   const [roster, setRoster] = useState<number[]>(initialRoster);
   const [selection, setSelection] = useState<Selection>(null);
-  const [manualRoleFilter, setManualRoleFilter] = useState<RoleFilter>("tutti");
-  const [teamFilter, setTeamFilter] = useState<string | null>(null);
+  const [selectedRoles, setSelectedRoles] = useState<Set<RoleClassic>>(new Set());
+  const [selectedTeams, setSelectedTeams] = useState<Set<string>>(new Set());
   const [moduleChangeMsg, setModuleChangeMsg] = useState<string | null>(null);
   const [captainId, setCaptainId] = useState<number | null>(null);
 
@@ -874,7 +870,9 @@ export default function FormazionePage() {
     return getSlotRole(selection.slotId, formation);
   }, [selection, formation]);
 
-  const effectiveFilter: RoleFilter = selectedFieldSlotRole ?? manualRoleFilter;
+  const effectiveRoles: Set<RoleClassic> = selectedFieldSlotRole
+    ? new Set([selectedFieldSlotRole])
+    : selectedRoles;
 
   // Mappa inversa: playerId → slotId (per sapere chi è in campo)
   const fieldPlayerIdx = useMemo(() => {
@@ -916,10 +914,10 @@ export default function FormazionePage() {
     return roster
       .map((pid, idx) => ({ player: PLAYER_BY_ID.get(pid)!, rosterIdx: idx, priority: idx + 1 }))
       .filter(({ player }) => player
-        && (effectiveFilter === "tutti" || player.roleClassic === effectiveFilter)
-        && (teamFilter === null || player.realTeam === teamFilter)
+        && (effectiveRoles.size === 0 || effectiveRoles.has(player.roleClassic))
+        && (selectedTeams.size === 0 || selectedTeams.has(player.realTeam))
       );
-  }, [roster, effectiveFilter, teamFilter]);
+  }, [roster, effectiveRoles, selectedTeams]);
 
   // ── Cambio modulo ────────────────────────────────────────────────────────────
   function handleModuloChange(newModulo: string) {
@@ -1110,7 +1108,7 @@ export default function FormazionePage() {
             {saveMutation.isPending ? "Salvataggio…" : "Salva"}
           </button>
           <button
-            onClick={() => { setFieldSlots({}); setRoster(initialRoster()); setSelection(null); setCaptainId(null); setTeamFilter(null); }}
+            onClick={() => { setFieldSlots({}); setRoster(initialRoster()); setSelection(null); setCaptainId(null); setSelectedRoles(new Set()); setSelectedTeams(new Set()); }}
             title="Reset formazione"
             style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 32, height: 32, borderRadius: "var(--r-sm)", border: "1px solid var(--border-strong)", background: "transparent", color: "var(--ink-mid)", cursor: "pointer", padding: 0 }}
           >
@@ -1125,16 +1123,25 @@ export default function FormazionePage() {
         {/* ── Colonna sinistra: filtri + lista ── */}
         <div style={{ display: "flex", flexDirection: "column", gap: 6, height: COLUMN_HEIGHT }}>
 
-          {/* Filtri ruolo — colorati per ruolo */}
+          {/* Filtri ruolo — multi-selezione, colorati per ruolo */}
           <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
             {ROLE_FILTERS.map(rf => {
-              const count = rf.value === "tutti" ? roster.length : rosterRoleCounts[rf.value as RoleClassic];
+              const count = rosterRoleCounts[rf.value];
               const colors = ROLE_FILTER_COLORS[rf.value];
-              const isActive = effectiveFilter === rf.value;
+              const isActive = effectiveRoles.has(rf.value);
               return (
                 <button
                   key={rf.value}
-                  onClick={() => { if (!hasFieldSelected) setManualRoleFilter(rf.value); }}
+                  onClick={() => {
+                    if (!hasFieldSelected) {
+                      setSelectedRoles(prev => {
+                        const next = new Set(prev);
+                        if (next.has(rf.value)) next.delete(rf.value);
+                        else next.add(rf.value);
+                        return next;
+                      });
+                    }
+                  }}
                   style={{
                     display: "flex", alignItems: "center", gap: 3,
                     padding: "3px 7px", borderRadius: 99,
@@ -1154,16 +1161,21 @@ export default function FormazionePage() {
             })}
           </div>
 
-          {/* Filtri squadra: count sopra il badge, centrati */}
+          {/* Filtri squadra: count sopra il badge, centrati — multi-selezione */}
           <div style={{ display: "flex", gap: 5, flexWrap: "wrap", flexShrink: 0, justifyContent: "center" }}>
             {uniqueTeams.map(team => {
               const count = rosterTeamCounts[team] ?? 0;
-              const isActive = teamFilter === team;
+              const isActive = selectedTeams.has(team);
               const logoUrl = TEAM_LOGO_URL[team];
               return (
                 <button
                   key={team}
-                  onClick={() => setTeamFilter(prev => prev === team ? null : team)}
+                  onClick={() => setSelectedTeams(prev => {
+                    const next = new Set(prev);
+                    if (next.has(team)) next.delete(team);
+                    else next.add(team);
+                    return next;
+                  })}
                   title={team}
                   style={{
                     display: "flex", flexDirection: "column", alignItems: "center", gap: 1,
@@ -1215,9 +1227,9 @@ export default function FormazionePage() {
 
         {/* ── Colonna destra: Giornata + pitch con modulo select sovrapposto ── */}
         <div style={{ width: "min(100%, calc((100vh - 160px) * 100 / 140))" }}>
-          {/* Giornata — sopra il campo, centrata sull'area verde (14% → 95%) */}
+          {/* Giornata — sopra il campo, centrata sull'area verde (18% → 95%) */}
           <div style={{
-            marginLeft: "14%", marginRight: "5%", marginBottom: 8,
+            marginLeft: "18%", marginRight: "5%", marginBottom: 8,
             textAlign: "center",
           }}>
             <div style={{
@@ -1247,8 +1259,8 @@ export default function FormazionePage() {
                 coach={COACH_MARIO}
                 avversario={avversario}
                 nextIsHome={fieldStatus === "casa"}
-                fieldRoleFilter={manualRoleFilter}
-                fieldTeamFilter={teamFilter}
+                fieldRoles={selectedRoles}
+                fieldTeams={selectedTeams}
               />
             </div>
             {/* Modulo select — dentro l'area tecnica (x:3-11%, y:65.7-80% del pitch) */}
