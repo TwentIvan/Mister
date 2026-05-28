@@ -30,3 +30,9 @@ id = "Apfv1-ttU3o8LzKJ4FwY2"
 uri = "file://toy-test-floodfill.zip"
 type = "unspecified"
 title = "face-to-many Toy — sfondo bianco flood-fill (1358, 1624, 6409, 30509, 35544)"
+
+[[outputs]]
+id = "joJfNPZjE1Woqx-G3jUoX"
+uri = "file://toy-normalized-test.zip"
+type = "unspecified"
+title = "Task 119 — Toy normalizzato + trasparente (1358, 1624, 6409, 30509, 35544)"

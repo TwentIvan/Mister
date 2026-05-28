@@ -1,0 +1,58 @@
+Task 119 (refined) — Pipeline normalizzata + Toy + transparent puliti su 5 sample
+
+OBIETTIVO
+Risolvere i due problemi dei Toy del Task 118:
+(a) sfondo nero invece che trasparente (face-to-many non preserva l'alfa)
+(b) alone bianco sui contorni del viso (artefatto dai bordi soft del cutout
+    PicWish, amplificato dalla stilizzazione)
+
+PIPELINE COMPLETA - per ognuno dei 5 cutout PicWish in
+mister-web/public/avatars/picwish-test/
+
+1. NORMALIZZAZIONE (sharp)
+   - Bbox pixel con alpha > 16: minX/Y, maxX/Y
+   - headSize = max(width, height); margine 15% per lato
+   - Crop quadrato centrato sulla testa + resize 512x512, fit:"contain",
+     background trasparente
+   - Salva: mister-web/public/avatars/normalized-test/<id>.png
+
+2. MATTE SU BIANCO (nuovo, prima di face-to-many)
+   - sharp(normalized).flatten({ background: { r: 255, g: 255, b: 255 } })
+   - I trasparenti diventano bianchi puri. Il modello non interpreta piu'
+     l'alfa come nero, niente bleed scuro sui bordi.
+   - Salva: mister-web/public/avatars/matted-test/<id>.png
+
+3. face-to-many STYLE=Toy (come Task 118)
+   - Input: l'immagine matted (BG bianco)
+   - Output opaco, ~512x512
+
+4. RIMOZIONE SFONDO (nuovo, dopo face-to-many)
+   Secondo pass Replicate per riavere sfondo trasparente + bordi puliti.
+   - Modello: usa una variant BiRefNet (es. zsxkib/birefnet o
+     arielreplicate/birefnet) - piu' accurata sui bordi rispetto al
+     general-purpose 851-labs, importante per eliminare l'alone
+   - Se BiRefNet non e' disponibile o produce ancora alone, prova
+     851-labs/background-remover come fallback
+   - Costo ~$0.005-0.01 per immagine
+   - Salva finale: mister-web/public/avatars/toy-normalized-test/<id>.webp
+
+VERIFICA INTERNA prima di consegnare
+Apri i 5 file toy-normalized-test/. Per ognuno verifica:
+- Sfondo TRASPARENTE (mettili su una card grigia in un tool veloce, o
+  controlla in CSS con background diverso)
+- Niente alone bianco lungo i contorni del viso
+- Volto della stessa dimensione e nella stessa posizione tra i 5
+
+Se persiste alone bianco residuo, prova nell'ordine:
+(i) lo stesso pipeline ma con erosione mask di 1-2 pixel prima del BG
+    remover (image-js ha morfologia, oppure piccolo loop manuale)
+(ii) switch del modello BG remover
+
+RIPORTAMI
+- Path dei 5 toy-normalized-test/ finali
+- Modello BG remover usato (e se hai dovuto switchare)
+- Costo Replicate totale (face-to-many + BG removal)
+- Se l'alone e' completamente assente o persiste residuo
+
+STOP. Validero' visivamente uniformita' + sfondo trasparente + bordi puliti
+sui 5 prima del Task 120 (refactor pieno sui 25).
