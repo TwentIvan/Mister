@@ -6,3 +6,9 @@ id = "sm3EvRqCmAlmu4eChdb3F"
 uri = "file://foto-originali-mario-squad.zip"
 type = "unspecified"
 title = "Foto originali Mario's Squad (25 giocatori)"
+
+[[outputs]]
+id = "gKmqXCSmYgzVXagjmTdCH"
+uri = "file://picwish-test.zip"
+type = "unspecified"
+title = "PicWish cutout — 5 player sample (1358, 1624, 35544, 6409, 30509)"
