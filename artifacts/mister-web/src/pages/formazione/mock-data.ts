@@ -27,7 +27,10 @@ export interface RosterPlayer {
 export interface MatchInfo {
   giornata: number;
   avversario: string;
+  avversarioLogo?: string;
   fieldStatus: FieldStatus;
+  competizione: string;
+  stadio: string;
 }
 
 // ─── Match giornata 2 ────────────────────────────────────────────────────────
@@ -36,6 +39,8 @@ export const MATCH_GIORNATA_2: MatchInfo = {
   giornata: 2,
   avversario: "Atletico Caffeina",
   fieldStatus: "casa",
+  competizione: "Serie A",
+  stadio: "Stadio Olimpico",
 };
 
 // ─── Colori squadre Serie A 2024-25 ──────────────────────────────────────────

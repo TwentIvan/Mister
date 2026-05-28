@@ -588,9 +588,9 @@ function Pitch({ modulo, fieldSlots, selection, captainId, onSlotClick, onSlotDo
         <rect x="31" y="115" width="51" height="20" fill="none" stroke="#ffffff" strokeWidth="0.6" />
         <rect x="44" y="126" width="25" height="9" fill="none" stroke="#ffffff" strokeWidth="0.6" />
         <circle cx="56.5" cy="123" r="0.8" fill="#ffffff" />
-        {/* Archi D delle aree di rigore — sweep=0 → centro sul dischetto, arco verso centrocampo */}
-        <path d="M 49 25 A 11 11 0 0 0 64 25"   fill="none" stroke="#ffffff" strokeWidth="0.6" />
-        <path d="M 64 115 A 11 11 0 0 0 49 115"  fill="none" stroke="#ffffff" strokeWidth="0.6" />
+        {/* Archi D delle aree di rigore — sweep=0 → centro sul dischetto, arco verso centrocampo; corda +30% */}
+        <path d="M 47 25 A 12.5 12.5 0 0 0 66 25"   fill="none" stroke="#ffffff" strokeWidth="0.6" />
+        <path d="M 66 115 A 12.5 12.5 0 0 0 47 115"  fill="none" stroke="#ffffff" strokeWidth="0.6" />
         {/* Archi d'angolo — sweep=0 → centro sul vertice del campo, arco dentro il campo (r≈1m) */}
         <path d="M 18 6.25 A 1.25 1.25 0 0 0 19.25 5"    fill="none" stroke="#ffffff" strokeWidth="0.6" />
         <path d="M 93.75 5 A 1.25 1.25 0 0 0 95 6.25"    fill="none" stroke="#ffffff" strokeWidth="0.6" />
@@ -600,9 +600,9 @@ function Pitch({ modulo, fieldSlots, selection, captainId, onSlotClick, onSlotDo
         <line x1="0" y1="85"  x2="16" y2="85"  stroke="#ffffff" strokeWidth="0.6" strokeDasharray="1.8 1.4" />
         <line x1="0" y1="119" x2="16" y2="119" stroke="#ffffff" strokeWidth="0.6" strokeDasharray="1.8 1.4" />
         <line x1="16" y1="85" x2="16" y2="119" stroke="#ffffff" strokeWidth="0.6" strokeDasharray="1.8 1.6" />
-        {/* Tratteggio angolare ai 2 vertici interni dell'area tecnica — 2 linee ad L */}
-        <polyline points="16,87 14,87 14,85"   fill="none" stroke="#ffffff" strokeWidth="0.6" />
-        <polyline points="16,117 14,117 14,119" fill="none" stroke="#ffffff" strokeWidth="0.6" />
+        {/* Marcatori angolari ai 2 vertici dell'area tecnica — L solida sul bordo */}
+        <polyline points="14,85 16,85 16,87"   fill="none" stroke="#ffffff" strokeWidth="0.9" />
+        <polyline points="14,119 16,119 16,117" fill="none" stroke="#ffffff" strokeWidth="0.9" />
       </svg>
 
       {/* MiniCoachToken — area tecnica ampliata: x=0→16%, y=60.7→85% */}
@@ -1050,7 +1050,7 @@ export default function FormazionePage() {
   const COLUMN_HEIGHT = "calc(100vh - 160px)";
 
   const hasFieldSelected = selection?.kind === "field";
-  const { avversario, fieldStatus } = MATCH_GIORNATA_2;
+  const { avversario, fieldStatus, competizione, stadio } = MATCH_GIORNATA_2;
   const salvaEnabled = starterCount === 11;
 
   if (lineupLoading) {
@@ -1073,12 +1073,15 @@ export default function FormazionePage() {
 
       {/* ── Intestazione ── */}
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
-        <div>
-          <h1 style={{ fontFamily: "var(--font-serif)", fontSize: "var(--text-2xl)", fontWeight: 600, color: "var(--green-deep)", lineHeight: "var(--leading-tight)", marginBottom: 4 }}>
-            Formazione
-          </h1>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <span style={{ fontSize: 13, color: "var(--ink-mid)" }}>Mario&apos;s Squad</span>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          {/* Logo squadra — placeholder fino a quando non sarà caricato */}
+          <div style={{ width: 44, height: 44, borderRadius: 8, background: "var(--green-deep)", border: "2px solid var(--green-mid)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <span style={{ fontFamily: "var(--font-mono)", fontSize: 13, fontWeight: 700, color: "var(--cream)", letterSpacing: "0.04em" }}>MS</span>
+          </div>
+          <div>
+            <div style={{ fontFamily: "var(--font-serif)", fontSize: 22, fontWeight: 700, color: "var(--ink)", lineHeight: 1.15, marginBottom: 4 }}>
+              Mario&apos;s Squad
+            </div>
             <span style={{ padding: "2px 8px", borderRadius: 99, background: fieldStatus === "casa" ? "var(--green-deep)" : "var(--ink-mid)", color: "#fff", fontFamily: "var(--font-mono)", fontSize: 10, fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase" }}>
               {fieldStatus === "casa" ? "Casa" : "Trasferta"}
             </span>
@@ -1236,24 +1239,29 @@ export default function FormazionePage() {
           </div>
         </div>
 
-        {/* ── Colonna destra: Giornata + pitch con modulo select sovrapposto ── */}
+        {/* ── Colonna destra: info partita + pitch con modulo select sovrapposto ── */}
         <div style={{ width: "min(100%, calc((100vh - 160px) * 100 / 140))" }}>
-          {/* Giornata — sopra il campo, centrata sull'area verde (18% → 95%) */}
+          {/* Barra info partita — sopra il campo, allineata sull'area verde (18% → 95%) */}
           <div style={{
             marginLeft: "18%", marginRight: "5%", marginBottom: 8,
-            textAlign: "center",
+            display: "flex", alignItems: "center", justifyContent: "space-between",
           }}>
+            {/* Sx: competizione (regular) + giornata (bold), stessa riga, stesso font */}
             <div style={{
-              fontFamily: "var(--font-mono)", fontSize: 17, fontWeight: 700,
-              color: "var(--ink)", letterSpacing: "0.09em", textTransform: "uppercase", lineHeight: 1.15,
+              fontFamily: "var(--font-mono)", fontSize: 13,
+              color: "var(--ink)", letterSpacing: "0.07em", textTransform: "uppercase",
             }}>
-              Giornata <span>{MATCH_GIORNATA_2.giornata}</span>
+              {competizione}{" "}
+              <span style={{ fontWeight: 700 }}>Giornata {MATCH_GIORNATA_2.giornata}</span>
             </div>
-            <div style={{
-              fontFamily: "var(--font-sans)", fontSize: 12,
-              color: "var(--ink-mid)", marginTop: 3, letterSpacing: "0.03em",
-            }}>
-              Campionato
+            {/* Dx: avversario + stadio */}
+            <div style={{ textAlign: "right" }}>
+              <div style={{ fontFamily: "var(--font-mono)", fontSize: 13, fontWeight: 700, color: "var(--ink)", letterSpacing: "0.05em", textTransform: "uppercase" }}>
+                {avversario}
+              </div>
+              <div style={{ fontFamily: "var(--font-sans)", fontSize: 11, color: "var(--ink-mid)", marginTop: 1 }}>
+                {stadio}
+              </div>
             </div>
           </div>
 
