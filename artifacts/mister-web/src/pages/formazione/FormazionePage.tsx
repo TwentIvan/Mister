@@ -1,11 +1,13 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import { Home, Plane, RotateCcw } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import {
   useGetLineups,
   usePutLineup,
   getGetLineupsQueryKey,
   useGetRoster,
+  useGetCompetitionMatches,
   type RosterPlayer,
 } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
@@ -13,7 +15,6 @@ import {
   MY_TEAM_INFO, MATCH_GIORNATA_2, TEAM_CODE, TEAM_COLORS, TEAM_LOGO_URL, COACH_MARIO,
   type HeadCoach,
 } from "./team-constants";
-import { MatchView } from "./MatchView";
 
 // ─── Tipi locali ──────────────────────────────────────────────────────────────
 
@@ -866,7 +867,7 @@ export default function FormazionePage() {
   const [selectedTeams, setSelectedTeams] = useState<Set<string>>(new Set());
   const [moduleChangeMsg, setModuleChangeMsg] = useState<string | null>(null);
   const [captainId, setCaptainId] = useState<number | null>(null);
-  const [viewMode, setViewMode] = useState<'builder' | 'match'>('builder');
+  const [, navigate] = useLocation();
 
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -874,6 +875,15 @@ export default function FormazionePage() {
   const { data: lineupData, isLoading: lineupLoading } = useGetLineups(LINEUP_PARAMS);
   const { data: rosterData, isLoading: rosterLoading } = useGetRoster({ fantaTeamId: "ft-mvp-1", season: 2024, round: 2 });
   const saveMutation = usePutLineup();
+  const { data: matchesData } = useGetCompetitionMatches("comp-mvp-campionato-2024");
+
+  const lastPlayedMatchId = useMemo(() => {
+    if (!matchesData?.matches) return null;
+    const played = matchesData.matches
+      .filter(m => m.status === "played" && (m.homeTeam.id === "ft-mvp-1" || m.awayTeam.id === "ft-mvp-1"))
+      .sort((a, b) => b.round - a.round);
+    return played[0]?.id ?? null;
+  }, [matchesData]);
 
   const allPlayers = useMemo(() => (rosterData ?? []).map(adaptPlayer), [rosterData]);
   const playerById = useMemo(() => new Map(allPlayers.map(p => [p.id, p])), [allPlayers]);
@@ -1139,19 +1149,22 @@ export default function FormazionePage() {
 
         {/* Toggle Formazione | Partita */}
         <div style={{ display: "flex", alignItems: "center", padding: 3, gap: 1, borderRadius: 99, background: "var(--surface-raised)", border: "1px solid var(--border)" }}>
-          {(["builder", "match"] as const).map(mode => (
-            <button
-              key={mode}
-              onClick={() => setViewMode(mode)}
-              style={{ padding: "4px 14px", borderRadius: 99, border: "none", cursor: "pointer", fontFamily: "var(--font-mono)", fontSize: 11, fontWeight: 600, letterSpacing: "0.05em", textTransform: "uppercase", background: viewMode === mode ? "var(--green-deep)" : "transparent", color: viewMode === mode ? "#fff" : "var(--ink-mid)", transition: "background 0.15s, color 0.15s" }}
-            >
-              {mode === 'builder' ? "Formazione" : "Partita"}
-            </button>
-          ))}
+          <button
+            style={{ padding: "4px 14px", borderRadius: 99, border: "none", cursor: "default", fontFamily: "var(--font-mono)", fontSize: 11, fontWeight: 600, letterSpacing: "0.05em", textTransform: "uppercase", background: "var(--green-deep)", color: "#fff" }}
+          >
+            Formazione
+          </button>
+          <button
+            onClick={() => lastPlayedMatchId !== null && navigate(`/partita/${lastPlayedMatchId}`)}
+            disabled={lastPlayedMatchId === null}
+            style={{ padding: "4px 14px", borderRadius: 99, border: "none", cursor: lastPlayedMatchId !== null ? "pointer" : "default", fontFamily: "var(--font-mono)", fontSize: 11, fontWeight: 600, letterSpacing: "0.05em", textTransform: "uppercase", background: "transparent", color: lastPlayedMatchId !== null ? "var(--ink-mid)" : "var(--ink-dim)", transition: "background 0.15s, color 0.15s", opacity: lastPlayedMatchId !== null ? 1 : 0.4 }}
+          >
+            Partita
+          </button>
         </div>
 
-        {/* Messaggi + azioni (solo in modalità builder) */}
-        {viewMode === 'builder' && <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end" }}>
+        {/* Messaggi + azioni */}
+        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end" }}>
           {moduleChangeMsg && (
             <div style={{ padding: "3px 10px", borderRadius: 99, background: "rgba(45,107,79,0.1)", border: "1px solid var(--green-mid)", fontSize: 12, color: "var(--green-deep)" }}>
               {moduleChangeMsg}
@@ -1190,11 +1203,8 @@ export default function FormazionePage() {
           >
             <RotateCcw size={14} />
           </button>
-        </div>}
+        </div>
       </div>
-
-      {viewMode === 'match' && <MatchView />}
-      {viewMode === 'builder' && (<>
 
       {/* ── Layout: [Filtri+Roster | Pitch] ── */}
       <div className="formazione-grid" style={{ display: "grid", gridTemplateColumns: "220px 1fr", gap: "var(--sp-5)", alignItems: "start" }}>
@@ -1390,7 +1400,6 @@ export default function FormazionePage() {
           .formazione-grid > :last-child  { order: 2; }
         }
       `}</style>
-      </>)}
     </div>
   );
 }

@@ -9,6 +9,7 @@ import {
   Moon,
   Sun,
   Shield,
+  Flag,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "@/components/theme-provider";
@@ -21,6 +22,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     { href: "/", label: "Cruscotto", icon: LayoutDashboard },
     { href: "/leagues", label: "Le mie leghe", icon: Trophy },
     { href: "/squadra/formazione", label: "Formazione", icon: Shield },
+    { href: "/competizione/comp-mvp-campionato-2024", label: "Competizione", icon: Flag },
     { href: "/players", label: "Giocatori", icon: Users },
   ];
 

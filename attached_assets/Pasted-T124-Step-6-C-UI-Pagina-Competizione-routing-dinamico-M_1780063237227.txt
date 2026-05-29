@@ -1,0 +1,114 @@
+T124 - Step 6.C - UI Pagina Competizione + routing dinamico MatchView
+
+OBIETTIVO
+1) Pagina /competizione/<id> con 3 viste: Calendario / Risultati / Classifica
+2) MatchView dynamic routing /partita/<matchId> consumando GET
+   /api/matches/:matchId
+3) Navigazione top-level minimale Formazione <-> Competizione
+4) Click su un match giocato porta a /partita/<matchId>
+
+1. NAVIGAZIONE TOP-LEVEL
+   Header globale app:
+   - Brand Mister a sinistra (logo + nome, riusa quello gia' presente
+     in Formazione)
+   - Nav links centrali o a destra: Formazione | Competizione
+   - Stato attivo visibile (es. underline, accent verde)
+   - Sobrio, niente shadow heavy
+
+2. PAGINA COMPETIZIONE - Route /competizione/<competitionId>
+   Default competition: 'comp-mvp-campionato-2024'
+
+   Layout: tabbar in alto con 3 tab (Calendario / Risultati / Classifica).
+   Sotto, la vista selezionata. Tab state client-side, niente URL change
+   per MVP (refactor futuro se serve sharability).
+
+   CALENDARIO
+   - Lista dei 7 round disponibili
+   - Ogni round: numero giornata + status badge (giocata / da giocare) +
+     data (playedAt o estimated)
+   - Sotto, le 4 partite del round: homeTeam (logo + name + code3) -
+     score - score - awayTeam (code3 + name + logo)
+   - Round giocati: scores visibili, match cliccabili (hover state)
+   - Round upcoming: dimmed (opacity ~0.5), niente scores, non cliccabili
+   - Click su match giocato -> navigate /partita/<matchId>
+
+   RISULTATI DI GIORNATA
+   - Selettore giornata in alto (segmented control o tab inline:
+     Giornata 1 / Giornata 2). Default: ultima giocata = giornata 2.
+   - Per la giornata selezionata, mostra le 4 partite con layout piu'
+     ampio del Calendario:
+     - Card per partita: home (logo+name a sinistra) - score (grande, in
+       mono) - score - away (name+logo a destra)
+     - Squadra vincente evidenziata (es. bold del nome o colore accent)
+     - Clic sulla card -> /partita/<matchId>
+   - Stile evocativo Hattrick "round summary" + Linear "card list"
+
+   CLASSIFICA
+   - Tabella 8 righe x colonne: #, squadra (logo+name+code3), G, V, P,
+     S, GF, GS, DR, PT
+   - Numeri in JetBrains Mono allineati a destra
+   - GF e GS 2 decimali, DR con segno (+/-)
+   - PT in bold
+   - Highlight della prima posizione (Atletico Caffeina): es. row
+     background verde tenue
+   - Dividers orizzontali sottili tra righe (#1f4733 al 10% di opacita')
+   - No sort interattivo per MVP, l'API gia' ordina
+
+3. ROUTING DINAMICO MATCHVIEW
+   Route nuova: /partita/<matchId>
+   
+   MatchView:
+   - Legge matchId da URL params
+   - Fetch GET /api/matches/:matchId -> homeTeam, awayTeam, scores, round
+   - Lineups via /api/roster (homeTeam.id e awayTeam.id, round) come
+     gia' fatto
+   - Coach voti via /api/coach-voto (idem)
+   - Header del match popolato dinamicamente da questi dati
+   
+   Per match con status != "played" (round 3-7 upcoming): MatchView
+   mostra un placeholder centrato "Partita non ancora giocata" + button
+   "Torna alla competizione" che porta a /competizione/<id>. Nessun
+   render di lineup/scoring.
+
+4. ENTRY POINT MATCHVIEW DALLA FORMAZIONE
+   Oggi nella Formazione c'e' un link "PARTITA" che porta al MatchView
+   hardcodato. Modificalo cosi':
+   - Query /api/competition/.../matches in mount
+   - Trova l'ultimo match con status="played" che coinvolge ft-mvp-1
+     (l'utente)
+   - Il link PARTITA naviga a /partita/<quel matchId>
+   - Fallback se nessun match giocato: link disabilitato o nascosto
+
+5. PALETTE E TIPOGRAFIA
+   Coerente con il sistema gia' in piedi:
+   - Background pagina: cream #efe6d3
+   - Cards / panel: bianco o cream-2 leggermente piu' chiaro
+   - Accent: verde profondo #1f4733
+   - Headers: Fraunces
+   - Body: Inter
+   - Numeri: JetBrains Mono
+   - Niente emoji
+   - Riferimenti visivi: Hattrick (densita' dati), Linear (cleanness),
+     Stripe (table styling), FM (gerarchia di info)
+
+VERIFICA
+- /competizione/comp-mvp-campionato-2024 renderizza con i 3 tab funzionanti
+- Calendario: 7 round, 28 match totali, primi 8 (round 1-2) cliccabili
+- Risultati: default round 2, selettore switcha a round 1
+- Classifica: 8 squadre, Atletico (ft-mvp-7) in cima con PT:6 DR:+4.77
+- Click su match round 2 (es. ft-mvp-1 vs ft-mvp-7) -> /partita/<id> e
+  MatchView carica correttamente
+- Click su match round 1 (es. ft-mvp-1 vs ft-mvp-8) -> stesso, ma con
+  round 1 dati
+- Tentativo /partita/<id round 3+> -> placeholder "Partita non ancora
+  giocata" + link torna a competizione
+- Top nav Formazione/Competizione funzionante, link attivo evidenziato
+
+RIPORTA
+- Screenshot della Pagina Competizione, una per tab (Calendario,
+  Risultati, Classifica)
+- Screenshot di MatchView caricato dinamicamente su un match round 1
+  (per verificare che il dynamic routing funziona, non solo il round 2
+  storicamente hardcodato)
+- Decisioni di design prese (layout selettore giornata, gestione
+  fanta-team senza logoUrl, eventuale fallback)
