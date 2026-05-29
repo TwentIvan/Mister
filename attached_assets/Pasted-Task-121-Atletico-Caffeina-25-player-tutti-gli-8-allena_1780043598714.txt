@@ -1,0 +1,70 @@
+Task 121 - Atletico Caffeina (25 player) + tutti gli 8 allenatori
+
+PREREQUISITO
+PicWish topup eseguito (i 50 crediti free sono stati esauriti col T120b).
+Prima di partire stampa il saldo crediti residuo per sanity check.
+
+PARTE 1 - Atletico Caffeina (ft-mvp-7), 25 player
+
+1. Query rosa attuale (sorgente di verita' = DB, mai liste stantie):
+   SELECT c.player_id, p.full_name, p.role_classic
+   FROM contracts c
+   JOIN players p ON p.id = c.player_id
+   WHERE c.fanta_team_id = 'ft-mvp-7'
+   ORDER BY p.role_classic, p.full_name;
+
+2. Diff con avatar esistenti - per ciascuno dei 25:
+   - Se /avatars/<id>.webp esiste E players.photo_cartoon_url popolato
+     -> SKIP (probabilmente gia' processato come "extra" del T120 vecchio)
+   - Se file esiste ma photo_cartoon_url NULL -> SOLO UPDATE DB, no
+     rigenerazione
+   - Se file non esiste -> pipeline completa
+
+3. Pipeline completa per i mancanti (identica a T120b):
+   PicWish cutout -> normalize bbox iniziale -> matte bianco ->
+   face-to-many Combo B (instant_id 0.55, denoising 0.78, prompt+negative
+   come T120) -> BiRefNet -> normalize iconografico 95% bbox (step finale
+   gia' in batch-avatars.ts) -> save mister-web/public/avatars/<id>.webp
+   -> UPDATE players SET photo_cartoon_url
+
+PARTE 2 - 8 allenatori
+
+1. Query:
+   SELECT DISTINCT c.id, c.lastname, c.photo_url, c.photo_cartoon_url
+   FROM coaches c
+   JOIN fanta_teams ft ON ft.head_coach_id = c.id;
+
+   Atteso: 8 coach (Allegri, Baroni, Gasperini, Conte, Tudor, Sarri,
+   Juric, Chivu).
+
+2. Stessa pipeline dei player, applicata a coaches.photo_url come input.
+
+3. PATH SEPARATO per evitare collisioni di ID con i player:
+   Salva in mister-web/public/avatars/coaches/<coach_id>.webp
+   (crea la cartella se non esiste).
+
+4. UPDATE coaches SET photo_cartoon_url = '/avatars/coaches/' || id ||
+   '.webp' per ciascun coach.
+
+5. Verifica che il frontend (MatchMiniCoachToken) usi gia' il pattern
+   photo_cartoon_url ?? photo_url - se si', tutto si aggiorna in
+   automatico. Se serve modificare l'URL pattern atteso, segnalalo.
+
+VERIFICA finale
+- Tutti i 25 di Atletico: avatar in /avatars/<id>.webp + photo_cartoon_url
+  popolato nel DB
+- Tutti gli 8 coach: avatar in /avatars/coaches/<id>.webp +
+  coaches.photo_cartoon_url popolato
+- Hard refresh nella vista match: AC interamente toy-izzata (campo +
+  panchina + tabellino), Allegri E Baroni nelle aree tecniche con
+  avatar Toy
+
+COSTI ATTESI
+- PicWish: ~33 crediti (meno se ci sono skip nel diff Atletico)
+- Replicate: ~33 face-to-many (~$0.33) + ~33 BiRefNet (~$0.17) = ~$0.50
+
+RIPORTA
+- Diff Atletico: skip / update-only / processati ex novo
+- Costo Replicate + crediti PicWish consumati e residui
+- 2 path esempio (1 player AC, 1 coach) per spot check
+- Conferma frontend renderizza coach con avatar Toy

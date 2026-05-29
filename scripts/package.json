@@ -24,7 +24,8 @@
     "sync:test-toy-pipeline": "tsx ./sync/test-toy-pipeline.ts",
     "sync:test-toy-tuning": "tsx ./sync/test-toy-tuning.ts",
     "sync:batch-avatars": "tsx ./sync/batch-avatars.ts",
-    "sync:normalize-avatars": "tsx ./sync/normalize-avatars.ts"
+    "sync:normalize-avatars": "tsx ./sync/normalize-avatars.ts",
+    "sync:batch-avatars-121": "tsx ./sync/batch-avatars-121.ts"
   },
   "dependencies": {
     "@workspace/db": "workspace:*",
