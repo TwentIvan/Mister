@@ -10,7 +10,7 @@
 
 import { db } from "@workspace/db";
 import { players } from "@workspace/db/schema";
-import { inArray } from "drizzle-orm";
+import { inArray, eq } from "drizzle-orm";
 import Replicate from "replicate";
 import sharp from "sharp";
 import fs from "fs";
@@ -222,7 +222,7 @@ async function runToy(replicate: Replicate, mattePath: string, id: number): Prom
 async function removeBg(replicate: Replicate, toyUrl: string, id: number): Promise<string> {
   const outPath = path.join(AVATARS_DIR, `${id}.webp`);
   const toyBuf  = await downloadBuffer(toyUrl);
-  const blob    = new Blob([toyBuf], { type: "image/png" });
+  const blob    = new Blob([new Uint8Array(toyBuf)], { type: "image/png" });
 
   console.log(`  #${id} → BG remove…`);
   const urls = await replicateRun(replicate, BGREM_MODEL, {
@@ -282,6 +282,13 @@ async function main() {
 
       const toyUrl     = await runToy(replicate, mattePath, id); toyCount++;
       await removeBg(replicate, toyUrl, id); bgCount++;
+
+      // Aggiorna DB in modo atomico dopo ogni file salvato
+      await db.update(players)
+        .set({ photoCartoonUrl: `/avatars/${id}.webp` })
+        .where(eq(players.id, id));
+      console.log(`  #${id} → DB aggiornato`);
+
       success.push(id);
 
       // pulizia file intermedi

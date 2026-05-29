@@ -150,7 +150,7 @@ async function removeBg(replicate: Replicate, toyUrl: string, id: number): Promi
   const outPath = path.join(DIRS.output, `${id}.webp`);
 
   const toyBuf = await downloadBuffer(toyUrl);
-  const blob   = new Blob([toyBuf], { type: "image/png" });
+  const blob   = new Blob([new Uint8Array(toyBuf)], { type: "image/png" });
 
   console.log(`  BG remove → invio a 851-labs…`);
   const urls = await replicateRun(replicate, BGREM_MODEL, {

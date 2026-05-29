@@ -1,0 +1,54 @@
+Task 120c - Update players.photo_cartoon_url dopo il batch Toy
+
+DIAGNOSI
+Verifica l'ipotesi: dopo Task 120b i 25 file Toy esistono in
+mister-web/public/avatars/, ma il frontend mostra ancora le foto originali.
+Probabile causa: players.photo_cartoon_url non aggiornato.
+
+1. Controlla la colonna sui 25 della rosa attuale Mario's Squad (ID:
+   31094, 147859, 2495, 1922, 30440, 31507, 1844, 31521, 18797, 105,
+   30425, 162141, 396637, 127631, 312, 46988, 143648, 30561, 31871,
+   136016, 951, 30533, 31555, 2292, 15673):
+
+   SELECT id, full_name, photo_cartoon_url, photo_url
+   FROM players
+   WHERE id IN (...);
+
+   Riportami: quanti hanno photo_cartoon_url NULL vs popolato, e se
+   popolato con quale pattern URL.
+
+2. Per pattern di riferimento (cosa erano i vecchi 25), guarda:
+   SELECT id, full_name, photo_cartoon_url
+   FROM players WHERE id IN (1624, 1358, 6409, 30509, 35544);
+
+FIX A - Patch DB per Mario's attuale
+Se i 25 hanno photo_cartoon_url NULL, esegui l'UPDATE col pattern usato dai
+vecchi (probabilmente /avatars/<id>.webp):
+
+  UPDATE players
+  SET photo_cartoon_url = '/avatars/' || id || '.webp'
+  WHERE id IN (... i 25 ...)
+    AND photo_cartoon_url IS NULL;
+
+Adatta il pattern URL all'esempio reale che vedi dai vecchi.
+
+FIX B - Pipeline script
+Lo script batch del Task 120/120b ha generato i file ma non ha fatto
+l'UPDATE: e' un bug sistematico che colpira' anche Atletico (Task 121)
+e qualsiasi futuro batch. Aggiungi alla pipeline, dopo il save del file
+finale, l'UPDATE della colonna players.photo_cartoon_url per quell'id.
+
+Cosi' il prossimo batch (Atletico o altri) e' atomico: file + DB allineati.
+
+VERIFICA
+- Rilancia la query del punto 1: tutti 25 ora hanno photo_cartoon_url
+- Test API: GET /api/roster?fantaTeamId=ft-mvp-1&season=2024&round=2 e
+  controlla che photoCartoonUrl sia popolato nei JSON dei giocatori
+- (Opzionale) hard refresh nel browser e verifica che la match view
+  ora mostri i volti Toy
+
+RIPORTA
+- Stato pre-fix (quanti NULL su 25)
+- Pattern URL usato (quello esistente nei vecchi 25)
+- Conferma fix DB applicato + script aggiornato
+- Conferma test API

@@ -113,7 +113,7 @@ async function runOne(
 
   // Step 2: BG removal (851-labs, background_type: "rgba", threshold: 0 = soft alpha)
   const toyBuf  = await downloadBuffer(toyUrls[0]);
-  const bgBlob  = new Blob([toyBuf], { type: "image/png" });
+  const bgBlob  = new Blob([new Uint8Array(toyBuf)], { type: "image/png" });
   console.log(`  [${comboLabel}] #${id} → BG remove…`);
   const bgUrls  = await replicateRun(replicate, BGREM_MODEL, {
     image:           bgBlob,
