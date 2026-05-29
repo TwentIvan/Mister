@@ -1356,22 +1356,24 @@ export default function FormazionePage() {
                 fieldTeams={selectedTeams}
               />
             </div>
-            {/* Modulo select — dentro l'area tecnica (x:3-11%, y:65.7-80% del pitch) */}
+            {/* Modulo select — sopra il badge allenatore (x:0-16%, y≈56%) */}
             <select
               value={modulo}
               onChange={e => handleModuloChange(e.target.value)}
               style={{
                 position: "absolute",
-                left: "3%", top: "78%",
-                width: "8%",
+                left: "0%", top: "56%",
+                width: "16%",
                 fontFamily: "var(--font-mono)",
-                fontSize: 8, fontWeight: 700,
-                color: "rgba(239,230,211,0.9)",
-                background: "#1f4733",
-                border: "1px solid rgba(255,255,255,0.18)",
-                borderRadius: 3,
-                padding: "2px 2px",
-                cursor: "pointer", outline: "none",
+                fontSize: 16, fontWeight: 700,
+                color: "#F4C430",
+                background: "transparent",
+                border: "none",
+                outline: "none",
+                cursor: "pointer",
+                textAlign: "center",
+                appearance: "none",
+                WebkitAppearance: "none",
                 zIndex: 10,
               }}
             >
