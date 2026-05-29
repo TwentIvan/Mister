@@ -1362,10 +1362,10 @@ export default function FormazionePage() {
               onChange={e => handleModuloChange(e.target.value)}
               style={{
                 position: "absolute",
-                left: "0%", top: "62%",
+                left: "0%", top: "66%",
                 width: "16%",
                 fontFamily: "var(--font-mono)",
-                fontSize: 16, fontWeight: 700,
+                fontSize: 18, fontWeight: 700,
                 color: "#F4C430",
                 background: "transparent",
                 border: "none",
