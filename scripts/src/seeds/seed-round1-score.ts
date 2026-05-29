@@ -1,11 +1,22 @@
 /**
- * T122 Step 6.A — Round 1: lineups (seed 41) + scoring + update competition_matches + classifica
+ * T124c — Round 1: lineups STRICT su contracts + scoring + update competition_matches
  *
- * Differenze da T113:
- *   - PRNG seed 41 (vs 42) → shuffle diverso → lineup diverse
- *   - ROUND = 1, played_at = '2024-08-25'
- *   - NON tocca i contratti esistenti
- *   - Alla fine stampa classifica round 1+2
+ * CAUSA BUG T122 (documentata):
+ *   Il vecchio script usava pool globali shufflati con seed=41.
+ *   I contratti (T113) erano stati assegnati con seed=42 → shuffle diverso
+ *   → player ID nei lineup round 1 NON corrispondevano ai contracts di quel team.
+ *   Solo i player che per coincidenza atterravano nello stesso slot entrambe le
+ *   volte (es. Ballo-Touré #105, Kabasele #18797) erano visibili nella UI.
+ *
+ * FIX:
+ *   Per ogni team, il pool player viene letto STRICT dai contracts (source of truth),
+ *   non da array globali. Zero dipendenza da shuffle di pool globali.
+ *
+ * PATTERN STRUTTURALE (vedi replit.md):
+ *   Ogni script che genera lineup DEVE filtrare via contracts table.
+ *   Mai assumere che un pool globale equivalga alla rosa di una fanta-team.
+ *
+ * PRNG seed: 41 (usato per shuffle interno alla rosa di ogni team)
  */
 
 import { db } from "@workspace/db";
@@ -14,6 +25,7 @@ import {
   lineupPlayers,
   playerGiornataStats,
   players as playersTable,
+  contracts,
   competitionMatches,
   fantaTeams,
   coaches,
@@ -25,11 +37,8 @@ import {
   type SlotPosition,
 } from "@workspace/scoring";
 import { eq, and, inArray } from "drizzle-orm";
-import { randomUUID } from "crypto";
 
-// ─── PRNG ─────────────────────────────────────────────────────────────────────
-
-const PRNG_SEED = 41;
+// ─── PRNG (mulberry32) ────────────────────────────────────────────────────────
 
 function makePrng(seed: number) {
   let a = seed;
@@ -63,61 +72,7 @@ const TEAMS = [
   "ft-mvp-5", "ft-mvp-6", "ft-mvp-7", "ft-mvp-8",
 ];
 
-// ─── POOL IDENTICO A T113 ─────────────────────────────────────────────────────
-
-const GK_ACTIVE = [
-  1282, 31156, 2802, 30394, 81012, 143648, 1624, 50054,
-  30418, 199578, 30417, 30670, 556, 22221, 2998, 312,
-  31037, 56459, 31566, 30611,
-];
-
-const GK_SV = [46988, 30392, 31717, 237268, 342071, 162445, 462227, 30704];
-
-const DEF_ACTIVE = [
-  26828, 30497, 1627, 45826, 1836, 31042, 47254, 31226,
-  30425, 200, 134, 31010, 1632, 180510, 30501, 180763,
-  30421, 46792, 887, 40582, 26095, 31642, 7090, 30396,
-  37604, 36916, 128338, 382452, 31009, 30775, 2725, 1807,
-  122468, 15909, 22007, 181806, 227, 14329, 31751, 319,
-  30553, 136087, 268341, 162141, 288, 32034, 127035, 30822,
-  1566, 18799, 2484, 47300, 25914, 137976, 833, 127631,
-  291589, 125674, 6931, 41144, 296560, 30708, 19209, 31099,
-  342063, 396637, 25353, 31543, 162012, 30736, 30827, 37,
-  1314, 30428, 226, 37651, 349232, 348568, 91358, 35544,
-  30770, 162907, 30615, 31521, 31390, 6050, 1844, 1929,
-  31137, 30420, 1841, 30921, 10238, 8586, 18797, 30526,
-  31079, 30737, 30845, 22222, 711, 127011,
-];
-
-const DEF_SV = [105, 30427, 61808, 128498, 196843, 2107, 37250, 154799];
-
-const MID_ACTIVE = [
-  30533, 178749, 628, 30866, 56207, 20638, 30932, 89520,
-  876, 266813, 30803, 30780, 1640, 1322, 383018, 951,
-  30937, 271, 314231, 31056, 25349, 36902, 340700, 203474,
-  194837, 31555, 30558, 30436, 30432, 288699, 190958, 74,
-  1850, 162106, 47439, 48047, 6383, 288769, 137, 10097,
-  2763, 211, 778, 350037, 1639, 786, 2292, 31871,
-  2118, 15673, 15881, 333116, 22174, 15905, 17, 161859,
-  3009, 46170, 30505, 47522, 22169, 782, 203, 136016,
-  2286, 1454, 1938, 881, 2807, 118956, 30431, 6409,
-  162266, 22254, 31173, 128353, 1457, 30532, 541, 3406,
-  7591, 37437, 2822, 56560, 30561, 1014, 36980, 144740,
-  309388,
-];
-
-const ATT_ACTIVE = [
-  483, 877, 147859, 31624, 30789, 875, 275651, 215,
-  19524, 30543, 9975, 48648, 30460, 22015, 56396, 22236,
-  2495, 39271, 31507, 30509, 30603, 134926, 3430, 312985,
-  48193, 30879, 50856, 1922, 15811, 339883, 31094, 140831,
-  177745, 19185, 47182, 21509, 199089, 6420, 346866, 2738,
-  30790, 219, 135519, 31692, 42315, 43056, 30440, 43036,
-];
-
-// ─── BUILDER SLOT LINEUP (identico a T113) ────────────────────────────────────
-
-const BENCH_ROLE_ORDER: Record<string, number> = { GK: 0, DEF: 1, MID: 2, ATT: 3 };
+// ─── Tipi ─────────────────────────────────────────────────────────────────────
 
 type SlotEntry = {
   playerId: number;
@@ -127,35 +82,77 @@ type SlotEntry = {
   benchOrder: number | null;
 };
 
-function buildLineupPlayers(
+const BENCH_ROLE_ORDER: Record<string, number> = { GK: 0, DEF: 1, MID: 2, ATT: 3 };
+
+// ─── buildLineup ─────────────────────────────────────────────────────────────
+// Riceve i player della squadra divisi per ruolo, con i loro voti.
+// Costruisce lineup 4-3-3 con 1 SV starter DEF deliberato.
+
+function buildLineup(
   gks: number[],
-  defsActive: number[],
-  defSv: number,
+  defs: number[],
   mids: number[],
   atts: number[],
   votoMap: Map<number, number | null>,
-): SlotEntry[] {
+): { slots: SlotEntry[]; captainId: number } {
+  // Per ogni ruolo: separa attivi (voto non null) da SV (voto null)
+  const isActive = (id: number) => (votoMap.get(id) ?? null) !== null;
+
+  const gkActive  = gks.filter(isActive);
+  const gkSv      = gks.filter(id => !isActive(id));
+
+  const defActive = defs.filter(isActive);
+  const defSv     = defs.filter(id => !isActive(id));
+
+  const midActive = mids.filter(isActive);
+  const attActive = atts.filter(isActive);
+
+  // Titolari GK: primo attivo, altrimenti SV
+  const starterGk = gkActive[0] ?? gkSv[0] ?? gks[0];
+
+  // Titolari DEF: 3 attivi + 1 SV deliberato (se non ci sono SV, usa attivo)
+  // Il SV deliberato va a slot 4 (per mostrare sostituzione in UI)
+  const starterDefsActive = defActive.slice(0, 3);
+  const starterDefSv      = defSv[0] ?? defActive[3] ?? defs[3] ?? defs[0];
+
+  // Titolari MID/ATT: 3 attivi ciascuno
+  const starterMids = midActive.slice(0, 3);
+  const starterAtts = attActive.slice(0, 3);
+
+  // Capitano = attivo con voto più alto tra i titolari
+  const activeTitolari = [starterGk, ...starterDefsActive, ...starterMids, ...starterAtts]
+    .filter(id => votoMap.get(id) !== null && votoMap.get(id) !== undefined);
+
+  activeTitolari.sort((a, b) => (votoMap.get(b) ?? 0) - (votoMap.get(a) ?? 0));
+  const captainId = activeTitolari[0] ?? starterAtts[0] ?? starterMids[0] ?? starterGk;
+
   const slots: SlotEntry[] = [];
 
-  slots.push({ playerId: gks[0],        slotPosition: "GK",  slotIndex: 1,  isStarter: true, benchOrder: null });
-  slots.push({ playerId: defsActive[0], slotPosition: "DEF", slotIndex: 2,  isStarter: true, benchOrder: null });
-  slots.push({ playerId: defsActive[1], slotPosition: "DEF", slotIndex: 3,  isStarter: true, benchOrder: null });
-  slots.push({ playerId: defSv,         slotPosition: "DEF", slotIndex: 4,  isStarter: true, benchOrder: null }); // S.V.
-  slots.push({ playerId: defsActive[2], slotPosition: "DEF", slotIndex: 5,  isStarter: true, benchOrder: null });
-  slots.push({ playerId: mids[0],       slotPosition: "MID", slotIndex: 6,  isStarter: true, benchOrder: null });
-  slots.push({ playerId: mids[1],       slotPosition: "MID", slotIndex: 7,  isStarter: true, benchOrder: null });
-  slots.push({ playerId: mids[2],       slotPosition: "MID", slotIndex: 8,  isStarter: true, benchOrder: null });
-  slots.push({ playerId: atts[0],       slotPosition: "ATT", slotIndex: 9,  isStarter: true, benchOrder: null }); // capitano
-  slots.push({ playerId: atts[1],       slotPosition: "ATT", slotIndex: 10, isStarter: true, benchOrder: null });
-  slots.push({ playerId: atts[2],       slotPosition: "ATT", slotIndex: 11, isStarter: true, benchOrder: null });
+  // Slot titolari 1-11
+  slots.push({ playerId: starterGk,          slotPosition: "GK",  slotIndex: 1,  isStarter: true, benchOrder: null });
+  slots.push({ playerId: starterDefsActive[0] ?? defs[0], slotPosition: "DEF", slotIndex: 2,  isStarter: true, benchOrder: null });
+  slots.push({ playerId: starterDefsActive[1] ?? defs[1], slotPosition: "DEF", slotIndex: 3,  isStarter: true, benchOrder: null });
+  slots.push({ playerId: starterDefSv,        slotPosition: "DEF", slotIndex: 4,  isStarter: true, benchOrder: null }); // SV
+  slots.push({ playerId: starterDefsActive[2] ?? defs[2], slotPosition: "DEF", slotIndex: 5,  isStarter: true, benchOrder: null });
+  slots.push({ playerId: starterMids[0] ?? mids[0],       slotPosition: "MID", slotIndex: 6,  isStarter: true, benchOrder: null });
+  slots.push({ playerId: starterMids[1] ?? mids[1],       slotPosition: "MID", slotIndex: 7,  isStarter: true, benchOrder: null });
+  slots.push({ playerId: starterMids[2] ?? mids[2],       slotPosition: "MID", slotIndex: 8,  isStarter: true, benchOrder: null });
+  slots.push({ playerId: starterAtts[0] ?? atts[0],       slotPosition: "ATT", slotIndex: 9,  isStarter: true, benchOrder: null });
+  slots.push({ playerId: starterAtts[1] ?? atts[1],       slotPosition: "ATT", slotIndex: 10, isStarter: true, benchOrder: null });
+  slots.push({ playerId: starterAtts[2] ?? atts[2],       slotPosition: "ATT", slotIndex: 11, isStarter: true, benchOrder: null });
 
+  // Calcola il set di starter per escluderli dalla panchina
+  const starterSet = new Set(slots.map(s => s.playerId));
+
+  // Panchina: tutti i player non starter
   const benchCandidates: { playerId: number; slotPosition: string }[] = [
-    ...gks.slice(1).map(id => ({ playerId: id, slotPosition: "GK" })),
-    ...defsActive.slice(3).map(id => ({ playerId: id, slotPosition: "DEF" })),
-    ...mids.slice(3).map(id => ({ playerId: id, slotPosition: "MID" })),
-    ...atts.slice(3).map(id => ({ playerId: id, slotPosition: "ATT" })),
+    ...gks.filter(id => !starterSet.has(id)).map(id => ({ playerId: id, slotPosition: "GK" })),
+    ...defs.filter(id => !starterSet.has(id)).map(id => ({ playerId: id, slotPosition: "DEF" })),
+    ...mids.filter(id => !starterSet.has(id)).map(id => ({ playerId: id, slotPosition: "MID" })),
+    ...atts.filter(id => !starterSet.has(id)).map(id => ({ playerId: id, slotPosition: "ATT" })),
   ];
 
+  // Ordina: per ruolo (GK→DEF→MID→ATT), poi voto DESC (SV ultimi)
   benchCandidates.sort((a, b) => {
     const rA = BENCH_ROLE_ORDER[a.slotPosition] ?? 99;
     const rB = BENCH_ROLE_ORDER[b.slotPosition] ?? 99;
@@ -178,15 +175,15 @@ function buildLineupPlayers(
     });
   });
 
-  return slots;
+  return { slots, captainId };
 }
 
 // ─── MAIN ─────────────────────────────────────────────────────────────────────
 
 async function main() {
-  console.log("=== T122 Step 6.A — Round 1: lineups + scoring + classifica ===\n");
+  console.log("=== T124c — Round 1: lineups STRICT su contracts + scoring ===\n");
 
-  // ── 1. Verifica match round 1 ──────────────────────────────────────────────
+  // ── 0. Verifica match round 1 ──────────────────────────────────────────────
   const round1Matches = await db
     .select()
     .from(competitionMatches)
@@ -199,14 +196,14 @@ async function main() {
 
   console.log(`Match round 1 trovati: ${round1Matches.length}`);
   for (const m of round1Matches) {
-    console.log(`  #${m.id} [order ${m.matchOrder}] ${m.homeFantaTeamId} vs ${m.awayFantaTeamId}`);
+    console.log(`  #${m.id} [${m.homeFantaTeamId} vs ${m.awayFantaTeamId}]`);
   }
   if (round1Matches.length !== 4) {
     throw new Error(`Attesi 4 match round 1, trovati ${round1Matches.length}`);
   }
   console.log();
 
-  // ── 2. Cancella lineup round 1 esistenti (se ri-eseguiamo) ────────────────
+  // ── 1. Cancella lineup round 1 esistenti ──────────────────────────────────
   const existingLineups = await db
     .select({ id: lineups.id })
     .from(lineups)
@@ -225,56 +222,82 @@ async function main() {
     await db.delete(lineups).where(
       inArray(lineups.id, existingLineups.map(l => l.id)),
     );
-    console.log(`Rimossi ${existingLineups.length} lineup round 1 esistenti.\n`);
+    console.log(`Rimossi ${existingLineups.length} lineup round 1 esistenti (player fantasma).\n`);
   }
 
-  // ── 3. Shuffle pool con PRNG seed 41 ──────────────────────────────────────
-  const rng = makePrng(PRNG_SEED);
-
-  const gkPool      = shuffle([...GK_ACTIVE, ...GK_SV], rng).slice(0, 24);
-  const defActive   = shuffle(DEF_ACTIVE, rng).slice(0, 56);
-  const defSv       = [...DEF_SV];
-  const midPool     = shuffle(MID_ACTIVE, rng).slice(0, 64);
-  const attPool     = shuffle(ATT_ACTIVE, rng).slice(0, 48);
-
-  const allIds = [...gkPool, ...defActive, ...defSv, ...midPool, ...attPool];
-  const unique = new Set(allIds);
-  if (unique.size !== allIds.length) {
-    throw new Error(`Duplicati: ${allIds.length} slot, ${unique.size} unici`);
-  }
-  console.log(`Pool round 1 (seed 41): ${allIds.length} giocatori unici ✓\n`);
-
-  // ── 4. Recupera voti round 1 per panchina ordinata ─────────────────────────
+  // ── 2. Carica voti round 1 ────────────────────────────────────────────────
   const votoRows = await db
     .select({ playerId: playerGiornataStats.playerId, voto: playerGiornataStats.votoMister })
     .from(playerGiornataStats)
-    .where(
-      and(
-        eq(playerGiornataStats.season, SEASON),
-        eq(playerGiornataStats.round, ROUND),
-        inArray(playerGiornataStats.playerId, allIds),
-      ),
-    );
+    .where(and(eq(playerGiornataStats.season, SEASON), eq(playerGiornataStats.round, ROUND)));
+
   const votoMap = new Map<number, number | null>(
-    votoRows.map(r => [r.playerId, r.voto ?? null]),
+    votoRows.map(r => [r.playerId, r.voto !== null ? Number(r.voto) : null]),
   );
-  console.log(`Voti round 1 caricati: ${votoMap.size} giocatori ✓\n`);
+  console.log(`Voti round 1 caricati: ${votoMap.size} giocatori\n`);
 
-  // ── 5. Costruisci e inserisci lineup per ogni team ─────────────────────────
-  console.log("Inserisco 8 lineup round 1…");
-  const lineupsByTeam = new Map<string, { lineup: typeof lineups.$inferSelect; slotPlayers: SlotEntry[] }>();
+  // ── 3. Per ogni team: leggi contracts, shuffla, costruisci lineup ──────────
+  console.log("─── Costruzione lineup da contracts ─────────────────────────────");
 
-  for (let t = 0; t < 8; t++) {
+  // PRNG unico seed 41 — consumato sequenzialmente per tutti i team
+  const rng = makePrng(41);
+
+  // Carica roles per tutti i player
+  const allPlayers = await db
+    .select({ id: playersTable.id, roleClassic: playersTable.roleClassic })
+    .from(playersTable);
+  const roleById = new Map<number, string>(allPlayers.map(p => [p.id, p.roleClassic]));
+
+  const lineupsByTeam = new Map<string, { lineup: typeof lineups.$inferSelect; slots: SlotEntry[] }>();
+
+  for (let t = 0; t < TEAMS.length; t++) {
     const teamId = TEAMS[t];
-    const teamGks       = gkPool.slice(t * 3, t * 3 + 3);
-    const teamDefsActive = defActive.slice(t * 7, t * 7 + 7);
-    const teamDefSv     = defSv[t];
-    const teamMids      = midPool.slice(t * 8, t * 8 + 8);
-    const teamAtts      = attPool.slice(t * 6, t * 6 + 6);
-    const captainPlayerId = teamAtts[0];
 
-    const players = buildLineupPlayers(teamGks, teamDefsActive, teamDefSv, teamMids, teamAtts, votoMap);
+    // Legge i contratti del team (source of truth) ← FIX CORE
+    const teamContracts = await db
+      .select({ playerId: contracts.playerId })
+      .from(contracts)
+      .where(
+        and(
+          eq(contracts.fantaTeamId, teamId),
+          eq(contracts.seasonStart, SEASON),
+        ),
+      );
 
+    if (teamContracts.length === 0) {
+      throw new Error(`Nessun contratto trovato per ${teamId} season ${SEASON}`);
+    }
+
+    const teamPlayerIds = teamContracts.map(c => c.playerId);
+
+    // Partiziona per ruolo
+    const gks:  number[] = [];
+    const defs: number[] = [];
+    const mids: number[] = [];
+    const atts: number[] = [];
+
+    for (const pid of teamPlayerIds) {
+      const role = roleById.get(pid) ?? "MID";
+      if      (role === "GK")  gks.push(pid);
+      else if (role === "DEF") defs.push(pid);
+      else if (role === "MID") mids.push(pid);
+      else                     atts.push(pid);
+    }
+
+    // Shuffla ogni gruppo con PRNG (seed 41 comune, diverso offset per ogni team)
+    const gkShuf  = shuffle(gks,  rng);
+    const defShuf = shuffle(defs, rng);
+    const midShuf = shuffle(mids, rng);
+    const attShuf = shuffle(atts, rng);
+
+    // Costruisce il lineup
+    const { slots, captainId } = buildLineup(gkShuf, defShuf, midShuf, attShuf, votoMap);
+
+    if (slots.length !== teamPlayerIds.length) {
+      throw new Error(`${teamId}: attesi ${teamPlayerIds.length} slot, generati ${slots.length}`);
+    }
+
+    // Inserisce
     const [lineup] = await db
       .insert(lineups)
       .values({
@@ -282,35 +305,59 @@ async function main() {
         season: SEASON,
         round: ROUND,
         module: "4-3-3",
-        captainPlayerId,
+        captainPlayerId: captainId,
       })
       .returning();
 
     await db.insert(lineupPlayers).values(
-      players.map(p => ({ ...p, lineupId: lineup.id })),
+      slots.map(p => ({ ...p, lineupId: lineup.id })),
     );
 
-    lineupsByTeam.set(teamId, { lineup, slotPlayers: players });
+    lineupsByTeam.set(teamId, { lineup, slots });
 
-    const svStarter = players.find(p => p.isStarter && DEF_SV.includes(p.playerId));
+    const svStarter = slots.find(s => s.isStarter && (votoMap.get(s.playerId) ?? null) === null);
+    const starters = slots.filter(s => s.isStarter);
+    const bestVoto = Math.max(
+      ...starters.map(s => votoMap.get(s.playerId) ?? 0).filter(v => v > 0),
+    );
     console.log(
-      `  ${teamId}: 4-3-3, cap=${captainPlayerId}, SV DEF=${svStarter?.playerId ?? "?"}, ` +
-      `${players.filter(p => p.isStarter).length} titolari, ${players.filter(p => !p.isStarter).length} panchina`,
+      `  ${teamId}: ${teamPlayerIds.length} contratti → ${starters.length} titolari, ` +
+      `${slots.length - starters.length} panchina, cap=${captainId} (${bestVoto.toFixed(2)}), ` +
+      `SV starter=${svStarter?.playerId ?? "nessuno"}`,
     );
   }
-  console.log("\nLineup round 1 inseriti ✓\n");
+  console.log();
 
-  // ── 6. Scoring ────────────────────────────────────────────────────────────
+  // ── 4. Verifica 0 orphan ──────────────────────────────────────────────────
+  console.log("─── Verifica orphan ──────────────────────────────────────────────");
+  const orphanCheck = await db.execute<{ orphans: string }>(
+    `SELECT COUNT(*) AS orphans
+     FROM lineup_players lp
+     JOIN lineups l ON l.id = lp.lineup_id
+     WHERE l.season = ${SEASON} AND l.round = ${ROUND}
+     AND NOT EXISTS (
+       SELECT 1 FROM contracts c
+       WHERE c.player_id = lp.player_id
+         AND c.fanta_team_id = l.fanta_team_id
+         AND c.season_start = ${SEASON}
+     )`,
+  );
+  const orphans = parseInt((orphanCheck.rows[0] as { orphans: string }).orphans, 10);
+  if (orphans !== 0) {
+    throw new Error(`ORPHAN CHECK FAILED: ${orphans} player non in contracts. Script ha ancora il bug.`);
+  }
+  console.log(`Orphan check: 0 ✓  (tutti i player sono in contracts del proprio team)\n`);
+
+  // ── 5. Scoring ────────────────────────────────────────────────────────────
   console.log("─── Scoring round 1 ──────────────────────────────────────────────");
 
   const playerVoti = new Map<number, number | null>(
     (await db.select({ playerId: playerGiornataStats.playerId, voto: playerGiornataStats.votoMister })
       .from(playerGiornataStats)
       .where(and(eq(playerGiornataStats.season, SEASON), eq(playerGiornataStats.round, ROUND)))
-    ).map(s => [s.playerId, s.voto ?? null]),
+    ).map(s => [s.playerId, s.voto !== null ? Number(s.voto) : null]),
   );
 
-  const allPlayers = await db.select({ id: playersTable.id, roleClassic: playersTable.roleClassic }).from(playersTable);
   const playerRoles = new Map<number, SlotPosition>(
     allPlayers.map(p => [p.id, p.roleClassic as SlotPosition]),
   );
@@ -337,14 +384,14 @@ async function main() {
   const fixtureResultByTeamId = new Map<number, { goalsFor: number; goalsAgainst: number }>();
   for (const fx of fixtures) {
     if (fx.homeGoals !== null && fx.awayGoals !== null) {
-      fixtureResultByTeamId.set(fx.homeTeamId, { goalsFor: fx.homeGoals, goalsAgainst: fx.awayGoals });
-      fixtureResultByTeamId.set(fx.awayTeamId, { goalsFor: fx.awayGoals, goalsAgainst: fx.homeGoals });
+      fixtureResultByTeamId.set(fx.homeTeamId, { goalsFor: fx.homeGoals,  goalsAgainst: fx.awayGoals });
+      fixtureResultByTeamId.set(fx.awayTeamId, { goalsFor: fx.awayGoals,  goalsAgainst: fx.homeGoals });
     }
   }
 
   const teamScores = new Map<string, number>();
 
-  for (const [teamId, { lineup, slotPlayers }] of lineupsByTeam) {
+  for (const [teamId, { lineup, slots }] of lineupsByTeam) {
     const coach = headCoachByTeam.get(teamId);
     const coachTeamId = coach?.currentTeamId ?? null;
     const fixtureResult = coachTeamId !== null ? (fixtureResultByTeamId.get(coachTeamId) ?? null) : null;
@@ -354,12 +401,12 @@ async function main() {
       lineup: {
         module: lineup.module,
         captainPlayerId: lineup.captainPlayerId ?? null,
-        players: slotPlayers.map(p => ({
-          playerId: p.playerId,
+        players: slots.map(p => ({
+          playerId:     p.playerId,
           slotPosition: p.slotPosition as SlotPosition,
-          slotIndex: p.slotIndex,
-          isStarter: p.isStarter,
-          benchOrder: p.benchOrder ?? null,
+          slotIndex:    p.slotIndex,
+          isStarter:    p.isStarter,
+          benchOrder:   p.benchOrder ?? null,
         })),
       },
       playerVoti,
@@ -373,20 +420,23 @@ async function main() {
     const baseScore = result.totalScore - result.coachDelta;
     const coachName = coach?.name ?? "(nessun allenatore)";
     const risultato = fixtureResult ? `${fixtureResult.goalsFor}:${fixtureResult.goalsAgainst}` : "—";
-    console.log(`  ${teamId}: base=${baseScore.toFixed(2)}, coachDelta=${result.coachDelta >= 0 ? "+" : ""}${result.coachDelta.toFixed(1)} (${coachName}, ${risultato}), tot=${result.totalScore.toFixed(2)}`);
+    console.log(
+      `  ${teamId}: base=${baseScore.toFixed(2)}, coach=${result.coachDelta >= 0 ? "+" : ""}${result.coachDelta.toFixed(1)} (${coachName}, ${risultato}), ` +
+      `tot=${result.totalScore.toFixed(2)}`,
+    );
     if (result.substitutions.length > 0) {
       console.log(`    sub: ${result.substitutions.map(s => `${s.out}→${s.inId}`).join(", ")}`);
     }
   }
   console.log();
 
-  // ── 7. Aggiorna competition_matches round 1 ───────────────────────────────
+  // ── 6. Aggiorna competition_matches round 1 ───────────────────────────────
   console.log("─── Risultati round 1 ────────────────────────────────────────────");
   for (const match of round1Matches) {
     const homeScore = teamScores.get(match.homeFantaTeamId);
     const awayScore = teamScores.get(match.awayFantaTeamId);
     if (homeScore === undefined || awayScore === undefined) {
-      throw new Error(`Score mancante per match ${match.id}`);
+      throw new Error(`Score mancante per match #${match.id}`);
     }
     await db
       .update(competitionMatches)
@@ -397,13 +447,11 @@ async function main() {
       })
       .where(eq(competitionMatches.id, match.id));
 
-    const homeTeam = match.homeFantaTeamId.replace("ft-mvp-", "Team ");
-    const awayTeam = match.awayFantaTeamId.replace("ft-mvp-", "Team ");
     console.log(`  [${match.homeFantaTeamId} vs ${match.awayFantaTeamId}]  ${homeScore.toFixed(2)} – ${awayScore.toFixed(2)}`);
   }
   console.log("\n4 partite round 1 aggiornate ✓\n");
 
-  // ── 8. Classifica round 1 + round 2 ──────────────────────────────────────
+  // ── 7. Classifica round 1 + round 2 ──────────────────────────────────────
   console.log("─── Classifica dopo round 1 + round 2 ───────────────────────────");
 
   const allMatches = await db
@@ -437,7 +485,7 @@ async function main() {
     else { home.P++; home.PT += 1; away.P++; away.PT += 1; }
   }
 
-  for (const [t, r] of table) {
+  for (const [, r] of table) {
     r.DR = Math.round((r.GF - r.GS) * 100) / 100;
   }
 
@@ -448,17 +496,16 @@ async function main() {
     return 0;
   });
 
-  console.log(
-    `${"Team".padEnd(10)} ${"G".padStart(2)} ${"V".padStart(2)} ${"P".padStart(2)} ${"S".padStart(2)} ${"GF".padStart(7)} ${"GS".padStart(7)} ${"DR".padStart(7)} ${"PT".padStart(3)}`,
-  );
-  console.log("─".repeat(55));
+  const H = `${"Team".padEnd(10)} ${"G".padStart(2)} ${"V".padStart(2)} ${"P".padStart(2)} ${"S".padStart(2)} ${"GF".padStart(7)} ${"GS".padStart(7)} ${"DR".padStart(7)} ${"PT".padStart(3)}`;
+  console.log(H);
+  console.log("─".repeat(H.length));
   for (const [teamId, r] of sorted) {
     console.log(
       `${teamId.padEnd(10)} ${r.G.toString().padStart(2)} ${r.V.toString().padStart(2)} ${r.P.toString().padStart(2)} ${r.S.toString().padStart(2)} ${r.GF.toFixed(2).padStart(7)} ${r.GS.toFixed(2).padStart(7)} ${r.DR.toFixed(2).padStart(7)} ${r.PT.toString().padStart(3)}`,
     );
   }
 
-  console.log("\n=== Completato ===");
+  console.log("\n=== T124c completato ===");
 }
 
 main()

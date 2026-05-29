@@ -1,0 +1,77 @@
+T124c - Fix: rigenerazione lineup round 1 con player pool corretto
+
+CAUSA ROOT (per documentazione)
+T122 ha generato lineup round 1 con player ID NON allineati ai contracts
+attuali. Solo 2/11 starter di ft-mvp-1 round 1 sono in rosa Mario's. Gli
+altri sono fantasmi (player di una rosa pre-reseed o pesca random dal
+pool players globale).
+
+FIX
+
+1. CANCELLA i lineup round 1 esistenti:
+   DELETE FROM lineup_players WHERE lineup_id IN (
+     SELECT id FROM lineups WHERE season = 2024 AND round = 1
+   );
+   DELETE FROM lineups WHERE season = 2024 AND round = 1;
+
+2. INVESTIGA brevemente lo script di T122: che pool di player ha usato
+   per la pesca random? Identifica la riga incriminata (probabilmente un
+   SELECT FROM players invece di un SELECT FROM contracts filtrato per
+   team) e correggila PRIMA di rilanciare. Documenta nel commit la
+   causa.
+
+3. RIGENERA i lineup round 1 con la STESSA logica di T113 (auto-seed
+   per le 8 fanta-team) ma stavolta STRICT sul contracts table:
+
+   Per ogni fanta-team (ft-mvp-1 ... ft-mvp-8):
+   - Pool players: SELECT player_id, role_classic FROM contracts c
+                   JOIN players p ON p.id = c.player_id
+                   WHERE c.fanta_team_id = '<ft-mvp-X>'
+                   AND c.season_start = 2024
+                   (esattamente i 25 in rosa)
+   - Lineup: 11 starter distribuiti su un modulo coerente + 14 bench
+   - Seed PRNG: 41 (deterministico, distinto dal 42 di round 2)
+   - Bench order: come T113 (per ruolo, poi voto desc, S.V. ultimi)
+   - 1-2 S.V. starter coperti da bench attivi same-role (deliberatamente,
+     per mostrare le sostituzioni)
+   - Capitano: player con voto piu' alto tra gli attivi
+
+4. VERIFICA POST-GENERAZIONE: zero orphan player nel nuovo dataset:
+
+   SELECT COUNT(*) AS orphans
+   FROM lineup_players lp
+   JOIN lineups l ON l.id = lp.lineup_id
+   WHERE l.season = 2024 AND l.round = 1
+   AND NOT EXISTS (
+     SELECT 1 FROM contracts c
+     WHERE c.player_id = lp.player_id
+     AND c.fanta_team_id = l.fanta_team_id
+     AND c.season_start = 2024
+   );
+
+   Atteso: 0. Se diverso da 0, lo script ha ancora il bug.
+
+5. RIESEGUI scoring engine sui nuovi lineup round 1. Coach voti da
+   serie_a_fixtures round 1 (gia' sincronizzati). UPDATE
+   competition_matches round 1 con i nuovi home_score/away_score.
+
+6. VERIFICA UI completa:
+   - Apri /partita/1, /partita/2, /partita/3, /partita/4 (i 4 match
+     round 1)
+   - Per ciascuno: 11 starter visibili in campo per entrambe le
+     squadre, 14 bench, tabellino sostituzioni coerente, scores
+     aggiornati
+
+7. RIPORTA
+   - Causa esatta del bug T122 (riga di codice)
+   - I 4 nuovi risultati round 1 (saranno diversi da 84.22/80.41/ecc -
+     normale, e' la nuova classifica coerente)
+   - Nuova classifica dopo round 1+2
+   - Conferma 0 orphan + 4 partite navigabili
+   - Screenshot di /partita/1 con lineup completi visibili
+
+NOTA STRUTTURALE PER REPLIT.MD
+Il pattern emerso: ogni script che genera lineup, contracts, o qualsiasi
+dato per-team DEVE filtrare strict via contracts table come single
+source of truth. Mai assumere che un pool "globale" sia equivalente
+alla rosa di una fanta-team. Annota nel replit.md.
