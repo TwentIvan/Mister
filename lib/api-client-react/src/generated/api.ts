@@ -22,6 +22,8 @@ import type {
 import type {
   Competition,
   CompetitionInput,
+  CompetitionMatch,
+  CompetitionMatchesResponse,
   CompetitionUpdate,
   Contract,
   ContractInput,
@@ -32,6 +34,7 @@ import type {
   FantaTeamUpdate,
   Federation,
   FederationUpdate,
+  GetCompetitionMatchesParams,
   GetDashboardParams,
   GetLineupsParams,
   GetMatchesParams,
@@ -55,6 +58,7 @@ import type {
   PlayerList,
   RecalculateVotoMisterParams,
   RosterPlayer,
+  StandingsResponse,
   TemplateInput,
   TemplateProfile,
   TemplateUpdate,
@@ -3269,6 +3273,249 @@ export function useGetRoster<TData = Awaited<ReturnType<typeof getRoster>>, TErr
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetRosterQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetCompetitionMatchesUrl = (competitionId: string,
+    params?: GetCompetitionMatchesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/competition/${competitionId}/matches?${stringifiedParams}` : `/api/competition/${competitionId}/matches`
+}
+
+/**
+ * @summary Lista partite di una competizione, opzionalmente filtrate per round
+ */
+export const getCompetitionMatches = async (competitionId: string,
+    params?: GetCompetitionMatchesParams, options?: RequestInit): Promise<CompetitionMatchesResponse> => {
+
+  return customFetch<CompetitionMatchesResponse>(getGetCompetitionMatchesUrl(competitionId,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetCompetitionMatchesQueryKey = (competitionId: string,
+    params?: GetCompetitionMatchesParams,) => {
+    return [
+    `/api/competition/${competitionId}/matches`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetCompetitionMatchesQueryOptions = <TData = Awaited<ReturnType<typeof getCompetitionMatches>>, TError = ErrorType<void>>(competitionId: string,
+    params?: GetCompetitionMatchesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCompetitionMatches>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetCompetitionMatchesQueryKey(competitionId,params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getCompetitionMatches>>> = ({ signal }) => getCompetitionMatches(competitionId,params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(competitionId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getCompetitionMatches>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetCompetitionMatchesQueryResult = NonNullable<Awaited<ReturnType<typeof getCompetitionMatches>>>
+export type GetCompetitionMatchesQueryError = ErrorType<void>
+
+
+/**
+ * @summary Lista partite di una competizione, opzionalmente filtrate per round
+ */
+
+export function useGetCompetitionMatches<TData = Awaited<ReturnType<typeof getCompetitionMatches>>, TError = ErrorType<void>>(
+ competitionId: string,
+    params?: GetCompetitionMatchesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCompetitionMatches>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetCompetitionMatchesQueryOptions(competitionId,params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetCompetitionStandingsUrl = (competitionId: string,) => {
+
+
+
+
+  return `/api/competition/${competitionId}/standings`
+}
+
+/**
+ * @summary Classifica on-the-fly calcolata dai match giocati
+ */
+export const getCompetitionStandings = async (competitionId: string, options?: RequestInit): Promise<StandingsResponse> => {
+
+  return customFetch<StandingsResponse>(getGetCompetitionStandingsUrl(competitionId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetCompetitionStandingsQueryKey = (competitionId: string,) => {
+    return [
+    `/api/competition/${competitionId}/standings`
+    ] as const;
+    }
+
+
+export const getGetCompetitionStandingsQueryOptions = <TData = Awaited<ReturnType<typeof getCompetitionStandings>>, TError = ErrorType<void>>(competitionId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCompetitionStandings>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetCompetitionStandingsQueryKey(competitionId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getCompetitionStandings>>> = ({ signal }) => getCompetitionStandings(competitionId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(competitionId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getCompetitionStandings>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetCompetitionStandingsQueryResult = NonNullable<Awaited<ReturnType<typeof getCompetitionStandings>>>
+export type GetCompetitionStandingsQueryError = ErrorType<void>
+
+
+/**
+ * @summary Classifica on-the-fly calcolata dai match giocati
+ */
+
+export function useGetCompetitionStandings<TData = Awaited<ReturnType<typeof getCompetitionStandings>>, TError = ErrorType<void>>(
+ competitionId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCompetitionStandings>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetCompetitionStandingsQueryOptions(competitionId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetMatchUrl = (matchId: number,) => {
+
+
+
+
+  return `/api/matches/${matchId}`
+}
+
+/**
+ * @summary Singolo match per ID
+ */
+export const getMatch = async (matchId: number, options?: RequestInit): Promise<CompetitionMatch> => {
+
+  return customFetch<CompetitionMatch>(getGetMatchUrl(matchId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetMatchQueryKey = (matchId: number,) => {
+    return [
+    `/api/matches/${matchId}`
+    ] as const;
+    }
+
+
+export const getGetMatchQueryOptions = <TData = Awaited<ReturnType<typeof getMatch>>, TError = ErrorType<void>>(matchId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMatch>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetMatchQueryKey(matchId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMatch>>> = ({ signal }) => getMatch(matchId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(matchId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMatch>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetMatchQueryResult = NonNullable<Awaited<ReturnType<typeof getMatch>>>
+export type GetMatchQueryError = ErrorType<void>
+
+
+/**
+ * @summary Singolo match per ID
+ */
+
+export function useGetMatch<TData = Awaited<ReturnType<typeof getMatch>>, TError = ErrorType<void>>(
+ matchId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMatch>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetMatchQueryOptions(matchId,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

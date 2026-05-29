@@ -1,0 +1,84 @@
+T123 - Step 6.B - API: competition matches + standings + single match
+
+OBIETTIVO
+Tre endpoint per supportare la Pagina Competizione (T124) e per rendere
+MatchView indirizzabile via matchId (oggi e' hardcodato a ft-mvp-1 vs
+ft-mvp-7).
+
+1. GET /api/competition/:id/matches
+   Query params: round (opzionale)
+
+   Response:
+   {
+     matches: [
+       {
+         id: string,
+         round: number,
+         homeTeam: { id, name, code3?, logoUrl?, colorPrimary,
+                     colorSecondary },
+         awayTeam: { ... idem ... },
+         homeScore: number | null,
+         awayScore: number | null,
+         playedAt: ISO datetime | null,
+         status: "played" | "upcoming"   // played se playedAt non null
+       }
+     ]
+   }
+
+   Ordinati per round asc, poi id asc.
+
+2. GET /api/competition/:id/standings
+   Calcola la classifica on-the-fly da competition_matches WHERE
+   played_at IS NOT NULL. Per ogni fanta-team della competizione:
+   - playedMatches, wins, draws, losses
+   - goalsFor (fanta-punti fatti, considerando sia home che away)
+   - goalsAgainst (fanta-punti subiti)
+   - goalDifference = GF - GS
+   - points = wins*3 + draws*1
+
+   Ordina per: points desc, goalDifference desc, goalsFor desc,
+   fantaTeam.name asc. Assegna position 1..N nell'ordine risultante.
+
+   Response:
+   {
+     standings: [
+       {
+         position: number,
+         fantaTeam: { id, name, code3?, logoUrl?, colorPrimary,
+                      colorSecondary },
+         playedMatches, wins, draws, losses,
+         goalsFor, goalsAgainst, goalDifference, points
+       }
+     ]
+   }
+
+   I valori monetari/scoring sono number con 2 decimali (es. GF=167.61,
+   non 167.6100001) - quantizza in output con il pattern gia' usato.
+
+3. GET /api/matches/:matchId
+   Singolo match, stessa shape di un elemento dell'array del punto 1.
+   Serve perche' MatchView in T124 avra' URL /partita/<matchId> e
+   chiamera' questo endpoint per i metadata. Le lineup, voti, coach
+   continuano sui loro endpoint esistenti (/api/roster + /api/coach-voto).
+
+4. OPENAPI + ORVAL
+   Aggiorna mister-api/openapi.yaml con i 3 endpoint e i loro schemas
+   (riusa lo schema FantaTeam gia' esistente per evitare duplicazioni).
+   Rigenera il client con `pnpm orval` (o equivalente).
+   Verifica typecheck pulito su mister-web e mister-api.
+
+5. SANITY TEST
+   curl http://localhost:<port>/api/competition/comp-mvp-campionato-2024/matches
+     -> attesi 8 match (4 round 1 + 4 round 2)
+   curl ...?round=2 -> 4 match
+   curl http://localhost:<port>/api/competition/comp-mvp-campionato-2024/standings
+     -> 8 righe, top deve essere ft-mvp-7 (Atletico) con 6 pt e DR +4.77
+   curl http://localhost:<port>/api/matches/<id di un match qualsiasi>
+     -> singolo oggetto coerente
+
+RIPORTA
+- 3 endpoint aggiunti + OpenAPI/Orval rigenerato + typecheck ok
+- Output sintetico delle 4 curl (numero match, top 3 classifica,
+  un esempio match con tutti i field popolati)
+- Decisioni prese: come hai gestito logoUrl e code3 sulle fanta-team
+  (nullable? placeholder? un default basato sul colore?)

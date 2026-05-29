@@ -878,6 +878,74 @@ paths:
                 items:
                   $ref: "#/components/schemas/RosterPlayer"
 
+  /competition/{competitionId}/matches:
+    get:
+      operationId: getCompetitionMatches
+      tags: [matches]
+      summary: Lista partite di una competizione, opzionalmente filtrate per round
+      parameters:
+        - in: path
+          name: competitionId
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: round
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Lista match ordinata per round asc, id asc
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CompetitionMatchesResponse"
+        "404":
+          description: Competizione non trovata
+
+  /competition/{competitionId}/standings:
+    get:
+      operationId: getCompetitionStandings
+      tags: [matches]
+      summary: Classifica on-the-fly calcolata dai match giocati
+      parameters:
+        - in: path
+          name: competitionId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Classifica ordinata per punti, differenza reti, gol fatti, nome
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StandingsResponse"
+        "404":
+          description: Competizione non trovata
+
+  /matches/{matchId}:
+    get:
+      operationId: getMatch
+      tags: [matches]
+      summary: Singolo match per ID
+      parameters:
+        - in: path
+          name: matchId
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Match trovato
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CompetitionMatch"
+        "404":
+          description: Match non trovato
+
   /matches:
     get:
       operationId: getMatches
@@ -1723,6 +1791,90 @@ components:
           description: Righe sotto soglia minuti (voto_mister resta NULL)
         durationMs:
           type: integer
+
+    # ─── COMPETITION MATCHES + STANDINGS ─────────────────────
+    MatchTeam:
+      type: object
+      required: [id, name, colorPrimary, colorSecondary]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        code3:
+          type: ["string", "null"]
+        logoUrl:
+          type: ["string", "null"]
+        colorPrimary:
+          type: string
+        colorSecondary:
+          type: string
+
+    CompetitionMatch:
+      type: object
+      required: [id, round, homeTeam, awayTeam, status]
+      properties:
+        id:
+          type: integer
+        round:
+          type: integer
+        homeTeam:
+          $ref: "#/components/schemas/MatchTeam"
+        awayTeam:
+          $ref: "#/components/schemas/MatchTeam"
+        homeScore:
+          type: ["number", "null"]
+        awayScore:
+          type: ["number", "null"]
+        playedAt:
+          type: ["string", "null"]
+          format: date-time
+        status:
+          type: string
+          enum: [played, upcoming]
+
+    CompetitionMatchesResponse:
+      type: object
+      required: [matches]
+      properties:
+        matches:
+          type: array
+          items:
+            $ref: "#/components/schemas/CompetitionMatch"
+
+    StandingsEntry:
+      type: object
+      required: [position, fantaTeam, playedMatches, wins, draws, losses, goalsFor, goalsAgainst, goalDifference, points]
+      properties:
+        position:
+          type: integer
+        fantaTeam:
+          $ref: "#/components/schemas/MatchTeam"
+        playedMatches:
+          type: integer
+        wins:
+          type: integer
+        draws:
+          type: integer
+        losses:
+          type: integer
+        goalsFor:
+          type: number
+        goalsAgainst:
+          type: number
+        goalDifference:
+          type: number
+        points:
+          type: integer
+
+    StandingsResponse:
+      type: object
+      required: [standings]
+      properties:
+        standings:
+          type: array
+          items:
+            $ref: "#/components/schemas/StandingsEntry"
 
     # ─── LINEUPS ──────────────────────────────────────────────
     MatchInfo:

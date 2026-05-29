@@ -697,6 +697,60 @@ export interface VotoAlgorithmRecalculateResponse {
   durationMs: number;
 }
 
+export interface MatchTeam {
+  id: string;
+  name: string;
+  /** @nullable */
+  code3?: string | null;
+  /** @nullable */
+  logoUrl?: string | null;
+  colorPrimary: string;
+  colorSecondary: string;
+}
+
+export type CompetitionMatchStatus = typeof CompetitionMatchStatus[keyof typeof CompetitionMatchStatus];
+
+
+export const CompetitionMatchStatus = {
+  played: 'played',
+  upcoming: 'upcoming',
+} as const;
+
+export interface CompetitionMatch {
+  id: number;
+  round: number;
+  homeTeam: MatchTeam;
+  awayTeam: MatchTeam;
+  /** @nullable */
+  homeScore?: number | null;
+  /** @nullable */
+  awayScore?: number | null;
+  /** @nullable */
+  playedAt?: string | null;
+  status: CompetitionMatchStatus;
+}
+
+export interface CompetitionMatchesResponse {
+  matches: CompetitionMatch[];
+}
+
+export interface StandingsEntry {
+  position: number;
+  fantaTeam: MatchTeam;
+  playedMatches: number;
+  wins: number;
+  draws: number;
+  losses: number;
+  goalsFor: number;
+  goalsAgainst: number;
+  goalDifference: number;
+  points: number;
+}
+
+export interface StandingsResponse {
+  standings: StandingsEntry[];
+}
+
 export interface MatchInfo {
   id: number;
   giornata: number;
@@ -843,6 +897,10 @@ round: number;
 export type GetRosterParams = {
 fantaTeamId: string;
 season: number;
+round?: number;
+};
+
+export type GetCompetitionMatchesParams = {
 round?: number;
 };
 

@@ -1284,6 +1284,108 @@ export const GetRosterResponse = zod.array(GetRosterResponseItem)
 
 
 /**
+ * @summary Lista partite di una competizione, opzionalmente filtrate per round
+ */
+export const GetCompetitionMatchesParams = zod.object({
+  "competitionId": zod.coerce.string()
+})
+
+export const GetCompetitionMatchesQueryParams = zod.object({
+  "round": zod.coerce.number().optional()
+})
+
+export const GetCompetitionMatchesResponse = zod.object({
+  "matches": zod.array(zod.object({
+  "id": zod.number(),
+  "round": zod.number(),
+  "homeTeam": zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "code3": zod.string().nullish(),
+  "logoUrl": zod.string().nullish(),
+  "colorPrimary": zod.string(),
+  "colorSecondary": zod.string()
+}),
+  "awayTeam": zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "code3": zod.string().nullish(),
+  "logoUrl": zod.string().nullish(),
+  "colorPrimary": zod.string(),
+  "colorSecondary": zod.string()
+}),
+  "homeScore": zod.number().nullish(),
+  "awayScore": zod.number().nullish(),
+  "playedAt": zod.coerce.date().nullish(),
+  "status": zod.enum(['played', 'upcoming'])
+}))
+})
+
+
+/**
+ * @summary Classifica on-the-fly calcolata dai match giocati
+ */
+export const GetCompetitionStandingsParams = zod.object({
+  "competitionId": zod.coerce.string()
+})
+
+export const GetCompetitionStandingsResponse = zod.object({
+  "standings": zod.array(zod.object({
+  "position": zod.number(),
+  "fantaTeam": zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "code3": zod.string().nullish(),
+  "logoUrl": zod.string().nullish(),
+  "colorPrimary": zod.string(),
+  "colorSecondary": zod.string()
+}),
+  "playedMatches": zod.number(),
+  "wins": zod.number(),
+  "draws": zod.number(),
+  "losses": zod.number(),
+  "goalsFor": zod.number(),
+  "goalsAgainst": zod.number(),
+  "goalDifference": zod.number(),
+  "points": zod.number()
+}))
+})
+
+
+/**
+ * @summary Singolo match per ID
+ */
+export const GetMatchParams = zod.object({
+  "matchId": zod.coerce.number()
+})
+
+export const GetMatchResponse = zod.object({
+  "id": zod.number(),
+  "round": zod.number(),
+  "homeTeam": zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "code3": zod.string().nullish(),
+  "logoUrl": zod.string().nullish(),
+  "colorPrimary": zod.string(),
+  "colorSecondary": zod.string()
+}),
+  "awayTeam": zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "code3": zod.string().nullish(),
+  "logoUrl": zod.string().nullish(),
+  "colorPrimary": zod.string(),
+  "colorSecondary": zod.string()
+}),
+  "homeScore": zod.number().nullish(),
+  "awayScore": zod.number().nullish(),
+  "playedAt": zod.coerce.date().nullish(),
+  "status": zod.enum(['played', 'upcoming'])
+})
+
+
+/**
  * @summary Recupera i match di una giornata con punteggi fanta
  */
 export const GetMatchesQueryParams = zod.object({
