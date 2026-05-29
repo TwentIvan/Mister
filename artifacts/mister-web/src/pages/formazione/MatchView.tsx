@@ -159,8 +159,8 @@ function MatchPlayerToken({ player, isCaptain = false }: { player: MatchPlayer; 
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, transform: "translate(-50%, -50%)", pointerEvents: "none" }}>
       <div style={{ position: "relative", width: OUTER, height: OUTER, flexShrink: 0 }}>
-        <div style={{ position: "absolute", inset: RING, borderRadius: "50%", overflow: "hidden", background: "rgba(0,0,0,0.35)" }}>
-          {src && <img src={src} alt={player.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={photoOnError(player)} />}
+        <div style={{ position: "absolute", inset: RING, borderRadius: "50%", overflow: "hidden", background: "var(--token-avatar-bg, #2d5848)" }}>
+          {src && <img src={src} alt={player.name} style={{ width: "100%", height: "100%", objectFit: "cover", transform: "scale(1.08)", transformOrigin: "center" }} onError={photoOnError(player)} />}
         </div>
         <div style={{ position: "absolute", inset: 0, borderRadius: "50%", border: `${RING}px solid ${affinityColor}`, boxShadow: `0 0 5px ${affinityColor}55`, pointerEvents: "none" }} />
         <div style={{ position: "absolute", top: -2, right: -2, width: VBADGE, height: VBADGE, borderRadius: "50%", background: hasVoto ? "#1f4733" : "rgba(0,0,0,0.45)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: hasVoto ? "0 0 0 1.5px rgba(244,196,48,0.75), 0 1px 3px rgba(0,0,0,0.6)" : "0 0 0 1px rgba(239,230,211,0.3), 0 1px 3px rgba(0,0,0,0.5)" }}>
@@ -219,8 +219,8 @@ function MatchMiniCoachToken({ coach, coachVoto }: { coach: HeadCoach; coachVoto
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, pointerEvents: "none" }}>
       <div style={{ position: "relative", width: OUTER, height: OUTER, flexShrink: 0 }}>
-        <div style={{ position: "absolute", inset: RING, borderRadius: "50%", overflow: "hidden", background: "rgba(0,0,0,0.4)" }}>
-          {coach.photoCartoonUrl && <img src={coach.photoCartoonUrl} alt={coach.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={e => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />}
+        <div style={{ position: "absolute", inset: RING, borderRadius: "50%", overflow: "hidden", background: "var(--token-avatar-bg, #2d5848)" }}>
+          {coach.photoCartoonUrl && <img src={coach.photoCartoonUrl} alt={coach.name} style={{ width: "100%", height: "100%", objectFit: "cover", transform: "scale(1.08)", transformOrigin: "center" }} onError={e => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />}
         </div>
         <div style={{ position: "absolute", inset: 0, borderRadius: "50%", border: `${RING}px solid rgba(244,196,48,0.82)`, boxShadow: "0 0 6px rgba(244,196,48,0.25)", pointerEvents: "none" }} />
         {/* Badge voto — top right */}
@@ -301,9 +301,9 @@ function BenchRow({ player }: { player: MatchPlayer }) {
       <div style={{ display: "flex", alignItems: "center", gap: 5, padding: "3px 6px 3px 5px", flex: 1, minWidth: 0 }}>
         {/* Foto circolare con ring verde affinità */}
         <div style={{ position: "relative", width: 26, height: 26, flexShrink: 0 }}>
-          <div style={{ position: "absolute", inset: 1, borderRadius: "50%", overflow: "hidden", background: "rgba(0,0,0,0.4)" }}>
+          <div style={{ position: "absolute", inset: 1, borderRadius: "50%", overflow: "hidden", background: "var(--token-avatar-bg, #2d5848)" }}>
             {src ? (
-              <img src={src} alt={player.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={photoOnError(player)} />
+              <img src={src} alt={player.name} style={{ width: "100%", height: "100%", objectFit: "cover", transform: "scale(1.08)", transformOrigin: "center" }} onError={photoOnError(player)} />
             ) : (
               <span style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", fontSize: 9, color: "rgba(255,255,255,0.7)", fontFamily: "var(--font-mono)" }}>
                 {player.name[0]}

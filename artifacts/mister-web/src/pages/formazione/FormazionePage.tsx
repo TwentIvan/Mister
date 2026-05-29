@@ -330,11 +330,11 @@ function PlayerToken({
       {/* ── Ring + foto + badge sovrapposti ── */}
       <div style={{ position: "relative", width: OUTER, height: OUTER, flexShrink: 0 }}>
         {/* Foto */}
-        <div style={{ position: "absolute", inset: RING, borderRadius: "50%", overflow: "hidden", background: "rgba(0,0,0,0.35)" }}>
+        <div style={{ position: "absolute", inset: RING, borderRadius: "50%", overflow: "hidden", background: "var(--token-avatar-bg, #2d5848)" }}>
           {(player.photoCartoonUrl ?? player.photoUrl) && (
             <img
               src={player.photoCartoonUrl ?? player.photoUrl!} alt={player.name}
-              style={{ width: "100%", height: "100%", objectFit: "cover" }}
+              style={{ width: "100%", height: "100%", objectFit: "cover", transform: "scale(1.08)", transformOrigin: "center" }}
               onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
             />
           )}
@@ -479,11 +479,11 @@ function MiniCoachToken({ coach, avversario, nextIsHome }: MiniCoachTokenProps) 
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 5, pointerEvents: "none" }}>
       {/* Ring + foto (stessa struttura di PlayerToken field) */}
       <div style={{ position: "relative", width: OUTER, height: OUTER, flexShrink: 0 }}>
-        <div style={{ position: "absolute", inset: RING, borderRadius: "50%", overflow: "hidden", background: "rgba(0,0,0,0.35)" }}>
+        <div style={{ position: "absolute", inset: RING, borderRadius: "50%", overflow: "hidden", background: "var(--token-avatar-bg, #2d5848)" }}>
           {coach.photoCartoonUrl && (
             <img
               src={coach.photoCartoonUrl} alt={coach.name}
-              style={{ width: "100%", height: "100%", objectFit: "cover" }}
+              style={{ width: "100%", height: "100%", objectFit: "cover", transform: "scale(1.08)", transformOrigin: "center" }}
               onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
             />
           )}
