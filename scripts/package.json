@@ -25,7 +25,8 @@
     "sync:test-toy-tuning": "tsx ./sync/test-toy-tuning.ts",
     "sync:batch-avatars": "tsx ./sync/batch-avatars.ts",
     "sync:normalize-avatars": "tsx ./sync/normalize-avatars.ts",
-    "sync:batch-avatars-121": "tsx ./sync/batch-avatars-121.ts"
+    "sync:batch-avatars-121": "tsx ./sync/batch-avatars-121.ts",
+    "seed:round1-score": "tsx ./src/seeds/seed-round1-score.ts"
   },
   "dependencies": {
     "@workspace/db": "workspace:*",

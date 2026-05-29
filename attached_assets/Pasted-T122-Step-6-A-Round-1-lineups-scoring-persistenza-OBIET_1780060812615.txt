@@ -1,0 +1,69 @@
+T122 - Step 6.A - Round 1: lineups + scoring + persistenza
+
+OBIETTIVO
+Generare il round 1 della competizione 'comp-mvp-campionato-2024' cosi'
+abbiamo 2 giornate giocate (round 1 + round 2) e una classifica con piu'
+sostanza per la Pagina Competizione.
+
+1. VERIFICA STATO ROUND 1
+   SELECT id, round, home_fanta_team_id, away_fanta_team_id,
+          home_score, away_score, played_at
+   FROM competition_matches
+   WHERE competition_id = 'comp-mvp-campionato-2024' AND round = 1;
+   
+   Se vuoti -> crea 4 record nuovi
+   Se presenti -> aggiorna scores e played_at (rigenerali da capo)
+
+2. PAIRINGS ROUND 1
+   I 4 match del round 1 vanno con accoppiamenti DIVERSI dal round 2
+   (round 2 era: ft-mvp-1 vs ft-mvp-7, ft-mvp-2 vs ft-mvp-8,
+   ft-mvp-3 vs ft-mvp-5, ft-mvp-4 vs ft-mvp-6 - verifica con SELECT).
+   
+   Schema proposto per round 1:
+   - ft-mvp-1 vs ft-mvp-2
+   - ft-mvp-3 vs ft-mvp-4
+   - ft-mvp-5 vs ft-mvp-6
+   - ft-mvp-7 vs ft-mvp-8
+   
+   Casa/trasferta alternato rispetto al round 2 se possibile, per
+   ridurre il "team X sempre in casa" effect.
+
+3. LINEUPS ROUND 1
+   Genera lineup auto-seeded per tutte e 8 le fanta-team, identica
+   logica al T113 (3-1-2-1-1 random ma deterministico, 11 titolari + 14
+   panchina ordinata, capitano voto-massimo, 1-2 S.V. starter coperti da
+   bench attivi same-role).
+   
+   Differenze dal T113:
+   - season = 2024, round = 1
+   - seed PRNG = 41 (vs 42 del round 2) per avere lineup diverse
+
+4. SCORING ROUND 1
+   Esegui lo scoring engine (lib/scoring) sui round-1 lineups usando i
+   voto_mister di round 1 da player_giornata_stats. Coach voto basato
+   su serie_a_fixtures di round 1 (Serie A reale, gia' sincronizzata
+   da T114).
+
+5. PERSIST
+   INSERT/UPDATE competition_matches per i 4 match round 1 con:
+   - competition_id = 'comp-mvp-campionato-2024'
+   - round = 1
+   - home/away_fanta_team_id dal pairing scelto
+   - home/away_score = output dello scoring engine
+   - played_at = data plausibile anteriore al round 2, es. '2024-08-25'
+     (fine settimana prima del round 2)
+
+6. VERIFICA - CLASSIFICA PRELIMINARE
+   Calcola e stampa la classifica dopo round 1 + round 2 con questa
+   logica standard:
+   - Per ogni fanta-team: G (partite giocate), V (vinte), P (pareggi),
+     S (perse), GF (fanta-punti fatti), GS (subiti), DR (GF-GS), PT
+     (3 V + 1 P)
+   - Ordinata per: PT desc, DR desc, GF desc, nome asc
+   - Stampa in console come tabella, 8 righe
+
+RIPORTA
+- I 4 risultati di round 1 (home team / away team / scores)
+- La classifica dopo round 1+2 (8 righe)
+- Conferma 4 record persistiti in competition_matches per round=1
+- Eventuali sorprese: chi e' inaspettatamente primo/ultimo
