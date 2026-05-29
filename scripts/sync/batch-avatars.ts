@@ -217,7 +217,62 @@ async function runToy(replicate: Replicate, mattePath: string, id: number): Prom
   return urls[0];
 }
 
-// ─── Step 5: BG removal → webp finale ────────────────────────────────────────
+// ─── Step 5: BG removal + normalizzazione → webp finale ──────────────────────
+
+const CANVAS_SZ   = 512;
+const TARGET_AXIS = Math.round(CANVAS_SZ * 0.95); // 487 px
+
+async function normalizeToCanvas(inputBuf: Buffer): Promise<Buffer> {
+  const { data, info } = await sharp(inputBuf)
+    .ensureAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+
+  const W = info.width, H = info.height, C = info.channels;
+  let minX = W, minY = H, maxX = -1, maxY = -1;
+
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      if (data[(y * W + x) * C + 3] > 16) {
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+      }
+    }
+  }
+
+  if (maxX < 0) {
+    return sharp({
+      create: { width: CANVAS_SZ, height: CANVAS_SZ, channels: 4 as const, background: { r: 0, g: 0, b: 0, alpha: 0 } },
+    }).webp({ quality: 85 }).toBuffer();
+  }
+
+  const bboxW       = maxX - minX + 1;
+  const bboxH       = maxY - minY + 1;
+  const axisMax     = Math.max(bboxW, bboxH);
+  const scaleFactor = TARGET_AXIS / axisMax;
+  const newW        = Math.round(bboxW * scaleFactor);
+  const newH        = Math.round(bboxH * scaleFactor);
+  const padLeft     = Math.floor((CANVAS_SZ - newW) / 2);
+  const padRight    = CANVAS_SZ - newW - padLeft;
+  const padTop      = Math.floor((CANVAS_SZ - newH) / 2);
+  const padBottom   = CANVAS_SZ - newH - padTop;
+
+  return sharp(inputBuf)
+    .ensureAlpha()
+    .extract({ left: minX, top: minY, width: bboxW, height: bboxH })
+    .resize(newW, newH, { kernel: "lanczos3", withoutEnlargement: false })
+    .extend({
+      top:    Math.max(0, padTop),
+      bottom: Math.max(0, padBottom),
+      left:   Math.max(0, padLeft),
+      right:  Math.max(0, padRight),
+      background: { r: 0, g: 0, b: 0, alpha: 0 },
+    })
+    .webp({ quality: 85 })
+    .toBuffer();
+}
 
 async function removeBg(replicate: Replicate, toyUrl: string, id: number): Promise<string> {
   const outPath = path.join(AVATARS_DIR, `${id}.webp`);
@@ -234,10 +289,9 @@ async function removeBg(replicate: Replicate, toyUrl: string, id: number): Promi
   if (!urls.length) throw new Error("BGRem: nessun URL");
 
   const cleanBuf = await downloadBuffer(urls[0]);
-  await sharp(cleanBuf)
-    .resize(512, 512, { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } })
-    .webp({ quality: 85 })
-    .toFile(outPath);
+  console.log(`  #${id} → normalizza (axisMax → ${TARGET_AXIS}px)…`);
+  const normBuf  = await normalizeToCanvas(cleanBuf);
+  fs.writeFileSync(outPath, normBuf);
 
   console.log(`  #${id} → salvato ${outPath}`);
   return outPath;

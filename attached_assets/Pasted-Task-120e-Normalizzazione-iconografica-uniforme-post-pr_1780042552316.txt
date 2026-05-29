@@ -1,0 +1,68 @@
+Task 120e - Normalizzazione iconografica uniforme (post-process locale)
+
+OBIETTIVO
+Tutti gli avatar Toy occupano il cerchio del badge in modo uniforme.
+L'INTERA immagine iconografica (testa + capelli + tutto il cutout) deve
+avere l'asse maggiore della sua bbox al 95% del canvas. Niente face
+detection: l'immagine intera e' l'iconografia da uniformare.
+
+ALGORITMO (puro sharp, locale, nessuna API esterna)
+Per ogni avatar finale (BG trasparente, canvas 512x512):
+  1. Carica con sharp e raw extract del canale alfa
+  2. Trova bbox pixel non trasparenti (alpha > 16):
+       minX, minY, maxX, maxY
+  3. width  = maxX - minX
+     height = maxY - minY
+     axisMax = max(width, height)
+  4. targetSize = 512 * 0.95   (= 487 pixel)
+     scaleFactor = targetSize / axisMax
+  5. bboxCenterX = (minX + maxX) / 2
+     bboxCenterY = (minY + maxY) / 2
+  6. Operazioni sharp:
+     a. extract({ left: minX, top: minY, width, height }) - crop tight
+        alla bbox
+     b. resize larghezza_nuova = width  * scaleFactor,
+                altezza_nuova  = height * scaleFactor (mantieni aspect)
+     c. extend / composite su canvas 512x512 con padding trasparente,
+        centrato (gravity center)
+     d. .webp().toFile(output)
+
+RISULTATO ATTESO
+- L'asse maggiore della testa = ~487 px (95% di 512) in ogni avatar
+- Aspect ratio originale della testa preservato (no deformazioni)
+- Centratura: la bbox e' centrata nel canvas
+- Per teste larghe: la larghezza tocca quasi i lati del cerchio
+- Per teste alte: l'altezza tocca quasi top/bottom del cerchio
+- Uniformita' percepita nel badge: tutte le teste arrivano vicino al
+  bordo del ring
+
+PARTE 1 - Re-normalizza i 25 di Mario's Squad gia' esistenti
+Player ID: 31094, 147859, 2495, 1922, 30440, 31507, 1844, 31521, 18797,
+105, 30425, 162141, 396637, 127631, 312, 46988, 143648, 30561, 31871,
+136016, 951, 30533, 31555, 2292, 15673.
+
+Per ognuno:
+- Backup mister-web/public/avatars/<id>.webp in /tmp prima dell'overwrite
+- Applica l'algoritmo sopra
+- Salva (overwrite) lo stesso path
+
+Niente Replicate, niente PicWish, niente DB update (i path restano gli
+stessi). Solo sharp locale.
+
+PARTE 2 - Aggiungi lo step alla pipeline
+Modifica lo script batch (quello che hai usato per Task 120/120b) per
+includere questa normalizzazione come ULTIMO step (dopo BiRefNet, prima
+del save finale). Cosi' il prossimo batch Atletico (Task 121) e futuri
+escono gia' uniformati.
+
+VERIFICA
+- Stampa per 3-4 esempi (es. Okoye, Ballo-Toure', Ramadani, Ketelaere)
+  le bbox dimensions PRE e POST normalizzazione, e il scaleFactor
+  applicato. Vogliamo vedere che POST l'axisMax sia ~487 px per tutti.
+- Hard refresh nel browser, screenshot match view di Mario's Squad
+- Le teste nei cerchi devono apparire della stessa dimensione
+
+RIPORTA
+- 25/25 normalizzati ok
+- Tabella PRE/POST bbox e scaleFactor per i 4 esempi
+- Conferma pipeline script aggiornata col nuovo step finale
