@@ -27,13 +27,16 @@ const TMP_DIR = path.join(os.tmpdir(), "mister-batch-avatars");
 
 for (const d of [AVATARS_DIR, TMP_DIR]) fs.mkdirSync(d, { recursive: true });
 
-// I 5 già validati in toy-tuning-B — vengono copiati prima di questo script.
-// Questo script processa solo i 20 rimanenti.
+// Task 120b — rosa attuale ft-mvp-1 (25 player, nessun avatar presente)
 const REMAINING_IDS = [
-  1084, 1920, 2055, 6931, 25911,
-  30414, 30419, 30879, 30913, 31031,
-  40392, 42007, 129687, 162570, 342074,
-  353417, 443141, 446092, 449638, 484411,
+  // ATT
+  31094, 147859, 2495, 1922, 30440, 31507,
+  // DEF
+  1844, 31521, 18797, 105, 30425, 162141, 396637, 127631,
+  // GK
+  312, 46988, 143648,
+  // MID
+  30561, 31871, 136016, 951, 30533, 31555, 2292, 15673,
 ];
 
 const PICWISH_API_KEY = process.env.PICWISH_API_KEY;
