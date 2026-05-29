@@ -121,7 +121,7 @@ export const TEAM_LOGO_BY_CODE: Record<string, string> = Object.fromEntries(
 export const COACH_MARIO: HeadCoach = {
   id: 3386,
   name: "M. Allegri",
-  photoCartoonUrl: "/avatars/coaches/3386.webp",
+  photoCartoonUrl: "/avatars/coaches/3386.webp?v=2",
   nationality: "Italy",
   currentTeamName: "Milan",
 };
@@ -129,7 +129,7 @@ export const COACH_MARIO: HeadCoach = {
 export const ATLETICO_CAFFEINA_COACH: HeadCoach = {
   id: 2915,
   name: "M. Baroni",
-  photoCartoonUrl: "/avatars/coaches/2915.webp",
+  photoCartoonUrl: "/avatars/coaches/2915.webp?v=2",
   nationality: "Italy",
   currentTeamName: null,
 };
