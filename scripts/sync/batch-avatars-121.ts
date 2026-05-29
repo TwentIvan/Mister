@@ -1,22 +1,26 @@
 /**
  * batch-avatars-121.ts — Task 121
- * Atletico Caffeina (ft-mvp-7) — 24 player mancanti + coaches (SKIP, già presenti).
+ * PARTE 1: Atletico Caffeina (ft-mvp-7) — 24 player mancanti
+ * PARTE 2: Coach (8) — rigenerazione forzata in stile Toy,
+ *          path nuovo /avatars/coaches/<id>.webp
  *
- * Diff eseguito prima della scrittura (2025-05-29):
- *   Player #30509 (Belotti): file EXISTS + photo_cartoon_url SET → SKIP
+ * Diff player (T121):
+ *   #30509 Belotti: file EXISTS + photo_cartoon_url SET → SKIP
  *   24 restanti: file MISSING, photo_cartoon_url NULL → pipeline completa
- *   8 coach: file EXISTS + photo_cartoon_url SET → SKIP tutti
  *
- * Pipeline (identica a T120b + step normalize iconografico):
- *   PicWish cutout → normalize bbox → matte bianco →
- *   face-to-many Toy Combo B → BiRefNet BG removal →
- *   normalizeToCanvas 95% (axisMax → 486px) → save webp → UPDATE DB
+ * Coach: bypass skip-logic totale — tutti e 8 rigenerati indipendentemente
+ *   dal file esistente (file vecchi sono stile Pixar pre-T117).
+ *   UPDATE coaches SET photo_cartoon_url = '/avatars/coaches/<id>.webp'
+ *
+ * Pipeline: PicWish cutout → normalize bbox → matte bianco →
+ *           face-to-many Toy Combo B → BiRefNet BG removal →
+ *           normalizeToCanvas 95% → save webp → UPDATE DB
  *
  * Uso: pnpm --filter @workspace/scripts run sync:batch-avatars-121
  */
 
 import { db } from "@workspace/db";
-import { players } from "@workspace/db/schema";
+import { players, coaches } from "@workspace/db/schema";
 import { inArray, eq } from "drizzle-orm";
 import Replicate from "replicate";
 import sharp from "sharp";
@@ -27,38 +31,28 @@ import http from "http";
 import os from "os";
 import { fileURLToPath } from "url";
 
-const __dirname   = path.dirname(fileURLToPath(import.meta.url));
-const ROOT        = path.resolve(__dirname, "../..");
-const AVATARS_DIR = path.join(ROOT, "artifacts/mister-web/public/avatars");
-const TMP_DIR     = path.join(os.tmpdir(), "mister-batch-121");
+const __dirname      = path.dirname(fileURLToPath(import.meta.url));
+const ROOT           = path.resolve(__dirname, "../..");
+const AVATARS_DIR    = path.join(ROOT, "artifacts/mister-web/public/avatars");
+const COACHES_DIR    = path.join(AVATARS_DIR, "coaches");
+const TMP_DIR        = path.join(os.tmpdir(), "mister-batch-121");
 
-for (const d of [AVATARS_DIR, TMP_DIR]) fs.mkdirSync(d, { recursive: true });
+for (const d of [AVATARS_DIR, COACHES_DIR, TMP_DIR]) fs.mkdirSync(d, { recursive: true });
 
 // ─── IDs ──────────────────────────────────────────────────────────────────────
 
-// Diff: 24 player mancanti (30509 Belotti → SKIP, file + DB già ok)
-const AC_IDS = [
-  // ATT
-  9975, 2738, 877, 875, 43056,
-  // DEF
-  18799, 180763, 41144, 227, 37250, 15909, 180510, 40582,
-  // GK
-  22221, 30418, 56459,
-  // MID
-  37437, 22174, 30932, 162266, 309388, 128353, 288769, 266813,
+// Parte 1: 24 player AC mancanti (30509 Belotti SKIP — file + DB ok)
+const AC_PLAYER_IDS = [
+  9975, 2738, 877, 875, 43056,         // ATT
+  18799, 180763, 41144, 227, 37250,    // DEF
+  15909, 180510, 40582,                 // DEF cont.
+  22221, 30418, 56459,                  // GK
+  37437, 22174, 30932, 162266,          // MID
+  309388, 128353, 288769, 266813,       // MID cont.
 ];
 
-// Coaches tutti già presenti (file + photo_cartoon_url SET) → SKIP
-const COACH_SKIP = [
-  { id: 3386, name: "Allegri"   },
-  { id: 2915, name: "Baroni"    },
-  { id: 15642, name: "Chivu"   },
-  { id: 2425, name: "Conte"     },
-  { id: 2393, name: "Gasperini" },
-  { id: 2408, name: "Jurić"     },
-  { id: 2412, name: "Sarri"     },
-  { id: 2432, name: "Tudor"     },
-];
+// Parte 2: 8 coach — rigenerazione forzata
+const COACH_IDS = [3386, 2915, 15642, 2425, 2393, 2408, 2412, 2432];
 
 // ─── Config modelli ───────────────────────────────────────────────────────────
 
@@ -80,8 +74,8 @@ const COMBO_B = {
 };
 
 const PICWISH_BASE = "https://techhk.aoscdn.com";
-const POLL_MAX = 40;
-const POLL_MS  = 2000;
+const POLL_MAX     = 40;
+const POLL_MS      = 2000;
 
 // ─── Utility ──────────────────────────────────────────────────────────────────
 
@@ -169,8 +163,8 @@ interface PicWishResp {
   data?: { task_id?: string; state?: number; image?: string; credits_cost?: number };
 }
 
-async function picwishCutout(photoUrl: string, id: number): Promise<string> {
-  const outPath = path.join(TMP_DIR, `${id}-cutout.png`);
+async function picwishCutout(photoUrl: string, id: number, label: string): Promise<string> {
+  const outPath = path.join(TMP_DIR, `${label}-${id}-cutout.png`);
 
   const submit = await fetch(`${PICWISH_BASE}/api/tasks/visual/self-face-cutout`, {
     method:  "POST",
@@ -199,8 +193,8 @@ async function picwishCutout(photoUrl: string, id: number): Promise<string> {
 
 // ─── Step 2: Normalize bbox iniziale ─────────────────────────────────────────
 
-async function normalizeBbox(cutoutPath: string, id: number): Promise<string> {
-  const outPath = path.join(TMP_DIR, `${id}-norm.png`);
+async function normalizeBbox(cutoutPath: string, id: number, label: string): Promise<string> {
+  const outPath = path.join(TMP_DIR, `${label}-${id}-norm.png`);
   const { data, info } = await sharp(cutoutPath).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
   const { width, height } = info;
   const ch = 4;
@@ -239,18 +233,18 @@ async function normalizeBbox(cutoutPath: string, id: number): Promise<string> {
 
 // ─── Step 3: Matte bianco ─────────────────────────────────────────────────────
 
-async function matteWhite(normPath: string, id: number): Promise<string> {
-  const outPath = path.join(TMP_DIR, `${id}-matte.png`);
+async function matteWhite(normPath: string, id: number, label: string): Promise<string> {
+  const outPath = path.join(TMP_DIR, `${label}-${id}-matte.png`);
   await sharp(normPath).flatten({ background: { r: 255, g: 255, b: 255 } }).png().toFile(outPath);
   return outPath;
 }
 
 // ─── Step 4: face-to-many Toy (Combo B) ──────────────────────────────────────
 
-async function runToy(replicate: Replicate, mattePath: string, id: number): Promise<string> {
+async function runToy(replicate: Replicate, mattePath: string, id: number, label: string): Promise<string> {
   const blob = new Blob([fs.readFileSync(mattePath)], { type: "image/png" });
   console.log(`  #${id} → Toy…`);
-  const urls = await replicateRun(replicate, TOY_MODEL, { image: blob, ...COMBO_B }, `Toy-${id}`);
+  const urls = await replicateRun(replicate, TOY_MODEL, { image: blob, ...COMBO_B }, `Toy-${label}-${id}`);
   if (!urls.length) throw new Error("Toy: nessun URL");
   console.log(`  #${id} → Toy OK`);
   return urls[0];
@@ -313,7 +307,13 @@ async function normalizeToCanvas(inputBuf: Buffer): Promise<Buffer> {
     .toBuffer();
 }
 
-async function removeBgAndNormalize(replicate: Replicate, toyUrl: string, id: number, outPath: string): Promise<void> {
+async function removeBgAndNormalize(
+  replicate: Replicate,
+  toyUrl: string,
+  id: number,
+  label: string,
+  outPath: string,
+): Promise<void> {
   const toyBuf = await downloadBuffer(toyUrl);
   const blob   = new Blob([new Uint8Array(toyBuf)], { type: "image/png" });
 
@@ -323,119 +323,216 @@ async function removeBgAndNormalize(replicate: Replicate, toyUrl: string, id: nu
     format:          "png",
     background_type: "rgba",
     threshold:       0,
-  }, `BGRem-${id}`);
+  }, `BGRem-${label}-${id}`);
   if (!urls.length) throw new Error("BGRem: nessun URL");
 
   const cleanBuf = await downloadBuffer(urls[0]);
   console.log(`  #${id} → normalizza (axisMax → ${TARGET_AXIS}px)…`);
   const normBuf  = await normalizeToCanvas(cleanBuf);
   fs.writeFileSync(outPath, normBuf);
-  console.log(`  #${id} → salvato ${outPath}`);
+  console.log(`  #${id} → salvato ${path.relative(ROOT, outPath)}`);
+}
+
+// ─── Pipeline completa ────────────────────────────────────────────────────────
+
+async function runFullPipeline(
+  replicate: Replicate,
+  photoUrl: string,
+  id: number,
+  label: string,
+  outPath: string,
+): Promise<{ picwish: number; toy: number; bg: number }> {
+  const cutoutPath = await picwishCutout(photoUrl, id, label);
+  console.log(`  #${id} → PicWish OK`);
+
+  const normPath  = await normalizeBbox(cutoutPath, id, label);
+  const mattePath = await matteWhite(normPath, id, label);
+
+  const toyUrl = await runToy(replicate, mattePath, id, label);
+  await removeBgAndNormalize(replicate, toyUrl, id, label, outPath);
+
+  for (const f of [cutoutPath, normPath, mattePath]) {
+    try { fs.unlinkSync(f); } catch (_) { /* ignora */ }
+  }
+  return { picwish: 1, toy: 1, bg: 1 };
 }
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 async function main() {
-  console.log("=== Task 121 — Atletico Caffeina (24 player) ===\n");
+  console.log("=== Task 121 — Atletico Caffeina + Coach (Toy pipeline) ===\n");
 
   await checkPicWishBalance();
   console.log();
 
-  // ── Coach report (tutti SKIP) ──
-  console.log("── Coach (8) ────────────────────────────────────────");
-  for (const c of COACH_SKIP) {
-    console.log(`  Coach #${c.id} ${c.name} → SKIP (file + photo_cartoon_url già presenti)`);
-  }
-  console.log(`  Percorso: /avatars/coaches/<id>.webp`);
-  console.log(`  Spot check: /avatars/coaches/3386.webp (Allegri), /avatars/coaches/2915.webp (Baroni)`);
-  console.log();
-
-  // ── Player diff ──
-  console.log("── Player Atletico Caffeina ─────────────────────────");
-  console.log(`  #30509 Belotti → SKIP (file + photo_cartoon_url già presenti)`);
-  console.log(`  24 player mancanti → pipeline completa\n`);
-
-  // Fetch da DB
-  const rows = await db
-    .select({ id: players.id, name: players.name, photoUrl: players.photoUrl })
-    .from(players)
-    .where(inArray(players.id, AC_IDS));
-
-  const rowMap = new Map(rows.map(r => [r.id, r]));
-  console.log(`Player trovati nel DB: ${rows.length}/${AC_IDS.length}\n`);
-
   const replicate = new Replicate({ auth: process.env.REPLICATE_API_TOKEN });
-  const success: number[] = [];
-  const failed:  Array<{ id: number; err: string }> = [];
-  let picwishCount = 0, toyCount = 0, bgCount = 0;
+  let totalPicwish = 0, totalToy = 0, totalBg = 0;
 
-  for (let i = 0; i < AC_IDS.length; i++) {
-    const id     = AC_IDS[i];
-    const player = rowMap.get(id);
-    console.log(`\n[${i + 1}/${AC_IDS.length}] #${id} ${player?.name ?? "(non in DB)"}`);
+  // ═══════════════════════════════════════════════════════════════
+  // PARTE 1: Player Atletico Caffeina (24)
+  // ═══════════════════════════════════════════════════════════════
+  console.log("══════════════════════════════════════════════════════════");
+  console.log("PARTE 1 — Player Atletico Caffeina");
+  console.log("══════════════════════════════════════════════════════════");
+  console.log("  #30509 Belotti → SKIP (file + photo_cartoon_url già presenti)\n");
 
-    if (!player?.photoUrl) {
-      const msg = player ? "photoUrl mancante" : "non trovato nel DB";
+  const playerRows = await db
+    .select({ id: players.id, name: players.name, photoUrl: players.photoUrl, photoCartoonUrl: players.photoCartoonUrl })
+    .from(players)
+    .where(inArray(players.id, AC_PLAYER_IDS));
+
+  const playerMap = new Map(playerRows.map(r => [r.id, r]));
+  console.log(`Player trovati nel DB: ${playerRows.length}/${AC_PLAYER_IDS.length}\n`);
+
+  const playerSuccess: number[] = [];
+  const playerUpdateOnly: number[] = [];
+  const playerFailed: Array<{ id: number; err: string }> = [];
+
+  for (let i = 0; i < AC_PLAYER_IDS.length; i++) {
+    const id     = AC_PLAYER_IDS[i];
+    const p      = playerMap.get(id);
+    const outPath = path.join(AVATARS_DIR, `${id}.webp`);
+    const fileExists = fs.existsSync(outPath);
+
+    console.log(`\n[P ${i + 1}/${AC_PLAYER_IDS.length}] #${id} ${p?.name ?? "(non in DB)"}`);
+
+    if (!p?.photoUrl) {
+      const msg = p ? "photoUrl mancante" : "non trovato nel DB";
       console.log(`  SKIP — ${msg}`);
-      failed.push({ id, err: msg });
+      playerFailed.push({ id, err: msg });
       continue;
     }
 
-    const outPath = path.join(AVATARS_DIR, `${id}.webp`);
+    // Toy file già ok + DB ok → skip completo
+    if (fileExists && p.photoCartoonUrl) {
+      console.log(`  SKIP — file Toy + photo_cartoon_url già presenti`);
+      playerSuccess.push(id);
+      continue;
+    }
 
-    try {
-      const cutoutPath = await picwishCutout(player.photoUrl, id);
-      console.log(`  #${id} → PicWish OK`);
-      picwishCount++;
-
-      const normPath  = await normalizeBbox(cutoutPath, id);
-      const mattePath = await matteWhite(normPath, id);
-
-      const toyUrl = await runToy(replicate, mattePath, id); toyCount++;
-      await removeBgAndNormalize(replicate, toyUrl, id, outPath); bgCount++;
-
-      // DB update atomico
+    // File già ok ma DB null → solo UPDATE DB
+    if (fileExists && !p.photoCartoonUrl) {
+      console.log(`  UPDATE-ONLY — file ok, aggiorno photo_cartoon_url nel DB`);
       await db.update(players)
         .set({ photoCartoonUrl: `/avatars/${id}.webp` })
         .where(eq(players.id, id));
       console.log(`  #${id} → DB aggiornato`);
+      playerUpdateOnly.push(id);
+      continue;
+    }
 
-      success.push(id);
+    // File mancante → pipeline completa
+    try {
+      const cost = await runFullPipeline(replicate, p.photoUrl, id, "p", outPath);
+      totalPicwish += cost.picwish; totalToy += cost.toy; totalBg += cost.bg;
 
-      // Pulizia file intermedi
-      for (const f of [cutoutPath, normPath, mattePath]) {
-        try { fs.unlinkSync(f); } catch (_) { /* ignora */ }
-      }
+      await db.update(players)
+        .set({ photoCartoonUrl: `/avatars/${id}.webp` })
+        .where(eq(players.id, id));
+      console.log(`  #${id} → DB aggiornato`);
+      playerSuccess.push(id);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       console.error(`  ERRORE: ${msg}`);
-      failed.push({ id, err: msg });
+      playerFailed.push({ id, err: msg });
     }
   }
 
-  // ── Riepilogo ──
-  const toyCost = toyCount * 0.0115;
-  const bgCost  = bgCount  * 0.007;
+  // ═══════════════════════════════════════════════════════════════
+  // PARTE 2: Coach (8) — rigenerazione forzata
+  // ═══════════════════════════════════════════════════════════════
+  console.log("\n══════════════════════════════════════════════════════════");
+  console.log("PARTE 2 — Coach (rigenerazione forzata, stile Toy)");
+  console.log("══════════════════════════════════════════════════════════\n");
 
-  console.log("\n=== Riepilogo Task 121 ===");
-  console.log(`\nPlayer processati: ${success.length}/24`);
-  if (success.length) console.log(`  OK: ${success.join(", ")}`);
-  if (failed.length) {
-    console.log(`Falliti (${failed.length}):`);
-    failed.forEach(f => console.log(`  #${f.id} — ${f.err}`));
+  const coachRows = await db
+    .select({ id: coaches.id, name: coaches.name, lastname: coaches.lastname, photoUrl: coaches.photoUrl })
+    .from(coaches)
+    .where(inArray(coaches.id, COACH_IDS));
+
+  const coachMap = new Map(coachRows.map(r => [r.id, r]));
+  console.log(`Coach trovati nel DB: ${coachRows.length}/${COACH_IDS.length}\n`);
+
+  const coachSuccess: number[] = [];
+  const coachFailed: Array<{ id: number; err: string }> = [];
+
+  for (let i = 0; i < COACH_IDS.length; i++) {
+    const id    = COACH_IDS[i];
+    const c     = coachMap.get(id);
+    const outPath = path.join(COACHES_DIR, `${id}.webp`);
+    const displayName = c?.lastname ?? c?.name ?? "(non in DB)";
+
+    console.log(`\n[C ${i + 1}/${COACH_IDS.length}] #${id} ${displayName}`);
+
+    if (!c?.photoUrl) {
+      const msg = c ? "photoUrl mancante" : "non trovato nel DB";
+      console.log(`  SKIP — ${msg}`);
+      coachFailed.push({ id, err: msg });
+      continue;
+    }
+
+    // Nessun check file precedente: rigenerazione forzata
+    try {
+      const cost = await runFullPipeline(replicate, c.photoUrl, id, "c", outPath);
+      totalPicwish += cost.picwish; totalToy += cost.toy; totalBg += cost.bg;
+
+      await db.update(coaches)
+        .set({ photoCartoonUrl: `/avatars/coaches/${id}.webp` })
+        .where(eq(coaches.id, id));
+      console.log(`  #${id} → DB aggiornato (coaches.photo_cartoon_url = '/avatars/coaches/${id}.webp')`);
+      coachSuccess.push(id);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error(`  ERRORE: ${msg}`);
+      coachFailed.push({ id, err: msg });
+    }
   }
-  console.log(`\nCoach: 8/8 SKIP (file + DB già presenti dal batch precedente)`);
 
-  console.log(`\nPicWish: ${picwishCount} crediti consumati (stimati)`);
-  console.log(`Replicate: ${toyCount} Toy + ${bgCount} BGRem`);
+  // ═══════════════════════════════════════════════════════════════
+  // RIEPILOGO
+  // ═══════════════════════════════════════════════════════════════
+  const toyCost = totalToy * 0.0115;
+  const bgCost  = totalBg  * 0.007;
+
+  console.log("\n══════════════════════════════════════════════════════════");
+  console.log("RIEPILOGO Task 121");
+  console.log("══════════════════════════════════════════════════════════");
+
+  const pSkip   = playerSuccess.filter(id => {
+    const p = playerMap.get(id);
+    return p?.photoCartoonUrl != null; // era già ok
+  });
+  const pNew    = playerSuccess.filter(id => !pSkip.includes(id) && !playerUpdateOnly.includes(id));
+  console.log(`\nParte 1 — Player AC (24 target):`);
+  console.log(`  SKIP     (Toy+DB ok): ${pSkip.length}`);
+  console.log(`  UPDATE-ONLY (DB):     ${playerUpdateOnly.length}${playerUpdateOnly.length ? " — " + playerUpdateOnly.join(", ") : ""}`);
+  console.log(`  PROCESSED:            ${pNew.length}${pNew.length ? " — " + pNew.join(", ") : ""}`);
+  if (playerFailed.length) {
+    console.log(`  FALLITI:              ${playerFailed.length}`);
+    playerFailed.forEach(f => console.log(`    #${f.id} — ${f.err}`));
+  }
+
+  console.log(`\nParte 2 — Coach (8 target, rigenerazione forzata):`);
+  console.log(`  PROCESSED:  ${coachSuccess.length} — ${coachSuccess.join(", ")}`);
+  if (coachFailed.length) {
+    console.log(`  FALLITI:    ${coachFailed.length}`);
+    coachFailed.forEach(f => console.log(`    #${f.id} — ${f.err}`));
+  }
+  console.log(`  photo_cartoon_url aggiornato per: ${coachSuccess.map(id => "#" + id).join(", ")}`);
+
+  console.log(`\nPicWish: ~${totalPicwish} crediti consumati`);
+  console.log(`Replicate: ${totalToy} Toy + ${totalBg} BGRem`);
   console.log(`Costo stimato: $${toyCost.toFixed(3)} (Toy) + $${bgCost.toFixed(3)} (BGRem) = ~$${(toyCost + bgCost).toFixed(3)}`);
 
-  console.log(`\nSpot check player: /avatars/${success[0] ?? "?"}.webp`);
-  console.log("Spot check coach:  /avatars/coaches/3386.webp (Allegri)");
+  const samplePlayer = pNew[0] ?? playerUpdateOnly[0] ?? playerSuccess[0];
+  const sampleCoach  = coachSuccess[0];
+  if (samplePlayer) console.log(`\nSpot check player: /avatars/${samplePlayer}.webp`);
+  if (sampleCoach)  console.log(`Spot check coach:  /avatars/coaches/${sampleCoach}.webp`);
 
   console.log("\nFatto.");
 
-  if (failed.length > 0) process.exit(1);
+  const anyFailed = playerFailed.length + coachFailed.length;
+  if (anyFailed > 0) process.exit(1);
 }
 
 main().catch(e => { console.error(e); process.exit(1); });
