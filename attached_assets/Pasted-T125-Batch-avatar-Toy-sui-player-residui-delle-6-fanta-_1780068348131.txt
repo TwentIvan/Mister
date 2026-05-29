@@ -1,0 +1,72 @@
+T125 - Batch avatar Toy sui player residui delle 6 fanta-team
+       (ft-mvp-2, 3, 4, 5, 6, 8)
+
+OBIETTIVO
+Toy-izzare tutti i giocatori delle 6 fanta-team che non hanno gia' un
+avatar Toy. Pipeline identica a T121 (gia' rodata).
+
+PREREQUISITO
+PicWish topup attivo. Stampa il saldo crediti residuo prima di partire,
+e fermati subito se sotto i ~30 (segnale che il topup originale era piu'
+piccolo di quanto immaginato e va rifatto).
+
+1. QUERY PLAYER POOL TOTALE
+   SELECT c.player_id, c.fanta_team_id, p.full_name, p.role_classic,
+          p.photo_cartoon_url
+   FROM contracts c
+   JOIN players p ON p.id = c.player_id
+   WHERE c.season_start = 2024
+     AND c.fanta_team_id IN ('ft-mvp-2', 'ft-mvp-3', 'ft-mvp-4',
+                             'ft-mvp-5', 'ft-mvp-6', 'ft-mvp-8')
+   ORDER BY c.fanta_team_id, p.role_classic;
+   
+   Atteso: 6 x 25 = 150 player.
+
+2. DIFF CONTRO STATO ATTUALE
+   Per ognuno dei 150 player, classifica in:
+   - SKIP: /avatars/<id>.webp esiste E photo_cartoon_url popolato
+     -> gia' Toy-izzato (sono i ~25 "extra" di T120 originale che
+     finirono qui per coincidenza dopo il reseed)
+   - UPDATE-ONLY: file esiste ma photo_cartoon_url e' NULL
+     -> solo UPDATE DB, no pipeline
+   - PROCESS: file mancante -> pipeline completa
+
+   Stampa il conteggio per categoria prima di partire (es. "12 SKIP / 0
+   UPDATE-ONLY / 138 PROCESS").
+
+3. PIPELINE PER I PROCESS
+   Identica a T121:
+   PicWish cutout -> normalize bbox iniziale -> matte bianco ->
+   face-to-many Combo B (instant_id 0.55, denoising 0.78) -> BiRefNet ->
+   normalize iconografico 95% bbox -> save /avatars/<id>.webp ->
+   UPDATE players SET photo_cartoon_url = '/avatars/' || id || '.webp'
+
+   Salvataggio incrementale: ogni player completato deve essere subito
+   visibile in DB e su disco. Se il batch crasha a meta', non perdiamo i
+   gia' fatti.
+
+4. SANITY CHECK PRIMI 3 PROCESS
+   Dopo aver processato i primi 3 player (per assicurarsi che PicWish e
+   Replicate rispondano ok), stampa una conferma esplicita prima di
+   procedere col resto. Se uno dei 3 fallisce, fermati e diagnostica
+   prima di consumare crediti su 150.
+
+5. GESTIONE FALLIMENTI
+   Se un singolo player fallisce (PicWish 5xx, Replicate timeout, ecc.):
+   - Logga con motivo
+   - Continua col prossimo (non bloccare l'intero batch)
+   - A fine batch riporta la lista dei falliti
+
+VERIFICA FINALE
+- Tutti i 150 hanno /avatars/<id>.webp + photo_cartoon_url
+  popolato (a parte falliti documentati)
+- Apri /partita/2 (round 1 I Magnifici vs Atletico) o un altro match
+  che coinvolga le 6 squadre - tutte le squadre dovrebbero apparire
+  Toy-izzate
+
+RIPORTA
+- Conteggi diff iniziale (SKIP / UPDATE-ONLY / PROCESS)
+- Player falliti (id + motivo) se ne ci sono
+- Costi: crediti PicWish consumati + residui, costo Replicate effettivo
+- Conferma 1-2 path esempio (es. un player di Sandhagen e un player di
+  Pancho Boys) per spot check
