@@ -1,0 +1,69 @@
+T124b - Diagnosi UI rotto su match round 1
+
+CONTESTO
+Visitando /partita/1 (Mario's Squad vs Bomber Coraggio round 1, score
+84.22 : 80.41), la match view mostra solo 2-3 starter per squadra (su 11
+attesi), panchina Bomber Coraggio vuota, tabellino sostituzioni semivuoto.
+Il match round 2 (Mario's vs Atletico) invece e' completo. Il problema e'
+solo su round 1.
+
+I punteggi 84.22/80.41 NON sono compatibili con 2-3 player visibili: il
+calcolo e' stato fatto su una rosa molto piu' ampia, ma la UI non riesce a
+mostrarla.
+
+DIAGNOSI - tre verifiche in parallelo
+
+1. CONTEGGI DATI ROUND 1 vs ROUND 2
+
+  SELECT round, COUNT(*) as total_rows
+  FROM lineup_players lp
+  JOIN lineups l ON l.id = lp.lineup_id
+  WHERE l.season = 2024 AND l.round IN (1, 2)
+  GROUP BY round;
+  
+  SELECT round, COUNT(*) FROM player_giornata_stats
+  WHERE season = 2024 AND round IN (1, 2) GROUP BY round;
+  
+  Atteso (se tutto e' coerente):
+  - lineup_players: ~200 sia round 1 sia round 2 (8 team x 25 player)
+  - player_giornata_stats: numero significativo (>>200), tendenzialmente
+    simile tra round 1 e 2
+  
+  Se round 1 ha MOLTI meno valori in player_giornata_stats, e' li' il
+  buco di dati.
+
+2. ISPEZIONE LINEUP MARIO'S ROUND 1 SPECIFICO
+
+  SELECT
+    lp.player_id, p.full_name, p.role_classic,
+    lp.is_starter, lp.bench_order, lp.is_captain,
+    pgs.voto AS voto_round1
+  FROM lineups l
+  JOIN lineup_players lp ON lp.lineup_id = l.id
+  JOIN players p ON p.id = lp.player_id
+  LEFT JOIN player_giornata_stats pgs ON pgs.player_id = lp.player_id
+    AND pgs.season = 2024 AND pgs.round = 1
+  WHERE l.fanta_team_id = 'ft-mvp-1' AND l.season = 2024 AND l.round = 1
+  ORDER BY lp.is_starter DESC, lp.bench_order ASC;
+  
+  Atteso: 25 righe (11 starter + 14 bench).
+  Stampa quante righe restituisce e quante hanno voto_round1 = NULL.
+
+3. ANALISI MATCHVIEW: CHE ROUND PASSA AI FETCH?
+
+  Apri il codice MatchView (o MatchDetailPage post-T124) e verifica:
+  - useGetRoster viene chiamato con round = ?
+  - useGetCoachVoto viene chiamato con round = ?
+  - Lo scoring engine client-side opera su quale round?
+  
+  Se uno qualsiasi e' hardcodato a 2 invece di leggere il round dal
+  /api/matches/:matchId, abbiamo trovato il bug.
+
+RIPORTA
+- I 2 conteggi del punto 1
+- Numero righe + numero voti NULL del punto 2
+- Per ogni hook fetch in MatchView, conferma se il round e' dinamico o
+  hardcodato
+- Tua diagnosi finale: dov'e' il problema?
+
+NIENTE FIX ancora. Solo diagnosi: voglio capire prima cosa e' rotto.
