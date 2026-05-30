@@ -1,0 +1,56 @@
+T127 — STEP 7.B: WIZARD SETUP LEGA
+
+Obiettivo: implementare il wizard a 3 step + riepilogo per creare una nuova lega manageriale con le sue squadre. Niente avvio asta, niente edit di leghe esistenti.
+
+PREREQUISITO PRE-TASK
+
+Verificare se la colonna fanta_teams.credits_remaining è già usata in qualche punto del codice (lib/api, lib/db, scripts, mister-web). Eseguire grep ricorsivo:
+  grep -r "credits_remaining\|creditsRemaining" --include="*.ts" --include="*.tsx"
+
+Se NESSUN risultato (oltre alla definizione schema): aggiungere un commento JSDoc nella definizione Drizzle che spieghi:
+  "Tesoreria del club tra stagioni (premi, ammortamenti, riparazioni). Distinta da budget_remaining che è il budget dell'asta in corso. Attualmente NON usata — verrà attivata in Step 10+ (clausole, sviluppo giovanile, lega permanente)."
+
+Se ci sono USI ATTIVI: stop e segnalalo nel report finale, non procedere finché Ivan non chiarisce.
+
+WIZARD UI
+
+Route: /lega/nuova
+Component container: mister-web/src/pages/SetupLegaPage.tsx
+Componenti step: mister-web/src/components/setup/StepLega.tsx, StepSquadre.tsx, StepRiepilogo.tsx, StepIndicator.tsx (header con i 3 pallini)
+
+Stato globale del wizard: lifted nel container, struttura tipizzata:
+  type SetupState = {
+    step: 1 | 2 | 3
+    lega: { name, budgetInitial, timerSeconds, rosterP, rosterD, rosterC, rosterA, mode }
+    squadre: Array<{ name, nameAuction, colorPrimary, colorSecondary, logoUrl? }>
+  }
+
+STEP 1 — LEGA
+
+Card "Identità":
+  - Input "Nome lega" (text, max 50, required) — default "Coppa Acerbi 2025"
+
+Card "Modalità":
+  - 3 mode-card affiancate: Classico, Manageriale, Manageriale Pro
+  - Solo Manageriale è selezionabile (preselezionata, evidenziata con bordo verde-deep)
+  - Le altre 2 hanno overlay/badge "In arrivo" e onClick disabled
+  - Sotto la riga, descrizione testuale della modalità selezionata
+
+Card "Budget e timer":
+  - Input number "Budget iniziale per squadra (FM)" — default 500, min 100, max 2000, step 10
+  - Input number "Durata timer per rilancio (secondi)" — default 8, min 3, max 30
+
+Card "Composizione rosa":
+  - 4 input number affiancati: Portieri (default 3), Difensori (default 8), Centrocampisti (default 8), Attaccanti (default 6)
+  - Min 1, max 15 per ciascuno
+  - Sotto, indicatore live "Totale rosa target: X giocatori per squadra" (somma dinamica)
+
+Pulsanti navigazione:
+  - "← Annulla" → torna alla home
+  - "Avanti: le squadre →" disabilitato finché tutti i field richiesti non sono validi
+
+STEP 2 — SQUADRE
+
+Lista dinamica di squadre (0-8). Ogni squadra è una card con:
+  - Input "Nome squadra" (text, max 50, required)
+  - Input "Nome all'asta" (text,
