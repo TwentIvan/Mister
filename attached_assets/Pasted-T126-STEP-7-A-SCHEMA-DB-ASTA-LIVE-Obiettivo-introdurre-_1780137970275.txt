@@ -1,0 +1,113 @@
+T126 — STEP 7.A: SCHEMA DB ASTA LIVE
+
+Obiettivo: introdurre lo schema DB necessario per supportare l'asta live (Step 7). Nessuna UI o logica applicativa in questo task — solo schema, migrazione, backfill, sanity check.
+
+CONTESTO
+
+La lega corrente (comp-mvp-campionato-2024, 8 fanta_teams, 200 contracts season_start=2024) deve poter girare un'asta live in futuro. Per farlo serve schema che modelli: la lega come entità (budget/timer/rosa/mode), l'asta come processo (status, bid history, assegnazioni finali), e qualche campo aggiuntivo su tabelle esistenti (auction_name e budget_remaining su fanta_teams, purchase_price_fm su contracts).
+
+NUOVE TABELLE DRIZZLE
+
+1) leagues
+   - id text PK (formato 'lg-...')
+   - name text NOT NULL
+   - federation_id text NULL (per ora sempre NULL, futura tabella federations)
+   - budget_initial integer NOT NULL (FM, fanta-milioni)
+   - timer_seconds integer NOT NULL DEFAULT 8
+   - roster_p integer NOT NULL DEFAULT 3
+   - roster_d integer NOT NULL DEFAULT 8
+   - roster_c integer NOT NULL DEFAULT 8
+   - roster_a integer NOT NULL DEFAULT 6
+   - mode text NOT NULL DEFAULT 'manageriale' (valori: 'classico' | 'manageriale' | 'manageriale_pro', check constraint)
+   - created_at timestamptz NOT NULL DEFAULT now()
+
+2) auctions
+   - id text PK (formato 'auc-...')
+   - league_id text NOT NULL FK leagues.id
+   - status text NOT NULL DEFAULT 'setup' (valori: 'setup' | 'running' | 'paused' | 'completed' | 'cancelled', check constraint)
+   - started_at timestamptz NULL
+   - completed_at timestamptz NULL
+   - created_at timestamptz NOT NULL DEFAULT now()
+
+3) auction_bids
+   - id text PK (formato 'abid-...')
+   - auction_id text NOT NULL FK auctions.id
+   - player_id integer NOT NULL FK players.id
+   - fanta_team_id text NOT NULL FK fanta_teams.id
+   - amount_fm integer NOT NULL CHECK (amount_fm > 0)
+   - valid boolean NOT NULL DEFAULT true (per gestire annullamenti senza perdere lo storico)
+   - created_at timestamptz NOT NULL DEFAULT now()
+   - indice composito su (auction_id, player_id) per query bid history per player
+
+4) auction_assignments
+   - id text PK (formato 'aasn-...')
+   - auction_id text NOT NULL FK auctions.id
+   - player_id integer NOT NULL FK players.id (UNIQUE per auction_id — un player può essere assegnato una sola volta per asta)
+   - fanta_team_id text NOT NULL FK fanta_teams.id
+   - final_price_fm integer NOT NULL CHECK (final_price_fm > 0)
+   - assigned_at timestamptz NOT NULL DEFAULT now()
+   - UNIQUE constraint su (auction_id, player_id)
+
+MODIFICHE TABELLE ESISTENTI
+
+5) competitions: aggiungere
+   - league_id text NULL FK leagues.id
+
+6) fanta_teams: aggiungere
+   - auction_name varchar(50) NULL
+   - budget_remaining integer NULL
+
+7) contracts: aggiungere
+   - purchase_price_fm integer NULL (NULL per i contracts seedati pre-asta, valorizzato post-aggiudicazione)
+
+BACKFILL
+
+Eseguire dopo la migrazione, in una transazione:
+
+A) INSERT INTO leagues:
+   id='lg-mvp'
+   name='Lega MVP'
+   budget_initial=500
+   timer_seconds=8
+   roster_p=3, roster_d=8, roster_c=8, roster_a=6
+   mode='manageriale'
+
+B) UPDATE competitions SET league_id='lg-mvp' WHERE id='comp-mvp-campionato-2024'
+
+C) UPDATE fanta_teams: settare auction_name e budget_remaining=500 secondo la mappa:
+   ft-mvp-1 → 'Mario'
+   ft-mvp-2 → 'Magnifici'
+   ft-mvp-3 → 'Trastevere'
+   ft-mvp-4 → 'Pancho'
+   ft-mvp-5 → 'Sandhagen'
+   ft-mvp-6 → 'Pelati'
+   ft-mvp-7 → 'Atletico'
+   ft-mvp-8 → 'Bomber'
+
+NON toccare contracts.purchase_price_fm: deve rimanere NULL per i 200 contracts esistenti (sono stati seedati senza asta, è semanticamente corretto che il prezzo sia sconosciuto).
+
+SANITY CHECK POST-BACKFILL
+
+Eseguire come script verificativo e stampare risultati:
+
+1) SELECT COUNT(*) FROM leagues — atteso: 1
+2) SELECT * FROM leagues WHERE id='lg-mvp' — verificare tutti i campi popolati correttamente
+3) SELECT id, league_id FROM competitions — atteso: comp-mvp-campionato-2024 con league_id='lg-mvp'
+4) SELECT id, name, auction_name, budget_remaining FROM fanta_teams ORDER BY id — atteso: 8 righe, tutti con auction_name e budget_remaining=500
+5) SELECT COUNT(*) FROM contracts WHERE purchase_price_fm IS NOT NULL — atteso: 0
+6) SELECT COUNT(*) FROM auctions — atteso: 0 (nessuna asta ancora avviata)
+
+DELIVERABLE
+
+- File di schema Drizzle aggiornati con le nuove tabelle e i nuovi campi
+- File di migrazione generato e applicato
+- Script di backfill in scripts/src/seeds/ (es. seed-step7a-backfill.ts) idempotente: se rieseguito non duplica la lega né riapplica gli UPDATE
+- Output del sanity check copiato nel report finale
+
+VINCOLI
+
+- TypeScript strict
+- Tutte le PK come text con prefisso (lg-, auc-, abid-, aasn-) tranne quelle già integer esistenti
+- check constraints SQL per status e mode (non solo enum TS)
+- Nessuna modifica a logica applicativa, API, UI in questo task
+- Source of truth resta contracts per il roster — auction_assignments è una tabella separata che alimenterà i futuri contracts solo dopo aggiudicazione

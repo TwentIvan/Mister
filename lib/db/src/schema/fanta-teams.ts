@@ -78,6 +78,14 @@ export const fantaTeams = pgTable("fanta_teams", {
   /** Allenatore fanta scelto dal manager (riferisce coaches.id). */
   headCoachId: integer("head_coach_id").references(() => coaches.id, { onDelete: "set null" }),
 
+  /**
+   * Budget residuo durante l'asta live in fanta-milioni (FM).
+   * Separato da `creditsRemaining` (usato per la gestione stagionale).
+   * Viene settato al valore iniziale all'avvio dell'asta e decrementato
+   * a ogni aggiudicazione.
+   */
+  budgetRemaining: integer("budget_remaining"),
+
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

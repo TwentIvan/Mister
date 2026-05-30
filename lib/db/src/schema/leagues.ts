@@ -18,7 +18,9 @@ import {
   jsonb,
   timestamp,
   pgEnum,
+  check,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { federations } from "./federations";
 
 // ============================================================
@@ -147,9 +149,11 @@ export const leagues = pgTable("leagues", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
 
-  /** Referenza alla Federation (1-a-1). */
+  /**
+   * Referenza alla Federation (1-a-1). Nullable: leghe standalone create
+   * fuori dal flusso federation (es. setup asta demo) possono non averla.
+   */
   federationId: text("federation_id")
-    .notNull()
     .references(() => federations.id, { onDelete: "cascade" }),
 
   /** Slug del template di origine. Denormalizzato per UI rapide. */
@@ -183,10 +187,37 @@ export const leagues = pgTable("leagues", {
   notifyEmail: boolean("notify_email").notNull().default(true),
   notifyPush: boolean("notify_push").notNull().default(true),
 
+  // ── Campi asta live ──────────────────────────────────────────────────────────
+  /** Secondi per ogni round d'asta. DEFAULT 8. */
+  timerSeconds: integer("timer_seconds").notNull().default(8),
+
+  /** Budget iniziale in fanta-milioni (FM). Denormalizzato da config.budget.initialCredits. */
+  budgetInitial: integer("budget_initial"),
+
+  /** Composizione rosa: portieri. Denormalizzato da config.squad.gk. */
+  rosterP: integer("roster_p"),
+  /** Composizione rosa: difensori. Denormalizzato da config.squad.def. */
+  rosterD: integer("roster_d"),
+  /** Composizione rosa: centrocampisti. Denormalizzato da config.squad.mid. */
+  rosterC: integer("roster_c"),
+  /** Composizione rosa: attaccanti. Denormalizzato da config.squad.att. */
+  rosterA: integer("roster_a"),
+
+  /**
+   * Modalità asta: 'classico' | 'manageriale' | 'manageriale_pro'.
+   * Check constraint SQL applicato a livello tabella.
+   */
+  auctionMode: text("auction_mode"),
+
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
-});
+}, (t) => [
+  check(
+    "leagues_auction_mode_check",
+    sql`${t.auctionMode} IS NULL OR ${t.auctionMode} IN ('classico', 'manageriale', 'manageriale_pro')`,
+  ),
+]);
 
 export type League = typeof leagues.$inferSelect;
 export type NewLeague = typeof leagues.$inferInsert;

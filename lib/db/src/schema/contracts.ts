@@ -80,6 +80,14 @@ export const contracts = pgTable("contracts", {
 
   state: contractStateEnum("state").notNull().default("active"),
 
+  /**
+   * Prezzo pagato in asta in fanta-milioni (FM).
+   * NULL per i contracts seedati pre-asta (semanticamente corretto:
+   * il prezzo è sconosciuto perché non sono stati aggiudicati tramite asta).
+   * Valorizzato post-aggiudicazione dal flusso auction_assignments → contracts.
+   */
+  purchasePriceFm: integer("purchase_price_fm"),
+
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

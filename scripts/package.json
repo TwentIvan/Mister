@@ -27,7 +27,8 @@
     "sync:normalize-avatars": "tsx ./sync/normalize-avatars.ts",
     "sync:batch-avatars-121": "tsx ./sync/batch-avatars-121.ts",
     "seed:round1-score": "tsx ./src/seeds/seed-round1-score.ts",
-    "sync:batch-avatars-125": "tsx ./sync/batch-avatars-125.ts"
+    "sync:batch-avatars-125": "tsx ./sync/batch-avatars-125.ts",
+    "seed:step7a-backfill": "tsx ./src/seeds/seed-step7a-backfill.ts"
   },
   "dependencies": {
     "@workspace/db": "workspace:*",

@@ -18,3 +18,6 @@ export * from "./lineup-players";
 export * from "./competition-matches";
 export * from "./coaches";
 export * from "./serie-a-fixtures";
+export * from "./auctions";
+export * from "./auction-bids";
+export * from "./auction-assignments";
