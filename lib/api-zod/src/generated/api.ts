@@ -288,7 +288,7 @@ export const ListLeaguesQueryParams = zod.object({
 export const ListLeaguesResponseItem = zod.object({
   "id": zod.string(),
   "name": zod.string(),
-  "federation_id": zod.string(),
+  "federation_id": zod.string().nullish(),
   "template_id": zod.string().nullish(),
   "admin_user_id": zod.string(),
   "co_admin_user_ids": zod.array(zod.string()).optional(),
@@ -301,21 +301,61 @@ export const ListLeaguesResponseItem = zod.object({
   "started": zod.boolean(),
   "notify_email": zod.boolean().optional(),
   "notify_push": zod.boolean().optional(),
+  "timer_seconds": zod.number().describe('Secondi per ogni round d\'asta (default 8)'),
+  "budget_initial": zod.number().nullish().describe('Budget iniziale per squadra in FM'),
+  "roster_p": zod.number().nullish().describe('Portieri per squadra'),
+  "roster_d": zod.number().nullish().describe('Difensori per squadra'),
+  "roster_c": zod.number().nullish().describe('Centrocampisti per squadra'),
+  "roster_a": zod.number().nullish().describe('Attaccanti per squadra'),
+  "auction_mode": zod.union([zod.literal('classico'),zod.literal('manageriale'),zod.literal('manageriale_pro'),zod.literal(null)]).nullish().describe('Modalità asta'),
   "created_at": zod.coerce.date()
 })
 export const ListLeaguesResponse = zod.array(ListLeaguesResponseItem)
 
 
 /**
- * @summary Crea una lega da template
+ * @summary Crea una lega con wizard (nome, parametri asta, squadre)
  */
+export const createLeagueBodyNameMax = 50;
+
+export const createLeagueBodyBudgetInitialMin = 100;
+export const createLeagueBodyBudgetInitialMax = 2000;
+
+export const createLeagueBodyTimerSecondsMin = 3;
+export const createLeagueBodyTimerSecondsMax = 30;
+
+export const createLeagueBodyRosterPMax = 15;
+
+export const createLeagueBodyRosterDMax = 15;
+
+export const createLeagueBodyRosterCMax = 15;
+
+export const createLeagueBodyRosterAMax = 15;
+
+export const createLeagueBodyFantaTeamsItemNameMax = 50;
+
+export const createLeagueBodyFantaTeamsItemNameAuctionMax = 30;
+
+export const createLeagueBodyFantaTeamsMin = 4;
+export const createLeagueBodyFantaTeamsMax = 8;
+
+
+
 export const CreateLeagueBody = zod.object({
-  "name": zod.string(),
-  "template_id": zod.string(),
-  "admin_user_id": zod.string(),
-  "season": zod.number(),
-  "max_managers": zod.number().optional(),
-  "visibility": zod.enum(['private', 'public', 'unlisted']).optional()
+  "name": zod.string().max(createLeagueBodyNameMax),
+  "budget_initial": zod.number().min(createLeagueBodyBudgetInitialMin).max(createLeagueBodyBudgetInitialMax),
+  "timer_seconds": zod.number().min(createLeagueBodyTimerSecondsMin).max(createLeagueBodyTimerSecondsMax),
+  "roster_p": zod.number().min(1).max(createLeagueBodyRosterPMax),
+  "roster_d": zod.number().min(1).max(createLeagueBodyRosterDMax),
+  "roster_c": zod.number().min(1).max(createLeagueBodyRosterCMax),
+  "roster_a": zod.number().min(1).max(createLeagueBodyRosterAMax),
+  "fanta_teams": zod.array(zod.object({
+  "name": zod.string().max(createLeagueBodyFantaTeamsItemNameMax),
+  "name_auction": zod.string().max(createLeagueBodyFantaTeamsItemNameAuctionMax).describe('Nome pronunciato dal battitore in asta'),
+  "color_primary": zod.string(),
+  "color_secondary": zod.string(),
+  "logo_url": zod.string().nullish()
+})).min(createLeagueBodyFantaTeamsMin).max(createLeagueBodyFantaTeamsMax)
 })
 
 
@@ -329,7 +369,7 @@ export const GetLeagueParams = zod.object({
 export const GetLeagueResponse = zod.object({
   "id": zod.string(),
   "name": zod.string(),
-  "federation_id": zod.string(),
+  "federation_id": zod.string().nullish(),
   "template_id": zod.string().nullish(),
   "admin_user_id": zod.string(),
   "co_admin_user_ids": zod.array(zod.string()).optional(),
@@ -342,6 +382,13 @@ export const GetLeagueResponse = zod.object({
   "started": zod.boolean(),
   "notify_email": zod.boolean().optional(),
   "notify_push": zod.boolean().optional(),
+  "timer_seconds": zod.number().describe('Secondi per ogni round d\'asta (default 8)'),
+  "budget_initial": zod.number().nullish().describe('Budget iniziale per squadra in FM'),
+  "roster_p": zod.number().nullish().describe('Portieri per squadra'),
+  "roster_d": zod.number().nullish().describe('Difensori per squadra'),
+  "roster_c": zod.number().nullish().describe('Centrocampisti per squadra'),
+  "roster_a": zod.number().nullish().describe('Attaccanti per squadra'),
+  "auction_mode": zod.union([zod.literal('classico'),zod.literal('manageriale'),zod.literal('manageriale_pro'),zod.literal(null)]).nullish().describe('Modalità asta'),
   "created_at": zod.coerce.date()
 })
 
@@ -367,7 +414,7 @@ export const UpdateLeagueBody = zod.object({
 export const UpdateLeagueResponse = zod.object({
   "id": zod.string(),
   "name": zod.string(),
-  "federation_id": zod.string(),
+  "federation_id": zod.string().nullish(),
   "template_id": zod.string().nullish(),
   "admin_user_id": zod.string(),
   "co_admin_user_ids": zod.array(zod.string()).optional(),
@@ -380,6 +427,13 @@ export const UpdateLeagueResponse = zod.object({
   "started": zod.boolean(),
   "notify_email": zod.boolean().optional(),
   "notify_push": zod.boolean().optional(),
+  "timer_seconds": zod.number().describe('Secondi per ogni round d\'asta (default 8)'),
+  "budget_initial": zod.number().nullish().describe('Budget iniziale per squadra in FM'),
+  "roster_p": zod.number().nullish().describe('Portieri per squadra'),
+  "roster_d": zod.number().nullish().describe('Difensori per squadra'),
+  "roster_c": zod.number().nullish().describe('Centrocampisti per squadra'),
+  "roster_a": zod.number().nullish().describe('Attaccanti per squadra'),
+  "auction_mode": zod.union([zod.literal('classico'),zod.literal('manageriale'),zod.literal('manageriale_pro'),zod.literal(null)]).nullish().describe('Modalità asta'),
   "created_at": zod.coerce.date()
 })
 
@@ -823,6 +877,8 @@ export const ListFantaTeamsResponseItem = zod.object({
   "name": zod.string(),
   "name_auction": zod.string().nullish(),
   "logo_url": zod.string().nullish(),
+  "color_primary": zod.string().nullish().describe('Colore primario della maglia (da jersey.primaryColor)'),
+  "color_secondary": zod.string().nullish().describe('Colore secondario della maglia (da jersey.secondaryColor)'),
   "credits_remaining": zod.number(),
   "roster": zod.array(zod.number()).optional(),
   "created_at": zod.coerce.date()
@@ -841,7 +897,9 @@ export const CreateFantaTeamBody = zod.object({
   "manager_user_id": zod.string(),
   "name": zod.string(),
   "name_auction": zod.string().optional(),
-  "logo_url": zod.string().optional()
+  "logo_url": zod.string().optional(),
+  "color_primary": zod.string().optional(),
+  "color_secondary": zod.string().optional()
 })
 
 
@@ -860,6 +918,8 @@ export const GetFantaTeamResponse = zod.object({
   "name": zod.string(),
   "name_auction": zod.string().nullish(),
   "logo_url": zod.string().nullish(),
+  "color_primary": zod.string().nullish().describe('Colore primario della maglia (da jersey.primaryColor)'),
+  "color_secondary": zod.string().nullish().describe('Colore secondario della maglia (da jersey.secondaryColor)'),
   "credits_remaining": zod.number(),
   "roster": zod.array(zod.number()).optional(),
   "created_at": zod.coerce.date()
@@ -889,6 +949,8 @@ export const UpdateFantaTeamResponse = zod.object({
   "name": zod.string(),
   "name_auction": zod.string().nullish(),
   "logo_url": zod.string().nullish(),
+  "color_primary": zod.string().nullish().describe('Colore primario della maglia (da jersey.primaryColor)'),
+  "color_secondary": zod.string().nullish().describe('Colore secondario della maglia (da jersey.secondaryColor)'),
   "credits_remaining": zod.number(),
   "roster": zod.array(zod.number()).optional(),
   "created_at": zod.coerce.date()
@@ -1064,7 +1126,7 @@ export const GetDashboardResponse = zod.object({
   "my_leagues": zod.array(zod.object({
   "id": zod.string(),
   "name": zod.string(),
-  "federation_id": zod.string(),
+  "federation_id": zod.string().nullish(),
   "template_id": zod.string().nullish(),
   "admin_user_id": zod.string(),
   "co_admin_user_ids": zod.array(zod.string()).optional(),
@@ -1077,6 +1139,13 @@ export const GetDashboardResponse = zod.object({
   "started": zod.boolean(),
   "notify_email": zod.boolean().optional(),
   "notify_push": zod.boolean().optional(),
+  "timer_seconds": zod.number().describe('Secondi per ogni round d\'asta (default 8)'),
+  "budget_initial": zod.number().nullish().describe('Budget iniziale per squadra in FM'),
+  "roster_p": zod.number().nullish().describe('Portieri per squadra'),
+  "roster_d": zod.number().nullish().describe('Difensori per squadra'),
+  "roster_c": zod.number().nullish().describe('Centrocampisti per squadra'),
+  "roster_a": zod.number().nullish().describe('Attaccanti per squadra'),
+  "auction_mode": zod.union([zod.literal('classico'),zod.literal('manageriale'),zod.literal('manageriale_pro'),zod.literal(null)]).nullish().describe('Modalità asta'),
   "created_at": zod.coerce.date()
 })),
   "active_markets": zod.array(zod.object({

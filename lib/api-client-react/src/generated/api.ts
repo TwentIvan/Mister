@@ -44,6 +44,7 @@ import type {
   LeagueInput,
   LeagueStats,
   LeagueUpdate,
+  LeagueWizardResponse,
   Lineup,
   LineupInput,
   ListLeaguesParams,
@@ -625,11 +626,11 @@ export const getCreateLeagueUrl = () => {
 }
 
 /**
- * @summary Crea una lega da template
+ * @summary Crea una lega con wizard (nome, parametri asta, squadre)
  */
-export const createLeague = async (leagueInput: LeagueInput, options?: RequestInit): Promise<League> => {
+export const createLeague = async (leagueInput: LeagueInput, options?: RequestInit): Promise<LeagueWizardResponse> => {
 
-  return customFetch<League>(getCreateLeagueUrl(),
+  return customFetch<LeagueWizardResponse>(getCreateLeagueUrl(),
   {
     ...options,
     method: 'POST',
@@ -642,7 +643,7 @@ export const createLeague = async (leagueInput: LeagueInput, options?: RequestIn
 
 
 
-export const getCreateLeagueMutationOptions = <TError = ErrorType<unknown>,
+export const getCreateLeagueMutationOptions = <TError = ErrorType<void>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createLeague>>, TError,{data: BodyType<LeagueInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
 ): UseMutationOptions<Awaited<ReturnType<typeof createLeague>>, TError,{data: BodyType<LeagueInput>}, TContext> => {
 
@@ -671,12 +672,12 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type CreateLeagueMutationResult = NonNullable<Awaited<ReturnType<typeof createLeague>>>
     export type CreateLeagueMutationBody = BodyType<LeagueInput>
-    export type CreateLeagueMutationError = ErrorType<unknown>
+    export type CreateLeagueMutationError = ErrorType<void>
 
     /**
- * @summary Crea una lega da template
+ * @summary Crea una lega con wizard (nome, parametri asta, squadre)
  */
-export const useCreateLeague = <TError = ErrorType<unknown>,
+export const useCreateLeague = <TError = ErrorType<void>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createLeague>>, TError,{data: BodyType<LeagueInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof createLeague>>,

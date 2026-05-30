@@ -1,0 +1,1 @@
+- [RosterSnapshot vs flat array](roster-snapshot-mismatch.md) — fanta_teams.roster nel DB è sempre RosterSnapshot oggetto, ma openapi/zod attende array piatto; fix in mapFantaTeam.

@@ -5,13 +5,44 @@
  * Mister — il fantacalcio manageriale
  * OpenAPI spec version: 0.1.0
  */
-import type { LeagueInputVisibility } from './leagueInputVisibility';
+import type { FantaTeamWizardInput } from './fantaTeamWizardInput';
 
 export interface LeagueInput {
+  /** @maxLength 50 */
   name: string;
-  template_id: string;
-  admin_user_id: string;
-  season: number;
-  max_managers?: number;
-  visibility?: LeagueInputVisibility;
+  /**
+     * @minimum 100
+     * @maximum 2000
+     */
+  budget_initial: number;
+  /**
+     * @minimum 3
+     * @maximum 30
+     */
+  timer_seconds: number;
+  /**
+     * @minimum 1
+     * @maximum 15
+     */
+  roster_p: number;
+  /**
+     * @minimum 1
+     * @maximum 15
+     */
+  roster_d: number;
+  /**
+     * @minimum 1
+     * @maximum 15
+     */
+  roster_c: number;
+  /**
+     * @minimum 1
+     * @maximum 15
+     */
+  roster_a: number;
+  /**
+     * @minItems 4
+     * @maxItems 8
+     */
+  fanta_teams: FantaTeamWizardInput[];
 }

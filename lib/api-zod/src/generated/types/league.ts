@@ -5,6 +5,7 @@
  * Mister — il fantacalcio manageriale
  * OpenAPI spec version: 0.1.0
  */
+import type { LeagueAuctionMode } from './leagueAuctionMode';
 import type { LeagueLineupVisibility } from './leagueLineupVisibility';
 import type { LeagueRosterVisibility } from './leagueRosterVisibility';
 import type { LeagueVisibility } from './leagueVisibility';
@@ -12,7 +13,8 @@ import type { LeagueVisibility } from './leagueVisibility';
 export interface League {
   id: string;
   name: string;
-  federation_id: string;
+  /** @nullable */
+  federation_id?: string | null;
   /** @nullable */
   template_id?: string | null;
   admin_user_id: string;
@@ -27,5 +29,37 @@ export interface League {
   started: boolean;
   notify_email?: boolean;
   notify_push?: boolean;
+  /** Secondi per ogni round d'asta (default 8) */
+  timer_seconds: number;
+  /**
+     * Budget iniziale per squadra in FM
+     * @nullable
+     */
+  budget_initial?: number | null;
+  /**
+     * Portieri per squadra
+     * @nullable
+     */
+  roster_p?: number | null;
+  /**
+     * Difensori per squadra
+     * @nullable
+     */
+  roster_d?: number | null;
+  /**
+     * Centrocampisti per squadra
+     * @nullable
+     */
+  roster_c?: number | null;
+  /**
+     * Attaccanti per squadra
+     * @nullable
+     */
+  roster_a?: number | null;
+  /**
+     * Modalità asta
+     * @nullable
+     */
+  auction_mode?: LeagueAuctionMode;
   created_at: Date;
 }

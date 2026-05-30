@@ -5,7 +5,7 @@
  *
  * A) INSERT leagues: id='lg-mvp' (ON CONFLICT DO NOTHING)
  * B) UPDATE competitions: comp-mvp-campionato-2024 → league_id='lg-mvp'
- * C) UPDATE fanta_teams: setta name_auction (short) e budget_remaining=500
+ * C) UPDATE fanta_teams: setta name_auction (short) e credits_remaining=500
  *
  * NON tocca contracts.purchase_price_fm (rimane NULL per i 200 esistenti).
  */
@@ -18,7 +18,7 @@ import {
   auctions,
   contracts,
 } from "@workspace/db/schema";
-import { eq, inArray, count, isNotNull } from "drizzle-orm";
+import { eq, count, isNotNull } from "drizzle-orm";
 import type { LeagueConfig } from "@workspace/db/schema";
 
 // ─── Configurazione lega MVP ───────────────────────────────────────────────
@@ -110,16 +110,15 @@ async function main() {
     console.log(`[B] UPDATE competitions '${COMP_ID}' → league_id='${LEAGUE_ID}' ✓`);
 
     // ── C) UPDATE fanta_teams ─────────────────────────────────────────────
-    const teamIds = Object.keys(AUCTION_NAMES);
     let updated = 0;
     for (const [teamId, auctionName] of Object.entries(AUCTION_NAMES)) {
       await tx
         .update(fantaTeams)
-        .set({ nameAuction: auctionName, budgetRemaining: 500 })
+        .set({ nameAuction: auctionName, creditsRemaining: 500 })
         .where(eq(fantaTeams.id, teamId));
       updated++;
     }
-    console.log(`[C] UPDATE fanta_teams: ${updated} squadre → auction_name + budget_remaining=500 ✓`);
+    console.log(`[C] UPDATE fanta_teams: ${updated} squadre → auction_name + credits_remaining=500 ✓`);
 
   });
 
@@ -173,16 +172,16 @@ async function main() {
 
   // 4. fanta_teams
   const teams = await db
-    .select({ id: fantaTeams.id, name: fantaTeams.name, nameAuction: fantaTeams.nameAuction, budgetRemaining: fantaTeams.budgetRemaining })
+    .select({ id: fantaTeams.id, name: fantaTeams.name, nameAuction: fantaTeams.nameAuction, creditsRemaining: fantaTeams.creditsRemaining })
     .from(fantaTeams)
     .orderBy(fantaTeams.id);
   console.log(`\n[4] fanta_teams (${teams.length} righe, atteso: ≥8):`);
   teams.forEach(t =>
-    console.log(`    ${t.id.padEnd(12)} name_auction=${String(t.nameAuction).padEnd(12)} budget_remaining=${t.budgetRemaining}`)
+    console.log(`    ${t.id.padEnd(12)} name_auction=${String(t.nameAuction).padEnd(12)} credits_remaining=${t.creditsRemaining}`)
   );
   const allOk = teams
     .filter(t => Object.keys(AUCTION_NAMES).includes(t.id))
-    .every(t => t.nameAuction !== null && t.budgetRemaining === 500);
+    .every(t => t.nameAuction !== null && t.creditsRemaining === 500);
   console.log(`    ${allOk ? "✓ tutti e 8 corretti" : "✗ alcuni valori errati"}`);
 
   // 5. contracts con purchase_price_fm NOT NULL

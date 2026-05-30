@@ -1,7 +1,7 @@
 import Dashboard from "@/pages/dashboard";
 import LeaguesList from "@/pages/leagues-list";
 import { PlayersList } from "@/pages/players-list";
-import CreateLeague from "@/pages/create-league";
+import SetupLegaPage from "@/pages/SetupLegaPage";
 import LeagueDetail from "@/pages/league-detail";
 import FederationRules from "@/pages/federation";
 import CompetitionDetail from "@/pages/competition-detail";
@@ -26,7 +26,8 @@ function Router() {
       <Switch>
         <Route path="/" component={Dashboard} />
         <Route path="/leagues" component={LeaguesList} />
-        <Route path="/leagues/new" component={CreateLeague} />
+        <Route path="/leagues/new" component={SetupLegaPage} />
+        <Route path="/lega/nuova" component={SetupLegaPage} />
         <Route path="/leagues/:id" component={LeagueDetail} />
         <Route path="/leagues/:id/federation" component={FederationRules} />
         <Route path="/leagues/:leagueId/competitions/:id" component={CompetitionDetail} />

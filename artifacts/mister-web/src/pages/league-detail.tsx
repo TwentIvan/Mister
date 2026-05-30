@@ -10,7 +10,8 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Trophy, Users, Calendar, Activity, BookOpen } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Trophy, Users, Calendar, Activity, BookOpen, Gavel, ArrowLeft } from "lucide-react";
 
 export default function LeagueDetail() {
   const { id } = useParams<{ id: string }>();
@@ -54,24 +55,45 @@ export default function LeagueDetail() {
     return <div className="text-destructive">Lega non trovata</div>;
   }
 
+  const isReadyForAuction = !league.started && (stats?.team_count ?? 0) >= 4;
+
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
         <div>
-          <div className="flex items-center gap-3 mb-2">
+          <div className="flex items-center gap-3 mb-2 flex-wrap">
             <Badge variant="outline" className="font-mono text-primary border-primary/20 bg-primary/5">
               Stagione {league.season}
             </Badge>
-            <Badge variant={league.started ? "default" : "secondary"}>
-              {league.started ? "In corso" : "Iscrizioni"}
-            </Badge>
+            {league.started ? (
+              <Badge variant="default">In corso</Badge>
+            ) : isReadyForAuction ? (
+              <Badge className="bg-[#1f4733] text-[#efe6d3] border-0">Pronta per l'asta</Badge>
+            ) : (
+              <Badge variant="secondary">Iscrizioni</Badge>
+            )}
             <Badge variant="outline" className="capitalize">{league.visibility}</Badge>
+            {league.auction_mode && (
+              <Badge variant="outline" className="capitalize">{league.auction_mode}</Badge>
+            )}
           </div>
           <h1 className="text-4xl font-bold font-serif text-primary tracking-tight" data-testid="text-league-name">
             {league.name}
           </h1>
+          {league.budget_initial != null && (
+            <p className="text-sm text-muted-foreground mt-1 font-mono">
+              {league.budget_initial} FM · {league.timer_seconds}s timer ·{" "}
+              {league.roster_p}P {league.roster_d}D {league.roster_c}C {league.roster_a}A
+            </p>
+          )}
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
+          <Link href="/leagues">
+            <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground">
+              <ArrowLeft className="h-4 w-4" />
+              Tutte le leghe
+            </Button>
+          </Link>
           {league.admin_user_id === "demo-user" && (
             <Link href={`/leagues/${league.id}/federation`}>
               <Button variant="outline" className="gap-2 border-primary/20 text-primary">
@@ -80,10 +102,20 @@ export default function LeagueDetail() {
               </Button>
             </Link>
           )}
-          <Button className="gap-2">
-            <Trophy className="h-4 w-4" />
-            La mia squadra
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span>
+                <Button
+                  disabled
+                  className="gap-2 bg-[#1f4733] text-[#efe6d3] opacity-50 cursor-not-allowed"
+                >
+                  <Gavel className="h-4 w-4" />
+                  Avvia asta
+                </Button>
+              </span>
+            </TooltipTrigger>
+            <TooltipContent>In arrivo (Step 7.C)</TooltipContent>
+          </Tooltip>
         </div>
       </div>
 
@@ -142,26 +174,58 @@ export default function LeagueDetail() {
           <Card>
             <CardHeader>
               <CardTitle>Squadre iscritte</CardTitle>
-              <CardDescription>Manager partecipanti e crediti residui</CardDescription>
+              <CardDescription>Manager partecipanti, nome asta e crediti residui</CardDescription>
             </CardHeader>
             <CardContent>
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Squadra</TableHead>
-                    <TableHead>Manager</TableHead>
+                    <TableHead>Asta</TableHead>
+                    <TableHead>Colori</TableHead>
                     <TableHead className="text-right">Crediti</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {isLoadingTeams ? (
-                    <TableRow><TableCell colSpan={3}><Skeleton className="h-8 w-full" /></TableCell></TableRow>
+                    <TableRow><TableCell colSpan={4}><Skeleton className="h-8 w-full" /></TableCell></TableRow>
                   ) : teams?.length === 0 ? (
-                    <TableRow><TableCell colSpan={3} className="text-center text-muted-foreground py-6">Nessuna squadra registrata.</TableCell></TableRow>
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center text-muted-foreground py-6">
+                        Nessuna squadra registrata.{" "}
+                        <Link href="/lega/nuova" className="text-primary underline underline-offset-2">
+                          Crea una lega con squadre
+                        </Link>
+                      </TableCell>
+                    </TableRow>
                   ) : teams?.map((team) => (
                     <TableRow key={team.id}>
                       <TableCell className="font-medium">{team.name}</TableCell>
-                      <TableCell className="text-muted-foreground text-sm font-mono">{team.manager_user_id}</TableCell>
+                      <TableCell className="text-muted-foreground text-sm font-mono">
+                        {team.name_auction ?? "—"}
+                      </TableCell>
+                      <TableCell>
+                        {(team.color_primary || team.color_secondary) ? (
+                          <div className="flex gap-1">
+                            {team.color_primary && (
+                              <div
+                                className="w-4 h-4 rounded-full ring-1 ring-border"
+                                style={{ backgroundColor: team.color_primary }}
+                                title={team.color_primary}
+                              />
+                            )}
+                            {team.color_secondary && (
+                              <div
+                                className="w-4 h-4 rounded-full ring-1 ring-border"
+                                style={{ backgroundColor: team.color_secondary }}
+                                title={team.color_secondary}
+                              />
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground text-xs">—</span>
+                        )}
+                      </TableCell>
                       <TableCell className="text-right font-mono font-bold">{team.credits_remaining}</TableCell>
                     </TableRow>
                   ))}
@@ -172,6 +236,34 @@ export default function LeagueDetail() {
         </div>
 
         <div className="col-span-1 space-y-8">
+          {league.budget_initial != null && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm">Configurazione asta</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Budget</span>
+                  <span className="font-mono font-bold">{league.budget_initial} FM</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Timer</span>
+                  <span className="font-mono">{league.timer_seconds}s</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Rosa</span>
+                  <span className="font-mono">
+                    {league.roster_p}P {league.roster_d}D {league.roster_c}C {league.roster_a}A
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Modalità</span>
+                  <span className="capitalize">{league.auction_mode ?? "—"}</span>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <div>

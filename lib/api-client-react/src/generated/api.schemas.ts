@@ -172,10 +172,24 @@ export const LeagueRosterVisibility = {
   hidden_all_season: 'hidden_all_season',
 } as const;
 
+/**
+ * Modalità asta
+ * @nullable
+ */
+export type LeagueAuctionMode = typeof LeagueAuctionMode[keyof typeof LeagueAuctionMode] | null;
+
+
+export const LeagueAuctionMode = {
+  classico: 'classico',
+  manageriale: 'manageriale',
+  manageriale_pro: 'manageriale_pro',
+} as const;
+
 export interface League {
   id: string;
   name: string;
-  federation_id: string;
+  /** @nullable */
+  federation_id?: string | null;
   /** @nullable */
   template_id?: string | null;
   admin_user_id: string;
@@ -190,25 +204,122 @@ export interface League {
   started: boolean;
   notify_email?: boolean;
   notify_push?: boolean;
+  /** Secondi per ogni round d'asta (default 8) */
+  timer_seconds: number;
+  /**
+     * Budget iniziale per squadra in FM
+     * @nullable
+     */
+  budget_initial?: number | null;
+  /**
+     * Portieri per squadra
+     * @nullable
+     */
+  roster_p?: number | null;
+  /**
+     * Difensori per squadra
+     * @nullable
+     */
+  roster_d?: number | null;
+  /**
+     * Centrocampisti per squadra
+     * @nullable
+     */
+  roster_c?: number | null;
+  /**
+     * Attaccanti per squadra
+     * @nullable
+     */
+  roster_a?: number | null;
+  /**
+     * Modalità asta
+     * @nullable
+     */
+  auction_mode?: LeagueAuctionMode;
   created_at: string;
 }
 
-export type LeagueInputVisibility = typeof LeagueInputVisibility[keyof typeof LeagueInputVisibility];
-
-
-export const LeagueInputVisibility = {
-  private: 'private',
-  public: 'public',
-  unlisted: 'unlisted',
-} as const;
+export interface FantaTeamWizardInput {
+  /** @maxLength 50 */
+  name: string;
+  /**
+     * Nome pronunciato dal battitore in asta
+     * @maxLength 30
+     */
+  name_auction: string;
+  color_primary: string;
+  color_secondary: string;
+  /** @nullable */
+  logo_url?: string | null;
+}
 
 export interface LeagueInput {
+  /** @maxLength 50 */
   name: string;
-  template_id: string;
-  admin_user_id: string;
-  season: number;
-  max_managers?: number;
-  visibility?: LeagueInputVisibility;
+  /**
+     * @minimum 100
+     * @maximum 2000
+     */
+  budget_initial: number;
+  /**
+     * @minimum 3
+     * @maximum 30
+     */
+  timer_seconds: number;
+  /**
+     * @minimum 1
+     * @maximum 15
+     */
+  roster_p: number;
+  /**
+     * @minimum 1
+     * @maximum 15
+     */
+  roster_d: number;
+  /**
+     * @minimum 1
+     * @maximum 15
+     */
+  roster_c: number;
+  /**
+     * @minimum 1
+     * @maximum 15
+     */
+  roster_a: number;
+  /**
+     * @minItems 4
+     * @maxItems 8
+     */
+  fanta_teams: FantaTeamWizardInput[];
+}
+
+export interface FantaTeam {
+  id: string;
+  league_id: string;
+  manager_user_id: string;
+  name: string;
+  /** @nullable */
+  name_auction?: string | null;
+  /** @nullable */
+  logo_url?: string | null;
+  /**
+     * Colore primario della maglia (da jersey.primaryColor)
+     * @nullable
+     */
+  color_primary?: string | null;
+  /**
+     * Colore secondario della maglia (da jersey.secondaryColor)
+     * @nullable
+     */
+  color_secondary?: string | null;
+  credits_remaining: number;
+  roster?: number[];
+  created_at: string;
+}
+
+export interface LeagueWizardResponse {
+  league: League;
+  fanta_teams: FantaTeam[];
 }
 
 export type LeagueUpdateVisibility = typeof LeagueUpdateVisibility[keyof typeof LeagueUpdateVisibility];
@@ -503,25 +614,13 @@ export interface MarketEventUpdate {
   settings?: MarketEventUpdateSettings;
 }
 
-export interface FantaTeam {
-  id: string;
-  league_id: string;
-  manager_user_id: string;
-  name: string;
-  /** @nullable */
-  name_auction?: string | null;
-  /** @nullable */
-  logo_url?: string | null;
-  credits_remaining: number;
-  roster?: number[];
-  created_at: string;
-}
-
 export interface FantaTeamInput {
   manager_user_id: string;
   name: string;
   name_auction?: string;
   logo_url?: string;
+  color_primary?: string;
+  color_secondary?: string;
 }
 
 export interface FantaTeamUpdate {

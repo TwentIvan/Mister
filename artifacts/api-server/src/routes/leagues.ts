@@ -4,15 +4,13 @@ import { nanoid } from "nanoid";
 import { db } from "@workspace/db";
 import {
   leagues,
-  federations,
   competitions,
   marketEvents,
   fantaTeams,
   contracts,
-  templateProfiles,
-  DEFAULT_RULES,
   DEFAULT_LEAGUE_CONFIG,
 } from "@workspace/db";
+import type { LeagueConfig } from "@workspace/db/schema";
 import {
   ListLeaguesQueryParams,
   ListLeaguesResponse,
@@ -26,7 +24,7 @@ import {
   GetLeagueStatsParams,
   GetLeagueStatsResponse,
 } from "@workspace/api-zod";
-import { mapLeague } from "../lib/mappers";
+import { mapLeague, mapFantaTeam } from "../lib/mappers";
 
 const router: IRouter = Router();
 
@@ -46,47 +44,103 @@ router.get("/leagues", async (req, res): Promise<void> => {
 router.post("/leagues", async (req, res): Promise<void> => {
   const parsed = CreateLeagueBody.safeParse(req.body);
   if (!parsed.success) {
-    res.status(400).json({ error: parsed.error.message });
+    res.status(400).json({ error: parsed.error.flatten() });
     return;
   }
   const d = parsed.data;
-  const leagueId = nanoid();
-  const fedId = nanoid();
 
-  let featureFlags = {};
-  if (d.template_id) {
-    const [tmpl] = await db
-      .select()
-      .from(templateProfiles)
-      .where(eq(templateProfiles.id, d.template_id));
-    if (tmpl) {
-      featureFlags = tmpl.featureFlags ?? {};
-    }
+  const auctionNames = d.fanta_teams.map(t => t.name_auction);
+  const uniqueAuctionNames = new Set(auctionNames);
+  if (uniqueAuctionNames.size !== auctionNames.length) {
+    res.status(409).json({ error: "I nomi all'asta delle squadre devono essere univoci" });
+    return;
   }
 
-  await db.insert(federations).values({
-    id: fedId,
-    name: d.name + " — Regolamento",
-    templateId: d.template_id ?? null,
-    featureFlags,
-    rules: DEFAULT_RULES,
-  });
+  const leagueId = `lg-${nanoid(8)}`;
 
-  const [row] = await db
-    .insert(leagues)
-    .values({
-      id: leagueId,
-      federationId: fedId,
-      name: d.name,
-      templateId: d.template_id ?? null,
-      adminUserId: d.admin_user_id,
-      season: d.season,
-      maxManagers: d.max_managers ?? 10,
-      visibility: d.visibility ?? "private",
-      config: DEFAULT_LEAGUE_CONFIG,
-    })
-    .returning();
-  res.status(201).json(GetLeagueResponse.parse(mapLeague(row)));
+  const leagueConfig: LeagueConfig = {
+    squad: {
+      gk: d.roster_p,
+      def: d.roster_d,
+      mid: d.roster_c,
+      att: d.roster_a,
+      startersTotal: 11,
+      allowedModules: ["3-4-3", "3-5-2", "4-3-3", "4-4-2", "4-5-1", "5-3-2", "5-4-1"],
+    },
+    captain: {
+      enabled: true,
+      multiplier: 1.0,
+      useVice: true,
+    },
+    budget: {
+      initialCredits: d.budget_initial,
+      minimumBid: 1,
+      allowNegativeBalance: false,
+      reserveForUnfilledRoles: true,
+    },
+    postAcquisitionWindow: {
+      enabled: true,
+      liveSeconds: 45,
+      asyncHours: 12,
+      defaultContractYears: 1,
+      defaultClauseAction: "leave_default",
+    },
+  };
+
+  try {
+    const result = await db.transaction(async (tx) => {
+      const [league] = await tx
+        .insert(leagues)
+        .values({
+          id: leagueId,
+          federationId: null,
+          name: d.name,
+          adminUserId: "demo-user",
+          season: new Date().getFullYear(),
+          maxManagers: d.fanta_teams.length,
+          config: leagueConfig,
+          timerSeconds: d.timer_seconds,
+          budgetInitial: d.budget_initial,
+          rosterP: d.roster_p,
+          rosterD: d.roster_d,
+          rosterC: d.roster_c,
+          rosterA: d.roster_a,
+          auctionMode: "manageriale",
+        })
+        .returning();
+
+      const teamRows = await tx
+        .insert(fantaTeams)
+        .values(
+          d.fanta_teams.map(t => ({
+            id: `ft-${nanoid(8)}`,
+            leagueId: leagueId,
+            managerUserId: "demo-user",
+            name: t.name,
+            nameAuction: t.name_auction,
+            logoUrl: t.logo_url ?? null,
+            jersey: {
+              primaryColor: t.color_primary,
+              secondaryColor: t.color_secondary,
+              pattern: "solid" as const,
+            },
+            creditsRemaining: d.budget_initial,
+            roster: [],
+          })),
+        )
+        .returning();
+
+      return { league, fantaTeams: teamRows };
+    });
+
+    res.status(201).json({
+      league: mapLeague(result.league),
+      fanta_teams: result.fantaTeams.map(mapFantaTeam),
+    });
+  } catch (err) {
+    req.log.error({ err }, "Errore creazione lega wizard");
+    res.status(500).json({ error: "Errore interno durante la creazione della lega" });
+  }
 });
 
 router.get("/leagues/:id", async (req, res): Promise<void> => {

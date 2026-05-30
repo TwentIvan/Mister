@@ -1,0 +1,144 @@
+T127 — STEP 7.B: WIZARD SETUP LEGA (rev. consolidamento credits)
+
+Obiettivo: (A) consolidare credits_remaining come unica colonna budget, droppando budget_remaining duplicato aggiunto in T126; (B) implementare il wizard a 3 step + riepilogo per creare una nuova lega manageriale. Niente avvio asta.
+
+================================================================
+PARTE A — CONSOLIDAMENTO credits_remaining / budget_remaining
+================================================================
+
+Il grep di T127 pre-task ha confermato che credits_remaining è già usato attivamente in:
+  - artifacts/api-server/src/routes/fanta-teams.ts (PATCH)
+  - artifacts/api-server/src/lib/mappers.ts (mapper)
+  - artifacts/mister-web/src/pages/league-detail.tsx (UI)
+  - lib/db/src/seeds/test-league-mvp.ts (seed)
+  - lib/api-zod/src/generated/api.ts (contratto generato)
+
+budget_remaining è stato aggiunto da T126 come duplicato accidentale. Va rimosso.
+
+A.1 — Migrazione dati pre-drop
+
+Per i 8 fanta_teams della lega lg-mvp (ft-mvp-1..8), T126 ha popolato budget_remaining=500. credits_remaining su questi 8 era probabilmente NULL prima di T126. Verificalo e migra:
+
+  SELECT id, credits_remaining, budget_remaining FROM fanta_teams WHERE id LIKE 'ft-mvp-%';
+
+Se credits_remaining IS NULL e budget_remaining = 500 → UPDATE per spostare il valore:
+  UPDATE fanta_teams 
+  SET credits_remaining = budget_remaining 
+  WHERE id LIKE 'ft-mvp-%' AND credits_remaining IS NULL AND budget_remaining IS NOT NULL;
+
+Sanity post-migrazione:
+  - Tutti i fanta_teams della lega lg-mvp devono avere credits_remaining = 500
+  - Le altre fanta_teams legacy devono mantenere il loro credits_remaining originale invariato
+
+A.2 — Drop colonna budget_remaining
+
+Generare migrazione Drizzle che fa ALTER TABLE fanta_teams DROP COLUMN budget_remaining.
+
+Aggiornare schema file lib/db/src/schema/fanta-teams.ts rimuovendo la definizione budget_remaining.
+
+A.3 — Pulizia codice T126
+
+Aggiornare lo script scripts/src/seeds/seed-step7a-backfill.ts:
+  - Sostituire ogni riferimento a budget_remaining con credits_remaining
+  - Lo script deve restare idempotente
+  - Sanity check finale: verifica che fanta_teams della lega lg-mvp abbiano credits_remaining=500
+
+Eventuali altri file che referenziano budget_remaining (grep ricorsivo): aggiornare tutti a credits_remaining.
+
+A.4 — Sanity check finale Parte A
+
+Stampare:
+  1) SELECT column_name FROM information_schema.columns WHERE table_name='fanta_teams' — verificare che budget_remaining NON sia presente
+  2) SELECT id, name, credits_remaining FROM fanta_teams WHERE id LIKE 'ft-mvp-%' ORDER BY id — atteso 8 righe tutte con credits_remaining=500
+  3) Conteggio occorrenze "budget_remaining" e "budgetRemaining" nel codebase — atteso: 0
+
+Se uno qualsiasi di questi check fallisce → fermati e segnalalo, non procedere con Parte B.
+
+================================================================
+PARTE B — WIZARD SETUP LEGA
+================================================================
+
+[NOTA: tutta la spec wizard originale resta valida, con UNA sola sostituzione: ogni occorrenza di "budgetRemaining" / "budget_remaining" → "creditsRemaining" / "credits_remaining"]
+
+WIZARD UI
+
+Route: /lega/nuova
+Component container: mister-web/src/pages/SetupLegaPage.tsx
+Componenti step: mister-web/src/components/setup/StepLega.tsx, StepSquadre.tsx, StepRiepilogo.tsx, StepIndicator.tsx
+
+Stato wizard (tipizzato):
+  type SetupState = {
+    step: 1 | 2 | 3
+    lega: { name, budgetInitial, timerSeconds, rosterP, rosterD, rosterC, rosterA, mode }
+    squadre: Array<{ name, nameAuction, colorPrimary, colorSecondary, logoUrl? }>
+  }
+
+STEP 1 — LEGA
+  Card "Identità": input "Nome lega" (max 50, default "Coppa Acerbi 2025")
+  Card "Modalità": 3 mode-card. Solo Manageriale selezionabile (preselezionata). Classico e Manageriale Pro disabled con badge "In arrivo".
+  Card "Budget e timer": budget FM (default 500, range 100-2000 step 10), timer s (default 8, range 3-30)
+  Card "Composizione rosa": P (default 3), D (default 8), C (default 8), A (default 6), range 1-15 ciascuno. Indicatore live "Totale rosa target: X"
+  Nav: "← Annulla" / "Avanti: le squadre →" (disabled se invalid)
+
+STEP 2 — SQUADRE
+  Lista 0-8 squadre. Ogni card: nome (max 50), nome all'asta (max 30, con helper "Pronunciato al microfono..."), colorPrimary (default #1f4733), colorSecondary (default #efe6d3), logoUrl (optional), pulsante rimuovi (disabled se prima squadra).
+  Validation: nameAuction UNIQUE tra squadre della lega (errore inline).
+  Helper: "X / 8 squadre · minimo 4 per iniziare l'asta"
+  Pulsante "+ Aggiungi squadra" (disabled se count=8)
+  Nav: "← Lega" / "Avanti: riepilogo →" (disabled se squadre<4 o invalid)
+
+STEP 3 — RIEPILOGO
+  Card riepilogo: Lega (nome + modalità), Parametri (Budget, Timer, Rosa target "3P · 8D · 8C · 6A", Pool giocatori = somma_rosa × num_squadre), Squadre (chip-list con nome + nome asta + swatch colori).
+  Nav: "← Squadre" / "Crea lega" (primario)
+
+API BACKEND
+
+Endpoint nuovo: POST /api/leagues
+  Body zod-validated:
+    { name, budgetInitial, timerSeconds, rosterP, rosterD, rosterC, rosterA, mode (server forza 'manageriale'), fantaTeams: [{ name, nameAuction, colorPrimary, colorSecondary, logoUrl? }] (min 4 max 8) }
+  Response 201: { league, fantaTeams }
+  Errors: 400 validation, 409 nameAuction duplicato
+  Implementazione:
+    - Transazione Drizzle
+    - league.id = `lg-${nanoid(8)}`
+    - fantaTeam.id = `ft-${nanoid(8)}`
+    - credits_remaining = budgetInitial su ogni fantaTeam (NON budget_remaining)
+    - federation_id = NULL
+
+Endpoint: GET /api/leagues/:id → { league, fantaTeams }
+
+OpenAPI + Orval rigenerazione.
+
+PAGINA OVERVIEW POST-CREAZIONE
+
+Route: /lega/:leagueId → mister-web/src/pages/LegaOverviewPage.tsx
+  - Header: nome lega + badge "Pronta per l'asta"
+  - Card Squadre: tabella nome, nome asta, swatch colori, credits_remaining
+  - Card Configurazione: readonly grid parametri
+  - Pulsante "Avvia asta" disabled tooltip "In arrivo (Step 7.C)"
+  - Pulsante "← Tutte le leghe" → /leghe (placeholder non implementato)
+
+NB: esiste già mister-web/src/pages/league-detail.tsx — verificare se è equivalente o se va consolidato con LegaOverviewPage. Se è la stessa pagina con nomi diversi: NON duplicarla, estendi quella esistente. Riporta nel deliverable cosa hai trovato e che scelta hai fatto.
+
+ROUTING
+
+Aggiungere in App.tsx:
+  /lega/nuova → SetupLegaPage
+  /lega/:leagueId → LegaOverviewPage (o pagina esistente consolidata)
+
+Sidebar: voce "Crea lega" sotto "Competizione".
+
+VINCOLI
+
+- TypeScript strict, no any
+- Form con react-hook-form + zod (se in stack) o useState tipizzato
+- Palette green-deep #1f4733, cream #efe6d3, Fraunces titoli, Inter body, JetBrains Mono numeri
+- Nessuna emoji nei testi
+- Icone via lucide-react
+
+DELIVERABLE
+
+- Parte A: migrazione drop budget_remaining, dati migrati, codice T126 ripulito, 3 sanity check stampati
+- Parte B: componenti React, endpoints API, OpenAPI/Orval rigenerati, test e2e (crea "Lega Test 7B" con 4 squadre fittizie, verifica row in leagues + 4 in fanta_teams con credits_remaining=budgetInitial, redirect su /lega/:id)
+- Screenshot delle 4 schermate (StepLega, StepSquadre, StepRiepilogo, LegaOverview)
+- Nota nel report finale: che decisione è stata presa su league-detail.tsx esistente

@@ -15,6 +15,16 @@ export interface FantaTeam {
   name_auction?: string | null;
   /** @nullable */
   logo_url?: string | null;
+  /**
+     * Colore primario della maglia (da jersey.primaryColor)
+     * @nullable
+     */
+  color_primary?: string | null;
+  /**
+     * Colore secondario della maglia (da jersey.secondaryColor)
+     * @nullable
+     */
+  color_secondary?: string | null;
   credits_remaining: number;
   roster?: number[];
   created_at: Date;

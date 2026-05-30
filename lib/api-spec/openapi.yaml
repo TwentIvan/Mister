@@ -163,7 +163,7 @@ paths:
     post:
       operationId: createLeague
       tags: [leagues]
-      summary: Crea una lega da template
+      summary: Crea una lega con wizard (nome, parametri asta, squadre)
       requestBody:
         required: true
         content:
@@ -176,7 +176,11 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/League"
+                $ref: "#/components/schemas/LeagueWizardResponse"
+        "400":
+          description: Validation error
+        "409":
+          description: Nomi all'asta duplicati
 
   /leagues/{id}:
     get:
@@ -1192,14 +1196,14 @@ components:
     # ─── LEAGUE ───────────────────────────────────────────────
     League:
       type: object
-      required: [id, name, federation_id, admin_user_id, max_managers, season, visibility, started, created_at]
+      required: [id, name, admin_user_id, max_managers, season, visibility, started, timer_seconds, created_at]
       properties:
         id:
           type: string
         name:
           type: string
         federation_id:
-          type: string
+          type: ["string", "null"]
         template_id:
           type: ["string", "null"]
         admin_user_id:
@@ -1229,27 +1233,100 @@ components:
           type: boolean
         notify_push:
           type: boolean
+        timer_seconds:
+          type: integer
+          description: Secondi per ogni round d'asta (default 8)
+        budget_initial:
+          type: ["integer", "null"]
+          description: Budget iniziale per squadra in FM
+        roster_p:
+          type: ["integer", "null"]
+          description: Portieri per squadra
+        roster_d:
+          type: ["integer", "null"]
+          description: Difensori per squadra
+        roster_c:
+          type: ["integer", "null"]
+          description: Centrocampisti per squadra
+        roster_a:
+          type: ["integer", "null"]
+          description: Attaccanti per squadra
+        auction_mode:
+          type: ["string", "null"]
+          enum: [classico, manageriale, manageriale_pro, null]
+          description: Modalità asta
         created_at:
           type: string
           format: date-time
 
     LeagueInput:
       type: object
-      required: [name, template_id, admin_user_id, season]
+      required: [name, budget_initial, timer_seconds, roster_p, roster_d, roster_c, roster_a, fanta_teams]
       properties:
         name:
           type: string
-        template_id:
-          type: string
-        admin_user_id:
-          type: string
-        season:
+          maxLength: 50
+        budget_initial:
           type: integer
-        max_managers:
+          minimum: 100
+          maximum: 2000
+        timer_seconds:
           type: integer
-        visibility:
+          minimum: 3
+          maximum: 30
+        roster_p:
+          type: integer
+          minimum: 1
+          maximum: 15
+        roster_d:
+          type: integer
+          minimum: 1
+          maximum: 15
+        roster_c:
+          type: integer
+          minimum: 1
+          maximum: 15
+        roster_a:
+          type: integer
+          minimum: 1
+          maximum: 15
+        fanta_teams:
+          type: array
+          items:
+            $ref: "#/components/schemas/FantaTeamWizardInput"
+          minItems: 4
+          maxItems: 8
+
+    FantaTeamWizardInput:
+      type: object
+      required: [name, name_auction, color_primary, color_secondary]
+      properties:
+        name:
           type: string
-          enum: [private, public, unlisted]
+          maxLength: 50
+        name_auction:
+          type: string
+          maxLength: 30
+          description: Nome pronunciato dal battitore in asta
+        color_primary:
+          type: string
+          example: "#1f4733"
+        color_secondary:
+          type: string
+          example: "#efe6d3"
+        logo_url:
+          type: ["string", "null"]
+
+    LeagueWizardResponse:
+      type: object
+      required: [league, fanta_teams]
+      properties:
+        league:
+          $ref: "#/components/schemas/League"
+        fanta_teams:
+          type: array
+          items:
+            $ref: "#/components/schemas/FantaTeam"
 
     LeagueUpdate:
       type: object
@@ -1531,6 +1608,12 @@ components:
           type: ["string", "null"]
         logo_url:
           type: ["string", "null"]
+        color_primary:
+          type: ["string", "null"]
+          description: Colore primario della maglia (da jersey.primaryColor)
+        color_secondary:
+          type: ["string", "null"]
+          description: Colore secondario della maglia (da jersey.secondaryColor)
         credits_remaining:
           type: integer
         roster:
@@ -1552,6 +1635,10 @@ components:
         name_auction:
           type: string
         logo_url:
+          type: string
+        color_primary:
+          type: string
+        color_secondary:
           type: string
 
     FantaTeamUpdate:

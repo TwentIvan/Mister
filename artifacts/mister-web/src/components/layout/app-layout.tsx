@@ -10,6 +10,7 @@ import {
   Sun,
   Shield,
   Flag,
+  PlusCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "@/components/theme-provider";
@@ -23,6 +24,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     { href: "/leagues", label: "Le mie leghe", icon: Trophy },
     { href: "/squadra/formazione", label: "Formazione", icon: Shield },
     { href: "/competizione/comp-mvp-campionato-2024", label: "Competizione", icon: Flag },
+    { href: "/lega/nuova", label: "Crea lega", icon: PlusCircle },
     { href: "/players", label: "Giocatori", icon: Users },
   ];
 

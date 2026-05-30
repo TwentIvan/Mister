@@ -28,6 +28,10 @@ router.get("/leagues/:leagueId/federation", async (req, res): Promise<void> => {
     res.status(404).json({ error: "Lega non trovata" });
     return;
   }
+  if (!leagueRow.federationId) {
+    res.status(404).json({ error: "Questa lega non è associata a nessuna federazione" });
+    return;
+  }
   const [row] = await db
     .select()
     .from(federations)
@@ -56,6 +60,10 @@ router.patch("/leagues/:leagueId/federation", async (req, res): Promise<void> =>
     .where(eq(leagues.id, params.data.leagueId));
   if (!leagueRow) {
     res.status(404).json({ error: "Lega non trovata" });
+    return;
+  }
+  if (!leagueRow.federationId) {
+    res.status(404).json({ error: "Questa lega non è associata a nessuna federazione" });
     return;
   }
   const d = parsed.data;

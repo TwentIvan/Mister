@@ -11,4 +11,6 @@ export interface FantaTeamInput {
   name: string;
   name_auction?: string;
   logo_url?: string;
+  color_primary?: string;
+  color_secondary?: string;
 }

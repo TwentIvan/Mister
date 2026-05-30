@@ -13,7 +13,7 @@ export function mapLeague(l: League) {
   return {
     id: l.id,
     name: l.name,
-    federation_id: l.federationId,
+    federation_id: l.federationId ?? null,
     template_id: l.templateId ?? null,
     admin_user_id: l.adminUserId,
     co_admin_user_ids: l.coAdminUserIds,
@@ -26,6 +26,13 @@ export function mapLeague(l: League) {
     started: l.started,
     notify_email: l.notifyEmail,
     notify_push: l.notifyPush,
+    timer_seconds: l.timerSeconds,
+    budget_initial: l.budgetInitial ?? null,
+    roster_p: l.rosterP ?? null,
+    roster_d: l.rosterD ?? null,
+    roster_c: l.rosterC ?? null,
+    roster_a: l.rosterA ?? null,
+    auction_mode: l.auctionMode ?? null,
     created_at: l.createdAt,
   };
 }
@@ -130,8 +137,16 @@ export function mapFantaTeam(t: FantaTeam) {
     name: t.name,
     name_auction: t.nameAuction ?? null,
     logo_url: t.logoUrl ?? null,
+    color_primary: t.jersey?.primaryColor ?? null,
+    color_secondary: t.jersey?.secondaryColor ?? null,
     credits_remaining: t.creditsRemaining,
-    roster: t.roster,
+    roster: (() => {
+      const r = t.roster as unknown;
+      if (!r) return [];
+      if (Array.isArray(r)) return r as number[];
+      const s = r as Record<string, number[]>;
+      return [...(s.gk ?? []), ...(s.def ?? []), ...(s.mid ?? []), ...(s.att ?? [])];
+    })(),
     created_at: t.createdAt,
   };
 }
