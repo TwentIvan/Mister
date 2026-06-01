@@ -20,6 +20,10 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  Auction,
+  AuctionActionResponse,
+  AuctionPlayerActionBody,
+  AuctionState,
   Competition,
   CompetitionInput,
   CompetitionMatch,
@@ -28,6 +32,10 @@ import type {
   Contract,
   ContractInput,
   ContractUpdate,
+  CreateAuctionBidBody,
+  CreateAuctionBidResponse,
+  CreateAuctionBody,
+  CreateAuctionResponse,
   DashboardSummary,
   FantaTeam,
   FantaTeamInput,
@@ -3612,4 +3620,578 @@ export function useGetMatches<TData = Awaited<ReturnType<typeof getMatches>>, TE
 
 
 
+
+export const getCreateAuctionUrl = () => {
+
+
+
+
+  return `/api/auctions`
+}
+
+/**
+ * @summary Avvia una nuova asta live per una lega
+ */
+export const createAuction = async (createAuctionBody: CreateAuctionBody, options?: RequestInit): Promise<CreateAuctionResponse> => {
+
+  return customFetch<CreateAuctionResponse>(getCreateAuctionUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      createAuctionBody,)
+  }
+);}
+
+
+
+
+export const getCreateAuctionMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAuction>>, TError,{data: BodyType<CreateAuctionBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createAuction>>, TError,{data: BodyType<CreateAuctionBody>}, TContext> => {
+
+const mutationKey = ['createAuction'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createAuction>>, {data: BodyType<CreateAuctionBody>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createAuction(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateAuctionMutationResult = NonNullable<Awaited<ReturnType<typeof createAuction>>>
+    export type CreateAuctionMutationBody = BodyType<CreateAuctionBody>
+    export type CreateAuctionMutationError = ErrorType<void>
+
+    /**
+ * @summary Avvia una nuova asta live per una lega
+ */
+export const useCreateAuction = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAuction>>, TError,{data: BodyType<CreateAuctionBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createAuction>>,
+        TError,
+        {data: BodyType<CreateAuctionBody>},
+        TContext
+      > => {
+      return useMutation(getCreateAuctionMutationOptions(options));
+    }
+
+export const getGetAuctionUrl = (id: string,) => {
+
+
+
+
+  return `/api/auctions/${id}`
+}
+
+/**
+ * @summary Stato corrente dell'asta (player corrente, offerta, storico, squadre)
+ */
+export const getAuction = async (id: string, options?: RequestInit): Promise<AuctionState> => {
+
+  return customFetch<AuctionState>(getGetAuctionUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetAuctionQueryKey = (id: string,) => {
+    return [
+    `/api/auctions/${id}`
+    ] as const;
+    }
+
+
+export const getGetAuctionQueryOptions = <TData = Awaited<ReturnType<typeof getAuction>>, TError = ErrorType<void>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAuction>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetAuctionQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAuction>>> = ({ signal }) => getAuction(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAuction>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetAuctionQueryResult = NonNullable<Awaited<ReturnType<typeof getAuction>>>
+export type GetAuctionQueryError = ErrorType<void>
+
+
+/**
+ * @summary Stato corrente dell'asta (player corrente, offerta, storico, squadre)
+ */
+
+export function useGetAuction<TData = Awaited<ReturnType<typeof getAuction>>, TError = ErrorType<void>>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAuction>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetAuctionQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateAuctionBidUrl = (id: string,) => {
+
+
+
+
+  return `/api/auctions/${id}/bid`
+}
+
+/**
+ * @summary Piazza un'offerta sul player corrente
+ */
+export const createAuctionBid = async (id: string,
+    createAuctionBidBody: CreateAuctionBidBody, options?: RequestInit): Promise<CreateAuctionBidResponse> => {
+
+  return customFetch<CreateAuctionBidResponse>(getCreateAuctionBidUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      createAuctionBidBody,)
+  }
+);}
+
+
+
+
+export const getCreateAuctionBidMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAuctionBid>>, TError,{id: string;data: BodyType<CreateAuctionBidBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createAuctionBid>>, TError,{id: string;data: BodyType<CreateAuctionBidBody>}, TContext> => {
+
+const mutationKey = ['createAuctionBid'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createAuctionBid>>, {id: string;data: BodyType<CreateAuctionBidBody>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  createAuctionBid(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateAuctionBidMutationResult = NonNullable<Awaited<ReturnType<typeof createAuctionBid>>>
+    export type CreateAuctionBidMutationBody = BodyType<CreateAuctionBidBody>
+    export type CreateAuctionBidMutationError = ErrorType<void>
+
+    /**
+ * @summary Piazza un'offerta sul player corrente
+ */
+export const useCreateAuctionBid = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAuctionBid>>, TError,{id: string;data: BodyType<CreateAuctionBidBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createAuctionBid>>,
+        TError,
+        {id: string;data: BodyType<CreateAuctionBidBody>},
+        TContext
+      > => {
+      return useMutation(getCreateAuctionBidMutationOptions(options));
+    }
+
+export const getAssignAuctionUrl = (id: string,) => {
+
+
+
+
+  return `/api/auctions/${id}/assign`
+}
+
+/**
+ * @summary Aggiudica il player corrente alla squadra con offerta più alta
+ */
+export const assignAuction = async (id: string,
+    auctionPlayerActionBody: AuctionPlayerActionBody, options?: RequestInit): Promise<AuctionActionResponse> => {
+
+  return customFetch<AuctionActionResponse>(getAssignAuctionUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      auctionPlayerActionBody,)
+  }
+);}
+
+
+
+
+export const getAssignAuctionMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof assignAuction>>, TError,{id: string;data: BodyType<AuctionPlayerActionBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof assignAuction>>, TError,{id: string;data: BodyType<AuctionPlayerActionBody>}, TContext> => {
+
+const mutationKey = ['assignAuction'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof assignAuction>>, {id: string;data: BodyType<AuctionPlayerActionBody>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  assignAuction(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AssignAuctionMutationResult = NonNullable<Awaited<ReturnType<typeof assignAuction>>>
+    export type AssignAuctionMutationBody = BodyType<AuctionPlayerActionBody>
+    export type AssignAuctionMutationError = ErrorType<void>
+
+    /**
+ * @summary Aggiudica il player corrente alla squadra con offerta più alta
+ */
+export const useAssignAuction = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof assignAuction>>, TError,{id: string;data: BodyType<AuctionPlayerActionBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof assignAuction>>,
+        TError,
+        {id: string;data: BodyType<AuctionPlayerActionBody>},
+        TContext
+      > => {
+      return useMutation(getAssignAuctionMutationOptions(options));
+    }
+
+export const getSkipAuctionUrl = (id: string,) => {
+
+
+
+
+  return `/api/auctions/${id}/skip`
+}
+
+/**
+ * @summary Salta il player corrente (status=skipped)
+ */
+export const skipAuction = async (id: string,
+    auctionPlayerActionBody: AuctionPlayerActionBody, options?: RequestInit): Promise<AuctionActionResponse> => {
+
+  return customFetch<AuctionActionResponse>(getSkipAuctionUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      auctionPlayerActionBody,)
+  }
+);}
+
+
+
+
+export const getSkipAuctionMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof skipAuction>>, TError,{id: string;data: BodyType<AuctionPlayerActionBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof skipAuction>>, TError,{id: string;data: BodyType<AuctionPlayerActionBody>}, TContext> => {
+
+const mutationKey = ['skipAuction'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof skipAuction>>, {id: string;data: BodyType<AuctionPlayerActionBody>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  skipAuction(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SkipAuctionMutationResult = NonNullable<Awaited<ReturnType<typeof skipAuction>>>
+    export type SkipAuctionMutationBody = BodyType<AuctionPlayerActionBody>
+    export type SkipAuctionMutationError = ErrorType<void>
+
+    /**
+ * @summary Salta il player corrente (status=skipped)
+ */
+export const useSkipAuction = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof skipAuction>>, TError,{id: string;data: BodyType<AuctionPlayerActionBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof skipAuction>>,
+        TError,
+        {id: string;data: BodyType<AuctionPlayerActionBody>},
+        TContext
+      > => {
+      return useMutation(getSkipAuctionMutationOptions(options));
+    }
+
+export const getPauseAuctionUrl = (id: string,) => {
+
+
+
+
+  return `/api/auctions/${id}/pause`
+}
+
+/**
+ * @summary Sospende l'asta
+ */
+export const pauseAuction = async (id: string, options?: RequestInit): Promise<Auction> => {
+
+  return customFetch<Auction>(getPauseAuctionUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getPauseAuctionMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof pauseAuction>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof pauseAuction>>, TError,{id: string}, TContext> => {
+
+const mutationKey = ['pauseAuction'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof pauseAuction>>, {id: string}> = (props) => {
+          const {id} = props ?? {};
+
+          return  pauseAuction(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PauseAuctionMutationResult = NonNullable<Awaited<ReturnType<typeof pauseAuction>>>
+
+    export type PauseAuctionMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Sospende l'asta
+ */
+export const usePauseAuction = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof pauseAuction>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof pauseAuction>>,
+        TError,
+        {id: string},
+        TContext
+      > => {
+      return useMutation(getPauseAuctionMutationOptions(options));
+    }
+
+export const getResumeAuctionUrl = (id: string,) => {
+
+
+
+
+  return `/api/auctions/${id}/resume`
+}
+
+/**
+ * @summary Riprende l'asta sospesa
+ */
+export const resumeAuction = async (id: string, options?: RequestInit): Promise<Auction> => {
+
+  return customFetch<Auction>(getResumeAuctionUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getResumeAuctionMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof resumeAuction>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof resumeAuction>>, TError,{id: string}, TContext> => {
+
+const mutationKey = ['resumeAuction'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof resumeAuction>>, {id: string}> = (props) => {
+          const {id} = props ?? {};
+
+          return  resumeAuction(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ResumeAuctionMutationResult = NonNullable<Awaited<ReturnType<typeof resumeAuction>>>
+
+    export type ResumeAuctionMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Riprende l'asta sospesa
+ */
+export const useResumeAuction = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof resumeAuction>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof resumeAuction>>,
+        TError,
+        {id: string},
+        TContext
+      > => {
+      return useMutation(getResumeAuctionMutationOptions(options));
+    }
+
+export const getEndAuctionUrl = (id: string,) => {
+
+
+
+
+  return `/api/auctions/${id}/end`
+}
+
+/**
+ * @summary Termina anticipatamente l'asta
+ */
+export const endAuction = async (id: string, options?: RequestInit): Promise<Auction> => {
+
+  return customFetch<Auction>(getEndAuctionUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getEndAuctionMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof endAuction>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof endAuction>>, TError,{id: string}, TContext> => {
+
+const mutationKey = ['endAuction'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof endAuction>>, {id: string}> = (props) => {
+          const {id} = props ?? {};
+
+          return  endAuction(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type EndAuctionMutationResult = NonNullable<Awaited<ReturnType<typeof endAuction>>>
+
+    export type EndAuctionMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Termina anticipatamente l'asta
+ */
+export const useEndAuction = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof endAuction>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof endAuction>>,
+        TError,
+        {id: string},
+        TContext
+      > => {
+      return useMutation(getEndAuctionMutationOptions(options));
+    }
 

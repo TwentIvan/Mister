@@ -10,6 +10,7 @@ import VotoAlgorithm from "@/pages/voto-algorithm";
 import FormazionePage from "@/pages/formazione/FormazionePage";
 import CompetizionePage from "@/pages/competizione/CompetizionePage";
 import MatchDetailPage from "@/pages/competizione/MatchDetailPage";
+import AstaLivePage from "@/pages/AstaLivePage";
 import { Switch, Route, Router as WouterRouter } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -34,6 +35,7 @@ function Router() {
         <Route path="/squadra/formazione" component={FormazionePage} />
         <Route path="/competizione/:competitionId" component={CompetizionePage} />
         <Route path="/partita/:matchId" component={MatchDetailPage} />
+        <Route path="/asta/:auctionId" component={AstaLivePage} />
         <Route path="/players" component={PlayersList} />
         <Route path="/superadmin/templates" component={TemplatesManager} />
         <Route path="/superadmin/algoritmo-voto" component={VotoAlgorithm} />

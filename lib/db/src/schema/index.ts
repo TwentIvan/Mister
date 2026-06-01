@@ -21,3 +21,4 @@ export * from "./serie-a-fixtures";
 export * from "./auctions";
 export * from "./auction-bids";
 export * from "./auction-assignments";
+export * from "./auction-player-queue";

@@ -13,6 +13,7 @@ import votoAlgorithmConfigRouter from "./voto-algorithm-config";
 import lineupsRouter from "./lineups";
 import matchesRouter from "./matches";
 import competitionMatchesRouter from "./competition-matches";
+import auctionsRouter from "./auctions";
 
 const router: IRouter = Router();
 
@@ -30,5 +31,6 @@ router.use(votoAlgorithmConfigRouter);
 router.use(lineupsRouter);
 router.use(matchesRouter);
 router.use(competitionMatchesRouter);
+router.use(auctionsRouter);
 
 export default router;

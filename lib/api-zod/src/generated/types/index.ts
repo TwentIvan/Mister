@@ -6,6 +6,16 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from './auction';
+export * from './auctionActionResponse';
+export * from './auctionBidItem';
+export * from './auctionPlayerActionBody';
+export * from './auctionPlayerEntry';
+export * from './auctionPlayerEntryRoleClassic';
+export * from './auctionPlayerEntryStatus';
+export * from './auctionProgress';
+export * from './auctionState';
+export * from './auctionStatus';
 export * from './competition';
 export * from './competitionConfig';
 export * from './competitionInput';
@@ -24,6 +34,10 @@ export * from './contractInput';
 export * from './contractState';
 export * from './contractUpdate';
 export * from './contractUpdateState';
+export * from './createAuctionBidBody';
+export * from './createAuctionBidResponse';
+export * from './createAuctionBody';
+export * from './createAuctionResponse';
 export * from './dashboardSummary';
 export * from './fantaTeam';
 export * from './fantaTeamInput';

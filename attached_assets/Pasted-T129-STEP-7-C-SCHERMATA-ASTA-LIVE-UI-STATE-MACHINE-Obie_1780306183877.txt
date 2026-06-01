@@ -1,0 +1,230 @@
+T129 — STEP 7.C: SCHERMATA ASTA LIVE (UI + STATE MACHINE)
+
+Obiettivo: implementare la schermata asta live con state machine, click-to-bid via pulsanti sidebar, aggiudicazione e transizione automatica al player successivo. Niente voice (7.D), niente annulla/vincoli rosa (7.E), niente call vocale banditore (7.F).
+
+================================================================
+PARTE A — ENDPOINTS API + STATE BACKEND
+================================================================
+
+A.1 — Endpoint creazione asta
+
+POST /api/auctions
+  Body zod: { leagueId: string }
+  Logica:
+    - Verifica che league_id esista e abbia ≥ 4 fanta_teams associate
+    - Verifica che NON esista già un'auction con status='running' o 'paused' per quella lega (1 asta attiva alla volta)
+    - Crea row auctions: id=`auc-${nanoid(8)}`, league_id, status='running', started_at=now()
+    - Costruisci pool player ordinato: 
+        SELECT p.id, p.role, p.last_name, p.first_name, p.team
+        FROM players p
+        WHERE p.season = (anno corrente, default 2024)
+        ORDER BY 
+          CASE p.role WHEN 'P' THEN 1 WHEN 'D' THEN 2 WHEN 'C' THEN 3 WHEN 'A' THEN 4 END,
+          p.last_name ASC, p.first_name ASC
+    - Salva il pool come array di player_id in una nuova tabella `auction_player_queue` (vedi A.2)
+  Response 201: { auction: Auction, currentPlayerId: number, totalPlayers: number }
+  Errors: 400 (lega senza squadre), 409 (asta già attiva)
+
+A.2 — Nuova tabella auction_player_queue
+
+  id text PK (formato 'apq-...')
+  auction_id text NOT NULL FK auctions.id
+  player_id integer NOT NULL FK players.id
+  position integer NOT NULL (0-based)
+  status text NOT NULL DEFAULT 'pending' CHECK status IN ('pending', 'sold', 'skipped')
+  UNIQUE (auction_id, player_id)
+  UNIQUE (auction_id, position)
+  indice su (auction_id, status, position) per query "next pending player"
+
+Migrazione Drizzle + schema TS.
+
+A.3 — Endpoint stato asta
+
+GET /api/auctions/:id
+  Logica:
+    - Carica auction
+    - Carica current player: SELECT * FROM auction_player_queue WHERE auction_id=:id AND status='pending' ORDER BY position ASC LIMIT 1 → JOIN players
+    - Carica current bid (offerta valida più alta sul current player): SELECT * FROM auction_bids WHERE auction_id=:id AND player_id=:currentPlayerId AND valid=true ORDER BY amount_fm DESC LIMIT 1
+    - Carica bids history del current player (ultime 10): valid=true, ORDER BY created_at DESC LIMIT 10
+    - Carica squadre della lega: fanta_teams JOIN su league_id
+    - Carica counts: SELECT COUNT(*) FROM auction_player_queue WHERE auction_id=:id AND status='sold' AS assignedCount, COUNT(*) total
+  Response: { auction, currentPlayer, currentBid, bidsHistory, squadre, progress: { current: position+1, total, sold } }
+
+A.4 — Endpoint piazza offerta
+
+POST /api/auctions/:id/bid
+  Body zod: { playerId: number, fantaTeamId: string, amountFm: number }
+  Logica:
+    - Verifica auction.status='running'
+    - Verifica playerId == current player id (no bid su altri player)
+    - Verifica fantaTeamId appartiene alla league dell'auction
+    - Verifica amountFm > current_bid.amount (se esiste current bid), altrimenti >= 1
+    - Verifica amountFm <= credits_remaining della fanta_team (vincolo budget — questo VINCOLO sì, non si può offrire più del budget; in 7.E aggiungeremo gli altri vincoli)
+    - Crea row auction_bids: amountFm, valid=true, created_at=now()
+  Response 201: { bid: AuctionBid, newCurrentBid: AuctionBid }
+  Errors: 400 (validazione), 403 (asta non running), 409 (offerta inferiore alla corrente)
+
+A.5 — Endpoint aggiudica
+
+POST /api/auctions/:id/assign
+  Body zod: { playerId: number }
+  Logica (in transazione):
+    - Verifica auction.status='running'
+    - Verifica playerId == current player id
+    - Carica current bid (la più alta valid sul playerId)
+    - Se nessuna current bid: errore 409 "Nessuna offerta valida"
+    - Crea row auction_assignments: auction_id, player_id, fanta_team_id=bid.fanta_team_id, final_price_fm=bid.amount_fm, assigned_at=now()
+    - Crea row contracts: player_id, fanta_team_id, season_start=2025, purchase_price_fm=bid.amount_fm
+    - UPDATE fanta_teams SET credits_remaining = credits_remaining - bid.amount_fm WHERE id=bid.fanta_team_id
+    - UPDATE auction_player_queue SET status='sold' WHERE auction_id=:id AND player_id=:playerId
+    - Determina next player: SELECT primo 'pending' in ORDER BY position. Se nessuno: auction.status='completed', completed_at=now()
+  Response: { assignment, nextPlayerId: number | null, auctionCompleted: boolean }
+
+A.6 — Endpoint skip
+
+POST /api/auctions/:id/skip
+  Body zod: { playerId: number }
+  Logica:
+    - Verifica auction.status='running'
+    - Verifica playerId == current player id
+    - UPDATE auction_player_queue SET status='skipped' WHERE auction_id=:id AND player_id=:playerId
+    - Determina next player (come A.5)
+  Response: { nextPlayerId: number | null, auctionCompleted: boolean }
+
+A.7 — Endpoint pausa/resume/termina
+
+POST /api/auctions/:id/pause → status='paused'
+POST /api/auctions/:id/resume → status='running'
+POST /api/auctions/:id/end → status='completed', completed_at=now()
+
+OpenAPI + Orval rigenerazione per tutti gli endpoint sopra.
+
+================================================================
+PARTE B — UI SCHERMATA ASTA
+================================================================
+
+Route: /asta/:auctionId
+Container: mister-web/src/pages/AstaLivePage.tsx
+
+LAYOUT (riprende la bozza HTML mister.html, sezione asta-live):
+
+Header (sticky top):
+  - Sinistra: brand Mister + nome lega
+  - Destra: progress "Giocatore X / Y · Aggiudicati Z"
+
+Main area: 2 colonne. Sinistra (stage, ~65%), destra (sidebar, ~35%).
+
+STAGE (componenti):
+
+mister-web/src/components/asta/PlayerHero.tsx
+  - Badge ruolo grande in alto (P, D, C, A) con colore ruolo
+  - Nome + cognome player in Fraunces grande
+  - Team Serie A + foto Toy avatar (se disponibile)
+  - Base d'asta: 1 FM (hardcoded)
+  - Ordine: posizione nel pool "#X di Y"
+
+mister-web/src/components/asta/CurrentBidPanel.tsx
+  - Sinistra: "Offerta attuale" label + amount (Mono grande) + nome squadra vincitrice
+  - Se nessuna offerta: amount "—", manager "Nessuna offerta", stile muted
+  - Destra: TimerCircular SVG (vedi sotto)
+
+mister-web/src/components/asta/TimerCircular.tsx
+  - SVG con cerchio background grigio + cerchio progress verde
+  - stroke-dasharray animato da 100% a 0% in timerSeconds (default 8s)
+  - Testo centrato: secondi rimanenti
+  - Stato visivo:
+    - Idle (nessuna offerta): mostra "—" muted, no animazione
+    - Bidding: countdown attivo, colore verde-deep
+    - Last 3 sec: pulse rosso/arancio
+    - Expired (0s): si ferma, banditore può aggiudicare
+
+mister-web/src/components/asta/AstaControls.tsx
+  - 4 pulsanti orizzontali:
+    - Aggiudica (primario, verde-deep, icona martello lucide-react Gavel): disabled se no current bid
+    - Pausa (secondario, icona Pause): toggle con Riprendi
+    - Salta (secondario, icona SkipForward)
+    - Termina asta (link, rosso muted): conferma con modal "Sei sicuro? L'asta verrà chiusa."
+
+SIDEBAR (componenti):
+
+mister-web/src/components/asta/SidebarSquadre.tsx
+  - Header "Squadre (N)"
+  - Lista verticale, ogni card:
+    - Riga 1: nome squadra (bold) + credits_remaining FM (Mono, destra)
+    - Riga 2: nome asta (muted, Mono) + slot riempiti "X/Y" (placeholder, vincoli in 7.E)
+    - Riga 3 (3 pulsanti inline): +1 / +5 / +10 (icone Plus) → POST /api/auctions/:id/bid con amount_fm = (current_bid?.amount_fm ?? 0) + delta, fanta_team_id = card.id
+  - Pulsanti dimati se la squadra ha credits_remaining < new_amount (vincolo soft già qui)
+
+mister-web/src/components/asta/BidFeed.tsx
+  - Header "Offerte"
+  - Lista offerte recenti (ultime 10), ogni riga:
+    - Nome asta squadra (Mono) · amount FM (Mono bold) · "Xs fa" (relative time)
+    - Highlight verde quando entra (animazione fade)
+  - Empty state: "In attesa della prima offerta..."
+  - Auto-scroll al top quando nuova offerta
+
+================================================================
+PARTE C — STATE MACHINE + INTEGRAZIONE
+================================================================
+
+C.1 — Stato locale React (in AstaLivePage)
+
+useState:
+  - auction (da GET)
+  - currentPlayer (da GET, refresh dopo ogni assign/skip)
+  - currentBid (da GET + update locale dopo POST bid)
+  - bidsHistory (array, append dopo POST bid)
+  - timerRemaining (number, 8 default, decrementato client-side ogni 100ms)
+  - timerActive (boolean, true dopo prima offerta sul current player)
+  - status: 'idle' | 'bidding' | 'sold' | 'transitioning' | 'paused' | 'completed'
+
+C.2 — Effects
+
+- useEffect: fetch GET /api/auctions/:id su mount, refresh su currentPlayerId change
+- useEffect: setInterval 100ms per countdown timer (solo se timerActive && !paused)
+- useEffect: quando timerRemaining ≤ 0, non auto-aggiudicare ma sblocca pulsante Aggiudica (visivamente "PRONTO" sotto il timer)
+
+C.3 — Handlers
+
+- onBidClick(fantaTeamId, delta): POST /api/auctions/:id/bid → su 201, update currentBid + bidsHistory + reset timer a 8s + timerActive=true
+- onAggiudicaClick: POST /api/auctions/:id/assign → su success, mostra animazione "AGGIUDICATO" 1.5s, poi setCurrentPlayer(nextPlayer) o "Asta completata" se nextPlayerId=null
+- onSkipClick: POST /api/auctions/:id/skip → setCurrentPlayer(nextPlayer)
+- onPauseClick / onResumeClick: POST → toggle status
+- onEndClick: modal conferma → POST /api/auctions/:id/end → redirect a /lega/:leagueId con messaggio "Asta completata"
+
+C.4 — Transizione player
+
+Quando passa al next player:
+  - Reset currentBid=null
+  - Reset bidsHistory=[]
+  - Reset timerRemaining=8, timerActive=false
+  - Fade-out player corrente, fade-in nuovo player (animazione 300ms)
+  - status='idle'
+
+C.5 — Schermata fine asta
+
+Se auction.status='completed':
+  - Mostra banner "Asta conclusa" centrato
+  - Tabella riepilogo: per ogni squadra, lista player acquistati con prezzo
+  - Pulsante "Torna alla lega" → /lega/:leagueId
+
+================================================================
+DELIVERABLE
+================================================================
+
+- Parte A: migrazione auction_player_queue + 7 endpoint API + OpenAPI/Orval
+- Parte B: 7 nuovi componenti React + AstaLivePage container
+- Parte C: state machine completo + transizione player + animazioni base
+- Pulsante "Avvia asta" nella league overview ora ATTIVO (rimuovi disabled + tooltip "In arrivo")
+- Test e2e manuale: avvia asta su una lega test, fai 3-4 offerte tra squadre diverse, aggiudica, verifica che credits_remaining decrementi e che si passi al player successivo
+- Screenshot: AstaLivePage in stato idle, bidding (timer attivo), sold (post-aggiudicazione), e schermata fine asta
+
+VINCOLI
+
+- TypeScript strict
+- Palette + tipografia coerente con resto Mister
+- Nessuna emoji nei testi UI (icone lucide-react)
+- Niente WebSocket (single device, timer client-side)
+- Niente voice (sarà 7.D)
+- Niente annulla, riapri, vincoli rosa avanzati (sarà 7.E)
+- Niente call vocale player (sarà 7.F)

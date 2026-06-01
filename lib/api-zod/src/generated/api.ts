@@ -1477,3 +1477,178 @@ export const GetMatchesResponseItem = zod.object({
 export const GetMatchesResponse = zod.array(GetMatchesResponseItem)
 
 
+/**
+ * @summary Avvia una nuova asta live per una lega
+ */
+export const CreateAuctionBody = zod.object({
+  "league_id": zod.string()
+})
+
+
+/**
+ * @summary Stato corrente dell'asta (player corrente, offerta, storico, squadre)
+ */
+export const GetAuctionParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const GetAuctionResponse = zod.object({
+  "auction": zod.object({
+  "id": zod.string(),
+  "league_id": zod.string(),
+  "status": zod.enum(['setup', 'running', 'paused', 'completed', 'cancelled']),
+  "started_at": zod.coerce.date().nullish(),
+  "completed_at": zod.coerce.date().nullish(),
+  "created_at": zod.coerce.date()
+}),
+  "current_player": zod.union([zod.object({
+  "player_id": zod.number(),
+  "position": zod.number(),
+  "status": zod.enum(['pending', 'sold', 'skipped']),
+  "name": zod.string(),
+  "full_name": zod.string(),
+  "role_classic": zod.enum(['GK', 'DEF', 'MID', 'ATT']),
+  "real_team": zod.string(),
+  "photo_url": zod.string().nullish()
+}),zod.null()]).optional(),
+  "current_bid": zod.union([zod.object({
+  "id": zod.string(),
+  "auction_id": zod.string(),
+  "player_id": zod.number(),
+  "fanta_team_id": zod.string(),
+  "amount_fm": zod.number(),
+  "valid": zod.boolean(),
+  "created_at": zod.coerce.date()
+}),zod.null()]).optional(),
+  "bids_history": zod.array(zod.object({
+  "id": zod.string(),
+  "auction_id": zod.string(),
+  "player_id": zod.number(),
+  "fanta_team_id": zod.string(),
+  "amount_fm": zod.number(),
+  "valid": zod.boolean(),
+  "created_at": zod.coerce.date()
+})),
+  "squadre": zod.array(zod.object({
+  "id": zod.string(),
+  "league_id": zod.string(),
+  "manager_user_id": zod.string(),
+  "name": zod.string(),
+  "name_auction": zod.string().nullish(),
+  "logo_url": zod.string().nullish(),
+  "color_primary": zod.string().nullish().describe('Colore primario della maglia (da jersey.primaryColor)'),
+  "color_secondary": zod.string().nullish().describe('Colore secondario della maglia (da jersey.secondaryColor)'),
+  "credits_remaining": zod.number(),
+  "roster": zod.array(zod.number()).optional(),
+  "created_at": zod.coerce.date()
+})),
+  "progress": zod.object({
+  "current": zod.number(),
+  "total": zod.number(),
+  "sold": zod.number()
+})
+})
+
+
+/**
+ * @summary Piazza un'offerta sul player corrente
+ */
+export const CreateAuctionBidParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+
+
+
+export const CreateAuctionBidBody = zod.object({
+  "player_id": zod.number(),
+  "fanta_team_id": zod.string(),
+  "amount_fm": zod.number().min(1)
+})
+
+
+/**
+ * @summary Aggiudica il player corrente alla squadra con offerta più alta
+ */
+export const AssignAuctionParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const AssignAuctionBody = zod.object({
+  "player_id": zod.number()
+})
+
+export const AssignAuctionResponse = zod.object({
+  "next_player_id": zod.number().nullish(),
+  "auction_completed": zod.boolean()
+})
+
+
+/**
+ * @summary Salta il player corrente (status=skipped)
+ */
+export const SkipAuctionParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const SkipAuctionBody = zod.object({
+  "player_id": zod.number()
+})
+
+export const SkipAuctionResponse = zod.object({
+  "next_player_id": zod.number().nullish(),
+  "auction_completed": zod.boolean()
+})
+
+
+/**
+ * @summary Sospende l'asta
+ */
+export const PauseAuctionParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const PauseAuctionResponse = zod.object({
+  "id": zod.string(),
+  "league_id": zod.string(),
+  "status": zod.enum(['setup', 'running', 'paused', 'completed', 'cancelled']),
+  "started_at": zod.coerce.date().nullish(),
+  "completed_at": zod.coerce.date().nullish(),
+  "created_at": zod.coerce.date()
+})
+
+
+/**
+ * @summary Riprende l'asta sospesa
+ */
+export const ResumeAuctionParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const ResumeAuctionResponse = zod.object({
+  "id": zod.string(),
+  "league_id": zod.string(),
+  "status": zod.enum(['setup', 'running', 'paused', 'completed', 'cancelled']),
+  "started_at": zod.coerce.date().nullish(),
+  "completed_at": zod.coerce.date().nullish(),
+  "created_at": zod.coerce.date()
+})
+
+
+/**
+ * @summary Termina anticipatamente l'asta
+ */
+export const EndAuctionParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const EndAuctionResponse = zod.object({
+  "id": zod.string(),
+  "league_id": zod.string(),
+  "status": zod.enum(['setup', 'running', 'paused', 'completed', 'cancelled']),
+  "started_at": zod.coerce.date().nullish(),
+  "completed_at": zod.coerce.date().nullish(),
+  "created_at": zod.coerce.date()
+})
+
+

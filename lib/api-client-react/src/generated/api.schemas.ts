@@ -945,6 +945,117 @@ export interface RosterPlayer {
   opponentIsHome?: boolean | null;
 }
 
+export type AuctionStatus = typeof AuctionStatus[keyof typeof AuctionStatus];
+
+
+export const AuctionStatus = {
+  setup: 'setup',
+  running: 'running',
+  paused: 'paused',
+  completed: 'completed',
+  cancelled: 'cancelled',
+} as const;
+
+export interface Auction {
+  id: string;
+  league_id: string;
+  status: AuctionStatus;
+  /** @nullable */
+  started_at?: string | null;
+  /** @nullable */
+  completed_at?: string | null;
+  created_at: string;
+}
+
+export type AuctionPlayerEntryStatus = typeof AuctionPlayerEntryStatus[keyof typeof AuctionPlayerEntryStatus];
+
+
+export const AuctionPlayerEntryStatus = {
+  pending: 'pending',
+  sold: 'sold',
+  skipped: 'skipped',
+} as const;
+
+export type AuctionPlayerEntryRoleClassic = typeof AuctionPlayerEntryRoleClassic[keyof typeof AuctionPlayerEntryRoleClassic];
+
+
+export const AuctionPlayerEntryRoleClassic = {
+  GK: 'GK',
+  DEF: 'DEF',
+  MID: 'MID',
+  ATT: 'ATT',
+} as const;
+
+export interface AuctionPlayerEntry {
+  player_id: number;
+  position: number;
+  status: AuctionPlayerEntryStatus;
+  name: string;
+  full_name: string;
+  role_classic: AuctionPlayerEntryRoleClassic;
+  real_team: string;
+  /** @nullable */
+  photo_url?: string | null;
+}
+
+export interface AuctionBidItem {
+  id: string;
+  auction_id: string;
+  player_id: number;
+  fanta_team_id: string;
+  amount_fm: number;
+  valid: boolean;
+  created_at: string;
+}
+
+export interface AuctionProgress {
+  current: number;
+  total: number;
+  sold: number;
+}
+
+export interface AuctionState {
+  auction: Auction;
+  current_player?: AuctionPlayerEntry | null;
+  current_bid?: AuctionBidItem | null;
+  bids_history: AuctionBidItem[];
+  squadre: FantaTeam[];
+  progress: AuctionProgress;
+}
+
+export interface CreateAuctionBody {
+  league_id: string;
+}
+
+export interface CreateAuctionResponse {
+  auction: Auction;
+  /** @nullable */
+  current_player_id?: number | null;
+  total_players: number;
+}
+
+export interface CreateAuctionBidBody {
+  player_id: number;
+  fanta_team_id: string;
+  /** @minimum 1 */
+  amount_fm: number;
+}
+
+export interface CreateAuctionBidResponse {
+  bid: AuctionBidItem;
+  new_current_bid: AuctionBidItem;
+}
+
+export interface AuctionPlayerActionBody {
+  player_id: number;
+}
+
+export interface AuctionActionResponse {
+  /** @nullable */
+  next_player_id?: number | null;
+  auction_completed: boolean;
+}
+
 export type ListTemplatesParams = {
 active_only?: boolean;
 };

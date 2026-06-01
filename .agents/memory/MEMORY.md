@@ -1,1 +1,5 @@
 - [RosterSnapshot vs flat array](roster-snapshot-mismatch.md) — fanta_teams.roster nel DB è sempre RosterSnapshot oggetto, ma openapi/zod attende array piatto; fix in mapFantaTeam.
+- [Auction player queue sorting](auction-queue.md) — pool ordinato per ruolo (GK→DEF→MID→ATT) poi name ASC via CASE in sql`...` Drizzle; playerPool da `players` globale (nessun filtro stagione).
+- [Auction route error pattern](auction-error-pattern.md) — per throw custom da transaction usare `{ code; message }` + narrowing con `"code" in err && "message" in err`, NON cast diretto a `{ message: string }`.
+- [useGetAuction queryKey required](orval-query-key.md) — le query hook Orval richiedono `queryKey` esplicito nelle options (es. `getGetAuctionQueryKey(id)`), altrimenti TS2741.
+- [leagues.ts pre-existing TS error](leagues-ts-error.md) — `roster: never[]` in leagues.ts line 115 è errore pre-esistente, non toccare.

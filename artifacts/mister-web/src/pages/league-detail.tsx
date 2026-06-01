@@ -2,9 +2,11 @@ import {
   useGetLeague, getGetLeagueQueryKey,
   useGetLeagueStats, getGetLeagueStatsQueryKey,
   useListCompetitions, getListCompetitionsQueryKey,
-  useListFantaTeams, getListFantaTeamsQueryKey
+  useListFantaTeams, getListFantaTeamsQueryKey,
+  useCreateAuction,
 } from "@workspace/api-client-react";
-import { useParams, Link } from "wouter";
+import { useState } from "react";
+import { useParams, Link, useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -15,6 +17,21 @@ import { Trophy, Users, Calendar, Activity, BookOpen, Gavel, ArrowLeft } from "l
 
 export default function LeagueDetail() {
   const { id } = useParams<{ id: string }>();
+  const [, navigate] = useLocation();
+
+  const createAuction = useCreateAuction();
+  const [astaError, setAstaError] = useState<string | null>(null);
+
+  const handleAvviaAsta = async () => {
+    if (!id) return;
+    setAstaError(null);
+    try {
+      const result = await createAuction.mutateAsync({ data: { league_id: id } });
+      navigate(`/asta/${result.auction.id}`);
+    } catch {
+      setAstaError("Impossibile avviare l'asta. Verifica che ci siano almeno 4 squadre.");
+    }
+  };
 
   const { data: league, isLoading: isLoadingLeague } = useGetLeague(
     id,
@@ -102,20 +119,34 @@ export default function LeagueDetail() {
               </Button>
             </Link>
           )}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span>
-                <Button
-                  disabled
-                  className="gap-2 bg-[#1f4733] text-[#efe6d3] opacity-50 cursor-not-allowed"
-                >
-                  <Gavel className="h-4 w-4" />
-                  Avvia asta
-                </Button>
-              </span>
-            </TooltipTrigger>
-            <TooltipContent>In arrivo (Step 7.C)</TooltipContent>
-          </Tooltip>
+          {isReadyForAuction ? (
+            <Button
+              className="gap-2 bg-[#1f4733] text-[#efe6d3] hover:bg-[#1f4733]/90"
+              onClick={handleAvviaAsta}
+              disabled={createAuction.isPending}
+            >
+              <Gavel className="h-4 w-4" />
+              {createAuction.isPending ? "Avvio in corso..." : "Avvia asta"}
+            </Button>
+          ) : (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span>
+                  <Button
+                    disabled
+                    className="gap-2 bg-[#1f4733] text-[#efe6d3] opacity-40 cursor-not-allowed"
+                  >
+                    <Gavel className="h-4 w-4" />
+                    Avvia asta
+                  </Button>
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>Servono almeno 4 squadre</TooltipContent>
+            </Tooltip>
+          )}
+          {astaError && (
+            <p className="text-destructive text-sm mt-1">{astaError}</p>
+          )}
         </div>
       </div>
 

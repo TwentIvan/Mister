@@ -30,6 +30,8 @@ tags:
     description: Formazioni giornata
   - name: matches
     description: Partite con punteggi fanta
+  - name: auctions
+    description: Aste live
 
 paths:
   /healthz:
@@ -977,6 +979,167 @@ paths:
                   $ref: "#/components/schemas/MatchInfo"
         "400":
           description: Parametri non validi
+
+  # ─── AUCTIONS ─────────────────────────────────────────────
+  /auctions:
+    post:
+      operationId: createAuction
+      tags: [auctions]
+      summary: Avvia una nuova asta live per una lega
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateAuctionBody"
+      responses:
+        "201":
+          description: Asta avviata
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreateAuctionResponse"
+        "400":
+          description: Lega non trovata o meno di 4 squadre
+        "409":
+          description: Asta già attiva per questa lega
+
+  /auctions/{id}:
+    get:
+      operationId: getAuction
+      tags: [auctions]
+      summary: Stato corrente dell'asta (player corrente, offerta, storico, squadre)
+      parameters:
+        - $ref: "#/components/parameters/StringId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuctionState"
+        "404":
+          description: Asta non trovata
+
+  /auctions/{id}/bid:
+    post:
+      operationId: createAuctionBid
+      tags: [auctions]
+      summary: Piazza un'offerta sul player corrente
+      parameters:
+        - $ref: "#/components/parameters/StringId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateAuctionBidBody"
+      responses:
+        "201":
+          description: Offerta registrata
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreateAuctionBidResponse"
+        "400":
+          description: Validazione fallita
+        "403":
+          description: Asta non in corso
+        "409":
+          description: Offerta inferiore alla corrente
+
+  /auctions/{id}/assign:
+    post:
+      operationId: assignAuction
+      tags: [auctions]
+      summary: Aggiudica il player corrente alla squadra con offerta più alta
+      parameters:
+        - $ref: "#/components/parameters/StringId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuctionPlayerActionBody"
+      responses:
+        "200":
+          description: Aggiudicazione completata
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuctionActionResponse"
+        "403":
+          description: Asta non in corso
+        "409":
+          description: Nessuna offerta valida
+
+  /auctions/{id}/skip:
+    post:
+      operationId: skipAuction
+      tags: [auctions]
+      summary: Salta il player corrente (status=skipped)
+      parameters:
+        - $ref: "#/components/parameters/StringId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuctionPlayerActionBody"
+      responses:
+        "200":
+          description: Player saltato
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuctionActionResponse"
+        "403":
+          description: Asta non in corso
+
+  /auctions/{id}/pause:
+    post:
+      operationId: pauseAuction
+      tags: [auctions]
+      summary: Sospende l'asta
+      parameters:
+        - $ref: "#/components/parameters/StringId"
+      responses:
+        "200":
+          description: Asta sospesa
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Auction"
+
+  /auctions/{id}/resume:
+    post:
+      operationId: resumeAuction
+      tags: [auctions]
+      summary: Riprende l'asta sospesa
+      parameters:
+        - $ref: "#/components/parameters/StringId"
+      responses:
+        "200":
+          description: Asta ripresa
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Auction"
+
+  /auctions/{id}/end:
+    post:
+      operationId: endAuction
+      tags: [auctions]
+      summary: Termina anticipatamente l'asta
+      parameters:
+        - $ref: "#/components/parameters/StringId"
+      responses:
+        "200":
+          description: Asta terminata
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Auction"
 
 components:
   parameters:
@@ -2106,3 +2269,159 @@ components:
         opponentIsHome:
           type: boolean
           nullable: true
+
+    # ─── AUCTIONS ─────────────────────────────────────────────
+    Auction:
+      type: object
+      required: [id, league_id, status, created_at]
+      properties:
+        id:
+          type: string
+        league_id:
+          type: string
+        status:
+          type: string
+          enum: [setup, running, paused, completed, cancelled]
+        started_at:
+          type: ["string", "null"]
+          format: date-time
+        completed_at:
+          type: ["string", "null"]
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+
+    AuctionPlayerEntry:
+      type: object
+      required: [player_id, position, status, name, full_name, role_classic, real_team]
+      properties:
+        player_id:
+          type: integer
+        position:
+          type: integer
+        status:
+          type: string
+          enum: [pending, sold, skipped]
+        name:
+          type: string
+        full_name:
+          type: string
+        role_classic:
+          type: string
+          enum: [GK, DEF, MID, ATT]
+        real_team:
+          type: string
+        photo_url:
+          type: ["string", "null"]
+
+    AuctionBidItem:
+      type: object
+      required: [id, auction_id, player_id, fanta_team_id, amount_fm, valid, created_at]
+      properties:
+        id:
+          type: string
+        auction_id:
+          type: string
+        player_id:
+          type: integer
+        fanta_team_id:
+          type: string
+        amount_fm:
+          type: integer
+        valid:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+
+    AuctionProgress:
+      type: object
+      required: [current, total, sold]
+      properties:
+        current:
+          type: integer
+        total:
+          type: integer
+        sold:
+          type: integer
+
+    AuctionState:
+      type: object
+      required: [auction, bids_history, squadre, progress]
+      properties:
+        auction:
+          $ref: "#/components/schemas/Auction"
+        current_player:
+          oneOf:
+            - $ref: "#/components/schemas/AuctionPlayerEntry"
+            - type: "null"
+        current_bid:
+          oneOf:
+            - $ref: "#/components/schemas/AuctionBidItem"
+            - type: "null"
+        bids_history:
+          type: array
+          items:
+            $ref: "#/components/schemas/AuctionBidItem"
+        squadre:
+          type: array
+          items:
+            $ref: "#/components/schemas/FantaTeam"
+        progress:
+          $ref: "#/components/schemas/AuctionProgress"
+
+    CreateAuctionBody:
+      type: object
+      required: [league_id]
+      properties:
+        league_id:
+          type: string
+
+    CreateAuctionResponse:
+      type: object
+      required: [auction, total_players]
+      properties:
+        auction:
+          $ref: "#/components/schemas/Auction"
+        current_player_id:
+          type: ["integer", "null"]
+        total_players:
+          type: integer
+
+    CreateAuctionBidBody:
+      type: object
+      required: [player_id, fanta_team_id, amount_fm]
+      properties:
+        player_id:
+          type: integer
+        fanta_team_id:
+          type: string
+        amount_fm:
+          type: integer
+          minimum: 1
+
+    CreateAuctionBidResponse:
+      type: object
+      required: [bid, new_current_bid]
+      properties:
+        bid:
+          $ref: "#/components/schemas/AuctionBidItem"
+        new_current_bid:
+          $ref: "#/components/schemas/AuctionBidItem"
+
+    AuctionPlayerActionBody:
+      type: object
+      required: [player_id]
+      properties:
+        player_id:
+          type: integer
+
+    AuctionActionResponse:
+      type: object
+      required: [auction_completed]
+      properties:
+        next_player_id:
+          type: ["integer", "null"]
+        auction_completed:
+          type: boolean
