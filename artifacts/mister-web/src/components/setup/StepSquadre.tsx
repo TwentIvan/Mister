@@ -138,7 +138,7 @@ export default function StepSquadre({ squadre, onChange, onNext, onBack }: StepS
                         data-testid={`input-team-auction-${i}`}
                       />
                       <p className="text-[10px] text-muted-foreground">
-                        Pronunciato al microfono dall'AI battitore
+                        Pronunciato al microfono durante l'asta. Usalo per disambiguare se hai omonimi tra i manager.
                       </p>
                     </div>
                   </div>

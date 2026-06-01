@@ -24,12 +24,12 @@ interface StepLegaProps {
 }
 
 const MODE_DESCRIPTIONS: Record<string, string> = {
-  manageriale:
-    "Contratti fino a 5 stagioni, clausole rescissorie, scouting, mercato sempre attivo, carryover 100%. Il prodotto pieno.",
   classico:
-    "Fantacalcio tradizionale, una stagione per volta, niente contratti. Per chi ha sempre giocato così.",
+    "Esperienza fantacalcio tradizionale: rosa di una sola stagione, formazione settimanale, voti del giornalista.",
+  manageriale:
+    "Contratti pluriennali e mercato attivo. Le squadre diventano patrimonio da gestire tra stagioni.",
   manageriale_pro:
-    "Tutto il Manageriale con regole avanzate aggiuntive. In sviluppo.",
+    "Tutto il manageriale + clausole rescissorie, sviluppo giovanile, lega permanente.",
 };
 
 function NumberInput({
