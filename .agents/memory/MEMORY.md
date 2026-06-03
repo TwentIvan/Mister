@@ -1,1 +1,2 @@
 - [Drizzle CHECK constraint drift](drizzle-check-constraint-drift.md) — drizzle-kit push non rileva modifiche a CHECK constraint esistenti; aggiornare con ALTER TABLE diretto.
+- [Voice chiamo — svincolati non filtrata](voice-chiamo-svincolati.md) — la lista voce deve venire da una query separata non filtrata; usare queueData filtrata azzera svincolati e blocca "chiamo" silenziosamente.

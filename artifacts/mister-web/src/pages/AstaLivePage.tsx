@@ -244,9 +244,19 @@ export default function AstaLivePage() {
     queueSearchParams,
     { query: { enabled: callMode === "chiamata" && !!auctionId, staleTime: 10_000, queryKey: getGetAuctionQueueQueryKey(auctionId!, queueSearchParams) } },
   );
+
+  // Lista NON filtrata per il riconoscimento vocale: indipendente dalla ricerca UI.
+  // Se usassimo queueData (filtrata), un callSearch attivo (es. "berardi") azzererebbe
+  // svincolati → parseIntent salterebbe silenziosamente il branch "chiamo".
+  const { data: queueVoiceData } = useGetAuctionQueue(
+    auctionId!,
+    undefined,
+    { query: { enabled: callMode === "chiamata" && !!auctionId, staleTime: 30_000, queryKey: getGetAuctionQueueQueryKey(auctionId!, undefined) } },
+  );
+
   const assignedPlayerIds = new Set((data?.assignments ?? []).map((a) => a.player_id));
   const allFetchedPlayers = (queueData?.players ?? []);
-  const svincolatiForVoice = allFetchedPlayers.map((p) => ({ id: p.id, name: p.name, real_team: p.real_team }));
+  const svincolatiForVoice = (queueVoiceData?.players ?? []).map((p) => ({ id: p.id, name: p.name, real_team: p.real_team }));
 
   const voice = useVoiceBidder({
     squadre: squadreForVoice,
