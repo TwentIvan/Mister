@@ -1,0 +1,65 @@
+Diagnostica prima, poi fix:
+
+
+3 actions
+I league_id sono corretti. Il problema è nella query del check. Leggo la sezione rilevante di auctions.ts:
+
+
+4 actions
+Il backend trova 8 squadre correttamente via league_id. L'errore deve venire da altrove. Leggo il handleAvviaAsta e il isReadyForAuction nel frontend, e controllo anche lo stato started delle leghe legacy:
+
+
+4 actions
+Leggo il handleAvviaAsta completo e controllo l'endpoint stats in parallelo:
+
+
+3 actions
+Tutto è chiaro. Il stats.team_count è corretto (8). Il vero problema: la catch in handleAvviaAsta mostra sempre il messaggio hardcoded invece dell'errore reale dal server. E siccome ho creato un'asta di test (auc-qzGbhBuD, status running) durante la verifica T129, qualsiasi nuovo click restituisce un 409 "Esiste già un'asta attiva" — ma il frontend lo maschera con il messaggio sulle 4 squadre.
+
+Fix in due parti:
+
+Backend — la risposta 409 include l'existing_auction_id così il frontend può fare redirect
+Frontend — handleAvviaAsta legge l'errore reale e su 409 redirige all'asta già attiva
+
+2 actions
+Fix backend e frontend in parallelo:
+
+
+3 actions
+Riavvio l'API server per il fix backend, e verifico il typecheck frontend in parallelo:
+
+
+5 actions
+Typecheck pulito, 409 restituisce existing_auction_id. Faccio lo screenshot del sanity check finale:
+
+
+2 actions
+Il bottone è attivo. Verifico il sanity post-fix — la pagina asta con le 8 squadre a 500 FM:
+
+
+2 actions
+T130 completato. Ecco il report diagnostico completo:
+
+Output delle 3 query diagnostiche
+
+Query	Risultato
+ft-mvp-* hanno league_id?	Sì, tutti e 8 hanno league_id = 'league-juve' ✓
+COUNT via league_id per lega	league-juve → 8, league-milan → 0, league-roma → 0 ✓
+Tabelle join tipo participant/member	Nessuna — solo leagues diretta
+Relazione rotta
+
+Nessuna delle due opzioni A/B del task. La vera causa era diversa: durante i test di T129 avevo creato un'asta (auc-qzGbhBuD, status running) per league-juve. Al click successivo su "Avvia asta" il backend restituiva correttamente un 409 "Esiste già un'asta attiva" — ma il frontend aveva una catch con messaggio hardcoded che mostrava sempre "Impossibile avviare l'asta. Verifica che ci siano almeno 4 squadre." indipendentemente dall'errore reale.
+
+Fix applicato
+
+Backend — auctions.ts: la risposta 409 include ora existing_auction_id:
+
+{ "error": "Esiste già un'asta attiva...", "existing_auction_id": "auc-qzGbhBuD" }
+
+Frontend — handleAvviaAsta: la catch legge l'errore reale dall'API. Su 409 con existing_auction_id, fa redirect diretto all'asta già attiva invece di mostrare un errore.
+
+Sanity post-fix ✓
+
+"Lega Test MVP" → bottone "Avvia asta" attivo → redirect a /asta/auc-qzGbhBuD
+Sidebar mostra 8 squadre (Mario's Squad, I Magnifici, Real Trastevere…) tutte a 500 FM
+league-milan e league-roma: bottone disabilitato correttamente (0 squadre e started=true rispettivamente)
