@@ -1,0 +1,52 @@
+TASK CORREZIONI — due strumenti per rimediare agli errori in asta dal vivo. Niente polish grafico (design = task finale). Tutto transazionale e coerente con timer/guard/vincoli gia esistenti.
+FAI PRIMA la Parte 1 (annullo), mostrami l'esito (U1-U5), POI la Parte 2 (editor manuale).
+
+==== PARTE 1 — ANNULLA ULTIMA OPERAZIONE (un solo passo) ====
+Un pulsante "Annulla ultima" nei controlli dell'hero. Annulla la SINGOLA azione piu recente dell'asta, dove l'azione e una tra: offerta, salto, aggiudicazione. Determina l'ultima azione come la piu recente per timestamp tra ultima offerta / ultimo salto / ultima aggiudicazione (o tieni un record "ultima azione" sull'asta).
+
+Reversal per tipo:
+- OFFERTA: invalida/elimina l'ultima offerta; ricalcola l'offerta corrente sul giocatore corrente dalle offerte valide rimaste (torna alla precedente, o "nessuna offerta"). Giocatore corrente invariato.
+- SALTO: riporta il giocatore saltato a 'pending' e impostalo come corrente (idle).
+- AGGIUDICAZIONE: in transazione — elimina assignment + contract, RIMBORSA i crediti alla squadra, LIBERA lo slot, riporta il giocatore come corrente 'pending' (riaperto, offerte azzerate, idle).
+
+Regole:
+- UN SOLO PASSO: dopo un annullo, un secondo annullo consecutivo non agisce (disabilitalo o no-op). Per correzioni piu profonde c'e l'editor manuale (Parte 2).
+- L'annullo passa per una TRANSIZIONE GUARDATA come skip/aggiudica (setta isTransitioning, await della mutation, await refetch): un'offerta lanciata durante l'annullo dev'essere bloccata dal guard.
+- Riusa il modello timer esistente: quando l'annullo riapre un giocatore come corrente, lo stato e idle (deadline null), come per un nuovo giocatore.
+
+Backend: POST /auctions/:id/undo, transazionale, autoritativo.
+
+CRITERI Parte 1:
+U1. Annulla dopo un'OFFERTA: l'ultima offerta sparisce, l'offerta corrente torna alla precedente (o "nessuna"); giocatore invariato.
+U2. Annulla dopo un SALTO: il giocatore saltato torna corrente (idle).
+U3. Annulla dopo un'AGGIUDICAZIONE: assignment/contract annullati, crediti ripristinati, slot liberato, giocatore riaperto come corrente. Verifica budget e slot aggiornati nel tabellone.
+U4. Solo un passo: secondo annullo consecutivo non agisce.
+U5. Un'offerta lanciata durante l'annullo e bloccata dal guard.
+
+----- CHECKPOINT: mostrami U1-U5, aspetta OK, poi Parte 2 -----
+
+==== PARTE 2 — CORREZIONE MANUALE ROSE + BUDGET (sempre disponibile) ====
+Pannello "Correggi" accessibile durante l'asta. Per ogni squadra:
+- la rosa per ruolo, con RIMUOVI su ogni giocatore;
+- AGGIUNGI giocatore: ricerca giocatore + campo prezzo;
+- OVERRIDE budget: campo per impostare credits_remaining direttamente.
+
+Semantica (transazionale, coerente):
+- AGGIUNGI: crea assignment/contract, addebita il prezzo, riempie lo slot.
+- RIMUOVI: elimina assignment/contract, RIMBORSA il prezzo, libera lo slot.
+- OVERRIDE budget: imposta credits_remaining al valore inserito.
+- Le modifiche manuali sono OVERRIDE del banditore: NON sottostanno ai blocchi 7.E (role cap / riserva budget), ma mantengono coerenti crediti/slot/rosa.
+
+Backend: endpoint manuali transazionali (aggiungi assignment, rimuovi assignment, set budget squadra).
+
+CRITERI Parte 2:
+M1. Pannello accessibile durante l'asta; per squadra mostra rosa per ruolo + rimuovi + aggiungi (ricerca+prezzo) + override budget.
+M2. Aggiungi addebita e riempie lo slot; Rimuovi rimborsa e libera lo slot.
+M3. Override budget imposta credits_remaining.
+M4. Le modifiche manuali bypassano i blocchi 7.E ma tengono i dati coerenti.
+M5. Il tabellone riflette in diretta rose e budget modificati.
+
+REGRESSIONE (entrambe le parti): i 7 criteri timer/guard, la voce e i vincoli 7.E restano invariati.
+
+VINCOLI: niente polish grafico ora; tutto transazionale; typecheck pulito; niente debug residuo.
+DELIVERABLE: diff; prova di U1/U2/U3 (con budget e slot prima/dopo) e di M2/M3; conferma U5 (guard durante annullo).

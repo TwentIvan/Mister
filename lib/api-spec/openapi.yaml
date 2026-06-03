@@ -1141,6 +1141,100 @@ paths:
               schema:
                 $ref: "#/components/schemas/Auction"
 
+  /auctions/{id}/undo:
+    post:
+      operationId: undoAuction
+      tags: [auctions]
+      summary: Annulla l'ultima azione (offerta, salto, aggiudicazione)
+      parameters:
+        - $ref: "#/components/parameters/StringId"
+      responses:
+        "200":
+          description: Annullo eseguito
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UndoAuctionResponse"
+        "204":
+          description: Nulla da annullare
+        "403":
+          description: Asta non in corso o sospesa
+
+  /auctions/{id}/manual/add:
+    post:
+      operationId: manualAddPlayer
+      tags: [auctions]
+      summary: Aggiunge manualmente un giocatore alla rosa di una squadra (override banditore)
+      parameters:
+        - $ref: "#/components/parameters/StringId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ManualAddBody"
+      responses:
+        "200":
+          description: Giocatore aggiunto
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ManualChangeResponse"
+        "400":
+          description: Parametri non validi
+        "403":
+          description: Asta non in corso o sospesa
+
+  /auctions/{id}/manual/remove:
+    post:
+      operationId: manualRemovePlayer
+      tags: [auctions]
+      summary: Rimuove manualmente un giocatore dalla rosa di una squadra (override banditore)
+      parameters:
+        - $ref: "#/components/parameters/StringId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ManualRemoveBody"
+      responses:
+        "200":
+          description: Giocatore rimosso
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ManualChangeResponse"
+        "400":
+          description: Giocatore non trovato in rosa
+        "403":
+          description: Asta non in corso o sospesa
+
+  /auctions/{id}/manual/set-budget:
+    post:
+      operationId: manualSetBudget
+      tags: [auctions]
+      summary: Imposta direttamente il budget di una squadra (override banditore)
+      parameters:
+        - $ref: "#/components/parameters/StringId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ManualSetBudgetBody"
+      responses:
+        "200":
+          description: Budget aggiornato
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ManualChangeResponse"
+        "400":
+          description: Squadra non trovata
+        "403":
+          description: Asta non in corso o sospesa
+
 components:
   parameters:
     StringId:
@@ -2496,3 +2590,53 @@ components:
           type: ["integer", "null"]
         auction_completed:
           type: boolean
+
+    UndoAuctionResponse:
+      type: object
+      required: [undone]
+      properties:
+        undone:
+          type: string
+          enum: [bid, skip, assign]
+        message:
+          type: string
+
+    ManualAddBody:
+      type: object
+      required: [fanta_team_id, player_id, price_fm]
+      properties:
+        fanta_team_id:
+          type: string
+        player_id:
+          type: integer
+        price_fm:
+          type: integer
+          minimum: 1
+
+    ManualRemoveBody:
+      type: object
+      required: [fanta_team_id, player_id]
+      properties:
+        fanta_team_id:
+          type: string
+        player_id:
+          type: integer
+
+    ManualSetBudgetBody:
+      type: object
+      required: [fanta_team_id, credits_remaining]
+      properties:
+        fanta_team_id:
+          type: string
+        credits_remaining:
+          type: integer
+          minimum: 0
+
+    ManualChangeResponse:
+      type: object
+      required: [ok]
+      properties:
+        ok:
+          type: boolean
+        message:
+          type: string

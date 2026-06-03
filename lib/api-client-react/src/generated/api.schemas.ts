@@ -1120,6 +1120,43 @@ export interface AuctionActionResponse {
   auction_completed: boolean;
 }
 
+export type UndoAuctionResponseUndone = typeof UndoAuctionResponseUndone[keyof typeof UndoAuctionResponseUndone];
+
+
+export const UndoAuctionResponseUndone = {
+  bid: 'bid',
+  skip: 'skip',
+  assign: 'assign',
+} as const;
+
+export interface UndoAuctionResponse {
+  undone: UndoAuctionResponseUndone;
+  message?: string;
+}
+
+export interface ManualAddBody {
+  fanta_team_id: string;
+  player_id: number;
+  /** @minimum 1 */
+  price_fm: number;
+}
+
+export interface ManualRemoveBody {
+  fanta_team_id: string;
+  player_id: number;
+}
+
+export interface ManualSetBudgetBody {
+  fanta_team_id: string;
+  /** @minimum 0 */
+  credits_remaining: number;
+}
+
+export interface ManualChangeResponse {
+  ok: boolean;
+  message?: string;
+}
+
 export type ListTemplatesParams = {
 active_only?: boolean;
 };

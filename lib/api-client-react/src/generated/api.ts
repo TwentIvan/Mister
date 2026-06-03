@@ -59,6 +59,10 @@ import type {
   ListPlayersParams,
   ListTemplatesParams,
   ListVotoAlgorithmConfigsParams,
+  ManualAddBody,
+  ManualChangeResponse,
+  ManualRemoveBody,
+  ManualSetBudgetBody,
   MarketEvent,
   MarketEventInput,
   MarketEventUpdate,
@@ -71,6 +75,7 @@ import type {
   TemplateInput,
   TemplateProfile,
   TemplateUpdate,
+  UndoAuctionResponse,
   ValidationErrors,
   VotoAlgorithmConfig,
   VotoAlgorithmConfigCreate,
@@ -4193,5 +4198,291 @@ export const useEndAuction = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getEndAuctionMutationOptions(options));
+    }
+
+export const getUndoAuctionUrl = (id: string,) => {
+
+
+
+
+  return `/api/auctions/${id}/undo`
+}
+
+/**
+ * @summary Annulla l'ultima azione (offerta, salto, aggiudicazione)
+ */
+export const undoAuction = async (id: string, options?: RequestInit): Promise<UndoAuctionResponse | void> => {
+
+  return customFetch<UndoAuctionResponse | void>(getUndoAuctionUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getUndoAuctionMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof undoAuction>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof undoAuction>>, TError,{id: string}, TContext> => {
+
+const mutationKey = ['undoAuction'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof undoAuction>>, {id: string}> = (props) => {
+          const {id} = props ?? {};
+
+          return  undoAuction(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UndoAuctionMutationResult = NonNullable<Awaited<ReturnType<typeof undoAuction>>>
+
+    export type UndoAuctionMutationError = ErrorType<void>
+
+    /**
+ * @summary Annulla l'ultima azione (offerta, salto, aggiudicazione)
+ */
+export const useUndoAuction = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof undoAuction>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof undoAuction>>,
+        TError,
+        {id: string},
+        TContext
+      > => {
+      return useMutation(getUndoAuctionMutationOptions(options));
+    }
+
+export const getManualAddPlayerUrl = (id: string,) => {
+
+
+
+
+  return `/api/auctions/${id}/manual/add`
+}
+
+/**
+ * @summary Aggiunge manualmente un giocatore alla rosa di una squadra (override banditore)
+ */
+export const manualAddPlayer = async (id: string,
+    manualAddBody: ManualAddBody, options?: RequestInit): Promise<ManualChangeResponse> => {
+
+  return customFetch<ManualChangeResponse>(getManualAddPlayerUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      manualAddBody,)
+  }
+);}
+
+
+
+
+export const getManualAddPlayerMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof manualAddPlayer>>, TError,{id: string;data: BodyType<ManualAddBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof manualAddPlayer>>, TError,{id: string;data: BodyType<ManualAddBody>}, TContext> => {
+
+const mutationKey = ['manualAddPlayer'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof manualAddPlayer>>, {id: string;data: BodyType<ManualAddBody>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  manualAddPlayer(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ManualAddPlayerMutationResult = NonNullable<Awaited<ReturnType<typeof manualAddPlayer>>>
+    export type ManualAddPlayerMutationBody = BodyType<ManualAddBody>
+    export type ManualAddPlayerMutationError = ErrorType<void>
+
+    /**
+ * @summary Aggiunge manualmente un giocatore alla rosa di una squadra (override banditore)
+ */
+export const useManualAddPlayer = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof manualAddPlayer>>, TError,{id: string;data: BodyType<ManualAddBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof manualAddPlayer>>,
+        TError,
+        {id: string;data: BodyType<ManualAddBody>},
+        TContext
+      > => {
+      return useMutation(getManualAddPlayerMutationOptions(options));
+    }
+
+export const getManualRemovePlayerUrl = (id: string,) => {
+
+
+
+
+  return `/api/auctions/${id}/manual/remove`
+}
+
+/**
+ * @summary Rimuove manualmente un giocatore dalla rosa di una squadra (override banditore)
+ */
+export const manualRemovePlayer = async (id: string,
+    manualRemoveBody: ManualRemoveBody, options?: RequestInit): Promise<ManualChangeResponse> => {
+
+  return customFetch<ManualChangeResponse>(getManualRemovePlayerUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      manualRemoveBody,)
+  }
+);}
+
+
+
+
+export const getManualRemovePlayerMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof manualRemovePlayer>>, TError,{id: string;data: BodyType<ManualRemoveBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof manualRemovePlayer>>, TError,{id: string;data: BodyType<ManualRemoveBody>}, TContext> => {
+
+const mutationKey = ['manualRemovePlayer'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof manualRemovePlayer>>, {id: string;data: BodyType<ManualRemoveBody>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  manualRemovePlayer(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ManualRemovePlayerMutationResult = NonNullable<Awaited<ReturnType<typeof manualRemovePlayer>>>
+    export type ManualRemovePlayerMutationBody = BodyType<ManualRemoveBody>
+    export type ManualRemovePlayerMutationError = ErrorType<void>
+
+    /**
+ * @summary Rimuove manualmente un giocatore dalla rosa di una squadra (override banditore)
+ */
+export const useManualRemovePlayer = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof manualRemovePlayer>>, TError,{id: string;data: BodyType<ManualRemoveBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof manualRemovePlayer>>,
+        TError,
+        {id: string;data: BodyType<ManualRemoveBody>},
+        TContext
+      > => {
+      return useMutation(getManualRemovePlayerMutationOptions(options));
+    }
+
+export const getManualSetBudgetUrl = (id: string,) => {
+
+
+
+
+  return `/api/auctions/${id}/manual/set-budget`
+}
+
+/**
+ * @summary Imposta direttamente il budget di una squadra (override banditore)
+ */
+export const manualSetBudget = async (id: string,
+    manualSetBudgetBody: ManualSetBudgetBody, options?: RequestInit): Promise<ManualChangeResponse> => {
+
+  return customFetch<ManualChangeResponse>(getManualSetBudgetUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      manualSetBudgetBody,)
+  }
+);}
+
+
+
+
+export const getManualSetBudgetMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof manualSetBudget>>, TError,{id: string;data: BodyType<ManualSetBudgetBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof manualSetBudget>>, TError,{id: string;data: BodyType<ManualSetBudgetBody>}, TContext> => {
+
+const mutationKey = ['manualSetBudget'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof manualSetBudget>>, {id: string;data: BodyType<ManualSetBudgetBody>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  manualSetBudget(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ManualSetBudgetMutationResult = NonNullable<Awaited<ReturnType<typeof manualSetBudget>>>
+    export type ManualSetBudgetMutationBody = BodyType<ManualSetBudgetBody>
+    export type ManualSetBudgetMutationError = ErrorType<void>
+
+    /**
+ * @summary Imposta direttamente il budget di una squadra (override banditore)
+ */
+export const useManualSetBudget = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof manualSetBudget>>, TError,{id: string;data: BodyType<ManualSetBudgetBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof manualSetBudget>>,
+        TError,
+        {id: string;data: BodyType<ManualSetBudgetBody>},
+        TContext
+      > => {
+      return useMutation(getManualSetBudgetMutationOptions(options));
     }
 

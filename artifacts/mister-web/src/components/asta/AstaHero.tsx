@@ -41,6 +41,8 @@ interface AstaHeroProps {
   onAggiudica: () => void;
   onPauseResume: () => void;
   onSalta: () => void;
+  canUndo: boolean;
+  onUndo: () => void;
 }
 
 export function AstaHero({
@@ -60,6 +62,8 @@ export function AstaHero({
   onAggiudica,
   onPauseResume,
   onSalta,
+  canUndo,
+  onUndo,
 }: AstaHeroProps) {
   const role = currentPlayer ? (ROLE_COLORS[currentPlayer.role_classic] ?? ROLE_COLORS.ATT) : null;
 
@@ -214,14 +218,25 @@ export function AstaHero({
           </Button>
         </div>
 
-        <Button
-          variant="ghost"
-          className="w-full text-muted-foreground text-sm h-9"
-          onClick={onSalta}
-          disabled={bidsDisabled || !currentPlayer}
-        >
-          Salta
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="ghost"
+            className="flex-1 text-muted-foreground text-sm h-9"
+            onClick={onSalta}
+            disabled={bidsDisabled || !currentPlayer}
+          >
+            Salta
+          </Button>
+          <Button
+            variant="ghost"
+            className="flex-1 text-muted-foreground text-sm h-9"
+            onClick={onUndo}
+            disabled={bidsDisabled || !canUndo}
+            title="Annulla ultima azione (offerta, salto o aggiudicazione)"
+          >
+            Annulla
+          </Button>
+        </div>
       </div>
     </div>
   );

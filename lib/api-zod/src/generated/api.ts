@@ -1755,3 +1755,78 @@ export const EndAuctionResponse = zod.object({
 })
 
 
+/**
+ * @summary Annulla l'ultima azione (offerta, salto, aggiudicazione)
+ */
+export const UndoAuctionParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const UndoAuctionResponse = zod.object({
+  "undone": zod.enum(['bid', 'skip', 'assign']),
+  "message": zod.string().optional()
+})
+
+
+/**
+ * @summary Aggiunge manualmente un giocatore alla rosa di una squadra (override banditore)
+ */
+export const ManualAddPlayerParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+
+
+
+export const ManualAddPlayerBody = zod.object({
+  "fanta_team_id": zod.string(),
+  "player_id": zod.number(),
+  "price_fm": zod.number().min(1)
+})
+
+export const ManualAddPlayerResponse = zod.object({
+  "ok": zod.boolean(),
+  "message": zod.string().optional()
+})
+
+
+/**
+ * @summary Rimuove manualmente un giocatore dalla rosa di una squadra (override banditore)
+ */
+export const ManualRemovePlayerParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const ManualRemovePlayerBody = zod.object({
+  "fanta_team_id": zod.string(),
+  "player_id": zod.number()
+})
+
+export const ManualRemovePlayerResponse = zod.object({
+  "ok": zod.boolean(),
+  "message": zod.string().optional()
+})
+
+
+/**
+ * @summary Imposta direttamente il budget di una squadra (override banditore)
+ */
+export const ManualSetBudgetParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const manualSetBudgetBodyCreditsRemainingMin = 0;
+
+
+
+export const ManualSetBudgetBody = zod.object({
+  "fanta_team_id": zod.string(),
+  "credits_remaining": zod.number().min(manualSetBudgetBodyCreditsRemainingMin)
+})
+
+export const ManualSetBudgetResponse = zod.object({
+  "ok": zod.boolean(),
+  "message": zod.string().optional()
+})
+
+

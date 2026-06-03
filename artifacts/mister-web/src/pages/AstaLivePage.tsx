@@ -10,6 +10,7 @@ import {
   usePauseAuction,
   useResumeAuction,
   useEndAuction,
+  useUndoAuction,
 } from "@workspace/api-client-react";
 import { AstaHero } from "@/components/asta/AstaHero";
 import { TabelloneSquadre } from "@/components/asta/TabelloneSquadre";
@@ -48,6 +49,10 @@ export default function AstaLivePage() {
   const pauseMutation  = usePauseAuction();
   const resumeMutation = useResumeAuction();
   const endMutation    = useEndAuction();
+  const undoMutation   = useUndoAuction();
+
+  // ── "Un solo passo": true dopo bid/skip/assign, false dopo undo ───────────
+  const [canUndo, setCanUndo] = useState(false);
 
   const auctionStatus = data?.auction.status;
   const isPaused      = auctionStatus === "paused";
@@ -86,6 +91,7 @@ export default function AstaLivePage() {
         data: { player_id: targetPlayerId, fanta_team_id: fantaTeamId, amount_fm: amountAbsoluto },
       });
       setDeadlineTs(Date.now() + timerSeconds * 1000);
+      setCanUndo(true);
       refetch();
     } catch (err: unknown) {
       const body = (err as { data?: { error?: string } })?.data;
@@ -111,6 +117,7 @@ export default function AstaLivePage() {
         data: { player_id: data.current_player.player_id },
       });
       setAggiudicatoVisible(true);
+      setCanUndo(true);
       await refetch();
       setTimeout(() => setAggiudicatoVisible(false), 1500);
     } finally {
@@ -130,6 +137,23 @@ export default function AstaLivePage() {
         id: auctionId,
         data: { player_id: data.current_player.player_id },
       });
+      setCanUndo(true);
+      await refetch();
+    } finally {
+      isTransitioningRef.current = false;
+      setIsTransitioning(false);
+    }
+  };
+
+  // ── handleUndo ────────────────────────────────────────────────────────────
+  const handleUndo = async () => {
+    if (!auctionId || !canUndo || isTransitioningRef.current) return;
+    isTransitioningRef.current = true;
+    setIsTransitioning(true);
+    setDeadlineTs(null);
+    try {
+      await undoMutation.mutateAsync({ id: auctionId });
+      setCanUndo(false);
       await refetch();
     } finally {
       isTransitioningRef.current = false;
@@ -167,7 +191,8 @@ export default function AstaLivePage() {
     skipMutation.isPending ||
     pauseMutation.isPending ||
     resumeMutation.isPending ||
-    endMutation.isPending;
+    endMutation.isPending ||
+    undoMutation.isPending;
 
   const timerActive  = deadlineTs !== null && !isPaused;
   const canAssign    = !!(data?.current_bid) && !isMutating && !isTransitioning && !isPaused;
@@ -295,6 +320,8 @@ export default function AstaLivePage() {
           onAggiudica={handleAggiudica}
           onPauseResume={handlePauseResume}
           onSalta={handleSalta}
+          canUndo={canUndo}
+          onUndo={handleUndo}
         />
       )}
 

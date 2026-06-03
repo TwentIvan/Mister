@@ -27,6 +27,13 @@ import {
   PauseAuctionParams,
   ResumeAuctionParams,
   EndAuctionParams,
+  UndoAuctionParams,
+  ManualAddPlayerParams,
+  ManualAddPlayerBody,
+  ManualRemovePlayerParams,
+  ManualRemovePlayerBody,
+  ManualSetBudgetParams,
+  ManualSetBudgetBody,
 } from "@workspace/api-zod";
 import { mapFantaTeam } from "../lib/mappers";
 
@@ -595,6 +602,328 @@ router.post("/auctions/:id/resume", async (req, res): Promise<void> => {
   const [auction] = await db.update(auctions).set({ status: "running" }).where(eq(auctions.id, params.data.id)).returning();
   if (!auction) { res.status(404).json({ error: "Asta non trovata" }); return; }
   res.json(mapAuction(auction));
+});
+
+// ─── POST /auctions/:id/undo ─────────────────────────────
+
+router.post("/auctions/:id/undo", async (req, res): Promise<void> => {
+  const params = UndoAuctionParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+  const { id } = params.data;
+
+  const [auction] = await db.select().from(auctions).where(eq(auctions.id, id));
+  if (!auction || (auction.status !== "running" && auction.status !== "paused")) {
+    res.status(403).json({ error: "L'asta non è in corso" });
+    return;
+  }
+
+  try {
+    // ── Determina l'ultima azione ──────────────────────────────────────────
+    // 1. Se il giocatore corrente ha offerte valide → undo bid
+    // 2. Altrimenti confronta posizione del player skipped più recente vs
+    //    posizione del player venduto più recente → il più alto position
+    //    determina chi è venuto dopo
+
+    const currentPlayer = await getNextPendingPlayer(id);
+
+    // (a) cerca l'offerta top sul giocatore corrente
+    const currentBid = currentPlayer
+      ? await db
+          .select()
+          .from(auctionBids)
+          .where(
+            and(
+              eq(auctionBids.auctionId, id),
+              eq(auctionBids.playerId, currentPlayer.playerId),
+              eq(auctionBids.valid, true),
+            ),
+          )
+          .orderBy(desc(auctionBids.amountFm))
+          .limit(1)
+          .then((r) => r[0] ?? null)
+      : null;
+
+    if (currentBid) {
+      // ── UNDO BID ────────────────────────────────────────────────────────
+      // Elimina quest'offerta; ricalcola la top bid tra le rimanenti
+      await db
+        .delete(auctionBids)
+        .where(eq(auctionBids.id, currentBid.id));
+
+      res.json({ undone: "bid", message: "Ultima offerta annullata" });
+      return;
+    }
+
+    // (b) trova il player skipped con posizione più alta
+    const lastSkipped = await db
+      .select({
+        playerId: auctionPlayerQueue.playerId,
+        position: auctionPlayerQueue.position,
+      })
+      .from(auctionPlayerQueue)
+      .where(
+        and(
+          eq(auctionPlayerQueue.auctionId, id),
+          eq(auctionPlayerQueue.status, "skipped"),
+        ),
+      )
+      .orderBy(desc(auctionPlayerQueue.position))
+      .limit(1)
+      .then((r) => r[0] ?? null);
+
+    // (c) trova l'ultima aggiudicazione per assignedAt
+    const lastAssignment = await db
+      .select({
+        id: auctionAssignments.id,
+        playerId: auctionAssignments.playerId,
+        fantaTeamId: auctionAssignments.fantaTeamId,
+        finalPriceFm: auctionAssignments.finalPriceFm,
+        position: auctionPlayerQueue.position,
+        assignedAt: auctionAssignments.assignedAt,
+      })
+      .from(auctionAssignments)
+      .innerJoin(
+        auctionPlayerQueue,
+        and(
+          eq(auctionPlayerQueue.auctionId, id),
+          eq(auctionPlayerQueue.playerId, auctionAssignments.playerId),
+        ),
+      )
+      .where(eq(auctionAssignments.auctionId, id))
+      .orderBy(desc(auctionAssignments.assignedAt))
+      .limit(1)
+      .then((r) => r[0] ?? null);
+
+    // Nulla da annullare
+    if (!lastSkipped && !lastAssignment) {
+      res.status(204).end();
+      return;
+    }
+
+    // Chi è più recente: confronto per posizione (più alto = più recente)
+    const skipPos   = lastSkipped?.position ?? -1;
+    const assignPos = lastAssignment?.position ?? -1;
+
+    if (skipPos >= assignPos) {
+      // ── UNDO SKIP ────────────────────────────────────────────────────────
+      await db
+        .update(auctionPlayerQueue)
+        .set({ status: "pending" })
+        .where(
+          and(
+            eq(auctionPlayerQueue.auctionId, id),
+            eq(auctionPlayerQueue.playerId, lastSkipped!.playerId),
+          ),
+        );
+      res.json({ undone: "skip", message: "Salto annullato, giocatore riportato in asta" });
+      return;
+    }
+
+    // ── UNDO ASSIGN ────────────────────────────────────────────────────────
+    const asgn = lastAssignment!;
+    await db.transaction(async (tx) => {
+      // Elimina assignment
+      await tx
+        .delete(auctionAssignments)
+        .where(eq(auctionAssignments.id, asgn.id));
+
+      // Elimina il contratto creato dall'asta per questo giocatore/squadra
+      await tx
+        .delete(contracts)
+        .where(
+          and(
+            eq(contracts.leagueId, auction.leagueId),
+            eq(contracts.fantaTeamId, asgn.fantaTeamId),
+            eq(contracts.playerId, asgn.playerId),
+          ),
+        );
+
+      // Rimborsa i crediti
+      await tx
+        .update(fantaTeams)
+        .set({ creditsRemaining: sql`${fantaTeams.creditsRemaining} + ${asgn.finalPriceFm}` })
+        .where(eq(fantaTeams.id, asgn.fantaTeamId));
+
+      // Azzera tutte le offerte per questo giocatore (riaperto da zero)
+      await tx
+        .delete(auctionBids)
+        .where(
+          and(
+            eq(auctionBids.auctionId, id),
+            eq(auctionBids.playerId, asgn.playerId),
+          ),
+        );
+
+      // Riporta il giocatore a pending
+      await tx
+        .update(auctionPlayerQueue)
+        .set({ status: "pending" })
+        .where(
+          and(
+            eq(auctionPlayerQueue.auctionId, id),
+            eq(auctionPlayerQueue.playerId, asgn.playerId),
+          ),
+        );
+
+      // Se l'asta era completed, riportala a running
+      if (auction.status === "completed") {
+        await tx
+          .update(auctions)
+          .set({ status: "running", completedAt: null })
+          .where(eq(auctions.id, id));
+      }
+    });
+
+    res.json({ undone: "assign", message: "Aggiudicazione annullata, giocatore riaperto" });
+  } catch (err) {
+    req.log.error({ err }, "Errore undo asta");
+    res.status(500).json({ error: "Errore interno" });
+  }
+});
+
+// ─── POST /auctions/:id/manual/add ───────────────────────
+
+router.post("/auctions/:id/manual/add", async (req, res): Promise<void> => {
+  const params = ManualAddPlayerParams.safeParse(req.params);
+  if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
+  const body = ManualAddPlayerBody.safeParse(req.body);
+  if (!body.success) { res.status(400).json({ error: body.error.flatten() }); return; }
+  const { id } = params.data;
+  const { fanta_team_id: fantaTeamId, player_id: playerId, price_fm: priceFm } = body.data;
+
+  const [auction] = await db.select().from(auctions).where(eq(auctions.id, id));
+  if (!auction || (auction.status !== "running" && auction.status !== "paused")) {
+    res.status(403).json({ error: "L'asta non è in corso" }); return;
+  }
+  const [team] = await db
+    .select()
+    .from(fantaTeams)
+    .where(and(eq(fantaTeams.id, fantaTeamId), eq(fantaTeams.leagueId, auction.leagueId)));
+  if (!team) { res.status(400).json({ error: "Squadra non trovata" }); return; }
+
+  try {
+    await db.transaction(async (tx) => {
+      await tx.insert(auctionAssignments).values({
+        id: `asg-${nanoid(8)}`,
+        auctionId: id,
+        playerId,
+        fantaTeamId,
+        finalPriceFm: priceFm,
+      });
+      await tx.insert(contracts).values({
+        id: `ctr-${nanoid(8)}`,
+        leagueId: auction.leagueId,
+        fantaTeamId,
+        playerId,
+        seasonStart: 2025,
+        durationSeasons: 1,
+        purchasePrice: priceFm,
+        purchasePriceFm: priceFm,
+        clauseDefault: Math.max(1, Math.round(priceFm * 0.8)),
+        clauseInvestment: 0,
+        state: "active",
+      });
+      await tx
+        .update(fantaTeams)
+        .set({ creditsRemaining: sql`${fantaTeams.creditsRemaining} - ${priceFm}` })
+        .where(eq(fantaTeams.id, fantaTeamId));
+      // Segna il player come sold nella coda se presente
+      await tx
+        .update(auctionPlayerQueue)
+        .set({ status: "sold" })
+        .where(
+          and(eq(auctionPlayerQueue.auctionId, id), eq(auctionPlayerQueue.playerId, playerId)),
+        );
+    });
+    res.json({ ok: true, message: "Giocatore aggiunto manualmente" });
+  } catch (err) {
+    req.log.error({ err }, "Errore manual add");
+    res.status(500).json({ error: "Errore interno" });
+  }
+});
+
+// ─── POST /auctions/:id/manual/remove ────────────────────
+
+router.post("/auctions/:id/manual/remove", async (req, res): Promise<void> => {
+  const params = ManualRemovePlayerParams.safeParse(req.params);
+  if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
+  const body = ManualRemovePlayerBody.safeParse(req.body);
+  if (!body.success) { res.status(400).json({ error: body.error.flatten() }); return; }
+  const { id } = params.data;
+  const { fanta_team_id: fantaTeamId, player_id: playerId } = body.data;
+
+  const [auction] = await db.select().from(auctions).where(eq(auctions.id, id));
+  if (!auction || (auction.status !== "running" && auction.status !== "paused")) {
+    res.status(403).json({ error: "L'asta non è in corso" }); return;
+  }
+
+  const [asgn] = await db
+    .select()
+    .from(auctionAssignments)
+    .where(
+      and(
+        eq(auctionAssignments.auctionId, id),
+        eq(auctionAssignments.fantaTeamId, fantaTeamId),
+        eq(auctionAssignments.playerId, playerId),
+      ),
+    );
+  if (!asgn) { res.status(400).json({ error: "Giocatore non trovato in rosa" }); return; }
+
+  try {
+    await db.transaction(async (tx) => {
+      await tx.delete(auctionAssignments).where(eq(auctionAssignments.id, asgn.id));
+      await tx.delete(contracts).where(
+        and(
+          eq(contracts.leagueId, auction.leagueId),
+          eq(contracts.fantaTeamId, fantaTeamId),
+          eq(contracts.playerId, playerId),
+        ),
+      );
+      await tx
+        .update(fantaTeams)
+        .set({ creditsRemaining: sql`${fantaTeams.creditsRemaining} + ${asgn.finalPriceFm}` })
+        .where(eq(fantaTeams.id, fantaTeamId));
+      // Riporta il player a pending nella coda
+      await tx
+        .update(auctionPlayerQueue)
+        .set({ status: "pending" })
+        .where(
+          and(eq(auctionPlayerQueue.auctionId, id), eq(auctionPlayerQueue.playerId, playerId)),
+        );
+    });
+    res.json({ ok: true, message: "Giocatore rimosso, crediti rimborsati" });
+  } catch (err) {
+    req.log.error({ err }, "Errore manual remove");
+    res.status(500).json({ error: "Errore interno" });
+  }
+});
+
+// ─── POST /auctions/:id/manual/set-budget ────────────────
+
+router.post("/auctions/:id/manual/set-budget", async (req, res): Promise<void> => {
+  const params = ManualSetBudgetParams.safeParse(req.params);
+  if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
+  const body = ManualSetBudgetBody.safeParse(req.body);
+  if (!body.success) { res.status(400).json({ error: body.error.flatten() }); return; }
+  const { id } = params.data;
+  const { fanta_team_id: fantaTeamId, credits_remaining: creditsRemaining } = body.data;
+
+  const [auction] = await db.select().from(auctions).where(eq(auctions.id, id));
+  if (!auction || (auction.status !== "running" && auction.status !== "paused")) {
+    res.status(403).json({ error: "L'asta non è in corso" }); return;
+  }
+
+  const [team] = await db
+    .update(fantaTeams)
+    .set({ creditsRemaining })
+    .where(and(eq(fantaTeams.id, fantaTeamId), eq(fantaTeams.leagueId, auction.leagueId)))
+    .returning();
+  if (!team) { res.status(400).json({ error: "Squadra non trovata" }); return; }
+
+  res.json({ ok: true, message: `Budget impostato a ${creditsRemaining} FM` });
 });
 
 // ─── POST /auctions/:id/end ──────────────────────────────
