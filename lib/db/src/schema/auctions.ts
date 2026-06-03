@@ -39,6 +39,12 @@ export const auctions = pgTable("auctions", {
   /** Durata del rilancio in secondi (range 5-30). Default 8. */
   timerSeconds: integer("timer_seconds").notNull().default(8),
 
+  /** Composizione rosa: slot per ruolo. Default classico 3/8/8/6. */
+  rosterP: integer("roster_p").notNull().default(3),
+  rosterD: integer("roster_d").notNull().default(8),
+  rosterC: integer("roster_c").notNull().default(8),
+  rosterA: integer("roster_a").notNull().default(6),
+
   startedAt: timestamp("started_at", { withTimezone: true }),
   completedAt: timestamp("completed_at", { withTimezone: true }),
 

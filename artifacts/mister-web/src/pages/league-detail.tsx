@@ -24,13 +24,28 @@ export default function LeagueDetail() {
   const [astaError, setAstaError] = useState<string | null>(null);
   const [isConfigOpen, setIsConfigOpen] = useState(false);
 
-  const handleAvviaAsta = async (timerSeconds: number, teamNames: Record<string, string>) => {
+  const handleAvviaAsta = async (
+    timerSeconds: number,
+    teamNames: Record<string, string>,
+    rosterP: number,
+    rosterD: number,
+    rosterC: number,
+    rosterA: number,
+  ) => {
     if (!id) return;
     setAstaError(null);
     setIsConfigOpen(false);
     try {
       const result = await createAuction.mutateAsync({
-        data: { league_id: id, timer_seconds: timerSeconds, team_names: teamNames },
+        data: {
+          league_id: id,
+          timer_seconds: timerSeconds,
+          team_names: teamNames,
+          roster_p: rosterP,
+          roster_d: rosterD,
+          roster_c: rosterC,
+          roster_a: rosterA,
+        },
       });
       navigate(`/asta/${result.auction.id}`);
     } catch (err: unknown) {

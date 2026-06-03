@@ -1484,11 +1484,23 @@ export const createAuctionBodyTimerSecondsDefault = 8;
 export const createAuctionBodyTimerSecondsMin = 5;
 export const createAuctionBodyTimerSecondsMax = 30;
 
+export const createAuctionBodyRosterPDefault = 3;
+
+export const createAuctionBodyRosterDDefault = 8;
+
+export const createAuctionBodyRosterCDefault = 8;
+
+export const createAuctionBodyRosterADefault = 6;
+
 
 
 export const CreateAuctionBody = zod.object({
   "league_id": zod.string(),
   "timer_seconds": zod.number().min(createAuctionBodyTimerSecondsMin).max(createAuctionBodyTimerSecondsMax).default(createAuctionBodyTimerSecondsDefault),
+  "roster_p": zod.number().min(1).default(createAuctionBodyRosterPDefault).describe('Slot portieri per squadra'),
+  "roster_d": zod.number().min(1).default(createAuctionBodyRosterDDefault).describe('Slot difensori per squadra'),
+  "roster_c": zod.number().min(1).default(createAuctionBodyRosterCDefault).describe('Slot centrocampisti per squadra'),
+  "roster_a": zod.number().min(1).default(createAuctionBodyRosterADefault).describe('Slot attaccanti per squadra'),
   "team_names": zod.record(zod.string(), zod.string()).optional().describe('Mappa teamId -> nome voce (sovrascrive nome_asta)')
 })
 
@@ -1504,6 +1516,14 @@ export const getAuctionResponseAuctionTimerSecondsDefault = 8;
 export const getAuctionResponseAuctionTimerSecondsMin = 5;
 export const getAuctionResponseAuctionTimerSecondsMax = 30;
 
+export const getAuctionResponseAuctionRosterPDefault = 3;
+
+export const getAuctionResponseAuctionRosterDDefault = 8;
+
+export const getAuctionResponseAuctionRosterCDefault = 8;
+
+export const getAuctionResponseAuctionRosterADefault = 6;
+
 
 
 export const GetAuctionResponse = zod.object({
@@ -1512,6 +1532,10 @@ export const GetAuctionResponse = zod.object({
   "league_id": zod.string(),
   "status": zod.enum(['setup', 'running', 'paused', 'completed', 'cancelled']),
   "timer_seconds": zod.number().min(getAuctionResponseAuctionTimerSecondsMin).max(getAuctionResponseAuctionTimerSecondsMax).default(getAuctionResponseAuctionTimerSecondsDefault),
+  "roster_p": zod.number().min(1).default(getAuctionResponseAuctionRosterPDefault),
+  "roster_d": zod.number().min(1).default(getAuctionResponseAuctionRosterDDefault),
+  "roster_c": zod.number().min(1).default(getAuctionResponseAuctionRosterCDefault),
+  "roster_a": zod.number().min(1).default(getAuctionResponseAuctionRosterADefault),
   "started_at": zod.coerce.date().nullish(),
   "completed_at": zod.coerce.date().nullish(),
   "created_at": zod.coerce.date()
@@ -1634,6 +1658,14 @@ export const pauseAuctionResponseTimerSecondsDefault = 8;
 export const pauseAuctionResponseTimerSecondsMin = 5;
 export const pauseAuctionResponseTimerSecondsMax = 30;
 
+export const pauseAuctionResponseRosterPDefault = 3;
+
+export const pauseAuctionResponseRosterDDefault = 8;
+
+export const pauseAuctionResponseRosterCDefault = 8;
+
+export const pauseAuctionResponseRosterADefault = 6;
+
 
 
 export const PauseAuctionResponse = zod.object({
@@ -1641,6 +1673,10 @@ export const PauseAuctionResponse = zod.object({
   "league_id": zod.string(),
   "status": zod.enum(['setup', 'running', 'paused', 'completed', 'cancelled']),
   "timer_seconds": zod.number().min(pauseAuctionResponseTimerSecondsMin).max(pauseAuctionResponseTimerSecondsMax).default(pauseAuctionResponseTimerSecondsDefault),
+  "roster_p": zod.number().min(1).default(pauseAuctionResponseRosterPDefault),
+  "roster_d": zod.number().min(1).default(pauseAuctionResponseRosterDDefault),
+  "roster_c": zod.number().min(1).default(pauseAuctionResponseRosterCDefault),
+  "roster_a": zod.number().min(1).default(pauseAuctionResponseRosterADefault),
   "started_at": zod.coerce.date().nullish(),
   "completed_at": zod.coerce.date().nullish(),
   "created_at": zod.coerce.date()
@@ -1658,6 +1694,14 @@ export const resumeAuctionResponseTimerSecondsDefault = 8;
 export const resumeAuctionResponseTimerSecondsMin = 5;
 export const resumeAuctionResponseTimerSecondsMax = 30;
 
+export const resumeAuctionResponseRosterPDefault = 3;
+
+export const resumeAuctionResponseRosterDDefault = 8;
+
+export const resumeAuctionResponseRosterCDefault = 8;
+
+export const resumeAuctionResponseRosterADefault = 6;
+
 
 
 export const ResumeAuctionResponse = zod.object({
@@ -1665,6 +1709,10 @@ export const ResumeAuctionResponse = zod.object({
   "league_id": zod.string(),
   "status": zod.enum(['setup', 'running', 'paused', 'completed', 'cancelled']),
   "timer_seconds": zod.number().min(resumeAuctionResponseTimerSecondsMin).max(resumeAuctionResponseTimerSecondsMax).default(resumeAuctionResponseTimerSecondsDefault),
+  "roster_p": zod.number().min(1).default(resumeAuctionResponseRosterPDefault),
+  "roster_d": zod.number().min(1).default(resumeAuctionResponseRosterDDefault),
+  "roster_c": zod.number().min(1).default(resumeAuctionResponseRosterCDefault),
+  "roster_a": zod.number().min(1).default(resumeAuctionResponseRosterADefault),
   "started_at": zod.coerce.date().nullish(),
   "completed_at": zod.coerce.date().nullish(),
   "created_at": zod.coerce.date()
@@ -1682,6 +1730,14 @@ export const endAuctionResponseTimerSecondsDefault = 8;
 export const endAuctionResponseTimerSecondsMin = 5;
 export const endAuctionResponseTimerSecondsMax = 30;
 
+export const endAuctionResponseRosterPDefault = 3;
+
+export const endAuctionResponseRosterDDefault = 8;
+
+export const endAuctionResponseRosterCDefault = 8;
+
+export const endAuctionResponseRosterADefault = 6;
+
 
 
 export const EndAuctionResponse = zod.object({
@@ -1689,6 +1745,10 @@ export const EndAuctionResponse = zod.object({
   "league_id": zod.string(),
   "status": zod.enum(['setup', 'running', 'paused', 'completed', 'cancelled']),
   "timer_seconds": zod.number().min(endAuctionResponseTimerSecondsMin).max(endAuctionResponseTimerSecondsMax).default(endAuctionResponseTimerSecondsDefault),
+  "roster_p": zod.number().min(1).default(endAuctionResponseRosterPDefault),
+  "roster_d": zod.number().min(1).default(endAuctionResponseRosterDDefault),
+  "roster_c": zod.number().min(1).default(endAuctionResponseRosterCDefault),
+  "roster_a": zod.number().min(1).default(endAuctionResponseRosterADefault),
   "started_at": zod.coerce.date().nullish(),
   "completed_at": zod.coerce.date().nullish(),
   "created_at": zod.coerce.date()

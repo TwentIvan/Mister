@@ -14,6 +14,26 @@ export interface CreateAuctionBody {
      * @maximum 30
      */
   timer_seconds?: number;
+  /**
+     * Slot portieri per squadra
+     * @minimum 1
+     */
+  roster_p?: number;
+  /**
+     * Slot difensori per squadra
+     * @minimum 1
+     */
+  roster_d?: number;
+  /**
+     * Slot centrocampisti per squadra
+     * @minimum 1
+     */
+  roster_c?: number;
+  /**
+     * Slot attaccanti per squadra
+     * @minimum 1
+     */
+  roster_a?: number;
   /** Mappa teamId -> nome voce (sovrascrive nome_asta) */
   team_names?: CreateAuctionBodyTeamNames;
 }

@@ -1,0 +1,39 @@
+REVISIONE 7.D — Parte 2 ridisegnata a TABELLONE + composizione rosa in config.
+(Allego un mockup HTML come riferimento VISIVO di layout e gerarchia: aprilo, non copiarne il codice. Lo stile resta quello di DESIGN_SYSTEM.md.)
+
+==== A — Composizione rosa in config ====
+- Aggiungi ad AstaConfigModal 4 campi numerici: Portieri / Difensori / Centrocampisti / Attaccanti, default 3 / 8 / 8 / 6, editabili.
+- Backend: su auctions aggiungi roster_p, roster_d, roster_c, roster_a INTEGER NOT NULL DEFAULT (3,8,8,6) — migrazione Drizzle + schema TS. POST /auctions li accetta nel body; GET /auctions/:id li restituisce.
+- IMPORTANTE: per ora la composizione serve SOLO a disegnare gli slot del tabellone. NESSUN vincolo che impedisca di comprare oltre quota (i limiti rosa sono 7.E). Non aggiungere validazione d'acquisto.
+
+==== B — Schermata live ridisegnata a TABELLONE ====
+Due fasce.
+
+FASCIA HERO (in alto, compatta, 3 zone):
+- Sinistra: giocatore corrente: badge ruolo, nome grande (display), squadra reale, base d'asta, indice "#N di totale".
+- Centro: timer (cerchio) + offerta corrente (importo grande + squadra in testa).
+- Destra: toggle Microfono in evidenza, sotto i tasti Aggiudica / Pausa / Salta.
+
+TABELLONE (corpo, il protagonista):
+- Le 8 squadre AFFIANCATE in colonne (CSS grid; scroll orizzontale se non entrano tutte).
+- Ogni colonna: nome squadra + budget residuo GRANDE in mono; poi 4 gruppi per ruolo (P/D/C/A), ciascuno con etichetta e conteggio tipo "1/3".
+- Per ogni ruolo disegna ESATTAMENTE roster_X slot. Slot PIENO = cognome + prezzo; slot VUOTO = riga placeholder tratteggiata (lo "slot atteso").
+- Ogni slot DEVE poter contenere un nome (NIENTE pallini): altezza e larghezza limitate, cognome troncato con ellissi se serve.
+- La squadra attualmente in testa all'offerta corrente: evidenziala (bordo/accento).
+- I tasti +1/+5/+10 (fallback manuale) stanno DENTRO la colonna di ogni squadra.
+
+Dati: le rose si leggono da assignments[] (gia in GET /auctions/:id); le quote da roster_p/d/c/a. Slot pieni = assignments di quel ruolo; slot vuoti = quota meno pieni.
+
+Stile: DESIGN_SYSTEM.md (verde scuro su cream, Fraunces display + JetBrains Mono per i numeri). Il mockup e solo riferimento di layout, non codice.
+
+==== CRITERI DI ACCETTAZIONE ====
+B1. Config: oltre a timer e nomi voce ci sono i 4 campi composizione (default 3/8/8/6, editabili); salvando finiscono su auctions.
+B2. Tabellone: 8 squadre affiancate; ogni squadra mostra budget grande + slot per ruolo nel numero ESATTO della composizione; slot pieni col nome+prezzo, vuoti tratteggiati.
+B3. A ogni aggiudicazione lo slot corrispondente passa da vuoto a pieno (nome + prezzo) e il budget scende, in diretta.
+B4. La squadra in testa all'offerta corrente e evidenziata.
+B5. Hero: giocatore + timer + offerta in alto, con toggle microfono + Aggiudica/Pausa/Salta a destra.
+B6. REGRESSIONE: i 7 criteri di timer/guard restano verdi.
+
+CHECKPOINT: mostrami screenshot del tabellone in stato realistico (qualche slot pieno, altri vuoti, una squadra in testa) + screenshot della config coi 4 campi composizione. Poi sblocco la voce (Parte 3, brief gia pronto).
+
+VINCOLI: niente vincoli rosa d'acquisto (7.E), niente voce ancora (subito dopo il checkpoint), typecheck pulito, niente debug residuo.

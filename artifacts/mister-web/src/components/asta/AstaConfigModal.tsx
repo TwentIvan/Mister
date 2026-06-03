@@ -9,7 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Gavel, Timer } from "lucide-react";
+import { Gavel, Timer, Users } from "lucide-react";
 
 interface Team {
   id: string;
@@ -22,7 +22,43 @@ interface AstaConfigModalProps {
   onOpenChange: (open: boolean) => void;
   teams: Team[];
   isLoading: boolean;
-  onConfirm: (timerSeconds: number, teamNames: Record<string, string>) => void;
+  onConfirm: (
+    timerSeconds: number,
+    teamNames: Record<string, string>,
+    rosterP: number,
+    rosterD: number,
+    rosterC: number,
+    rosterA: number,
+  ) => void;
+}
+
+function NumInput({
+  label,
+  value,
+  onChange,
+  color,
+}: {
+  label: string;
+  value: number;
+  onChange: (v: number) => void;
+  color: string;
+}) {
+  return (
+    <div className="flex flex-col items-center gap-1">
+      <span className={`text-[10px] font-mono font-bold uppercase tracking-wider ${color}`}>{label}</span>
+      <Input
+        type="number"
+        min={1}
+        max={20}
+        value={value}
+        onChange={(e) => {
+          const n = parseInt(e.target.value, 10);
+          if (!isNaN(n) && n >= 1) onChange(n);
+        }}
+        className="w-16 h-9 font-mono text-center text-base font-bold"
+      />
+    </div>
+  );
 }
 
 export function AstaConfigModal({
@@ -33,12 +69,19 @@ export function AstaConfigModal({
   onConfirm,
 }: AstaConfigModalProps) {
   const [timerSeconds, setTimerSeconds] = useState(8);
+  const [rosterP, setRosterP] = useState(3);
+  const [rosterD, setRosterD] = useState(8);
+  const [rosterC, setRosterC] = useState(8);
+  const [rosterA, setRosterA] = useState(6);
   const [teamNames, setTeamNames] = useState<Record<string, string>>({});
 
-  // Inizializza i nomi quando il modal si apre
   useEffect(() => {
     if (open) {
       setTimerSeconds(8);
+      setRosterP(3);
+      setRosterD(8);
+      setRosterC(8);
+      setRosterA(6);
       const initial: Record<string, string> = {};
       for (const t of teams) {
         initial[t.id] = t.name_auction ?? t.name;
@@ -47,18 +90,11 @@ export function AstaConfigModal({
     }
   }, [open, teams]);
 
-  const handleTimerChange = (val: string) => {
-    const n = parseInt(val, 10);
-    if (!isNaN(n)) setTimerSeconds(Math.max(5, Math.min(30, n)));
-  };
-
   const handleTeamName = (teamId: string, value: string) => {
     setTeamNames((prev) => ({ ...prev, [teamId]: value }));
   };
 
-  const handleConfirm = () => {
-    onConfirm(timerSeconds, teamNames);
-  };
+  const slotTotal = rosterP + rosterD + rosterC + rosterA;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -70,7 +106,7 @@ export function AstaConfigModal({
           </DialogTitle>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto space-y-6 py-2">
+        <div className="flex-1 overflow-y-auto space-y-6 py-2 pr-1">
           {/* Timer */}
           <div className="space-y-2">
             <Label className="flex items-center gap-2 text-sm font-semibold">
@@ -83,50 +119,74 @@ export function AstaConfigModal({
                 min={5}
                 max={30}
                 value={timerSeconds}
-                onChange={(e) => handleTimerChange(e.target.value)}
-                className="w-28 font-mono text-center text-lg"
+                onChange={(e) => {
+                  const n = parseInt(e.target.value, 10);
+                  if (!isNaN(n)) setTimerSeconds(Math.max(5, Math.min(30, n)));
+                }}
+                className="w-24 font-mono text-center text-lg"
               />
-              <span className="text-xs text-muted-foreground">Range: 5–30 s. Default: 8 s.</span>
+              <span className="text-xs text-muted-foreground">Range: 5–30 s &nbsp;·&nbsp; Default: 8 s</span>
             </div>
           </div>
 
-          {/* Nomi voce per squadra */}
+          {/* Composizione rosa */}
           <div className="space-y-3">
-            <div>
-              <p className="text-sm font-semibold">Nomi per la voce</p>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Il nome che il battitore usa per ogni squadra. Precompilato dal nome asta attuale.
-              </p>
+            <Label className="flex items-center gap-2 text-sm font-semibold">
+              <Users className="h-4 w-4 text-muted-foreground" />
+              Composizione rosa per squadra
+            </Label>
+            <div className="flex items-end gap-3">
+              <NumInput label="Portieri"      value={rosterP} onChange={setRosterP} color="text-amber-700" />
+              <NumInput label="Difensori"     value={rosterD} onChange={setRosterD} color="text-blue-700"  />
+              <NumInput label="Centroc."      value={rosterC} onChange={setRosterC} color="text-green-700" />
+              <NumInput label="Attacc."       value={rosterA} onChange={setRosterA} color="text-red-700"   />
+              <div className="ml-auto pb-0.5 text-right">
+                <span className="text-xs text-muted-foreground font-mono">Totale</span>
+                <p className="font-mono font-bold text-primary text-lg leading-tight">{slotTotal}</p>
+              </div>
             </div>
-            <div className="space-y-2">
-              {teams.map((team) => (
-                <div key={team.id} className="grid grid-cols-[1fr_auto] gap-2 items-center">
-                  <div>
-                    <p className="text-xs text-muted-foreground mb-1 font-mono">{team.name}</p>
+            <p className="text-xs text-muted-foreground">
+              Default classico: 3P · 8D · 8C · 6A = 25 giocatori
+            </p>
+          </div>
+
+          {/* Nomi voce */}
+          {teams.length > 0 && (
+            <div className="space-y-3">
+              <div>
+                <p className="text-sm font-semibold">Nomi per la voce</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Come il battitore chiama ogni squadra.
+                </p>
+              </div>
+              <div className="space-y-2">
+                {teams.map((team) => (
+                  <div key={team.id} className="flex items-center gap-3">
+                    <span className="text-xs font-mono text-muted-foreground w-28 shrink-0 truncate">{team.name}</span>
                     <Input
                       value={teamNames[team.id] ?? ""}
                       onChange={(e) => handleTeamName(team.id, e.target.value)}
                       placeholder={team.name}
-                      className="h-8 text-sm font-mono"
+                      className="h-8 text-sm font-mono flex-1"
                     />
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
-        <DialogFooter className="pt-4 border-t">
+        <DialogFooter className="pt-4 border-t gap-2">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isLoading}>
             Annulla
           </Button>
           <Button
             className="bg-[#1f4733] text-[#efe6d3] hover:bg-[#1f4733]/90 gap-2"
-            onClick={handleConfirm}
+            onClick={() => onConfirm(timerSeconds, teamNames, rosterP, rosterD, rosterC, rosterA)}
             disabled={isLoading}
           >
             <Gavel className="h-4 w-4" />
-            {isLoading ? "Avvio in corso..." : "Salva e Avvia"}
+            {isLoading ? "Avvio in corso…" : "Salva e Avvia"}
           </Button>
         </DialogFooter>
       </DialogContent>

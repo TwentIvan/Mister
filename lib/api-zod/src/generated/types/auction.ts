@@ -16,6 +16,14 @@ export interface Auction {
      * @maximum 30
      */
   timer_seconds: number;
+  /** @minimum 1 */
+  roster_p: number;
+  /** @minimum 1 */
+  roster_d: number;
+  /** @minimum 1 */
+  roster_c: number;
+  /** @minimum 1 */
+  roster_a: number;
   /** @nullable */
   started_at?: Date | null;
   /** @nullable */

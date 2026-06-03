@@ -11,13 +11,10 @@ import {
   useResumeAuction,
   useEndAuction,
 } from "@workspace/api-client-react";
-import { PlayerHero } from "@/components/asta/PlayerHero";
-import { CurrentBidPanel } from "@/components/asta/CurrentBidPanel";
-import { AstaControls } from "@/components/asta/AstaControls";
-import { SidebarSquadre } from "@/components/asta/SidebarSquadre";
-import { BidFeed } from "@/components/asta/BidFeed";
-import { RoseSquadrePanel } from "@/components/asta/RoseSquadrePanel";
+import { AstaHero } from "@/components/asta/AstaHero";
+import { TabelloneSquadre } from "@/components/asta/TabelloneSquadre";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { CheckCircle2, Gavel } from "lucide-react";
@@ -33,7 +30,6 @@ export default function AstaLivePage() {
 
   // ── INTERVENTO 1: timer su deadline assoluto ─────────────────────────────
   // deadlineTs: epoch ms della scadenza. null = idle (nessuna offerta per questo giocatore).
-  // remaining è stato derivato, calcolato nel tick — NON più source of truth.
   const [deadlineTs, setDeadlineTs] = useState<number | null>(null);
   const timerSeconds = data?.auction.timer_seconds ?? 8;
   const [remaining, setRemaining] = useState(timerSeconds);
@@ -76,7 +72,6 @@ export default function AstaLivePage() {
   }, [deadlineTs, isPaused]);
 
   // ── INTERVENTO 2: reset a idle al cambio giocatore ───────────────────────
-  // Ogni cambio di currentPlayerId azzera il timer. Nessun path secondario via bids_history.
   const currentPlayerId = data?.current_player?.player_id;
   useEffect(() => {
     setDeadlineTs(null);
@@ -86,29 +81,21 @@ export default function AstaLivePage() {
 
   // ── INTERVENTO 3a: handleBid — try/catch + errore visibile ───────────────
   const handleBid = async (fantaTeamId: string, delta: number) => {
-    if (!auctionId || !data?.current_player) return;
-    // Guard primario (ref sincrono): blocca nel tick stesso di handleAggiudica/handleSalta
-    if (isTransitioningRef.current) return;
+    if (!auctionId || !data?.current_player || isTransitioningRef.current) return;
     const targetPlayerId = data.current_player.player_id;
-    const currentAmount = data.current_bid?.amount_fm ?? 0;
+    const currentAmount = data?.current_bid?.amount_fm ?? 0;
     setBidError(null);
     try {
-      // Guard secondario: verifica freschezza cache (auto-poll 5s)
-      const freshData = queryClient.getQueryData(
-        getGetAuctionQueryKey(auctionId!)
-      ) as typeof data;
-      if (freshData?.current_player?.player_id !== targetPlayerId) return;
       await bidMutation.mutateAsync({
         id: auctionId,
         data: { player_id: targetPlayerId, fanta_team_id: fantaTeamId, amount_fm: currentAmount + delta },
       });
-      // Ogni offerta riuscita: estende la deadline di TIMER_SECONDS da adesso (BUG 1 risolto)
+      // Ogni offerta riuscita: estende la deadline di timerSeconds da adesso (BUG 1 risolto)
       setDeadlineTs(Date.now() + timerSeconds * 1000);
       refetch();
     } catch (err: unknown) {
       const body = (err as { data?: { error?: string } })?.data;
       setBidError(body?.error ?? "Offerta non registrata. Riprova.");
-      refetch(); // risincronizza lo stato dopo l'errore
     }
   };
 
@@ -135,7 +122,7 @@ export default function AstaLivePage() {
   // ── INTERVENTO 3b: handleSalta — await refetch prima di sbloccare ─────────
   const handleSalta = async () => {
     if (!auctionId || !data?.current_player) return;
-    isTransitioningRef.current = true; // sincrono — blocca handleBid prima del re-render
+    isTransitioningRef.current = true;
     setIsTransitioning(true);
     setDeadlineTs(null);
     try {
@@ -143,7 +130,7 @@ export default function AstaLivePage() {
         id: auctionId,
         data: { player_id: data.current_player.player_id },
       });
-      await refetch(); // attende che current_player avanzi: nessun bid stale possibile
+      await refetch();
     } finally {
       isTransitioningRef.current = false;
       setIsTransitioning(false);
@@ -154,18 +141,16 @@ export default function AstaLivePage() {
   const handlePauseResume = async () => {
     if (!auctionId) return;
     if (isPaused) {
-      // Riprendi: recupera ms salvati, poi aspetta isPaused=false, infine riavvia il timer
       const savedMs = remainingMsOnPauseRef.current;
       await resumeMutation.mutateAsync({ id: auctionId });
-      await refetch(); // isPaused diventa false dopo questo
+      await refetch();
       if (savedMs > 0) {
-        setDeadlineTs(Date.now() + savedMs); // deadline corretta: now + ms rimasti alla pausa
+        setDeadlineTs(Date.now() + savedMs);
       }
     } else {
-      // Pausa: salva i ms rimasti, azzera subito il timer (mostra "—"), poi mutation
       const savedMs = deadlineTs ? Math.max(0, deadlineTs - Date.now()) : 0;
       remainingMsOnPauseRef.current = savedMs;
-      setDeadlineTs(null); // Congela display: "—"
+      setDeadlineTs(null);
       await pauseMutation.mutateAsync({ id: auctionId });
       await refetch();
     }
@@ -186,25 +171,17 @@ export default function AstaLivePage() {
     resumeMutation.isPending ||
     endMutation.isPending;
 
-  // Durante la pausa il timer è congelato: mostriamo "—" nel cerchio (active=false)
   const timerActive = deadlineTs !== null && !isPaused;
-  const timerExpired = deadlineTs !== null && !isPaused && remaining === 0;
   const canAssign = !!(data?.current_bid) && !isMutating && !isTransitioning && !isPaused;
   const bidsDisabled = isMutating || isTransitioning;
 
   // ── Loading / error ───────────────────────────────────────────────────────
   if (isLoadingAuction) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-4">
         <Skeleton className="h-8 w-1/3" />
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 space-y-4">
-            <Skeleton className="h-72" />
-            <Skeleton className="h-24" />
-            <Skeleton className="h-12" />
-          </div>
-          <Skeleton className="h-96" />
-        </div>
+        <Skeleton className="h-40" />
+        <Skeleton className="h-96" />
       </div>
     );
   }
@@ -225,46 +202,38 @@ export default function AstaLivePage() {
   }));
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-300">
+    <div className="space-y-4 animate-in fade-in duration-300">
+      {/* ── Header ──────────────────────────────────────────────── */}
       <div className="flex items-center justify-between gap-4 flex-wrap">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
           <Gavel className="h-5 w-5 text-primary" />
           <h1 className="text-xl font-bold font-serif text-primary">Asta live</h1>
           {isPaused && <Badge variant="secondary">Sospesa</Badge>}
           {isCompleted && (
-            <Badge className="bg-green-100 text-green-800 border border-green-200">Completata</Badge>
+            <Badge variant="outline" className="border-green-400 text-green-700">
+              Completata
+            </Badge>
           )}
+          <p className="text-sm text-muted-foreground font-mono">
+            {data.progress.current}/{data.progress.total}
+            {" · "}
+            <span className="font-bold text-foreground">{data.progress.sold}</span> aggiudicati
+          </p>
         </div>
-        <p className="font-mono text-sm text-muted-foreground tabular-nums">
-          Giocatore{" "}
-          <span className="font-bold text-foreground">{data.progress.current}</span>
-          {" / "}
-          <span className="font-bold text-foreground">{data.progress.total}</span>
-          {" · "}
-          <span className="font-bold text-foreground">{data.progress.sold}</span> aggiudicati
-        </p>
+        {!isCompleted && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-muted-foreground hover:text-destructive"
+            onClick={handleTermina}
+            disabled={isMutating}
+          >
+            Termina asta
+          </Button>
+        )}
       </div>
 
-      {isCompleted && (
-        <div className="rounded-xl border-2 border-green-200 bg-green-50 p-8 text-center">
-          <CheckCircle2 className="h-12 w-12 text-green-600 mx-auto mb-3" />
-          <h2 className="text-2xl font-bold font-serif text-green-800 mb-2">Asta completata</h2>
-          <p className="text-green-700 font-mono text-sm">
-            {data.progress.sold} giocatori aggiudicati{" "}
-            · {data.progress.total - data.progress.sold} non assegnati
-          </p>
-          <div className="mt-8 max-w-md mx-auto">
-            <SidebarSquadre
-              squadre={squadreForComponents}
-              currentBidAmount={0}
-              isPaused
-              isLoading={false}
-              onBid={() => {}}
-            />
-          </div>
-        </div>
-      )}
-
+      {/* ── Flash "Aggiudicato!" ─────────────────────────────────── */}
       {aggiudicatoVisible && (
         <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
           <div className="bg-[#1f4733] text-[#efe6d3] rounded-2xl px-12 py-8 shadow-2xl animate-in zoom-in duration-200">
@@ -273,85 +242,63 @@ export default function AstaLivePage() {
         </div>
       )}
 
-      {!isCompleted && (
-        <>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 space-y-5">
-            {data.current_player ? (
-              <>
-                <div className="rounded-xl border bg-card shadow-sm">
-                  <PlayerHero player={data.current_player} total={data.progress.total} />
-                </div>
-                <CurrentBidPanel
-                  currentBid={data.current_bid ?? null}
-                  squadre={squadreForComponents}
-                  timerRemaining={remaining}
-                  timerTotal={timerSeconds}
-                  timerActive={timerActive}
-                />
-                {bidError && (
-                  <p className="text-destructive text-sm text-center font-mono">{bidError}</p>
-                )}
-                <AstaControls
-                  canAssign={canAssign}
-                  isPaused={isPaused}
-                  timerExpired={timerExpired}
-                  isLoading={isMutating || isTransitioning}
-                  onAggiudica={handleAggiudica}
-                  onPauseResume={handlePauseResume}
-                  onSalta={handleSalta}
-                  onTermina={handleTermina}
-                />
-              </>
-            ) : (
-              <div className="rounded-xl border bg-card p-16 text-center text-muted-foreground text-sm">
-                In attesa del prossimo giocatore...
-              </div>
-            )}
-          </div>
-
-          <div className="space-y-5">
-            <div className="rounded-xl border bg-card shadow-sm p-4">
-              <SidebarSquadre
-                squadre={squadreForComponents}
-                currentBidAmount={data.current_bid?.amount_fm ?? 0}
-                isPaused={isPaused}
-                isLoading={bidsDisabled}
-                onBid={handleBid}
-              />
-            </div>
-            <div className="rounded-xl border bg-card shadow-sm p-4">
-              <BidFeed
-                bids={(data.bids_history ?? []).map((b) => ({
-                  id: b.id,
-                  fanta_team_id: b.fanta_team_id,
-                  amount_fm: b.amount_fm,
-                  created_at: b.created_at,
-                }))}
-                squadre={squadreForComponents}
-              />
-            </div>
-          </div>
+      {/* ── Asta completata ──────────────────────────────────────── */}
+      {isCompleted && (
+        <div className="rounded-xl border-2 border-green-200 bg-green-50 p-6 text-center">
+          <CheckCircle2 className="h-10 w-10 text-green-600 mx-auto mb-2" />
+          <h2 className="text-xl font-bold font-serif text-green-800 mb-1">Asta completata</h2>
+          <p className="text-green-700 font-mono text-sm">
+            {data.progress.sold} giocatori aggiudicati
+            {" · "}
+            {data.progress.total - data.progress.sold} non assegnati
+          </p>
         </div>
-
-        {/* ── FASCIA INFERIORE: rose e budget ──────────────────────────── */}
-        <RoseSquadrePanel
-          squadre={data.squadre.map((s) => ({
-            id: s.id,
-            name: s.name,
-            name_auction: s.name_auction,
-            credits_remaining: s.credits_remaining,
-          }))}
-          assignments={(data.assignments ?? []).map((a) => ({
-            player_id: a.player_id,
-            player_name: a.player_name,
-            role_classic: a.role_classic,
-            fanta_team_id: a.fanta_team_id,
-            final_price_fm: a.final_price_fm,
-          }))}
-        />
-        </>
       )}
+
+      {/* ── Bid error inline ────────────────────────────────────── */}
+      {bidError && (
+        <p className="text-destructive text-sm text-center font-mono">{bidError}</p>
+      )}
+
+      {/* ── FASCIA HERO (solo quando l'asta è attiva) ───────────── */}
+      {!isCompleted && (
+        <AstaHero
+          currentPlayer={data.current_player ?? null}
+          currentBid={data.current_bid ?? null}
+          squadre={squadreForComponents}
+          timerRemaining={remaining}
+          timerTotal={timerSeconds}
+          timerActive={timerActive}
+          isPaused={isPaused}
+          canAssign={canAssign}
+          bidsDisabled={bidsDisabled}
+          progress={data.progress}
+          onAggiudica={handleAggiudica}
+          onPauseResume={handlePauseResume}
+          onSalta={handleSalta}
+        />
+      )}
+
+      {/* ── TABELLONE (sempre visibile, read-only quando completata) */}
+      <TabelloneSquadre
+        squadre={squadreForComponents}
+        assignments={(data.assignments ?? []).map((a) => ({
+          player_id: a.player_id,
+          player_name: a.player_name,
+          role_classic: a.role_classic,
+          fanta_team_id: a.fanta_team_id,
+          final_price_fm: a.final_price_fm,
+        }))}
+        rosterP={data.auction.roster_p}
+        rosterD={data.auction.roster_d}
+        rosterC={data.auction.roster_c}
+        rosterA={data.auction.roster_a}
+        currentBidTeamId={data.current_bid?.fanta_team_id ?? null}
+        currentBidAmount={data.current_bid?.amount_fm ?? 0}
+        isPaused={isPaused || isCompleted}
+        isLoading={bidsDisabled}
+        onBid={handleBid}
+      />
     </div>
   );
 }

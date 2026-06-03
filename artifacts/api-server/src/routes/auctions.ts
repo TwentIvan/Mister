@@ -37,6 +37,10 @@ function mapAuction(a: Auction) {
     league_id: a.leagueId,
     status: a.status,
     timer_seconds: a.timerSeconds,
+    roster_p: a.rosterP,
+    roster_d: a.rosterD,
+    roster_c: a.rosterC,
+    roster_a: a.rosterA,
     started_at: a.startedAt ?? null,
     completed_at: a.completedAt ?? null,
     created_at: a.createdAt,
@@ -103,7 +107,15 @@ router.post("/auctions", async (req, res): Promise<void> => {
     res.status(400).json({ error: parsed.error.flatten() });
     return;
   }
-  const { league_id: leagueId, timer_seconds = 8, team_names = {} } = parsed.data;
+  const {
+    league_id: leagueId,
+    timer_seconds = 8,
+    team_names = {},
+    roster_p = 3,
+    roster_d = 8,
+    roster_c = 8,
+    roster_a = 6,
+  } = parsed.data;
 
   const [league] = await db.select().from(leagues).where(eq(leagues.id, leagueId));
   if (!league) {
@@ -163,7 +175,17 @@ router.post("/auctions", async (req, res): Promise<void> => {
     const auction = await db.transaction(async (tx) => {
       const [row] = await tx
         .insert(auctions)
-        .values({ id: auctionId, leagueId, status: "running", startedAt: new Date(), timerSeconds: timer_seconds })
+        .values({
+          id: auctionId,
+          leagueId,
+          status: "running",
+          startedAt: new Date(),
+          timerSeconds: timer_seconds,
+          rosterP: roster_p,
+          rosterD: roster_d,
+          rosterC: roster_c,
+          rosterA: roster_a,
+        })
         .returning();
 
       if (playerPool.length > 0) {
