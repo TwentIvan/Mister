@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useParams } from "wouter";
 import {
   useGetAuction,
@@ -25,6 +26,7 @@ const TIMER_SECONDS = 8;
 
 export default function AstaLivePage() {
   const { auctionId } = useParams<{ auctionId: string }>();
+  const queryClient = useQueryClient();
 
   const { data, isLoading: isLoadingAuction, isError, refetch } = useGetAuction(
     auctionId!,
@@ -42,6 +44,8 @@ export default function AstaLivePage() {
   // ── Transition lock ───────────────────────────────────────────────────────
   // Disabilita i tasti offerta mentre skip/aggiudica è in volo + attende il refetch
   const [isTransitioning, setIsTransitioning] = useState(false);
+  // Ref sincrono: aggiornato PRIMA di qualsiasi await — blocca handleBid nel tick stesso del click
+  const isTransitioningRef = useRef(false);
 
   // ── Errore bid inline ─────────────────────────────────────────────────────
   const [bidError, setBidError] = useState<string | null>(null);
@@ -84,13 +88,20 @@ export default function AstaLivePage() {
   // ── INTERVENTO 3a: handleBid — try/catch + errore visibile ───────────────
   const handleBid = async (fantaTeamId: string, delta: number) => {
     if (!auctionId || !data?.current_player) return;
-    const playerId = data.current_player.player_id;
+    // Guard primario (ref sincrono): blocca nel tick stesso di handleAggiudica/handleSalta
+    if (isTransitioningRef.current) return;
+    const targetPlayerId = data.current_player.player_id;
     const currentAmount = data.current_bid?.amount_fm ?? 0;
     setBidError(null);
     try {
+      // Guard secondario: verifica freschezza cache (auto-poll 5s)
+      const freshData = queryClient.getQueryData(
+        getGetAuctionQueryKey(auctionId!)
+      ) as typeof data;
+      if (freshData?.current_player?.player_id !== targetPlayerId) return;
       await bidMutation.mutateAsync({
         id: auctionId,
-        data: { player_id: playerId, fanta_team_id: fantaTeamId, amount_fm: currentAmount + delta },
+        data: { player_id: targetPlayerId, fanta_team_id: fantaTeamId, amount_fm: currentAmount + delta },
       });
       // Ogni offerta riuscita: estende la deadline di TIMER_SECONDS da adesso (BUG 1 risolto)
       setDeadlineTs(Date.now() + TIMER_SECONDS * 1000);
@@ -105,6 +116,7 @@ export default function AstaLivePage() {
   // ── INTERVENTO 3b: handleAggiudica — await refetch prima di sbloccare ────
   const handleAggiudica = async () => {
     if (!auctionId || !data?.current_player) return;
+    isTransitioningRef.current = true; // sincrono — blocca handleBid prima del re-render
     setIsTransitioning(true);
     setDeadlineTs(null);
     try {
@@ -116,6 +128,7 @@ export default function AstaLivePage() {
       await refetch(); // attende che current_player avanzi
       setTimeout(() => setAggiudicatoVisible(false), 1500);
     } finally {
+      isTransitioningRef.current = false;
       setIsTransitioning(false); // bottoni offerta sbloccati solo dopo refetch
     }
   };
@@ -123,6 +136,7 @@ export default function AstaLivePage() {
   // ── INTERVENTO 3b: handleSalta — await refetch prima di sbloccare ─────────
   const handleSalta = async () => {
     if (!auctionId || !data?.current_player) return;
+    isTransitioningRef.current = true; // sincrono — blocca handleBid prima del re-render
     setIsTransitioning(true);
     setDeadlineTs(null);
     try {
@@ -132,6 +146,7 @@ export default function AstaLivePage() {
       });
       await refetch(); // attende che current_player avanzi: nessun bid stale possibile
     } finally {
+      isTransitioningRef.current = false;
       setIsTransitioning(false);
     }
   };
@@ -140,19 +155,21 @@ export default function AstaLivePage() {
   const handlePauseResume = async () => {
     if (!auctionId) return;
     if (isPaused) {
-      // Riprendi: ripristina deadline dal remaining salvato
+      // Riprendi: recupera ms salvati, poi aspetta isPaused=false, infine riavvia il timer
+      const savedMs = remainingMsOnPauseRef.current;
       await resumeMutation.mutateAsync({ id: auctionId });
-      if (remainingMsOnPauseRef.current > 0) {
-        setDeadlineTs(Date.now() + remainingMsOnPauseRef.current);
+      await refetch(); // isPaused diventa false dopo questo
+      if (savedMs > 0) {
+        setDeadlineTs(Date.now() + savedMs); // deadline corretta: now + ms rimasti alla pausa
       }
     } else {
-      // Pausa: salva i ms rimanenti prima di fermare
-      remainingMsOnPauseRef.current = deadlineTs
-        ? Math.max(0, deadlineTs - Date.now())
-        : 0;
+      // Pausa: salva i ms rimasti, azzera subito il timer (mostra "—"), poi mutation
+      const savedMs = deadlineTs ? Math.max(0, deadlineTs - Date.now()) : 0;
+      remainingMsOnPauseRef.current = savedMs;
+      setDeadlineTs(null); // Congela display: "—"
       await pauseMutation.mutateAsync({ id: auctionId });
+      await refetch();
     }
-    await refetch();
   };
 
   const handleTermina = async () => {

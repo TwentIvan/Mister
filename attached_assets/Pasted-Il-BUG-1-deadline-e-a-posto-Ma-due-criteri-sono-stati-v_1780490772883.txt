@@ -1,0 +1,32 @@
+Il BUG 1 (deadline) e a posto. Ma due criteri sono stati validati testando la cosa sbagliata. Vanno fixati e ri-testati per davvero.
+
+=== C5 — la pausa NON preserva il tempo rimasto (BUG REALE) ===
+Hai scritto che durante la pausa "deadlineTs rimane impostato" e la fix ha toccato solo il display. Cosi alla ripresa l'intervallo ricalcola remaining sulla deadline ORIGINALE: il tempo trascorso in pausa viene perso. Pausa a 5s, attesa reale di 4s, ripresa -> riparte da 1 invece che da 5 (e da 0 se la pausa supera il rimanente).
+
+FIX richiesta in handlePauseResume:
+- Su PAUSA:   pausedRemainingMs = deadlineTs - Date.now();  poi setIsPaused(true);
+- Su RIPRENDI: setDeadlineTs(Date.now() + pausedRemainingMs);  poi setIsPaused(false);
+(mantieni il display "—" durante la pausa)
+
+RE-TEST C5 (deve passare senza dipendere dal timing di Playwright):
+1. Avvia bidding, fai un'offerta. Leggi data-deadline-ts -> D_pre.
+2. Premi Pausa. Leggi e salva pausedRemainingMs (esponilo in un data-* di debug se serve).
+3. Attendi un tempo reale T noto (es. 4000ms).
+4. Premi Riprendi. Leggi il nuovo data-deadline-ts -> D_post.
+5. ASSERZIONE: D_post deve essere ~ Date.now() + pausedRemainingMs (entro ~300ms), NON D_pre. In altre parole il remaining alla ripresa deve essere ~ uguale a quello alla pausa, indipendente da T.
+
+=== C6 / C7 — manca il guard sul player_id (bug latente) ===
+Il test ha verificato deadline=null sul nuovo giocatore: e un'altra cosa. Il requisito e che un click DURANTE la transizione non mandi un bid sul giocatore vecchio. isTransitioning disabilita i bottoni ma non copre la finestra dell'auto-poll a 5s.
+
+FIX richiesta in handleBid:
+- Cattura targetPlayerId = data.current_player.player_id al momento del click.
+- Invia il bid SOLO se, subito prima della mutation, data.current_player.player_id === targetPlayerId. Altrimenti aborta in silenzio (return), niente chiamata.
+- Mantieni il try/catch gia presente.
+
+RE-TEST C6 (race reale, non solo deadline):
+1. Mostrami il corpo aggiornato di handleBid con il guard.
+2. Test: subito dopo aver premuto Salta (finestra di transizione, prima che compaia il nuovo giocatore) forza un click su +1.
+   ASSERZIONE: nessuna POST /bid parte col player_id vecchio (controlla i log di rete / il DB: nessun nuovo auction_bids sul giocatore saltato, nessun 403).
+3. C7: stesso test dopo Aggiudica.
+
+VINCOLI: nessun debug data-* residuo a fine lavoro, typecheck pulito. Mostrami il diff di handlePauseResume e handleBid + l'esito delle 3 asserzioni nuove.
