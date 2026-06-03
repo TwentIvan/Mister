@@ -184,6 +184,7 @@ export type Intent =
   | { type: "riprendi" }
   | { type: "chiama"; playerId: number; playerName: string }
   | { type: "chiama_ambiguous"; candidates: PlayerVoice[] }
+  | { type: "chiama_notfound"; fragment: string }
   | { type: "seleziona"; n: number }
   | null;
 
@@ -204,6 +205,8 @@ export function parseIntent(
       const matches = fuzzyMatchAll(rest, svincolati);
       if (matches.length === 1) return { type: "chiama", playerId: matches[0].id, playerName: matches[0].name };
       if (matches.length > 1)   return { type: "chiama_ambiguous", candidates: matches };
+      // Nessuna corrispondenza in coda: il giocatore potrebbe essere già aggiudicato
+      return { type: "chiama_notfound", fragment: rest };
     }
     return null;
   }
@@ -332,6 +335,9 @@ export function useVoiceBidder({
             flash(`Disambiguazione: ${intent.candidates.length} giocatori`);
             cbRef.current.onChiamaAmbiguous(intent.candidates);
           }
+          break;
+        case "chiama_notfound":
+          flash(`Non in coda: ${intent.fragment}`);
           break;
         case "seleziona":
           if (cbRef.current.onSeleziona) {
