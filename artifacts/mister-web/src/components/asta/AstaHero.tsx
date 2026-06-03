@@ -1,4 +1,4 @@
-import { MicOff } from "lucide-react";
+import { Mic, MicOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const ROLE_COLORS: Record<string, { bg: string; text: string; label: string }> = {
@@ -33,6 +33,11 @@ interface AstaHeroProps {
   canAssign: boolean;
   bidsDisabled: boolean;
   progress: { current: number; total: number; sold: number };
+  // Voce
+  micActive: boolean;
+  micSupported: boolean;
+  onMicToggle: () => void;
+  // Azioni
   onAggiudica: () => void;
   onPauseResume: () => void;
   onSalta: () => void;
@@ -49,6 +54,9 @@ export function AstaHero({
   canAssign,
   bidsDisabled,
   progress,
+  micActive,
+  micSupported,
+  onMicToggle,
   onAggiudica,
   onPauseResume,
   onSalta,
@@ -62,23 +70,21 @@ export function AstaHero({
     : null;
 
   // Timer ring — r=40, CIRC ≈ 251
-  const fraction = (timerActive || isPaused) ? timerRemaining / timerTotal : 1;
-  const dashOffset = CIRC * (1 - fraction);
-  const ringColor =
+  const fraction    = (timerActive || isPaused) ? timerRemaining / timerTotal : 1;
+  const dashOffset  = CIRC * (1 - fraction);
+  const ringColor   =
     !timerActive && !isPaused ? "#d1c5a8"
-    : timerRemaining <= 3 ? "#e2554e"
+    : timerRemaining <= 3     ? "#e2554e"
     : "#c8922b";
 
   const timerDisplay: number | string =
-    timerActive ? timerRemaining
-    : isPaused ? timerRemaining
+    timerActive   ? timerRemaining
+    : isPaused    ? timerRemaining
     : "—";
 
   return (
-    <div
-      className="grid gap-3"
-      style={{ gridTemplateColumns: "1.15fr 0.9fr 1fr" }}
-    >
+    <div className="grid gap-3" style={{ gridTemplateColumns: "1.15fr 0.9fr 1fr" }}>
+
       {/* ── SINISTRA: Giocatore corrente ─── */}
       <div className="rounded-xl border bg-card p-4 flex flex-col gap-2 min-w-0">
         <p className="text-[10px] font-mono font-semibold uppercase tracking-widest text-muted-foreground">
@@ -88,9 +94,7 @@ export function AstaHero({
           <>
             <div className="flex items-center gap-2">
               {role && (
-                <span
-                  className={`inline-flex items-center justify-center w-7 h-7 rounded-full font-bold font-mono text-sm shrink-0 ${role.bg} ${role.text}`}
-                >
+                <span className={`inline-flex items-center justify-center w-7 h-7 rounded-full font-bold font-mono text-sm shrink-0 ${role.bg} ${role.text}`}>
                   {role.label}
                 </span>
               )}
@@ -115,7 +119,6 @@ export function AstaHero({
 
       {/* ── CENTRO: Timer + Offerta corrente ─── */}
       <div className="rounded-xl border bg-card p-4 flex flex-col items-center justify-center gap-2 text-center">
-        {/* Timer ring SVG */}
         <div className="relative w-[92px] h-[92px] shrink-0">
           <svg width="92" height="92" viewBox="0 0 92 92" style={{ transform: "rotate(-90deg)" }}>
             <circle cx="46" cy="46" r="40" fill="none" stroke="#e0d4b6" strokeWidth="6" />
@@ -147,8 +150,7 @@ export function AstaHero({
                 <span className="text-sm font-mono font-normal">FM</span>
               </p>
               <p className="text-[12px] font-mono text-muted-foreground">
-                da{" "}
-                <span className="font-bold text-amber-700">{leadingTeam}</span>
+                da <span className="font-bold text-amber-700">{leadingTeam}</span>
               </p>
             </>
           ) : (
@@ -159,14 +161,39 @@ export function AstaHero({
 
       {/* ── DESTRA: Controlli ─── */}
       <div className="rounded-xl border bg-card p-4 flex flex-col gap-3 justify-center">
-        {/* Mic toggle — cablato nella Parte 3 */}
+
+        {/* ── Toggle microfono (Parte 3) ── */}
         <button
-          disabled
-          className="flex items-center gap-2.5 w-full bg-[#1f4733] text-[#efe6d3] rounded-lg px-3 py-2.5 font-mono font-bold text-sm opacity-40 cursor-not-allowed"
+          onClick={onMicToggle}
+          disabled={!micSupported}
+          className={[
+            "flex items-center gap-2.5 w-full rounded-lg px-3 py-2.5",
+            "font-mono font-bold text-sm transition-colors",
+            micActive
+              ? "bg-[#1f4733] text-[#efe6d3] hover:bg-[#1f4733]/90"
+              : "bg-muted/40 text-foreground hover:bg-muted/70",
+            !micSupported ? "opacity-40 cursor-not-allowed" : "cursor-pointer",
+          ].join(" ")}
         >
-          <MicOff className="h-4 w-4 shrink-0" />
-          <span>Microfono</span>
-          <span className="ml-auto text-[10px] font-normal opacity-70">Parte 3</span>
+          {micActive ? (
+            <>
+              {/* Indicatore pulsante rosso quando attivo */}
+              <span className="relative shrink-0 w-4 h-4 flex items-center justify-center">
+                <span className="absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75 animate-ping" />
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500" />
+              </span>
+              <span>Microfono attivo</span>
+              <span className="ml-auto text-[10px] font-normal opacity-70">in ascolto…</span>
+            </>
+          ) : (
+            <>
+              <MicOff className="h-4 w-4 shrink-0" />
+              <span>Microfono</span>
+              {!micSupported && (
+                <span className="ml-auto text-[10px] font-normal opacity-60">non supportato</span>
+              )}
+            </>
+          )}
         </button>
 
         <div className="flex gap-2">

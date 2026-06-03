@@ -1,0 +1,40 @@
+TASK 7.D — PARTE 3: battitore vocale. Le Parti 1-2 (config + tabellone) sono fatte. Niente polish grafico qui: il design e un task finale separato.
+
+PREREQUISITO ARCHITETTURALE: la voce DEVE passare per gli STESSI handler gia induriti (bid col guard isTransitioningRef + match player_id + setDeadlineTs; handleAggiudica; handleSalta). NESSUN path parallelo. Se non esiste gia, estrai UNA funzione placeBid(fantaTeamId, amountFmAssoluto) che contiene guard + estensione timer: i tasti +N la chiamano con currentBid+N, la voce con il numero assoluto.
+
+TECNOLOGIA: Web Speech API del browser (window.SpeechRecognition || webkitSpeechRecognition), lang 'it-IT', continuous=true, interimResults=true. NIENTE backend STT. (Chrome.)
+
+ATTIVAZIONE: il toggle Microfono nell'hero (oggi placeholder "Parte 3"). On = ascolto continuo; il primo on fa comparire il prompt permessi del browser. Off = stop. CRITICO: su recognition.onend, se il toggle e ancora ON, RIAVVIA il recognition — altrimenti Chrome lo ferma dopo qualche secondo di silenzio e il mic "muore" senza che nessuno se ne accorga.
+
+PARSING: agisci SOLO sui risultati FINAL (isFinal). Debounce comandi identici entro ~1.5s (un singolo comando non deve eseguirsi due volte). Normalizza il transcript (minuscolo, niente accenti), poi in quest'ordine:
+1) Controlli (prefisso "mister"):
+   - "mister salta"    => handleSalta()
+   - "mister pausa"    => pausa
+   - "mister riprendi" => riprendi
+2) Aggiudica: "giocatore aggiudicato" => handleAggiudica() (aggiudica il corrente e passa al successivo)
+3) Offerta: "[nome] [numero]" => offerta ASSOLUTA:
+   - nome: match FUZZY sui nomi voce delle squadre (il campo name_auction impostato in config), normalizzati; gestisci nomi multi-parola.
+   - numero: parsa sia cifre ("15") sia parole italiane ("quindici"); mappa 0-99 + parsing cifre.
+   - chiama placeBid(fantaTeamId, numeroAssoluto). Cosi timer e guard valgono identici per la voce.
+   - se il backend rifiuta (es. importo <= offerta corrente) si mostra l'errore inline gia presente.
+NOTA: gli incrementi +1/+5/+10 restano SOLO sui tasti, NON a voce.
+
+FEEDBACK UI (serve in demo, deve essere visibile):
+   - trascrizione live di cio che il mic sente;
+   - conferma del comando riconosciuto (es. "Offerta: Trastevere 15", "Comando: salta") con un flash breve;
+   - comando non riconosciuto: ignorato, nessun effetto.
+I tasti restano come fallback.
+
+CRITERI DI ACCETTAZIONE:
+V1. Toggle: primo on => prompt permessi; on = ascolto continuo; off = stop; auto-restart su onend (verifica che dopo 15-20s di silenzio il mic sia ANCORA attivo).
+V2. "[nome] 15" con giocatore attivo => offerta 15 di quella squadra via placeBid; il timer riparte (deadline estesa). Usa un nome voce impostato in config.
+V3. "Giocatore aggiudicato" => aggiudica il corrente al miglior offerente e passa al successivo.
+V4. "Mister salta" / "Mister pausa" / "Mister riprendi" => azioni rispettive.
+V5. Numero a parole ("[nome] dodici") riconosciuto come 12.
+V6. Feedback: trascrizione live visibile; comando riconosciuto mostrato; non riconosciuto ignorato; offerta sotto la corrente => errore inline.
+V7. Un singolo comando finale NON eseguito due volte (debounce).
+V8. REGRESSIONE: i 7 criteri timer/guard restano verdi; la voce passa per gli stessi handler. In particolare un'offerta vocale DURANTE una transizione (skip/aggiudica) deve essere bloccata dal guard esattamente come quella dei tasti.
+
+VINCOLI: Web Speech API only. Voce SOLO numeri assoluti. Nessun path di bid parallelo. Niente call vocale del banditore (e 7.F). NIENTE polish grafico ora. Typecheck pulito, niente debug residuo.
+
+DELIVERABLE: diff; e una prova del flusso voce: log/trascrizione di "[nome] 15" => bid registrato e timer ripartito, "giocatore aggiudicato" => assegnato, "mister salta" => skip. Se possibile un breve screen recording, o screenshot della trascrizione live + conferma comando.
