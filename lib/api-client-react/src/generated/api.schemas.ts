@@ -956,6 +956,17 @@ export const AuctionStatus = {
   cancelled: 'cancelled',
 } as const;
 
+/**
+ * Modalità di avanzamento: sequenziale (listone) o a chiamata esplicita (chiamata)
+ */
+export type AuctionCallMode = typeof AuctionCallMode[keyof typeof AuctionCallMode];
+
+
+export const AuctionCallMode = {
+  listone: 'listone',
+  chiamata: 'chiamata',
+} as const;
+
 export interface Auction {
   id: string;
   league_id: string;
@@ -975,6 +986,10 @@ export interface Auction {
   roster_a: number;
   /** Vero se esiste un'azione annullabile (bid/skip/assign). Server-authoritative. */
   undoable: boolean;
+  /** Modalità di avanzamento: sequenziale (listone) o a chiamata esplicita (chiamata) */
+  call_mode: AuctionCallMode;
+  /** In chiamata: ordina per ruolo P→D→C→A */
+  role_order: boolean;
   /** @nullable */
   started_at?: string | null;
   /** @nullable */
@@ -989,6 +1004,7 @@ export const AuctionPlayerEntryStatus = {
   pending: 'pending',
   sold: 'sold',
   skipped: 'skipped',
+  called: 'called',
 } as const;
 
 export type AuctionPlayerEntryRoleClassic = typeof AuctionPlayerEntryRoleClassic[keyof typeof AuctionPlayerEntryRoleClassic];
@@ -1062,6 +1078,14 @@ export interface AuctionState {
  */
 export type CreateAuctionBodyTeamNames = {[key: string]: string};
 
+export type CreateAuctionBodyCallMode = typeof CreateAuctionBodyCallMode[keyof typeof CreateAuctionBodyCallMode];
+
+
+export const CreateAuctionBodyCallMode = {
+  listone: 'listone',
+  chiamata: 'chiamata',
+} as const;
+
 export interface CreateAuctionBody {
   league_id: string;
   /**
@@ -1091,6 +1115,8 @@ export interface CreateAuctionBody {
   roster_a?: number;
   /** Mappa teamId -> nome voce (sovrascrive nome_asta) */
   team_names?: CreateAuctionBodyTeamNames;
+  call_mode?: CreateAuctionBodyCallMode;
+  role_order?: boolean;
 }
 
 export interface CreateAuctionResponse {
@@ -1172,6 +1198,16 @@ export interface ManualUpdatePriceResponse {
 
 export interface ManualChangeResponse {
   ok: boolean;
+  message?: string;
+}
+
+export interface CallPlayerBody {
+  player_id: number;
+}
+
+export interface CallPlayerResponse {
+  ok: boolean;
+  player_id: number;
   message?: string;
 }
 

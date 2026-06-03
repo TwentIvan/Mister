@@ -24,6 +24,8 @@ import type {
   AuctionActionResponse,
   AuctionPlayerActionBody,
   AuctionState,
+  CallPlayerBody,
+  CallPlayerResponse,
   Competition,
   CompetitionInput,
   CompetitionMatch,
@@ -4270,6 +4272,78 @@ export const useUndoAuction = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getUndoAuctionMutationOptions(options));
+    }
+
+export const getCallPlayerUrl = (id: string,) => {
+
+
+
+
+  return `/api/auctions/${id}/call`
+}
+
+/**
+ * @summary Chiama un giocatore svincolato come corrente (modalità chiamata)
+ */
+export const callPlayer = async (id: string,
+    callPlayerBody: CallPlayerBody, options?: RequestInit): Promise<CallPlayerResponse> => {
+
+  return customFetch<CallPlayerResponse>(getCallPlayerUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      callPlayerBody,)
+  }
+);}
+
+
+
+
+export const getCallPlayerMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof callPlayer>>, TError,{id: string;data: BodyType<CallPlayerBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof callPlayer>>, TError,{id: string;data: BodyType<CallPlayerBody>}, TContext> => {
+
+const mutationKey = ['callPlayer'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof callPlayer>>, {id: string;data: BodyType<CallPlayerBody>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  callPlayer(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CallPlayerMutationResult = NonNullable<Awaited<ReturnType<typeof callPlayer>>>
+    export type CallPlayerMutationBody = BodyType<CallPlayerBody>
+    export type CallPlayerMutationError = ErrorType<void>
+
+    /**
+ * @summary Chiama un giocatore svincolato come corrente (modalità chiamata)
+ */
+export const useCallPlayer = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof callPlayer>>, TError,{id: string;data: BodyType<CallPlayerBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof callPlayer>>,
+        TError,
+        {id: string;data: BodyType<CallPlayerBody>},
+        TContext
+      > => {
+      return useMutation(getCallPlayerMutationOptions(options));
     }
 
 export const getManualAddPlayerUrl = (id: string,) => {

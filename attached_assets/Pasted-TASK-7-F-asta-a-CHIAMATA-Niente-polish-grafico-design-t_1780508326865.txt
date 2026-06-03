@@ -1,0 +1,47 @@
+TASK 7.F — asta a CHIAMATA. Niente polish grafico (design = task finale). Tutto server-authoritative. La chiamata passa per la stessa macchina gia esistente (timer/guard/aggiudica/salta).
+FAI PRIMA le Parti A+B (config + chiamata base), CHECKPOINT, poi la Parte C (ordine di ruolo).
+
+==== PARTE A — Config modalita ====
+Nel modal di config asta aggiungi:
+- "Modalita chiamata": select tra "A listone" (sequenziale, comportamento attuale) e "A chiamata" (il banditore chiama il giocatore).
+- "Chiamata per ordine di ruolo": checkbox (rilevante solo in modalita a chiamata).
+Backend: su auctions aggiungi call_mode ('listone' | 'chiamata', default 'listone') e role_order (boolean, default false). Migrazione Drizzle + schema. POST /auctions li accetta. GET /auctions/:id li restituisce.
+
+==== PARTE B — Chiamata del giocatore (voce + ricerca) ====
+In modalita 'chiamata' NON c'e avanzamento automatico dal listone. Il giocatore corrente viene impostato da una CHIAMATA. Quando nessun giocatore e in asta: schermata "chiama un giocatore" con la ricerca.
+
+PRIMA: estrai il controllo svincolato (oggi inlineato in manual/add) in UNA funzione condivisa, es. assertSvincolato(auctionId, playerId) o getOwnerTeam(...). Usala sia in manual/add sia nella chiamata. Una sola fonte di verita.
+
+Endpoint: POST /auctions/:id/call { player_id }.
+- Valida: il giocatore e SVINCOLATO (helper condiviso); se gia assegnato rifiuta con "Giocatore gia di [squadra]".
+- Imposta il giocatore come corrente (stato idle, deadline null), pronto per le offerte.
+- Dopo aggiudica/salto, in modalita chiamata si torna a "nessun giocatore in asta, chiama il prossimo".
+
+Chiamata via RICERCA: box di ricerca (come l'aggiungi manuale) filtrato agli svincolati; i gia-assegnati trasparentizzati/non selezionabili con "gia di [squadra]". Selezionando un giocatore parte la chiamata.
+
+Chiamata via VOCE (in useVoiceBidder): nuovo pattern "chiamo [nome] [squadra reale]" da controllare PRIMA del pattern offerta (il prefisso "chiamo" disambigua). Match FUZZY su nome giocatore + squadra reale tra gli svincolati. Trovato il giocatore, chiama lo stesso path della ricerca (POST /call). NON un path parallelo.
+
+----- CHECKPOINT: mostrami chiamata da ricerca e da voce che mette un giocatore in asta, e il rifiuto di un gia-assegnato. Aspetta OK, poi Parte C. -----
+
+==== PARTE C — Ordine di ruolo ====
+Quando role_order e ON (e modalita chiamata):
+- Ruolo corrente aperto = il primo ruolo nell'ordine P, D, C, A per cui NON tutte le squadre hanno raggiunto la quota (roster_R). DERIVATO dalle quote/assignments, nessuno stato extra.
+- Si possono chiamare solo giocatori del ruolo corrente: la ricerca e filtrata a quel ruolo; voce e server rifiutano gli altri ruoli con motivo (es. "Ruolo non ancora aperto: si chiamano i portieri").
+- AUTO-AVANZAMENTO: quando TUTTE le squadre hanno riempito la quota del ruolo corrente, il ruolo successivo diventa automaticamente quello aperto (cade fuori dalla derivazione, senza azioni manuali).
+- Quando anche l'ultimo ruolo (A) e completato da tutte, l'asta e di fatto conclusa.
+
+==== CRITERI ====
+Parti A+B:
+F1. Config: select modalita (listone/chiamata) + checkbox ordine di ruolo; salvati su auctions.
+F2. In modalita chiamata: nessun avanzamento automatico; senza giocatore in asta appare la ricerca per chiamare.
+F3. Chiamata da RICERCA: selezioni uno svincolato, diventa il giocatore corrente, parte l'asta normale (timer/offerte). Gia-assegnati trasparentizzati/non selezionabili.
+F4. Chiamata da VOCE: "chiamo [nome] [squadra]" mette in asta il giocatore (stesso path della ricerca).
+F5. Solo svincolati: /call di un gia-assegnato rifiutato dal server col motivo (helper condiviso, estratto). Dopo aggiudica/salto si torna a "chiama il prossimo".
+Parte C:
+F6. role_order ON: si chiamano solo giocatori del ruolo corrente; ricerca filtrata, voce/server rifiutano altri ruoli col motivo.
+F7. Auto-avanzamento: quando tutte le squadre completano la quota del ruolo corrente, si apre il successivo (derivato dalle quote). Mostra un esempio: riempi i P di tutte, verifica che si apra D.
+F8. REGRESSIONE: in modalita 'listone' tutto come prima; timer/guard/voce/7.E/annullo/editor invariati.
+
+VINCOLI: config nel modal asta (dimmi se la vuoi come flag federazione invece); helper svincolato estratto e condiviso; server-authoritative su call e su role_order; niente path di chiamata paralleli alla voce; niente polish grafico; typecheck pulito, niente debug residuo.
+
+DELIVERABLE: diff; prova F3/F4 (chiamata da ricerca e da voce), F5 (rifiuto gia-assegnato); dopo checkpoint, F6/F7 (vincolo ruolo + auto-avanzamento con esempio).

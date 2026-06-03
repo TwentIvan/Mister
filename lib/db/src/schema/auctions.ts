@@ -13,6 +13,7 @@ import {
   pgTable,
   text,
   integer,
+  boolean,
   timestamp,
   check,
 } from "drizzle-orm/pg-core";
@@ -56,6 +57,19 @@ export const auctions = pgTable("auctions", {
    */
   lastUndoableAction: text("last_undoable_action"),
 
+  /**
+   * Modalità di avanzamento dell'asta.
+   * 'listone'  — sequenziale automatico (comportamento classico)
+   * 'chiamata' — il banditore chiama esplicitamente ogni giocatore
+   */
+  callMode: text("call_mode").notNull().default("listone"),
+
+  /**
+   * Se true (solo in callMode='chiamata'), i giocatori si chiamano
+   * rispettando l'ordine di ruolo P → D → C → A.
+   */
+  roleOrder: boolean("role_order").notNull().default(false),
+
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -63,6 +77,10 @@ export const auctions = pgTable("auctions", {
   check(
     "auctions_status_check",
     sql`${t.status} IN ('setup', 'running', 'paused', 'completed', 'cancelled')`,
+  ),
+  check(
+    "auctions_call_mode_check",
+    sql`${t.callMode} IN ('listone', 'chiamata')`,
   ),
 ]);
 

@@ -31,6 +31,8 @@ export default function LeagueDetail() {
     rosterD: number,
     rosterC: number,
     rosterA: number,
+    callMode: "listone" | "chiamata" = "listone",
+    roleOrder: boolean = false,
   ) => {
     if (!id) return;
     setAstaError(null);
@@ -45,6 +47,8 @@ export default function LeagueDetail() {
           roster_d: rosterD,
           roster_c: rosterC,
           roster_a: rosterA,
+          call_mode: callMode,
+          role_order: roleOrder,
         },
       });
       navigate(`/asta/${result.auction.id}`);

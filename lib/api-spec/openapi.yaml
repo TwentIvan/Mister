@@ -1160,6 +1160,33 @@ paths:
         "403":
           description: Asta non in corso o sospesa
 
+  /auctions/{id}/call:
+    post:
+      operationId: callPlayer
+      tags: [auctions]
+      summary: "Chiama un giocatore svincolato come corrente (modalità chiamata)"
+      parameters:
+        - $ref: "#/components/parameters/StringId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CallPlayerBody"
+      responses:
+        "200":
+          description: Giocatore in asta
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CallPlayerResponse"
+        "400":
+          description: Giocatore già assegnato o non trovato
+        "403":
+          description: Asta non in corso o modalità non chiamata
+        "409":
+          description: Giocatore già in asta o altro conflitto
+
   /auctions/{id}/manual/add:
     post:
       operationId: manualAddPlayer
@@ -2392,7 +2419,7 @@ components:
     # ─── AUCTIONS ─────────────────────────────────────────────
     Auction:
       type: object
-      required: [id, league_id, status, created_at, timer_seconds, roster_p, roster_d, roster_c, roster_a, undoable]
+      required: [id, league_id, status, created_at, timer_seconds, roster_p, roster_d, roster_c, roster_a, undoable, call_mode, role_order]
       properties:
         id:
           type: string
@@ -2425,6 +2452,15 @@ components:
         undoable:
           type: boolean
           description: "Vero se esiste un'azione annullabile (bid/skip/assign). Server-authoritative."
+        call_mode:
+          type: string
+          enum: [listone, chiamata]
+          default: listone
+          description: "Modalità di avanzamento: sequenziale (listone) o a chiamata esplicita (chiamata)"
+        role_order:
+          type: boolean
+          default: false
+          description: "In chiamata: ordina per ruolo P→D→C→A"
         started_at:
           type: ["string", "null"]
           format: date-time
@@ -2445,7 +2481,7 @@ components:
           type: integer
         status:
           type: string
-          enum: [pending, sold, skipped]
+          enum: [pending, sold, skipped, called]
         name:
           type: string
         full_name:
@@ -2570,6 +2606,13 @@ components:
           additionalProperties:
             type: string
           description: "Mappa teamId -> nome voce (sovrascrive nome_asta)"
+        call_mode:
+          type: string
+          enum: [listone, chiamata]
+          default: listone
+        role_order:
+          type: boolean
+          default: false
 
     CreateAuctionResponse:
       type: object
@@ -2694,5 +2737,23 @@ components:
       properties:
         ok:
           type: boolean
+        message:
+          type: string
+
+    CallPlayerBody:
+      type: object
+      required: [player_id]
+      properties:
+        player_id:
+          type: integer
+
+    CallPlayerResponse:
+      type: object
+      required: [ok, player_id]
+      properties:
+        ok:
+          type: boolean
+        player_id:
+          type: integer
         message:
           type: string

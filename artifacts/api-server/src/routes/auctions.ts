@@ -36,6 +36,8 @@ import {
   ManualSetBudgetBody,
   ManualUpdatePriceParams,
   ManualUpdatePriceBody,
+  CallPlayerParams,
+  CallPlayerBody,
 } from "@workspace/api-zod";
 import { mapFantaTeam } from "../lib/mappers";
 
@@ -52,6 +54,8 @@ function mapAuction(a: Auction) {
     roster_c: a.rosterC,
     roster_a: a.rosterA,
     undoable: a.lastUndoableAction !== null && a.lastUndoableAction !== undefined,
+    call_mode: a.callMode,
+    role_order: a.roleOrder,
     started_at: a.startedAt ?? null,
     completed_at: a.completedAt ?? null,
     created_at: a.createdAt,
@@ -70,7 +74,28 @@ function mapBid(b: AuctionBid) {
   };
 }
 
-async function getNextPendingPlayer(auctionId: string) {
+// ── Helper svincolato — fonte di verità condivisa da manual/add e /call ──────
+// Restituisce il nome della squadra che detiene il giocatore in questa asta,
+// o null se è svincolato.  Usare per rifiutare con "Giocatore già di [squadra]".
+async function getOwnerTeam(auctionId: string, playerId: number): Promise<string | null> {
+  const [row] = await db
+    .select({ teamName: fantaTeams.name })
+    .from(auctionAssignments)
+    .innerJoin(fantaTeams, eq(fantaTeams.id, auctionAssignments.fantaTeamId))
+    .where(
+      and(
+        eq(auctionAssignments.auctionId, auctionId),
+        eq(auctionAssignments.playerId, playerId),
+      ),
+    );
+  return row?.teamName ?? null;
+}
+
+// ── Giocatore corrente in asta ────────────────────────────────────────────────
+// listone  → primo 'pending'  (avanzamento automatico)
+// chiamata → primo 'called'   (chiamato esplicitamente dal banditore)
+async function getCurrentQueuePlayer(auctionId: string, callMode = "listone") {
+  const targetStatus = callMode === "chiamata" ? "called" : "pending";
   const rows = await db
     .select({
       playerId: auctionPlayerQueue.playerId,
@@ -87,13 +112,16 @@ async function getNextPendingPlayer(auctionId: string) {
     .where(
       and(
         eq(auctionPlayerQueue.auctionId, auctionId),
-        eq(auctionPlayerQueue.status, "pending"),
+        eq(auctionPlayerQueue.status, targetStatus),
       ),
     )
     .orderBy(asc(auctionPlayerQueue.position))
     .limit(1);
   return rows[0] ?? null;
 }
+
+// Back-compat alias usato dove non si ha il callMode a portata di mano
+const getNextPendingPlayer = (auctionId: string) => getCurrentQueuePlayer(auctionId, "listone");
 
 type PlayerRow = NonNullable<Awaited<ReturnType<typeof getNextPendingPlayer>>>;
 
@@ -126,6 +154,8 @@ router.post("/auctions", async (req, res): Promise<void> => {
     roster_d = 8,
     roster_c = 8,
     roster_a = 6,
+    call_mode: callMode = "listone",
+    role_order: roleOrder = false,
   } = parsed.data;
 
   const [league] = await db.select().from(leagues).where(eq(leagues.id, leagueId));
@@ -196,6 +226,8 @@ router.post("/auctions", async (req, res): Promise<void> => {
           rosterD: roster_d,
           rosterC: roster_c,
           rosterA: roster_a,
+          callMode,
+          roleOrder,
         })
         .returning();
 
@@ -216,7 +248,8 @@ router.post("/auctions", async (req, res): Promise<void> => {
       return row;
     });
 
-    const firstPlayer = await getNextPendingPlayer(auctionId);
+    // In chiamata: il primo giocatore non viene impostato automaticamente
+    const firstPlayer = callMode === "chiamata" ? null : await getCurrentQueuePlayer(auctionId, "listone");
 
     res.status(201).json({
       auction: mapAuction(auction),
@@ -245,7 +278,7 @@ router.get("/auctions/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  const currentPlayerRow = await getNextPendingPlayer(id);
+  const currentPlayerRow = await getCurrentQueuePlayer(id, auction.callMode);
 
   let currentBid: AuctionBid | null = null;
   let bidsHistory: AuctionBid[] = [];
@@ -334,7 +367,7 @@ router.post("/auctions/:id/bid", async (req, res): Promise<void> => {
     return;
   }
 
-  const currentPlayer = await getNextPendingPlayer(id);
+  const currentPlayer = await getCurrentQueuePlayer(id, auction.callMode);
   if (!currentPlayer || currentPlayer.playerId !== playerId) {
     res.status(400).json({ error: "Il giocatore non è quello corrente in asta" });
     return;
@@ -479,7 +512,7 @@ router.post("/auctions/:id/assign", async (req, res): Promise<void> => {
   }
 
   try {
-    const nextPlayerId = await db.transaction(async (tx) => {
+    const { nextPlayerId, auctionCompleted } = await db.transaction(async (tx) => {
       const [topBid] = await tx
         .select()
         .from(auctionBids)
@@ -521,6 +554,12 @@ router.post("/auctions/:id/assign", async (req, res): Promise<void> => {
         .set({ status: "sold" })
         .where(and(eq(auctionPlayerQueue.auctionId, id), eq(auctionPlayerQueue.playerId, playerId)));
 
+      // In chiamata: no auto-avanzamento — il banditore chiama esplicitamente il prossimo
+      if (auction.callMode === "chiamata") {
+        await tx.update(auctions).set({ lastUndoableAction: "assign" }).where(eq(auctions.id, id));
+        return { nextPlayerId: null, auctionCompleted: false };
+      }
+
       const [nextRow] = await tx
         .select({ playerId: auctionPlayerQueue.playerId })
         .from(auctionPlayerQueue)
@@ -532,16 +571,16 @@ router.post("/auctions/:id/assign", async (req, res): Promise<void> => {
         await tx.update(auctions)
           .set({ status: "completed", completedAt: new Date(), lastUndoableAction: "assign" })
           .where(eq(auctions.id, id));
+        return { nextPlayerId: null, auctionCompleted: true };
       } else {
         await tx.update(auctions)
           .set({ lastUndoableAction: "assign" })
           .where(eq(auctions.id, id));
+        return { nextPlayerId: nextRow.playerId, auctionCompleted: false };
       }
-
-      return nextRow?.playerId ?? null;
     });
 
-    res.json({ next_player_id: nextPlayerId, auction_completed: nextPlayerId === null });
+    res.json({ next_player_id: nextPlayerId, auction_completed: auctionCompleted });
   } catch (err: unknown) {
     if (typeof err === "object" && err !== null && "code" in err && "message" in err) {
       const e = err as { code: number; message: string };
@@ -582,7 +621,14 @@ router.post("/auctions/:id/skip", async (req, res): Promise<void> => {
     .set({ status: "skipped" })
     .where(and(eq(auctionPlayerQueue.auctionId, id), eq(auctionPlayerQueue.playerId, playerId)));
 
-  const nextRow = await getNextPendingPlayer(id);
+  // In chiamata: no auto-avanzamento
+  if (auction.callMode === "chiamata") {
+    await db.update(auctions).set({ lastUndoableAction: "skip" }).where(eq(auctions.id, id));
+    res.json({ next_player_id: null, auction_completed: false });
+    return;
+  }
+
+  const nextRow = await getCurrentQueuePlayer(id, "listone");
   if (!nextRow) {
     await db.update(auctions)
       .set({ status: "completed", completedAt: new Date(), lastUndoableAction: "skip" })
@@ -649,7 +695,7 @@ router.post("/auctions/:id/undo", async (req, res): Promise<void> => {
     //    posizione del player venduto più recente → il più alto position
     //    determina chi è venuto dopo
 
-    const currentPlayer = await getNextPendingPlayer(id);
+    const currentPlayer = await getCurrentQueuePlayer(id, auction.callMode);
 
     // (a) cerca l'offerta top sul giocatore corrente
     const currentBid = currentPlayer
@@ -733,9 +779,11 @@ router.post("/auctions/:id/undo", async (req, res): Promise<void> => {
 
     if (skipPos >= assignPos) {
       // ── UNDO SKIP ────────────────────────────────────────────────────────
+      // In chiamata: ripristina a 'called' (era stato chiamato, poi saltato)
+      const restoreStatus = auction.callMode === "chiamata" ? "called" : "pending";
       await db
         .update(auctionPlayerQueue)
-        .set({ status: "pending" })
+        .set({ status: restoreStatus })
         .where(
           and(
             eq(auctionPlayerQueue.auctionId, id),
@@ -784,10 +832,11 @@ router.post("/auctions/:id/undo", async (req, res): Promise<void> => {
           ),
         );
 
-      // Riporta il giocatore a pending
+      // Riporta il giocatore a pending (o 'called' in chiamata mode)
+      const undoAssignStatus = auction.callMode === "chiamata" ? "called" : "pending";
       await tx
         .update(auctionPlayerQueue)
-        .set({ status: "pending" })
+        .set({ status: undoAssignStatus })
         .where(
           and(
             eq(auctionPlayerQueue.auctionId, id),
@@ -837,20 +886,10 @@ router.post("/auctions/:id/manual/add", async (req, res): Promise<void> => {
   if (!team) { res.status(400).json({ error: "Squadra non trovata" }); return; }
 
   // ── Regola svincolato: rifiuta se già assegnato in questa asta ────────────
-  // Questa stessa logica vale anche per la CHIAMATA (7.F): tenuta qui come
-  // unica fonte di verità server-side, identica per editor e chiamata.
-  const [existingAsgn] = await db
-    .select({ teamName: fantaTeams.name })
-    .from(auctionAssignments)
-    .innerJoin(fantaTeams, eq(fantaTeams.id, auctionAssignments.fantaTeamId))
-    .where(
-      and(
-        eq(auctionAssignments.auctionId, id),
-        eq(auctionAssignments.playerId, playerId),
-      ),
-    );
-  if (existingAsgn) {
-    res.status(400).json({ error: `Giocatore già di ${existingAsgn.teamName}` });
+  // getOwnerTeam è l'unica fonte di verità: usata sia qui che in /call.
+  const ownerTeam = await getOwnerTeam(id, playerId);
+  if (ownerTeam) {
+    res.status(400).json({ error: `Giocatore già di ${ownerTeam}` });
     return;
   }
 
@@ -1049,6 +1088,73 @@ router.post("/auctions/:id/manual/set-budget", async (req, res): Promise<void> =
   if (!team) { res.status(400).json({ error: "Squadra non trovata" }); return; }
 
   res.json({ ok: true, message: `Budget impostato a ${creditsRemaining} FM` });
+});
+
+// ─── POST /auctions/:id/call ─────────────────────────────
+// Modalità chiamata: il banditore seleziona esplicitamente il prossimo giocatore
+// da mettere all'asta. Imposta lo status del giocatore da 'pending' → 'called'.
+// Se c'è già un 'called', la richiesta viene rifiutata con 409.
+
+router.post("/auctions/:id/call", async (req, res): Promise<void> => {
+  const params = CallPlayerParams.safeParse(req.params);
+  if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
+  const body = CallPlayerBody.safeParse(req.body);
+  if (!body.success) { res.status(400).json({ error: body.error.flatten() }); return; }
+
+  const { id } = params.data;
+  const { player_id: playerId } = body.data;
+
+  const [auction] = await db.select().from(auctions).where(eq(auctions.id, id));
+  if (!auction || auction.status !== "running") {
+    res.status(403).json({ error: "L'asta non è in corso" });
+    return;
+  }
+  if (auction.callMode !== "chiamata") {
+    res.status(403).json({ error: "L'asta non è in modalità chiamata" });
+    return;
+  }
+
+  // Guard: giocatore già assegnato
+  const ownerTeam = await getOwnerTeam(id, playerId);
+  if (ownerTeam) {
+    res.status(400).json({ error: `Giocatore già di ${ownerTeam}` });
+    return;
+  }
+
+  // Guard: c'è già un giocatore in corso d'asta
+  const existingCalled = await getCurrentQueuePlayer(id, "chiamata");
+  if (existingCalled) {
+    res.status(409).json({ error: "C'è già un giocatore in asta — aggiudica o salta prima di chiamarne un altro" });
+    return;
+  }
+
+  // Controlla che il giocatore sia nella coda con status 'pending'
+  const [queueEntry] = await db
+    .select()
+    .from(auctionPlayerQueue)
+    .where(
+      and(
+        eq(auctionPlayerQueue.auctionId, id),
+        eq(auctionPlayerQueue.playerId, playerId),
+        eq(auctionPlayerQueue.status, "pending"),
+      ),
+    );
+  if (!queueEntry) {
+    res.status(400).json({ error: "Giocatore non trovato in coda (già aggiudicato, saltato o non presente)" });
+    return;
+  }
+
+  await db
+    .update(auctionPlayerQueue)
+    .set({ status: "called" })
+    .where(
+      and(
+        eq(auctionPlayerQueue.auctionId, id),
+        eq(auctionPlayerQueue.playerId, playerId),
+      ),
+    );
+
+  res.json({ ok: true, player_id: playerId, message: "Giocatore chiamato in asta" });
 });
 
 // ─── POST /auctions/:id/end ──────────────────────────────

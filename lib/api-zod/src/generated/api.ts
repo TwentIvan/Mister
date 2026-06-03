@@ -1492,7 +1492,8 @@ export const createAuctionBodyRosterCDefault = 8;
 
 export const createAuctionBodyRosterADefault = 6;
 
-
+export const createAuctionBodyCallModeDefault = `listone`;
+export const createAuctionBodyRoleOrderDefault = false;
 
 export const CreateAuctionBody = zod.object({
   "league_id": zod.string(),
@@ -1501,7 +1502,9 @@ export const CreateAuctionBody = zod.object({
   "roster_d": zod.number().min(1).default(createAuctionBodyRosterDDefault).describe('Slot difensori per squadra'),
   "roster_c": zod.number().min(1).default(createAuctionBodyRosterCDefault).describe('Slot centrocampisti per squadra'),
   "roster_a": zod.number().min(1).default(createAuctionBodyRosterADefault).describe('Slot attaccanti per squadra'),
-  "team_names": zod.record(zod.string(), zod.string()).optional().describe('Mappa teamId -> nome voce (sovrascrive nome_asta)')
+  "team_names": zod.record(zod.string(), zod.string()).optional().describe('Mappa teamId -> nome voce (sovrascrive nome_asta)'),
+  "call_mode": zod.enum(['listone', 'chiamata']).default(createAuctionBodyCallModeDefault),
+  "role_order": zod.boolean().default(createAuctionBodyRoleOrderDefault)
 })
 
 
@@ -1524,7 +1527,8 @@ export const getAuctionResponseAuctionRosterCDefault = 8;
 
 export const getAuctionResponseAuctionRosterADefault = 6;
 
-
+export const getAuctionResponseAuctionCallModeDefault = `listone`;
+export const getAuctionResponseAuctionRoleOrderDefault = false;
 
 export const GetAuctionResponse = zod.object({
   "auction": zod.object({
@@ -1537,6 +1541,8 @@ export const GetAuctionResponse = zod.object({
   "roster_c": zod.number().min(1).default(getAuctionResponseAuctionRosterCDefault),
   "roster_a": zod.number().min(1).default(getAuctionResponseAuctionRosterADefault),
   "undoable": zod.boolean().describe('Vero se esiste un\'azione annullabile (bid\/skip\/assign). Server-authoritative.'),
+  "call_mode": zod.enum(['listone', 'chiamata']).default(getAuctionResponseAuctionCallModeDefault).describe('Modalità di avanzamento: sequenziale (listone) o a chiamata esplicita (chiamata)'),
+  "role_order": zod.boolean().default(getAuctionResponseAuctionRoleOrderDefault).describe('In chiamata: ordina per ruolo P→D→C→A'),
   "started_at": zod.coerce.date().nullish(),
   "completed_at": zod.coerce.date().nullish(),
   "created_at": zod.coerce.date()
@@ -1544,7 +1550,7 @@ export const GetAuctionResponse = zod.object({
   "current_player": zod.union([zod.object({
   "player_id": zod.number(),
   "position": zod.number(),
-  "status": zod.enum(['pending', 'sold', 'skipped']),
+  "status": zod.enum(['pending', 'sold', 'skipped', 'called']),
   "name": zod.string(),
   "full_name": zod.string(),
   "role_classic": zod.enum(['GK', 'DEF', 'MID', 'ATT']),
@@ -1667,7 +1673,8 @@ export const pauseAuctionResponseRosterCDefault = 8;
 
 export const pauseAuctionResponseRosterADefault = 6;
 
-
+export const pauseAuctionResponseCallModeDefault = `listone`;
+export const pauseAuctionResponseRoleOrderDefault = false;
 
 export const PauseAuctionResponse = zod.object({
   "id": zod.string(),
@@ -1679,6 +1686,8 @@ export const PauseAuctionResponse = zod.object({
   "roster_c": zod.number().min(1).default(pauseAuctionResponseRosterCDefault),
   "roster_a": zod.number().min(1).default(pauseAuctionResponseRosterADefault),
   "undoable": zod.boolean().describe('Vero se esiste un\'azione annullabile (bid\/skip\/assign). Server-authoritative.'),
+  "call_mode": zod.enum(['listone', 'chiamata']).default(pauseAuctionResponseCallModeDefault).describe('Modalità di avanzamento: sequenziale (listone) o a chiamata esplicita (chiamata)'),
+  "role_order": zod.boolean().default(pauseAuctionResponseRoleOrderDefault).describe('In chiamata: ordina per ruolo P→D→C→A'),
   "started_at": zod.coerce.date().nullish(),
   "completed_at": zod.coerce.date().nullish(),
   "created_at": zod.coerce.date()
@@ -1704,7 +1713,8 @@ export const resumeAuctionResponseRosterCDefault = 8;
 
 export const resumeAuctionResponseRosterADefault = 6;
 
-
+export const resumeAuctionResponseCallModeDefault = `listone`;
+export const resumeAuctionResponseRoleOrderDefault = false;
 
 export const ResumeAuctionResponse = zod.object({
   "id": zod.string(),
@@ -1716,6 +1726,8 @@ export const ResumeAuctionResponse = zod.object({
   "roster_c": zod.number().min(1).default(resumeAuctionResponseRosterCDefault),
   "roster_a": zod.number().min(1).default(resumeAuctionResponseRosterADefault),
   "undoable": zod.boolean().describe('Vero se esiste un\'azione annullabile (bid\/skip\/assign). Server-authoritative.'),
+  "call_mode": zod.enum(['listone', 'chiamata']).default(resumeAuctionResponseCallModeDefault).describe('Modalità di avanzamento: sequenziale (listone) o a chiamata esplicita (chiamata)'),
+  "role_order": zod.boolean().default(resumeAuctionResponseRoleOrderDefault).describe('In chiamata: ordina per ruolo P→D→C→A'),
   "started_at": zod.coerce.date().nullish(),
   "completed_at": zod.coerce.date().nullish(),
   "created_at": zod.coerce.date()
@@ -1741,7 +1753,8 @@ export const endAuctionResponseRosterCDefault = 8;
 
 export const endAuctionResponseRosterADefault = 6;
 
-
+export const endAuctionResponseCallModeDefault = `listone`;
+export const endAuctionResponseRoleOrderDefault = false;
 
 export const EndAuctionResponse = zod.object({
   "id": zod.string(),
@@ -1753,6 +1766,8 @@ export const EndAuctionResponse = zod.object({
   "roster_c": zod.number().min(1).default(endAuctionResponseRosterCDefault),
   "roster_a": zod.number().min(1).default(endAuctionResponseRosterADefault),
   "undoable": zod.boolean().describe('Vero se esiste un\'azione annullabile (bid\/skip\/assign). Server-authoritative.'),
+  "call_mode": zod.enum(['listone', 'chiamata']).default(endAuctionResponseCallModeDefault).describe('Modalità di avanzamento: sequenziale (listone) o a chiamata esplicita (chiamata)'),
+  "role_order": zod.boolean().default(endAuctionResponseRoleOrderDefault).describe('In chiamata: ordina per ruolo P→D→C→A'),
   "started_at": zod.coerce.date().nullish(),
   "completed_at": zod.coerce.date().nullish(),
   "created_at": zod.coerce.date()
@@ -1768,6 +1783,24 @@ export const UndoAuctionParams = zod.object({
 
 export const UndoAuctionResponse = zod.object({
   "undone": zod.enum(['bid', 'skip', 'assign']),
+  "message": zod.string().optional()
+})
+
+
+/**
+ * @summary Chiama un giocatore svincolato come corrente (modalità chiamata)
+ */
+export const CallPlayerParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const CallPlayerBody = zod.object({
+  "player_id": zod.number()
+})
+
+export const CallPlayerResponse = zod.object({
+  "ok": zod.boolean(),
+  "player_id": zod.number(),
   "message": zod.string().optional()
 })
 

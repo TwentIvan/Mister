@@ -10,6 +10,9 @@ import {
   useResumeAuction,
   useEndAuction,
   useUndoAuction,
+  useCallPlayer,
+  useListPlayers,
+  getListPlayersQueryKey,
 } from "@workspace/api-client-react";
 import { AstaHero } from "@/components/asta/AstaHero";
 import { TabelloneSquadre } from "@/components/asta/TabelloneSquadre";
@@ -19,7 +22,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { CheckCircle2, Gavel, Mic, Pencil } from "lucide-react";
+import { CheckCircle2, Gavel, Mic, Pencil, Phone } from "lucide-react";
 
 export default function AstaLivePage() {
   const { auctionId } = useParams<{ auctionId: string }>();
@@ -41,6 +44,9 @@ export default function AstaLivePage() {
   const [bidError, setBidError] = useState<string | null>(null);
   const [aggiudicatoVisible, setAggiudicatoVisible] = useState(false);
 
+  // ── Chiamata mode: ricerca giocatore ─────────────────────────────────────
+  const [callSearch, setCallSearch] = useState("");
+
   const bidMutation    = useCreateAuctionBid();
   const assignMutation = useAssignAuction();
   const skipMutation   = useSkipAuction();
@@ -48,6 +54,7 @@ export default function AstaLivePage() {
   const resumeMutation = useResumeAuction();
   const endMutation    = useEndAuction();
   const undoMutation   = useUndoAuction();
+  const callMutation   = useCallPlayer();
 
   // ── Correggi panel ────────────────────────────────────────────────────────
   const [correggiOpen, setCorreggiOpen] = useState(false);
@@ -56,6 +63,7 @@ export default function AstaLivePage() {
   const canUndo = data?.auction.undoable ?? false;
 
   const auctionStatus = data?.auction.status;
+  const callMode      = data?.auction.call_mode ?? "listone";
   const isPaused      = auctionStatus === "paused";
   const isCompleted   = auctionStatus === "completed";
 
@@ -181,6 +189,23 @@ export default function AstaLivePage() {
     await refetch();
   };
 
+  // ── handleCall: chiama un giocatore svincolato in modalità chiamata ───────
+  const handleCall = async (playerId: number) => {
+    if (!auctionId || isTransitioningRef.current) return;
+    isTransitioningRef.current = true;
+    setIsTransitioning(true);
+    try {
+      await callMutation.mutateAsync({ id: auctionId, data: { player_id: playerId } });
+      setCallSearch("");
+      await refetch();
+    } catch {
+      // Errore gestito dal refetch (la UI aggiornerà lo stato)
+    } finally {
+      isTransitioningRef.current = false;
+      setIsTransitioning(false);
+    }
+  };
+
   // ── Derived state ─────────────────────────────────────────────────────────
   const isMutating =
     bidMutation.isPending ||
@@ -189,7 +214,8 @@ export default function AstaLivePage() {
     pauseMutation.isPending ||
     resumeMutation.isPending ||
     endMutation.isPending ||
-    undoMutation.isPending;
+    undoMutation.isPending ||
+    callMutation.isPending;
 
   const timerActive  = deadlineTs !== null && !isPaused;
   const canAssign    = !!(data?.current_bid) && !isMutating && !isTransitioning && !isPaused;
@@ -204,6 +230,21 @@ export default function AstaLivePage() {
     name_auction: t.name_auction ?? null,
   }));
 
+  // In chiamata mode: lista svincolati per voice "chiamo [nome]"
+  // Caricata sempre (niente hook condizionali); limitata a 200 per semplicità.
+  const assignedPlayerIds = new Set((data?.assignments ?? []).map((a) => a.player_id));
+  const listPlayersParams = callMode === "chiamata"
+    ? { limit: 200, search: callSearch.length >= 2 ? callSearch : undefined }
+    : undefined;
+  const { data: playersData } = useListPlayers(
+    listPlayersParams,
+    { query: { enabled: callMode === "chiamata", staleTime: 30_000, queryKey: getListPlayersQueryKey(listPlayersParams) } },
+  );
+  const allFetchedPlayers = (playersData?.items ?? []) as Array<{ id: number; name: string; full_name: string; role_classic: string; real_team: string }>;
+  const svincolatiForVoice = allFetchedPlayers
+    .filter((p) => !assignedPlayerIds.has(p.id))
+    .map((p) => ({ id: p.id, name: p.name, real_team: p.real_team }));
+
   const voice = useVoiceBidder({
     squadre: squadreForVoice,
     onPlaceBid: placeBid,
@@ -213,6 +254,8 @@ export default function AstaLivePage() {
     // così "mister pausa" non fa riprendi se già in pausa e viceversa.
     onPausa:    () => { if (!isPaused) void handlePauseResume(); },
     onRiprendi: () => { if (isPaused)  void handlePauseResume(); },
+    svincolati: callMode === "chiamata" ? svincolatiForVoice : undefined,
+    onChiama:   callMode === "chiamata" ? handleCall : undefined,
   });
 
   // ── Loading / error ───────────────────────────────────────────────────────
@@ -307,6 +350,65 @@ export default function AstaLivePage() {
       {/* ── Bid error inline ────────────────────────────────────── */}
       {bidError && (
         <p className="text-destructive text-sm text-center font-mono">{bidError}</p>
+      )}
+
+      {/* ── CHIAMA IL PROSSIMO (solo in modalità chiamata, quando nessun giocatore è in asta) ── */}
+      {callMode === "chiamata" && !data?.current_player && !isCompleted && !isPaused && (
+        <div className="rounded-xl border-2 border-dashed border-primary/30 bg-card p-5 space-y-3">
+          <div className="flex items-center gap-2">
+            <Phone className="h-4 w-4 text-primary" />
+            <span className="font-semibold font-serif text-primary text-sm">Chiama il prossimo giocatore</span>
+            <span className="text-xs text-muted-foreground font-mono ml-auto">
+              Voce: «chiamo [nome]»
+            </span>
+          </div>
+          <input
+            type="text"
+            placeholder="Cerca per nome o squadra…"
+            value={callSearch}
+            onChange={(e) => setCallSearch(e.target.value)}
+            className="w-full h-9 rounded-md border bg-background px-3 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+          />
+          {callSearch.length >= 2 && (
+            <div className="max-h-52 overflow-y-auto rounded-md border divide-y">
+              {allFetchedPlayers.length === 0 ? (
+                <p className="px-3 py-2 text-sm text-muted-foreground font-mono">Nessun giocatore trovato</p>
+              ) : (
+                allFetchedPlayers.map((p) => {
+                  const isAssigned = assignedPlayerIds.has(p.id);
+                  return (
+                    <button
+                      key={p.id}
+                      disabled={isAssigned || isTransitioning}
+                      onClick={() => !isAssigned && void handleCall(p.id)}
+                      className={[
+                        "w-full flex items-center gap-3 px-3 py-2 text-left text-sm transition-colors",
+                        isAssigned
+                          ? "opacity-30 cursor-not-allowed"
+                          : "hover:bg-muted cursor-pointer",
+                      ].join(" ")}
+                    >
+                      <span className={[
+                        "font-mono text-[10px] uppercase font-bold w-6 text-center",
+                        p.role_classic === "GK"  ? "text-amber-700" :
+                        p.role_classic === "DEF" ? "text-blue-700"  :
+                        p.role_classic === "MID" ? "text-green-700" :
+                                                   "text-red-700",
+                      ].join(" ")}>
+                        {p.role_classic === "GK" ? "P" : p.role_classic === "DEF" ? "D" : p.role_classic === "MID" ? "C" : "A"}
+                      </span>
+                      <span className="font-mono font-semibold flex-1">{p.name}</span>
+                      <span className="text-xs text-muted-foreground font-mono">{p.real_team}</span>
+                      {isAssigned && (
+                        <span className="text-xs text-muted-foreground font-mono">già assegnato</span>
+                      )}
+                    </button>
+                  );
+                })
+              )}
+            </div>
+          )}
+        </div>
       )}
 
       {/* ── FASCIA HERO ─────────────────────────────────────────── */}

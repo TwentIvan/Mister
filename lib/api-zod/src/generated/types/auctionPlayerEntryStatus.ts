@@ -13,4 +13,5 @@ export const AuctionPlayerEntryStatus = {
   pending: 'pending',
   sold: 'sold',
   skipped: 'skipped',
+  called: 'called',
 } as const;

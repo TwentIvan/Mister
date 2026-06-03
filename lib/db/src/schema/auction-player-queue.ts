@@ -44,7 +44,7 @@ export const auctionPlayerQueue = pgTable(
   (t) => [
     check(
       "apq_status_check",
-      sql`${t.status} IN ('pending', 'sold', 'skipped')`,
+      sql`${t.status} IN ('pending', 'sold', 'skipped', 'called')`,
     ),
     unique("uq_apq_auction_player").on(t.auctionId, t.playerId),
     unique("uq_apq_auction_position").on(t.auctionId, t.position),

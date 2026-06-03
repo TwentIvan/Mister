@@ -29,6 +29,8 @@ interface AstaConfigModalProps {
     rosterD: number,
     rosterC: number,
     rosterA: number,
+    callMode: "listone" | "chiamata",
+    roleOrder: boolean,
   ) => void;
 }
 
@@ -74,6 +76,8 @@ export function AstaConfigModal({
   const [rosterC, setRosterC] = useState(8);
   const [rosterA, setRosterA] = useState(6);
   const [teamNames, setTeamNames] = useState<Record<string, string>>({});
+  const [callMode, setCallMode] = useState<"listone" | "chiamata">("listone");
+  const [roleOrder, setRoleOrder] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -82,6 +86,8 @@ export function AstaConfigModal({
       setRosterD(8);
       setRosterC(8);
       setRosterA(6);
+      setCallMode("listone");
+      setRoleOrder(false);
       const initial: Record<string, string> = {};
       for (const t of teams) {
         initial[t.id] = t.name_auction ?? t.name;
@@ -126,6 +132,42 @@ export function AstaConfigModal({
                 className="w-24 font-mono text-center text-lg"
               />
               <span className="text-xs text-muted-foreground">Range: 5–30 s &nbsp;·&nbsp; Default: 8 s</span>
+            </div>
+          </div>
+
+          {/* Modalità chiamata */}
+          <div className="space-y-3">
+            <Label className="text-sm font-semibold">Modalità asta</Label>
+            <div className="space-y-2">
+              <div className="flex items-center gap-3">
+                <select
+                  value={callMode}
+                  onChange={(e) => {
+                    setCallMode(e.target.value as "listone" | "chiamata");
+                    if (e.target.value !== "chiamata") setRoleOrder(false);
+                  }}
+                  className="h-9 rounded-md border bg-background px-3 font-mono text-sm w-48"
+                >
+                  <option value="listone">A listone</option>
+                  <option value="chiamata">A chiamata</option>
+                </select>
+                <span className="text-xs text-muted-foreground">
+                  {callMode === "listone"
+                    ? "Avanzamento automatico dal listone"
+                    : "Il banditore chiama ogni giocatore"}
+                </span>
+              </div>
+              {callMode === "chiamata" && (
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={roleOrder}
+                    onChange={(e) => setRoleOrder(e.target.checked)}
+                    className="h-4 w-4 rounded border accent-primary"
+                  />
+                  <span className="text-sm font-mono">Chiamata per ordine di ruolo (P → D → C → A)</span>
+                </label>
+              )}
             </div>
           </div>
 
@@ -182,7 +224,7 @@ export function AstaConfigModal({
           </Button>
           <Button
             className="bg-[#1f4733] text-[#efe6d3] hover:bg-[#1f4733]/90 gap-2"
-            onClick={() => onConfirm(timerSeconds, teamNames, rosterP, rosterD, rosterC, rosterA)}
+            onClick={() => onConfirm(timerSeconds, teamNames, rosterP, rosterD, rosterC, rosterA, callMode, roleOrder)}
             disabled={isLoading}
           >
             <Gavel className="h-4 w-4" />

@@ -124,6 +124,39 @@ function fuzzyMatch(fragment: string, squadre: Squadra[]): Squadra | null {
   return null;
 }
 
+// ── Fuzzy player matching (per chiamata voce) ────────────────────────────────
+export interface PlayerVoice {
+  id: number;
+  name: string;
+  real_team: string;
+}
+
+function fuzzyMatchPlayer(fragment: string, players: PlayerVoice[]): PlayerVoice | null {
+  if (!fragment || players.length === 0) return null;
+  const frag = norm(fragment);
+
+  // 1. Exact name
+  for (const p of players) {
+    if (norm(p.name) === frag) return p;
+  }
+  // 2. Exact "name realteam"
+  for (const p of players) {
+    if (`${norm(p.name)} ${norm(p.real_team)}` === frag) return p;
+  }
+  // 3. Starts-with name (either direction)
+  for (const p of players) {
+    const pn = norm(p.name);
+    if (pn.startsWith(frag) || frag.startsWith(pn)) return p;
+  }
+  // 4. Any ≥3-char token in name
+  const fragTokens = frag.split(" ");
+  for (const p of players) {
+    const pTokens = norm(p.name).split(" ");
+    if (fragTokens.some((t) => t.length >= 3 && pTokens.includes(t))) return p;
+  }
+  return null;
+}
+
 // ── Public interface ─────────────────────────────────────────────────────────
 export interface UseVoiceBidderOptions {
   squadre: Squadra[];
@@ -132,6 +165,10 @@ export interface UseVoiceBidderOptions {
   onSalta: () => void;
   onPausa: () => void;
   onRiprendi: () => void;
+  /** Solo in modalità chiamata: lista dei giocatori svincolati per il riconoscimento "chiamo [nome]" */
+  svincolati?: PlayerVoice[];
+  /** Callback per chiamare un giocatore (modalità chiamata) */
+  onChiama?: (playerId: number) => void;
 }
 
 export interface UseVoiceBidderResult {
@@ -150,6 +187,8 @@ export function useVoiceBidder({
   onSalta,
   onPausa,
   onRiprendi,
+  svincolati,
+  onChiama,
 }: UseVoiceBidderOptions): UseVoiceBidderResult {
   const [isActive, setIsActive]       = useState(false);
   const [transcript, setTranscript]   = useState("");
@@ -159,11 +198,14 @@ export function useVoiceBidder({
   const isActiveRef = useRef(false);
   const recRef      = useRef<SRRecognition | null>(null);
   const debounceRef = useRef<{ key: string; ts: number } | null>(null);
-  const cbRef       = useRef({ onPlaceBid, onAggiudica, onSalta, onPausa, onRiprendi, squadre });
+  const cbRef       = useRef({
+    onPlaceBid, onAggiudica, onSalta, onPausa, onRiprendi, squadre,
+    svincolati, onChiama,
+  });
 
   // Keep callback ref current on every render (no deps needed)
   useEffect(() => {
-    cbRef.current = { onPlaceBid, onAggiudica, onSalta, onPausa, onRiprendi, squadre };
+    cbRef.current = { onPlaceBid, onAggiudica, onSalta, onPausa, onRiprendi, squadre, svincolati, onChiama };
   });
 
   const supported = !!getSRCtor();
@@ -185,6 +227,23 @@ export function useVoiceBidder({
         debounceRef.current?.key === normalized &&
         now - debounceRef.current.ts < 1500
       ) return;
+
+      // ── 0. Chiamata giocatore — "chiamo [nome] [squadra_reale]" ──────────
+      // Deve stare PRIMA del pattern offerta: il prefisso "chiamo" disambigua.
+      if (normalized.startsWith("chiamo ") && cbRef.current.onChiama && cbRef.current.svincolati?.length) {
+        const text2 = normalized.slice("chiamo ".length).trim();
+        const player = fuzzyMatchPlayer(text2, cbRef.current.svincolati);
+        if (player) {
+          const key = `chiamo-${player.id}`;
+          debounceRef.current = { key, ts: now };
+          flash(`Chiamata: ${player.name}`);
+          cbRef.current.onChiama(player.id);
+          return;
+        }
+        // Prefisso riconosciuto ma player non trovato → ignora silenziosamente
+        // (non scivolare nel pattern offerta: "chiamo" non è un nome di squadra)
+        return;
+      }
 
       // ── 1. Control commands (prefix "mister") ────────────────────────────
       if (normalized === "mister salta") {

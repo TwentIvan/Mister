@@ -5,6 +5,7 @@
  * Mister — il fantacalcio manageriale
  * OpenAPI spec version: 0.1.0
  */
+import type { AuctionCallMode } from './auctionCallMode';
 import type { AuctionStatus } from './auctionStatus';
 
 export interface Auction {
@@ -26,6 +27,10 @@ export interface Auction {
   roster_a: number;
   /** Vero se esiste un'azione annullabile (bid/skip/assign). Server-authoritative. */
   undoable: boolean;
+  /** Modalità di avanzamento: sequenziale (listone) o a chiamata esplicita (chiamata) */
+  call_mode: AuctionCallMode;
+  /** In chiamata: ordina per ruolo P→D→C→A */
+  role_order: boolean;
   /** @nullable */
   started_at?: Date | null;
   /** @nullable */
