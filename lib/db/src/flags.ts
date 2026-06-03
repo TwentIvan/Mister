@@ -193,6 +193,24 @@ export const FLAGS = [
     label: "Recupero crediti su svincolo (%)",
     description: "Percentuale di crediti recuperata quando il manager svincola un giocatore.",
   },
+  {
+    key: "auction_role_cap",
+    category: "economy",
+    type: "bool",
+    defaultValue: true,
+    label: "Limite quota ruolo in asta",
+    description:
+      "Blocca l'offerta su un giocatore il cui ruolo è già esaurito nella rosa della squadra offerente.",
+  },
+  {
+    key: "auction_reserve_budget",
+    category: "economy",
+    type: "bool",
+    defaultValue: true,
+    label: "Riserva budget per completare la rosa",
+    description:
+      "Un'offerta viene bloccata se lascerebbe meno di 1 FM per ogni slot di rosa ancora vuoto.",
+  },
 
   // --- TATTICA ---
   {

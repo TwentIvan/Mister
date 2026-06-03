@@ -11,6 +11,7 @@ import {
   players,
   contracts,
   leagues,
+  federations,
   type Auction,
   type AuctionBid,
 } from "@workspace/db";
@@ -353,6 +354,85 @@ router.post("/auctions/:id/bid", async (req, res): Promise<void> => {
   if (amountFm > team.creditsRemaining) {
     res.status(400).json({ error: "Crediti insufficienti" });
     return;
+  }
+
+  // ── Flag federazione (default ON se lega senza federation) ────────────────
+  const [leagueRow] = await db
+    .select({ federationId: leagues.federationId })
+    .from(leagues)
+    .where(eq(leagues.id, auction.leagueId));
+
+  let featureFlags: Record<string, unknown> = {};
+  if (leagueRow?.federationId) {
+    const [fed] = await db
+      .select({ featureFlags: federations.featureFlags })
+      .from(federations)
+      .where(eq(federations.id, leagueRow.federationId));
+    featureFlags = (fed?.featureFlags ?? {}) as Record<string, unknown>;
+  }
+  // Se un flag non è esplicitamente impostato a false lo consideriamo ON
+  const flagRoleCap       = featureFlags["auction_role_cap"]       !== false;
+  const flagReserveBudget = featureFlags["auction_reserve_budget"] !== false;
+
+  // ── Regola 1: quota per ruolo ─────────────────────────────────────────────
+  if (flagRoleCap) {
+    const roleToRoster: Record<string, number | null | undefined> = {
+      GK:  auction.rosterP,
+      DEF: auction.rosterD,
+      MID: auction.rosterC,
+      ATT: auction.rosterA,
+    };
+    const roleLabel: Record<string, string> = {
+      GK: "portieri", DEF: "difensori", MID: "centrocampisti", ATT: "attaccanti",
+    };
+    const roleQuota = roleToRoster[currentPlayer.playerRole] ?? null;
+    if (roleQuota !== null) {
+      const [roleCountRow] = await db
+        .select({ n: count() })
+        .from(auctionAssignments)
+        .innerJoin(players, eq(auctionAssignments.playerId, players.id))
+        .where(
+          and(
+            eq(auctionAssignments.auctionId, id),
+            eq(auctionAssignments.fantaTeamId, fantaTeamId),
+            eq(players.roleClassic, currentPlayer.playerRole),
+          ),
+        );
+      const alreadyAcquired = Number(roleCountRow?.n ?? 0);
+      if (alreadyAcquired >= roleQuota) {
+        const label = roleLabel[currentPlayer.playerRole] ?? currentPlayer.playerRole.toLowerCase();
+        res.status(400).json({ error: `Rosa ${label} completa` });
+        return;
+      }
+    }
+  }
+
+  // ── Regola 2: riserva budget per completare la rosa ───────────────────────
+  if (flagReserveBudget) {
+    const totalSlots =
+      (auction.rosterP ?? 0) +
+      (auction.rosterD ?? 0) +
+      (auction.rosterC ?? 0) +
+      (auction.rosterA ?? 0);
+    const [acquiredRow] = await db
+      .select({ n: count() })
+      .from(auctionAssignments)
+      .where(
+        and(
+          eq(auctionAssignments.auctionId, id),
+          eq(auctionAssignments.fantaTeamId, fantaTeamId),
+        ),
+      );
+    const teamAcquired   = Number(acquiredRow?.n ?? 0);
+    const emptySlots     = totalSlots - teamAcquired;
+    // Dopo questo acquisto restano emptySlots-1 slot vuoti, ognuno richiede ≥1 FM
+    const offertaMassima = team.creditsRemaining - (emptySlots - 1);
+    if (amountFm > offertaMassima) {
+      res.status(400).json({
+        error: `Budget insufficiente per completare la rosa (massimo ${offertaMassima} FM)`,
+      });
+      return;
+    }
   }
 
   const [bid] = await db

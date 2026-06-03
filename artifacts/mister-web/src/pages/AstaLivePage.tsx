@@ -335,6 +335,7 @@ export default function AstaLivePage() {
         rosterD={data.auction.roster_d}
         rosterC={data.auction.roster_c}
         rosterA={data.auction.roster_a}
+        currentPlayerRole={data.current_player?.role_classic ?? null}
         currentBidTeamId={data.current_bid?.fanta_team_id ?? null}
         currentBidAmount={data.current_bid?.amount_fm ?? 0}
         isPaused={isPaused || isCompleted}

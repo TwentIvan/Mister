@@ -1,0 +1,40 @@
+TASK 7.E — vincoli rosa e budget. Due regole VINCOLANTI (bloccano l'offerta), enforcement LATO SERVER nell'endpoint di offerta cosi vale identico per tasti e voce. Niente polish grafico (il design e un task finale a parte).
+
+GOVERNO TRAMITE FLAG DI LEGA (non inventare config parallele):
+- Cerca in lib/db/src/flags.ts i flag che governano (a) i limiti di rosa per ruolo e (b) la regola "budget per completare la rosa". Sono raggruppati per categoria (contracts/market/economy/tactics/scouting).
+- Se i flag adatti esistono: aggancia l'enforcement a quelli, letti dalla federazione della lega. Assicurati che per la lega demo siano ON.
+- Se NON esistono: aggiungine due minimi (default ON) nel gruppo piu pertinente (probabilmente economy). NON costruire la UI completa dei 18 flag: serve solo che le regole siano attive di default e spegnibili.
+- Se un flag e OFF, la regola corrispondente non blocca nulla.
+
+DATI gia disponibili: composizione su auctions (roster_p/d/c/a), credits_remaining per squadra, e gli assignments per squadra (ruolo + prezzo) gia restituiti da GET /auctions/:id.
+
+REGOLA 1 — quota di ruolo
+Per il ruolo R del giocatore corrente, una squadra puo offrire solo finche i suoi acquisti di ruolo R sono MENO della quota roster_R. Quando li ha riempiti (acquisti_R pari a roster_R), non puo piu offrire su un giocatore di ruolo R.
+
+REGOLA 2 — "devi poter completare la rosa"
+Una squadra deve trattenere almeno 1 FM per ogni slot ancora vuoto che le restera dopo questo acquisto.
+- slot_totali = roster_p + roster_d + roster_c + roster_a
+- acquisiti = numero totale di giocatori gia presi dalla squadra
+- offerta_massima = credits_remaining - (slot_totali - acquisiti - 1)
+Un'offerta oltre offerta_massima viene bloccata.
+(La regola "non oltre i crediti disponibili" esiste gia da 7.C: resta.)
+
+ENFORCEMENT (server-authoritative):
+- Nell'endpoint POST /auctions/:id/bid valida ENTRAMBE le regole (quando i rispettivi flag sono ON) prima di accettare l'offerta. Se violate, rispondi con errore + motivo leggibile (es. "Rosa portieri completa", "Budget insufficiente per completare la rosa").
+- La voce passa gia per placeBid e quindi per lo stesso endpoint: una voce-offerta che viola viene rifiutata e il motivo appare nel feedback inline gia presente. NON duplicare la validazione lato voce.
+
+RIFLESSO FRONTEND (presentazione minima, niente restyle):
+- Tasti +1/+5/+10 di una squadra che non puo offrire sul giocatore corrente (ruolo pieno): disabilitati, con motivo (tooltip/etichetta breve).
+- Tasto/importo che supererebbe offerta_massima: disabilitato.
+- L'errore del backend resta mostrato inline come ora.
+
+CRITERI DI ACCETTAZIONE:
+E1. Quota ruolo: riempi i portieri di una squadra (acquisti_P pari a roster_P), poi prova a farle offrire un altro portiere: BLOCCATA, col motivo (sia da tasto sia da voce).
+E2. Completa rosa: con una squadra a budget basso e molti slot vuoti, un'offerta oltre credits_remaining - (slot_totali - acquisiti - 1) e BLOCCATA col motivo. Mostra il calcolo su un esempio.
+E3. Server-authoritative: una VOCE-offerta che viola una delle due regole viene rifiutata con feedback (passa per lo stesso endpoint dei tasti, nessuna validazione duplicata).
+E4. Governo flag: i vincoli sono legati a flag di lega/federazione (da flags.ts), ON per la lega demo; con flag OFF non bloccano. Indica quali flag hai usato/aggiunto.
+E5. REGRESSIONE: i 7 criteri timer/guard e il flusso voce restano verdi.
+
+VINCOLI: enforcement lato server; non costruire la UI completa dei flag federazione (solo flag default ON); niente polish grafico ora; typecheck pulito, niente debug residuo.
+
+DELIVERABLE: diff (flags/schema se toccati, endpoint bid, riflesso frontend); prova di E1 ed E2 (screenshot/log del blocco col motivo + il calcolo di E2); conferma di E3 via voce.

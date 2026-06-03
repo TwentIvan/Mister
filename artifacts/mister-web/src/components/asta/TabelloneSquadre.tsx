@@ -20,6 +20,7 @@ interface TabelloneSquadreProps {
   rosterD: number;
   rosterC: number;
   rosterA: number;
+  currentPlayerRole: string | null;
   currentBidTeamId: string | null;
   currentBidAmount: number;
   isPaused: boolean;
@@ -44,7 +45,9 @@ export function TabelloneSquadre({
   rosterD,
   rosterC,
   rosterA,
+  currentPlayerRole,
   currentBidTeamId,
+  currentBidAmount,
   isPaused,
   isLoading,
   onBid,
@@ -62,8 +65,12 @@ export function TabelloneSquadre({
     byRole.get(rk)!.push(a);
   }
 
-  const canBid = !isPaused && !isLoading;
+  const globalCanBid = !isPaused && !isLoading;
   const n = squadre.length || 1;
+
+  // Constraints derivable from data already in the response
+  const totalSlots = rosterP + rosterD + rosterC + rosterA;
+  const currentRole = (currentPlayerRole as RoleKey) || null;
 
   return (
     <div>
@@ -78,7 +85,7 @@ export function TabelloneSquadre({
         </p>
       </div>
 
-      {/* Board: fluid grid, no horizontal scroll, all columns fit */}
+      {/* Board: fluid grid, no horizontal scroll */}
       <div className="w-full rounded-xl border bg-card overflow-hidden">
         <div
           className="grid bg-border"
@@ -88,9 +95,30 @@ export function TabelloneSquadre({
           }}
         >
           {squadre.map((team) => {
-            const isLead = team.id === currentBidTeamId;
+            const isLead    = team.id === currentBidTeamId;
             const teamRoles = byTeam.get(team.id) ?? new Map<RoleKey, AssignmentItem[]>();
             const displayName = team.name_auction ?? team.name;
+
+            // ── Constraint 1: role quota ─────────────────────────────────────
+            const roleQuota        = currentRole ? rosterByRole[currentRole] : 0;
+            const teamRoleAcquired = currentRole ? (teamRoles.get(currentRole)?.length ?? 0) : 0;
+            const roleFull         = !!currentRole && teamRoleAcquired >= roleQuota;
+
+            // ── Constraint 2: reserve budget ─────────────────────────────────
+            const teamAcquired   = assignments.filter((a) => a.fanta_team_id === team.id).length;
+            const emptySlots     = totalSlots - teamAcquired;
+            // After buying this player: emptySlots - 1 remaining, each needs ≥1 FM
+            const offertaMassima = team.credits_remaining - (emptySlots - 1);
+
+            const teamCanBid = globalCanBid && !roleFull;
+
+            // Reason label shown below buttons (first blocking reason wins)
+            let blockReason: string | null = null;
+            if (roleFull && currentRole && ROLE_CONFIG[currentRole]) {
+              blockReason = `Rosa ${ROLE_CONFIG[currentRole].label.toLowerCase()} completa`;
+            } else if (globalCanBid && !roleFull && offertaMassima < currentBidAmount + 1) {
+              blockReason = `max ${Math.max(0, offertaMassima)} FM`;
+            }
 
             return (
               <div
@@ -124,9 +152,9 @@ export function TabelloneSquadre({
                 {/* Role groups */}
                 <div className="flex flex-col gap-1.5 flex-1 min-w-0">
                   {ROLE_ORDER.map((role) => {
-                    const cfg = ROLE_CONFIG[role];
-                    const filled = teamRoles.get(role) ?? [];
-                    const total = rosterByRole[role];
+                    const cfg      = ROLE_CONFIG[role];
+                    const filled   = teamRoles.get(role) ?? [];
+                    const total    = rosterByRole[role];
                     const emptyCount = Math.max(0, total - filled.length);
 
                     return (
@@ -169,17 +197,29 @@ export function TabelloneSquadre({
 
                 {/* Bid buttons */}
                 <div className="flex gap-1 pt-2 border-t border-border mt-2">
-                  {[1, 5, 10].map((delta) => (
-                    <button
-                      key={delta}
-                      onClick={() => onBid(team.id, delta)}
-                      disabled={!canBid}
-                      className="flex-1 border border-border rounded-md py-1 font-mono font-bold text-[10px] text-primary/80 bg-card hover:bg-muted/30 disabled:opacity-25 disabled:cursor-not-allowed transition-colors"
-                    >
-                      +{delta}
-                    </button>
-                  ))}
+                  {[1, 5, 10].map((delta) => {
+                    const wouldBid     = currentBidAmount + delta;
+                    const overBudget   = wouldBid > offertaMassima;
+                    const btnDisabled  = !teamCanBid || overBudget;
+                    return (
+                      <button
+                        key={delta}
+                        onClick={() => onBid(team.id, delta)}
+                        disabled={btnDisabled}
+                        className="flex-1 border border-border rounded-md py-1 font-mono font-bold text-[10px] text-primary/80 bg-card hover:bg-muted/30 disabled:opacity-25 disabled:cursor-not-allowed transition-colors"
+                      >
+                        +{delta}
+                      </button>
+                    );
+                  })}
                 </div>
+
+                {/* Blocking reason (role full or budget cap) */}
+                {blockReason && (
+                  <p className="text-[8px] font-mono text-muted-foreground text-center mt-1 leading-tight">
+                    {blockReason}
+                  </p>
+                )}
               </div>
             );
           })}
