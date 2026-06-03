@@ -1,0 +1,49 @@
+T130 — FIX BUG "Avvia asta" SU LEGHE LEGACY
+
+Quando si preme "Avvia asta" su "Lega Test MVP" (id 'league-juve'), il backend risponde "Impossibile avviare l'asta. Verifica che ci siano almeno 4 squadre." nonostante la pagina mostri 8 squadre iscritte. Il check del POST /auctions trova 0 squadre, mentre il counter della pagina ne trova 8 — quindi due query diverse, due relazioni diverse.
+
+DIAGNOSI
+
+1) Eseguire queste query e riportare i risultati:
+
+  -- Le squadre ft-mvp-* hanno league_id valorizzato?
+  SELECT id, name, league_id FROM fanta_teams WHERE id LIKE 'ft-mvp-%' ORDER BY id;
+
+  -- Quante squadre il backend conta per ogni lega via colonna league_id diretta?
+  SELECT l.id, l.name, COUNT(ft.id) AS num_squadre
+  FROM leagues l
+  LEFT JOIN fanta_teams ft ON ft.league_id = l.id
+  GROUP BY l.id, l.name
+  ORDER BY l.id;
+
+  -- Esiste una tabella di join tipo league_participants o simile?
+  SELECT table_name FROM information_schema.tables 
+  WHERE table_schema = 'public' 
+    AND (table_name LIKE '%participant%' OR table_name LIKE '%member%' OR table_name LIKE '%league_%');
+
+2) Identificare la query usata dal check "almeno 4 squadre" in artifacts/api-server/src/routes/auctions.ts (POST /auctions) e confrontarla con la query usata per il counter "Manager 8/8" nella league-detail page.
+
+FIX
+
+In base alla diagnosi, scegliere uno dei due approcci:
+
+OPZIONE A — le ft-mvp-* hanno league_id NULL o sbagliato:
+  Backfill UPDATE fanta_teams SET league_id = 'league-juve' WHERE id LIKE 'ft-mvp-%' AND league_id IS NULL (o whatever è il valore corretto)
+
+OPZIONE B — il check del POST /auctions usa una relazione sbagliata:
+  Allineare la query del check alla stessa relazione usata dal counter "Manager 8/8" (probabilmente via competition_participants o simile)
+
+Verificare anche che il pulsante "Avvia asta" sia effettivamente sbloccato sulle altre 2 leghe legacy ("Sfida Mantra Pro", "Champions del Bar Roma") se hanno squadre associate.
+
+SANITY POST-FIX
+
+- Cliccare "Avvia asta" su "Lega Test MVP" → l'asta deve partire correttamente (redirect a /asta/:auctionId)
+- Verificare che le squadre in sidebar dell'asta siano le 8 attese (Mario's Squad, I Magnifici, etc.)
+- Verificare che credits_remaining iniziale di ogni squadra sia 500
+
+DELIVERABLE
+
+- Output delle 3 query diagnostiche
+- Spiegazione: quale era la relazione rotta
+- Diff del fix applicato (migrazione SQL se backfill, oppure modifica codice se query)
+- Screenshot dell'asta partita correttamente dalla "Lega Test MVP"

@@ -28,8 +28,15 @@ export default function LeagueDetail() {
     try {
       const result = await createAuction.mutateAsync({ data: { league_id: id } });
       navigate(`/asta/${result.auction.id}`);
-    } catch {
-      setAstaError("Impossibile avviare l'asta. Verifica che ci siano almeno 4 squadre.");
+    } catch (err: unknown) {
+      // Se c'è già un'asta attiva, reindirizza direttamente
+      const body = (err as { response?: { data?: { existing_auction_id?: string; error?: string } } })
+        ?.response?.data;
+      if (body?.existing_auction_id) {
+        navigate(`/asta/${body.existing_auction_id}`);
+        return;
+      }
+      setAstaError(body?.error ?? "Impossibile avviare l'asta.");
     }
   };
 

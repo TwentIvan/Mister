@@ -129,7 +129,10 @@ router.post("/auctions", async (req, res): Promise<void> => {
       ),
     );
   if (active.length > 0) {
-    res.status(409).json({ error: "Esiste già un'asta attiva per questa lega" });
+    res.status(409).json({
+      error: "Esiste già un'asta attiva per questa lega",
+      existing_auction_id: active[0].id,
+    });
     return;
   }
 
