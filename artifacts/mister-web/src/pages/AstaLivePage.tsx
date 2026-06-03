@@ -286,12 +286,14 @@ export default function AstaLivePage() {
   );
 
   // Lista NON filtrata per il riconoscimento vocale: indipendente dalla ricerca UI.
-  // Se usassimo queueData (filtrata), un callSearch attivo (es. "berardi") azzererebbe
-  // svincolati → parseIntent salterebbe silenziosamente il branch "chiamo".
+  // Si abilita appena auctionId è noto (non attende callMode) così i dati sono pronti
+  // prima che l'utente attivi il microfono. Se usassimo queueData (filtrata per ruolo/ricerca),
+  // un callSearch attivo o role_order azzererebbe svincolati → parseIntent salterebbe
+  // silenziosamente il branch "chiamo" senza mai chiamare flash().
   const { data: queueVoiceData } = useGetAuctionQueue(
     auctionId!,
     undefined,
-    { query: { enabled: callMode === "chiamata" && !!auctionId, staleTime: 30_000, queryKey: getGetAuctionQueueQueryKey(auctionId!, undefined) } },
+    { query: { enabled: !!auctionId, staleTime: 30_000, queryKey: getGetAuctionQueueQueryKey(auctionId!, undefined) } },
   );
 
   const assignedPlayerIds = new Set((data?.assignments ?? []).map((a) => a.player_id));
