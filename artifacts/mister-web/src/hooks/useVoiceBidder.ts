@@ -263,6 +263,7 @@ export interface UseVoiceBidderOptions {
   svincolati?: PlayerVoice[];
   onChiama?: (playerId: number) => void;
   onChiamaAmbiguous?: (candidates: PlayerVoice[]) => void;
+  onChiamaNotFound?: (fragment: string) => void;
   onSeleziona?: (n: number) => void;
 }
 
@@ -287,6 +288,7 @@ export function useVoiceBidder({
   svincolati,
   onChiama,
   onChiamaAmbiguous,
+  onChiamaNotFound,
   onSeleziona,
 }: UseVoiceBidderOptions): UseVoiceBidderResult {
   const [isActive, setIsActive]       = useState(false);
@@ -297,10 +299,10 @@ export function useVoiceBidder({
   const recRef          = useRef<SRRecognition | null>(null);
   const debounceRef     = useRef<{ key: string; ts: number } | null>(null);
   const interimTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const cbRef       = useRef({ onPlaceBid, onAggiudica, onSalta, onPausa, onRiprendi, squadre, svincolati, onChiama, onChiamaAmbiguous, onSeleziona });
+  const cbRef       = useRef({ onPlaceBid, onAggiudica, onSalta, onPausa, onRiprendi, squadre, svincolati, onChiama, onChiamaAmbiguous, onChiamaNotFound, onSeleziona });
 
   useEffect(() => {
-    cbRef.current = { onPlaceBid, onAggiudica, onSalta, onPausa, onRiprendi, squadre, svincolati, onChiama, onChiamaAmbiguous, onSeleziona };
+    cbRef.current = { onPlaceBid, onAggiudica, onSalta, onPausa, onRiprendi, squadre, svincolati, onChiama, onChiamaAmbiguous, onChiamaNotFound, onSeleziona };
   });
 
   const supported = !!getSRCtor();
@@ -337,7 +339,7 @@ export function useVoiceBidder({
           }
           break;
         case "chiama_notfound":
-          flash(`Non in coda: ${intent.fragment}`);
+          cbRef.current.onChiamaNotFound?.(intent.fragment);
           break;
         case "seleziona":
           if (cbRef.current.onSeleziona) {

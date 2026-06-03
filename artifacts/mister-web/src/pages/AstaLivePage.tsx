@@ -319,6 +319,21 @@ export default function AstaLivePage() {
     svincolati:           callMode === "chiamata" ? svincolatiForVoice : undefined,
     onChiama:             callMode === "chiamata" ? handleCall : undefined,
     onChiamaAmbiguous:    callMode === "chiamata" ? (candidates) => setDisambCandidates(candidates) : undefined,
+    onChiamaNotFound:     callMode === "chiamata" ? (fragment) => {
+      // Cerca il frammento vocale tra i giocatori già assegnati (normalizzato, senza accenti)
+      const n = (s: string) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+      const frag = n(fragment);
+      const hit = (data?.assignments ?? []).find((a) => {
+        const name = n(a.player_name);
+        return name.includes(frag) || frag.includes(name.split(" ").slice(-1)[0]!);
+      });
+      if (hit) {
+        const team = playerTeamMap.get(hit.player_id) ?? "altra squadra";
+        setBidError(`${hit.player_name} già di ${team}`);
+        setTimeout(() => setBidError(null), 4000);
+      }
+      // Se non trovato tra gli assegnati: nome non riconosciuto, silenzio
+    } : undefined,
     onSeleziona:          callMode === "chiamata" ? (n) => {
       const p = disambCandidates?.[n - 1];
       if (p) void handleCall(p.id);
