@@ -57,12 +57,15 @@ export default function AstaLivePage() {
 
   useEffect(() => {
     if (!timerActive || isPaused) {
+      console.log(`[TIMER-EFFECT] stop — timerActive=${timerActive} isPaused=${isPaused}`);
       if (timerRef.current) clearInterval(timerRef.current);
       return;
     }
+    console.log(`[TIMER-EFFECT] start interval — timerActive=${timerActive}`);
     timerRef.current = setInterval(() => {
       setTimerRemaining((prev) => {
         if (prev <= 0) {
+          console.log("[TIMER] scaduto (0)");
           if (timerRef.current) clearInterval(timerRef.current);
           return 0;
         }
@@ -76,6 +79,7 @@ export default function AstaLivePage() {
 
   const currentPlayerId = data?.current_player?.player_id;
   useEffect(() => {
+    console.log(`[PLAYER-CHANGE] nuovo playerId=${currentPlayerId} — reset timer e prevBidCount`);
     if (timerRef.current) clearInterval(timerRef.current);
     setTimerActive(false);
     setTimerRemaining(TIMER_SECONDS);
@@ -84,13 +88,16 @@ export default function AstaLivePage() {
 
   useEffect(() => {
     const bidCount = data?.bids_history.length ?? 0;
+    console.log(`[BIDS-EFFECT] bidCount=${bidCount} prevBidCount=${prevBidCountRef.current} timerActive=${timerActive}`);
     if (bidCount > prevBidCountRef.current && !timerActive) {
+      console.log("[BIDS-EFFECT] → setTimerActive(true) via bids_history");
       setTimerActive(true);
     }
     prevBidCountRef.current = bidCount;
   }, [data?.bids_history.length, timerActive]);
 
   const resetTimer = useCallback(() => {
+    console.log("[RESET-TIMER] chiamato → setTimerActive(true), setTimerRemaining(8)");
     if (timerRef.current) clearInterval(timerRef.current);
     setTimerRemaining(TIMER_SECONDS);
     setTimerActive(true);
@@ -99,16 +106,21 @@ export default function AstaLivePage() {
   const handleBid = async (fantaTeamId: string, delta: number) => {
     if (!auctionId || !data?.current_player) return;
     const currentAmount = data.current_bid?.amount_fm ?? 0;
-    await bidMutation.mutateAsync({
-      id: auctionId,
-      data: {
-        player_id: data.current_player.player_id,
-        fanta_team_id: fantaTeamId,
-        amount_fm: currentAmount + delta,
-      },
-    });
-    resetTimer();
-    refetch();
+    const playerId = data.current_player.player_id;
+    const amount = currentAmount + delta;
+    console.log(`[BID] inizio — playerId=${playerId} fantaTeamId=${fantaTeamId} amount=${amount}`);
+    try {
+      await bidMutation.mutateAsync({
+        id: auctionId,
+        data: { player_id: playerId, fanta_team_id: fantaTeamId, amount_fm: amount },
+      });
+      console.log("[BID] mutation OK → resetTimer + refetch");
+      resetTimer();
+      refetch();
+    } catch (err: unknown) {
+      const body = (err as { data?: { error?: string } })?.data;
+      console.error(`[BID] mutation FAILED — ${body?.error ?? String(err)}`);
+    }
   };
 
   const handleAggiudica = async () => {
@@ -129,10 +141,12 @@ export default function AstaLivePage() {
 
   const handleSalta = async () => {
     if (!auctionId || !data?.current_player) return;
+    console.log(`[SALTA] inizio — playerId=${data.current_player.player_id}`);
     await skipMutation.mutateAsync({
       id: auctionId,
       data: { player_id: data.current_player.player_id },
     });
+    console.log("[SALTA] mutation OK → setTimerActive(false) + refetch");
     if (timerRef.current) clearInterval(timerRef.current);
     setTimerActive(false);
     setTimerRemaining(TIMER_SECONDS);
