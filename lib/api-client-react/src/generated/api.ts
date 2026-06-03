@@ -3780,6 +3780,84 @@ export function useGetAuction<TData = Awaited<ReturnType<typeof getAuction>>, TE
 
 
 
+export const getGetAuctionStreamUrl = (id: string,) => {
+
+
+
+
+  return `/api/auctions/${id}/stream`
+}
+
+/**
+ * Server-Sent Events. Il server invia lo stato completo (AuctionState) a ogni mutazione. Il client deve riconnettersi automaticamente tramite EventSource.
+ * @summary SSE stream — aggiornamenti real-time dello stato asta
+ */
+export const getAuctionStream = async (id: string, options?: RequestInit): Promise<string> => {
+
+  return customFetch<string>(getGetAuctionStreamUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetAuctionStreamQueryKey = (id: string,) => {
+    return [
+    `/api/auctions/${id}/stream`
+    ] as const;
+    }
+
+
+export const getGetAuctionStreamQueryOptions = <TData = Awaited<ReturnType<typeof getAuctionStream>>, TError = ErrorType<unknown>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAuctionStream>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetAuctionStreamQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAuctionStream>>> = ({ signal }) => getAuctionStream(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAuctionStream>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetAuctionStreamQueryResult = NonNullable<Awaited<ReturnType<typeof getAuctionStream>>>
+export type GetAuctionStreamQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary SSE stream — aggiornamenti real-time dello stato asta
+ */
+
+export function useGetAuctionStream<TData = Awaited<ReturnType<typeof getAuctionStream>>, TError = ErrorType<unknown>>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAuctionStream>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetAuctionStreamQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
 export const getCreateAuctionBidUrl = (id: string,) => {
 
 

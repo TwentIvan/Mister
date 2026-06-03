@@ -990,6 +990,13 @@ export interface Auction {
   call_mode: AuctionCallMode;
   /** In chiamata: ordina per ruolo P→D→C→A */
   role_order: boolean;
+  /**
+     * Epoch ms della deadline del rilancio corrente. Null se nessun timer attivo. Server-authoritative.
+     * @nullable
+     */
+  deadline_ts?: number | null;
+  /** Ms residui del timer al momento della pausa. Usati da /resume per ripristinare la deadline. */
+  paused_remaining_ms: number;
   /** @nullable */
   started_at?: string | null;
   /** @nullable */

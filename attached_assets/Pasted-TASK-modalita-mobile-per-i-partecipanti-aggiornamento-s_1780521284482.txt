@@ -1,0 +1,45 @@
+TASK — modalita mobile per i partecipanti + aggiornamento sincrono dell'asta. Due fasi con CHECKPOINT dopo la Fase 1 (sync + timer server-side), prima della UI mobile. I rilanci passano SEMPRE per il POST /bid esistente (guard + vincoli 7.E): nessun path parallelo. Niente AI ora (solo spazio riservato). Non e il restyle finale: UI pulita e funzionale, ma il polish e il task design separato.
+
+==== FASE 1 — sincronizzazione real-time + timer server-authoritative ====
+Oggi l'asta si aggiorna con poll a 5s e la deadline del timer e calcolata lato client. Per piu device serve push real-time e deadline server-side.
+
+SSE:
+- Endpoint GET /auctions/:id/stream (Server-Sent Events). Il server tiene i subscriber per asta e, a OGNI mutazione (bid, assign, skip, call, undo, modifica manuale, pausa, riprendi), trasmette lo stato aggiornato dell'asta (stessa forma di GET /auctions/:id).
+- I client (schermo banditore AstaLivePage + futura schermata mobile) si abbonano con EventSource e aggiornano lo stato a ogni messaggio. Mantieni un poll di fallback a bassa frequenza per sicurezza, ma la fonte primaria e l'SSE. EventSource si riconnette da solo; alla riconnessione rifai un GET dello stato.
+
+TIMER SERVER-AUTHORITATIVE (parte delicata):
+- Sposta la deadline sul server: salva deadline_ts sull'asta (o sullo stato del giocatore corrente). Su un bid riuscito il server fa deadline_ts = now + timer_seconds*1000. Su nuovo giocatore/idle: deadline_ts null.
+- Pausa/riprendi SERVER-side: pausa salva il rimanente e congela; riprendi fa deadline_ts = now + rimanente. (Stessa semantica del C5, ma ora sul server e quindi sincronizzata.)
+- deadline_ts (e isPaused) sono nello stato trasmesso. OGNI client calcola remaining = ceil((deadline_ts - now)/1000). Lo schermo del banditore smette di calcolare la deadline da solo e la legge dallo stato server.
+
+CRITERI Fase 1:
+P1. SSE: i client ricevono lo stato a ogni cambiamento, senza dipendere dal poll 5s.
+P2. Due tab della stessa asta mostrano lo STESSO countdown (entro ~1s) e lo stesso stato; un rilancio in una si riflette subito nell'altra.
+P3. Pausa/riprendi server-side: pausa congela su tutti i client, riprendi riparte dal rimanente su tutti.
+P4. Lo schermo banditore consuma SSE + deadline server (poll solo come fallback).
+P5. REGRESSIONE: i 7 criteri timer/guard RI-VERIFICATI e verdi col timer server-side; voce/7.E/annullo/chiamata invariati.
+
+----- CHECKPOINT: due tab in sync, countdown allineato, 7 criteri verdi. Aspetta OK, poi Fase 2. -----
+
+==== FASE 2 — link/QR per squadra + schermata mobile ====
+ACCESSO:
+- Genera un token opaco per squadra (alla creazione asta o su richiesta). Link tipo /asta/:id/join/:token.
+- Pannello banditore "Inviti": per ogni squadra il link + un QR (lib QR lato client) copiabili/mostrabili.
+- Aprendo il link/QR di una squadra il client e identificato COME quella squadra (dal token).
+
+SCHERMATA MOBILE (parte alta soltanto; sotto spazio riservato all'AI):
+- IN ALTO, compatto: giocatore corrente (nome, ruolo, squadra), offerta corrente + chi e in testa, timer (dalla deadline server), e il BUDGET della propria squadra. Sotto: i tasti +1 +2 +3 +5 +10 che rilanciano per la PROPRIA squadra (POST /bid con amount = offerta_corrente + N, identita dal token).
+- IN BASSO: area riservata e VUOTA, placeholder "Suggerimenti AI - prossimamente". Niente AI adesso.
+- I tasti +N rispettano i vincoli riflessi dallo stato sincronizzato: disabilitati se ruolo pieno / oltre la riserva budget / durante una transizione, con motivo. Niente rifiuti silenziosi.
+- Real-time via lo stesso SSE.
+
+CRITERI Fase 2:
+P6. Pannello banditore con link + QR per ogni squadra.
+P7. Aprendo il link/QR di una squadra si e connessi come quella squadra, su schermata mobile.
+P8. Schermata mobile: asta compatta in alto + tasti +1/+2/+3/+5/+10 per la propria squadra; area AI riservata e vuota in basso; la parte alta occupa solo la porzione superiore.
+P9. Sync end-to-end: un rilancio da un telefono aggiorna in tempo reale lo schermo banditore e gli altri telefoni; il timer riparte per tutti.
+P10. Concorrenza: due telefoni che rilanciano lo stesso importo - il server serializza, il secondo e rifiutato (deve superare l'offerta corrente) con feedback; nessun doppio conteggio.
+P11. I vincoli 7.E valgono sui rilanci mobile (stesso POST /bid).
+
+VINCOLI: bid via POST /bid esistente (nessun path parallelo); server-authoritative; SSE (WS solo se preferisci); area AI vuota; UI pulita ma NON il restyle finale; typecheck pulito, niente debug residuo.
+DELIVERABLE: diff; Fase 1 - prova di due tab in sync + countdown allineato + 7 criteri ri-verificati; dopo checkpoint, Fase 2 - QR/link, schermata mobile, e un rilancio cross-device che sincronizza (screenshot/registrazione; la prova cross-device dal vivo la faccio io).

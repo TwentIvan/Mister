@@ -1021,6 +1021,22 @@ paths:
         "404":
           description: Asta non trovata
 
+  /auctions/{id}/stream:
+    get:
+      operationId: getAuctionStream
+      tags: [auctions]
+      summary: "SSE stream — aggiornamenti real-time dello stato asta"
+      description: "Server-Sent Events. Il server invia lo stato completo (AuctionState) a ogni mutazione. Il client deve riconnettersi automaticamente tramite EventSource."
+      parameters:
+        - $ref: "#/components/parameters/StringId"
+      responses:
+        "200":
+          description: Stream SSE
+          content:
+            text/event-stream:
+              schema:
+                type: string
+
   /auctions/{id}/bid:
     post:
       operationId: createAuctionBid
@@ -2447,7 +2463,7 @@ components:
     # ─── AUCTIONS ─────────────────────────────────────────────
     Auction:
       type: object
-      required: [id, league_id, status, created_at, timer_seconds, roster_p, roster_d, roster_c, roster_a, undoable, call_mode, role_order]
+      required: [id, league_id, status, created_at, timer_seconds, roster_p, roster_d, roster_c, roster_a, undoable, call_mode, role_order, paused_remaining_ms]
       properties:
         id:
           type: string
@@ -2489,6 +2505,13 @@ components:
           type: boolean
           default: false
           description: "In chiamata: ordina per ruolo P→D→C→A"
+        deadline_ts:
+          type: ["integer", "null"]
+          description: "Epoch ms della deadline del rilancio corrente. Null se nessun timer attivo. Server-authoritative."
+        paused_remaining_ms:
+          type: integer
+          default: 0
+          description: "Ms residui del timer al momento della pausa. Usati da /resume per ripristinare la deadline."
         started_at:
           type: ["string", "null"]
           format: date-time

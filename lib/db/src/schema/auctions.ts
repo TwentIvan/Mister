@@ -50,6 +50,19 @@ export const auctions = pgTable("auctions", {
   completedAt: timestamp("completed_at", { withTimezone: true }),
 
   /**
+   * Deadline assoluta del rilancio corrente (server-authoritative).
+   * Impostata dal server a now + timer_seconds su ogni bid riuscito.
+   * Azzerata (null) su assign/skip/call/undo/pausa.
+   */
+  deadlineTs: timestamp("deadline_ts", { withTimezone: true }),
+
+  /**
+   * Ms residui del timer al momento della pausa.
+   * Usati da /resume per ripristinare la deadline senza perdere il tempo rimasto.
+   */
+  pausedRemainingMs: integer("paused_remaining_ms").notNull().default(0),
+
+  /**
    * Marca "azione annullabile presente".
    * Impostata a 'bid'/'skip'/'assign' dopo ogni azione; azzerata (null)
    * dopo un undo. Il backend rifiuta /undo se null — protezione server-side

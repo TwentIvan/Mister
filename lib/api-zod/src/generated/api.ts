@@ -1529,6 +1529,7 @@ export const getAuctionResponseAuctionRosterADefault = 6;
 
 export const getAuctionResponseAuctionCallModeDefault = `listone`;
 export const getAuctionResponseAuctionRoleOrderDefault = false;
+export const getAuctionResponseAuctionPausedRemainingMsDefault = 0;
 
 export const GetAuctionResponse = zod.object({
   "auction": zod.object({
@@ -1543,6 +1544,8 @@ export const GetAuctionResponse = zod.object({
   "undoable": zod.boolean().describe('Vero se esiste un\'azione annullabile (bid\/skip\/assign). Server-authoritative.'),
   "call_mode": zod.enum(['listone', 'chiamata']).default(getAuctionResponseAuctionCallModeDefault).describe('Modalità di avanzamento: sequenziale (listone) o a chiamata esplicita (chiamata)'),
   "role_order": zod.boolean().default(getAuctionResponseAuctionRoleOrderDefault).describe('In chiamata: ordina per ruolo P→D→C→A'),
+  "deadline_ts": zod.number().nullish().describe('Epoch ms della deadline del rilancio corrente. Null se nessun timer attivo. Server-authoritative.'),
+  "paused_remaining_ms": zod.number().default(getAuctionResponseAuctionPausedRemainingMsDefault).describe('Ms residui del timer al momento della pausa. Usati da \/resume per ripristinare la deadline.'),
   "started_at": zod.coerce.date().nullish(),
   "completed_at": zod.coerce.date().nullish(),
   "created_at": zod.coerce.date()
@@ -1600,6 +1603,15 @@ export const GetAuctionResponse = zod.object({
   "fanta_team_id": zod.string(),
   "final_price_fm": zod.number()
 }))
+})
+
+
+/**
+ * Server-Sent Events. Il server invia lo stato completo (AuctionState) a ogni mutazione. Il client deve riconnettersi automaticamente tramite EventSource.
+ * @summary SSE stream — aggiornamenti real-time dello stato asta
+ */
+export const GetAuctionStreamParams = zod.object({
+  "id": zod.coerce.string()
 })
 
 
@@ -1675,6 +1687,7 @@ export const pauseAuctionResponseRosterADefault = 6;
 
 export const pauseAuctionResponseCallModeDefault = `listone`;
 export const pauseAuctionResponseRoleOrderDefault = false;
+export const pauseAuctionResponsePausedRemainingMsDefault = 0;
 
 export const PauseAuctionResponse = zod.object({
   "id": zod.string(),
@@ -1688,6 +1701,8 @@ export const PauseAuctionResponse = zod.object({
   "undoable": zod.boolean().describe('Vero se esiste un\'azione annullabile (bid\/skip\/assign). Server-authoritative.'),
   "call_mode": zod.enum(['listone', 'chiamata']).default(pauseAuctionResponseCallModeDefault).describe('Modalità di avanzamento: sequenziale (listone) o a chiamata esplicita (chiamata)'),
   "role_order": zod.boolean().default(pauseAuctionResponseRoleOrderDefault).describe('In chiamata: ordina per ruolo P→D→C→A'),
+  "deadline_ts": zod.number().nullish().describe('Epoch ms della deadline del rilancio corrente. Null se nessun timer attivo. Server-authoritative.'),
+  "paused_remaining_ms": zod.number().default(pauseAuctionResponsePausedRemainingMsDefault).describe('Ms residui del timer al momento della pausa. Usati da \/resume per ripristinare la deadline.'),
   "started_at": zod.coerce.date().nullish(),
   "completed_at": zod.coerce.date().nullish(),
   "created_at": zod.coerce.date()
@@ -1715,6 +1730,7 @@ export const resumeAuctionResponseRosterADefault = 6;
 
 export const resumeAuctionResponseCallModeDefault = `listone`;
 export const resumeAuctionResponseRoleOrderDefault = false;
+export const resumeAuctionResponsePausedRemainingMsDefault = 0;
 
 export const ResumeAuctionResponse = zod.object({
   "id": zod.string(),
@@ -1728,6 +1744,8 @@ export const ResumeAuctionResponse = zod.object({
   "undoable": zod.boolean().describe('Vero se esiste un\'azione annullabile (bid\/skip\/assign). Server-authoritative.'),
   "call_mode": zod.enum(['listone', 'chiamata']).default(resumeAuctionResponseCallModeDefault).describe('Modalità di avanzamento: sequenziale (listone) o a chiamata esplicita (chiamata)'),
   "role_order": zod.boolean().default(resumeAuctionResponseRoleOrderDefault).describe('In chiamata: ordina per ruolo P→D→C→A'),
+  "deadline_ts": zod.number().nullish().describe('Epoch ms della deadline del rilancio corrente. Null se nessun timer attivo. Server-authoritative.'),
+  "paused_remaining_ms": zod.number().default(resumeAuctionResponsePausedRemainingMsDefault).describe('Ms residui del timer al momento della pausa. Usati da \/resume per ripristinare la deadline.'),
   "started_at": zod.coerce.date().nullish(),
   "completed_at": zod.coerce.date().nullish(),
   "created_at": zod.coerce.date()
@@ -1755,6 +1773,7 @@ export const endAuctionResponseRosterADefault = 6;
 
 export const endAuctionResponseCallModeDefault = `listone`;
 export const endAuctionResponseRoleOrderDefault = false;
+export const endAuctionResponsePausedRemainingMsDefault = 0;
 
 export const EndAuctionResponse = zod.object({
   "id": zod.string(),
@@ -1768,6 +1787,8 @@ export const EndAuctionResponse = zod.object({
   "undoable": zod.boolean().describe('Vero se esiste un\'azione annullabile (bid\/skip\/assign). Server-authoritative.'),
   "call_mode": zod.enum(['listone', 'chiamata']).default(endAuctionResponseCallModeDefault).describe('Modalità di avanzamento: sequenziale (listone) o a chiamata esplicita (chiamata)'),
   "role_order": zod.boolean().default(endAuctionResponseRoleOrderDefault).describe('In chiamata: ordina per ruolo P→D→C→A'),
+  "deadline_ts": zod.number().nullish().describe('Epoch ms della deadline del rilancio corrente. Null se nessun timer attivo. Server-authoritative.'),
+  "paused_remaining_ms": zod.number().default(endAuctionResponsePausedRemainingMsDefault).describe('Ms residui del timer al momento della pausa. Usati da \/resume per ripristinare la deadline.'),
   "started_at": zod.coerce.date().nullish(),
   "completed_at": zod.coerce.date().nullish(),
   "created_at": zod.coerce.date()

@@ -1,4 +1,4 @@
-import { Router, type IRouter } from "express";
+import { Router, type IRouter, type Response } from "express";
 import { eq, and, asc, desc, count, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { db } from "@workspace/db";
@@ -56,6 +56,8 @@ function mapAuction(a: Auction) {
     undoable: a.lastUndoableAction !== null && a.lastUndoableAction !== undefined,
     call_mode: a.callMode,
     role_order: a.roleOrder,
+    deadline_ts: a.deadlineTs ? a.deadlineTs.getTime() : null,
+    paused_remaining_ms: a.pausedRemainingMs,
     started_at: a.startedAt ?? null,
     completed_at: a.completedAt ?? null,
     created_at: a.createdAt,
@@ -170,6 +172,85 @@ function mapPlayerEntry(row: PlayerRow) {
     real_team: row.playerTeam,
     photo_url: row.playerPhotoUrl ?? null,
   };
+}
+
+// ── SSE subscribers + buildAuctionState + notifyAuction ──────────────────────
+
+const sseClients = new Map<string, Set<Response>>();
+
+async function buildAuctionState(id: string) {
+  const [auction] = await db.select().from(auctions).where(eq(auctions.id, id));
+  if (!auction) return null;
+
+  const currentPlayerRow = await getCurrentQueuePlayer(id, auction.callMode);
+  let currentBid: AuctionBid | null = null;
+  let bidsHistory: AuctionBid[] = [];
+
+  if (currentPlayerRow) {
+    const { playerId } = currentPlayerRow;
+    const [topBid] = await db
+      .select().from(auctionBids)
+      .where(and(eq(auctionBids.auctionId, id), eq(auctionBids.playerId, playerId), eq(auctionBids.valid, true)))
+      .orderBy(desc(auctionBids.amountFm)).limit(1);
+    currentBid = topBid ?? null;
+    bidsHistory = await db
+      .select().from(auctionBids)
+      .where(and(eq(auctionBids.auctionId, id), eq(auctionBids.playerId, playerId), eq(auctionBids.valid, true)))
+      .orderBy(desc(auctionBids.createdAt)).limit(10);
+  }
+
+  const teams = await db.select().from(fantaTeams).where(eq(fantaTeams.leagueId, auction.leagueId));
+
+  const assignmentRows = await db
+    .select({
+      playerId: auctionAssignments.playerId,
+      playerName: players.name,
+      roleClassic: players.roleClassic,
+      fantaTeamId: auctionAssignments.fantaTeamId,
+      finalPriceFm: auctionAssignments.finalPriceFm,
+    })
+    .from(auctionAssignments)
+    .innerJoin(players, eq(auctionAssignments.playerId, players.id))
+    .where(eq(auctionAssignments.auctionId, id));
+
+  const [totalRow] = await db
+    .select({ count: count() }).from(auctionPlayerQueue)
+    .where(eq(auctionPlayerQueue.auctionId, id));
+  const [soldRow] = await db
+    .select({ count: count() }).from(auctionPlayerQueue)
+    .where(and(eq(auctionPlayerQueue.auctionId, id), eq(auctionPlayerQueue.status, "sold")));
+
+  const total = Number(totalRow?.count ?? 0);
+  const sold = Number(soldRow?.count ?? 0);
+  const currentPosition = currentPlayerRow?.position ?? total;
+
+  return {
+    auction: mapAuction(auction),
+    current_player: currentPlayerRow ? mapPlayerEntry(currentPlayerRow) : null,
+    current_bid: currentBid ? mapBid(currentBid) : null,
+    bids_history: bidsHistory.map(mapBid),
+    squadre: teams.map(mapFantaTeam),
+    progress: { current: currentPosition + 1, total, sold },
+    assignments: assignmentRows.map((a) => ({
+      player_id: a.playerId,
+      player_name: a.playerName,
+      role_classic: a.roleClassic,
+      fanta_team_id: a.fantaTeamId,
+      final_price_fm: a.finalPriceFm,
+    })),
+  };
+}
+
+function notifyAuction(id: string): void {
+  const clients = sseClients.get(id);
+  if (!clients?.size) return;
+  void buildAuctionState(id).then((state) => {
+    if (!state) return;
+    const msg = `data: ${JSON.stringify(state)}\n\n`;
+    for (const client of clients) {
+      try { client.write(msg); } catch { /* client disconnesso */ }
+    }
+  });
 }
 
 // ─── POST /auctions ───────────────────────────────────────
@@ -304,78 +385,44 @@ router.get("/auctions/:id", async (req, res): Promise<void> => {
     res.status(400).json({ error: params.error.message });
     return;
   }
-  const { id } = params.data;
-
-  const [auction] = await db.select().from(auctions).where(eq(auctions.id, id));
-  if (!auction) {
+  const state = await buildAuctionState(params.data.id);
+  if (!state) {
     res.status(404).json({ error: "Asta non trovata" });
     return;
   }
+  res.json(state);
+});
 
-  const currentPlayerRow = await getCurrentQueuePlayer(id, auction.callMode);
+// ─── GET /auctions/:id/stream (SSE) ───────────────────────
 
-  let currentBid: AuctionBid | null = null;
-  let bidsHistory: AuctionBid[] = [];
+router.get("/auctions/:id/stream", (req, res): void => {
+  const { id } = req.params;
 
-  if (currentPlayerRow) {
-    const { playerId } = currentPlayerRow;
-    const [topBid] = await db
-      .select()
-      .from(auctionBids)
-      .where(and(eq(auctionBids.auctionId, id), eq(auctionBids.playerId, playerId), eq(auctionBids.valid, true)))
-      .orderBy(desc(auctionBids.amountFm))
-      .limit(1);
-    currentBid = topBid ?? null;
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+  res.setHeader("X-Accel-Buffering", "no");
+  res.flushHeaders();
 
-    bidsHistory = await db
-      .select()
-      .from(auctionBids)
-      .where(and(eq(auctionBids.auctionId, id), eq(auctionBids.playerId, playerId), eq(auctionBids.valid, true)))
-      .orderBy(desc(auctionBids.createdAt))
-      .limit(10);
-  }
+  if (!sseClients.has(id)) sseClients.set(id, new Set());
+  const clientSet = sseClients.get(id)!;
+  clientSet.add(res);
 
-  const teams = await db.select().from(fantaTeams).where(eq(fantaTeams.leagueId, auction.leagueId));
+  // Stato corrente immediato alla connessione (no-op se asta non trovata)
+  void buildAuctionState(id).then((state) => {
+    if (!state) return;
+    try { res.write(`data: ${JSON.stringify(state)}\n\n`); } catch { /* ignore */ }
+  });
 
-  const assignmentRows = await db
-    .select({
-      playerId: auctionAssignments.playerId,
-      playerName: players.name,
-      roleClassic: players.roleClassic,
-      fantaTeamId: auctionAssignments.fantaTeamId,
-      finalPriceFm: auctionAssignments.finalPriceFm,
-    })
-    .from(auctionAssignments)
-    .innerJoin(players, eq(auctionAssignments.playerId, players.id))
-    .where(eq(auctionAssignments.auctionId, id));
+  // Heartbeat ogni 25 s per tenere viva la connessione attraverso i proxy
+  const heartbeatId = setInterval(() => {
+    try { res.write(": heartbeat\n\n"); } catch { clearInterval(heartbeatId); }
+  }, 25_000);
 
-  const [totalRow] = await db
-    .select({ count: count() })
-    .from(auctionPlayerQueue)
-    .where(eq(auctionPlayerQueue.auctionId, id));
-  const [soldRow] = await db
-    .select({ count: count() })
-    .from(auctionPlayerQueue)
-    .where(and(eq(auctionPlayerQueue.auctionId, id), eq(auctionPlayerQueue.status, "sold")));
-
-  const total = Number(totalRow?.count ?? 0);
-  const sold = Number(soldRow?.count ?? 0);
-  const currentPosition = currentPlayerRow?.position ?? total;
-
-  res.json({
-    auction: mapAuction(auction),
-    current_player: currentPlayerRow ? mapPlayerEntry(currentPlayerRow) : null,
-    current_bid: currentBid ? mapBid(currentBid) : null,
-    bids_history: bidsHistory.map(mapBid),
-    squadre: teams.map(mapFantaTeam),
-    progress: { current: currentPosition + 1, total, sold },
-    assignments: assignmentRows.map((a) => ({
-      player_id: a.playerId,
-      player_name: a.playerName,
-      role_classic: a.roleClassic,
-      fanta_team_id: a.fantaTeamId,
-      final_price_fm: a.finalPriceFm,
-    })),
+  req.on("close", () => {
+    clearInterval(heartbeatId);
+    clientSet.delete(res);
+    if (clientSet.size === 0) sseClients.delete(id);
   });
 });
 
@@ -517,10 +564,14 @@ router.post("/auctions/:id/bid", async (req, res): Promise<void> => {
     .values({ id: `bid-${nanoid(8)}`, auctionId: id, playerId, fantaTeamId, amountFm, valid: true })
     .returning();
 
-  // Marca azione annullabile (server-authoritative)
-  await db.update(auctions).set({ lastUndoableAction: "bid" }).where(eq(auctions.id, id));
+  // Timer server-authoritative: imposta deadline = now + timer_seconds
+  const newDeadline = new Date(Date.now() + auction.timerSeconds * 1000);
+  await db.update(auctions)
+    .set({ lastUndoableAction: "bid", deadlineTs: newDeadline })
+    .where(eq(auctions.id, id));
 
   res.status(201).json({ bid: mapBid(bid), new_current_bid: mapBid(bid) });
+  notifyAuction(id);
 });
 
 // ─── POST /auctions/:id/assign ───────────────────────────
@@ -590,7 +641,7 @@ router.post("/auctions/:id/assign", async (req, res): Promise<void> => {
 
       // In chiamata: no auto-avanzamento — il banditore chiama esplicitamente il prossimo
       if (auction.callMode === "chiamata") {
-        await tx.update(auctions).set({ lastUndoableAction: "assign" }).where(eq(auctions.id, id));
+        await tx.update(auctions).set({ lastUndoableAction: "assign", deadlineTs: null }).where(eq(auctions.id, id));
         return { nextPlayerId: null, auctionCompleted: false };
       }
 
@@ -603,18 +654,19 @@ router.post("/auctions/:id/assign", async (req, res): Promise<void> => {
 
       if (!nextRow) {
         await tx.update(auctions)
-          .set({ status: "completed", completedAt: new Date(), lastUndoableAction: "assign" })
+          .set({ status: "completed", completedAt: new Date(), lastUndoableAction: "assign", deadlineTs: null })
           .where(eq(auctions.id, id));
         return { nextPlayerId: null, auctionCompleted: true };
       } else {
         await tx.update(auctions)
-          .set({ lastUndoableAction: "assign" })
+          .set({ lastUndoableAction: "assign", deadlineTs: null })
           .where(eq(auctions.id, id));
         return { nextPlayerId: nextRow.playerId, auctionCompleted: false };
       }
     });
 
     res.json({ next_player_id: nextPlayerId, auction_completed: auctionCompleted });
+    notifyAuction(id);
   } catch (err: unknown) {
     if (typeof err === "object" && err !== null && "code" in err && "message" in err) {
       const e = err as { code: number; message: string };
@@ -657,21 +709,23 @@ router.post("/auctions/:id/skip", async (req, res): Promise<void> => {
 
   // In chiamata: no auto-avanzamento
   if (auction.callMode === "chiamata") {
-    await db.update(auctions).set({ lastUndoableAction: "skip" }).where(eq(auctions.id, id));
+    await db.update(auctions).set({ lastUndoableAction: "skip", deadlineTs: null }).where(eq(auctions.id, id));
     res.json({ next_player_id: null, auction_completed: false });
+    notifyAuction(id);
     return;
   }
 
   const nextRow = await getCurrentQueuePlayer(id, "listone");
   if (!nextRow) {
     await db.update(auctions)
-      .set({ status: "completed", completedAt: new Date(), lastUndoableAction: "skip" })
+      .set({ status: "completed", completedAt: new Date(), lastUndoableAction: "skip", deadlineTs: null })
       .where(eq(auctions.id, id));
   } else {
-    await db.update(auctions).set({ lastUndoableAction: "skip" }).where(eq(auctions.id, id));
+    await db.update(auctions).set({ lastUndoableAction: "skip", deadlineTs: null }).where(eq(auctions.id, id));
   }
 
   res.json({ next_player_id: nextRow?.playerId ?? null, auction_completed: nextRow === null });
+  notifyAuction(id);
 });
 
 // ─── POST /auctions/:id/pause ────────────────────────────
@@ -682,9 +736,18 @@ router.post("/auctions/:id/pause", async (req, res): Promise<void> => {
     res.status(400).json({ error: params.error.message });
     return;
   }
-  const [auction] = await db.update(auctions).set({ status: "paused" }).where(eq(auctions.id, params.data.id)).returning();
+  const { id } = params.data;
+  const [current] = await db.select().from(auctions).where(eq(auctions.id, id));
+  if (!current) { res.status(404).json({ error: "Asta non trovata" }); return; }
+  // Salva il tempo residuo del timer al momento della pausa
+  const remaining = current.deadlineTs ? Math.max(0, current.deadlineTs.getTime() - Date.now()) : 0;
+  const [auction] = await db.update(auctions)
+    .set({ status: "paused", pausedRemainingMs: remaining, deadlineTs: null })
+    .where(eq(auctions.id, id))
+    .returning();
   if (!auction) { res.status(404).json({ error: "Asta non trovata" }); return; }
   res.json(mapAuction(auction));
+  notifyAuction(id);
 });
 
 // ─── POST /auctions/:id/resume ───────────────────────────
@@ -695,9 +758,18 @@ router.post("/auctions/:id/resume", async (req, res): Promise<void> => {
     res.status(400).json({ error: params.error.message });
     return;
   }
-  const [auction] = await db.update(auctions).set({ status: "running" }).where(eq(auctions.id, params.data.id)).returning();
+  const { id } = params.data;
+  const [current] = await db.select().from(auctions).where(eq(auctions.id, id));
+  if (!current) { res.status(404).json({ error: "Asta non trovata" }); return; }
+  // Ripristina il timer dal tempo residuo salvato alla pausa
+  const newDeadline = current.pausedRemainingMs > 0 ? new Date(Date.now() + current.pausedRemainingMs) : null;
+  const [auction] = await db.update(auctions)
+    .set({ status: "running", deadlineTs: newDeadline, pausedRemainingMs: 0 })
+    .where(eq(auctions.id, id))
+    .returning();
   if (!auction) { res.status(404).json({ error: "Asta non trovata" }); return; }
   res.json(mapAuction(auction));
+  notifyAuction(id);
 });
 
 // ─── POST /auctions/:id/undo ─────────────────────────────
@@ -754,10 +826,11 @@ router.post("/auctions/:id/undo", async (req, res): Promise<void> => {
         .delete(auctionBids)
         .where(eq(auctionBids.id, currentBid.id));
 
-      // Azzera: nessuna altra azione annullabile finché non se ne fa un'altra
-      await db.update(auctions).set({ lastUndoableAction: null }).where(eq(auctions.id, id));
+      // Azzera azione annullabile e timer (nessun bid attivo)
+      await db.update(auctions).set({ lastUndoableAction: null, deadlineTs: null }).where(eq(auctions.id, id));
 
       res.json({ undone: "bid", message: "Ultima offerta annullata" });
+      notifyAuction(id);
       return;
     }
 
@@ -825,9 +898,10 @@ router.post("/auctions/:id/undo", async (req, res): Promise<void> => {
           ),
         );
 
-      await db.update(auctions).set({ lastUndoableAction: null }).where(eq(auctions.id, id));
+      await db.update(auctions).set({ lastUndoableAction: null, deadlineTs: null }).where(eq(auctions.id, id));
 
       res.json({ undone: "skip", message: "Salto annullato, giocatore riportato in asta" });
+      notifyAuction(id);
       return;
     }
 
@@ -878,21 +952,22 @@ router.post("/auctions/:id/undo", async (req, res): Promise<void> => {
           ),
         );
 
-      // Se l'asta era completed, riportala a running; in ogni caso azzera undoable
+      // Se l'asta era completed, riportala a running; in ogni caso azzera undoable e timer
       if (auction.status === "completed") {
         await tx
           .update(auctions)
-          .set({ status: "running", completedAt: null, lastUndoableAction: null })
+          .set({ status: "running", completedAt: null, lastUndoableAction: null, deadlineTs: null })
           .where(eq(auctions.id, id));
       } else {
         await tx
           .update(auctions)
-          .set({ lastUndoableAction: null })
+          .set({ lastUndoableAction: null, deadlineTs: null })
           .where(eq(auctions.id, id));
       }
     });
 
     res.json({ undone: "assign", message: "Aggiudicazione annullata, giocatore riaperto" });
+    notifyAuction(id);
   } catch (err) {
     req.log.error({ err }, "Errore undo asta");
     res.status(500).json({ error: "Errore interno" });
@@ -962,6 +1037,7 @@ router.post("/auctions/:id/manual/add", async (req, res): Promise<void> => {
         );
     });
     res.json({ ok: true, message: "Giocatore aggiunto manualmente" });
+    notifyAuction(id);
   } catch (err) {
     req.log.error({ err }, "Errore manual add");
     res.status(500).json({ error: "Errore interno" });
@@ -1018,6 +1094,7 @@ router.post("/auctions/:id/manual/remove", async (req, res): Promise<void> => {
         );
     });
     res.json({ ok: true, message: "Giocatore rimosso, crediti rimborsati" });
+    notifyAuction(id);
   } catch (err) {
     req.log.error({ err }, "Errore manual remove");
     res.status(500).json({ error: "Errore interno" });
@@ -1093,6 +1170,7 @@ router.post("/auctions/:id/manual/update-price", async (req, res): Promise<void>
       credits_delta: creditsDelta,
       message: `Prezzo aggiornato: ${oldPriceFm} → ${newPriceFm} FM (crediti ${creditsDelta >= 0 ? "+" : ""}${creditsDelta})`,
     });
+    notifyAuction(id);
   } catch (err) {
     req.log.error({ err }, "Errore manual update-price");
     res.status(500).json({ error: "Errore interno" });
@@ -1122,6 +1200,7 @@ router.post("/auctions/:id/manual/set-budget", async (req, res): Promise<void> =
   if (!team) { res.status(400).json({ error: "Squadra non trovata" }); return; }
 
   res.json({ ok: true, message: `Budget impostato a ${creditsRemaining} FM` });
+  notifyAuction(id);
 });
 
 // ─── POST /auctions/:id/call ─────────────────────────────
@@ -1218,7 +1297,11 @@ router.post("/auctions/:id/call", async (req, res): Promise<void> => {
       ),
     );
 
+  // Nuovo giocatore chiamato — nessun bid ancora, azzera deadline
+  await db.update(auctions).set({ deadlineTs: null }).where(eq(auctions.id, id));
+
   res.json({ ok: true, player_id: playerId, message: "Giocatore chiamato in asta" });
+  notifyAuction(id);
 });
 
 // ─── GET /auctions/:id/queue ─────────────────────────────
@@ -1281,11 +1364,12 @@ router.post("/auctions/:id/end", async (req, res): Promise<void> => {
   }
   const [auction] = await db
     .update(auctions)
-    .set({ status: "completed", completedAt: new Date() })
+    .set({ status: "completed", completedAt: new Date(), deadlineTs: null })
     .where(eq(auctions.id, params.data.id))
     .returning();
   if (!auction) { res.status(404).json({ error: "Asta non trovata" }); return; }
   res.json(mapAuction(auction));
+  notifyAuction(params.data.id);
 });
 
 export default router;

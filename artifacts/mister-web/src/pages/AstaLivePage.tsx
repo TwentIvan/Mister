@@ -31,14 +31,14 @@ export default function AstaLivePage() {
   const { auctionId } = useParams<{ auctionId: string }>();
   const { data, isLoading: isLoadingAuction, isError, refetch } = useGetAuction(
     auctionId!,
-    { query: { enabled: !!auctionId, queryKey: getGetAuctionQueryKey(auctionId!), refetchInterval: 5000 } },
+    { query: { enabled: !!auctionId, queryKey: getGetAuctionQueryKey(auctionId!), refetchInterval: 30_000 } },
   );
 
-  // ── INTERVENTO 1: timer su deadline assoluto ─────────────────────────────
-  const [deadlineTs, setDeadlineTs] = useState<number | null>(null);
+  // ── Timer: deadline server-authoritative ──────────────────────────────────
   const timerSeconds = data?.auction.timer_seconds ?? 8;
   const [remaining, setRemaining] = useState(timerSeconds);
-  const remainingMsOnPauseRef = useRef<number>(0);
+  // deadline_ts arriva dal server via SSE o polling; il client calcola solo il display.
+  const deadlineTs = (data?.auction.deadline_ts ?? null) as number | null;
 
   // ── Transition lock ───────────────────────────────────────────────────────
   const [isTransitioning, setIsTransitioning] = useState(false);
@@ -84,13 +84,25 @@ export default function AstaLivePage() {
     return () => clearInterval(id);
   }, [deadlineTs, isPaused]);
 
-  // ── INTERVENTO 2: reset a idle al cambio giocatore ───────────────────────
+  // ── Reset display a idle al cambio giocatore ─────────────────────────────
   const currentPlayerId = data?.current_player?.player_id;
   useEffect(() => {
-    setDeadlineTs(null);
     setRemaining(timerSeconds);
     setBidError(null);
   }, [currentPlayerId]);
+
+  // ── SSE — aggiornamenti real-time ────────────────────────────────────────
+  useEffect(() => {
+    if (!auctionId) return;
+    const es = new EventSource(`/api/auctions/${auctionId}/stream`);
+    es.onmessage = (e: MessageEvent<string>) => {
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        queryClient.setQueryData(getGetAuctionQueryKey(auctionId), JSON.parse(e.data) as any);
+      } catch { /* ignore parse errors */ }
+    };
+    return () => es.close();
+  }, [auctionId, queryClient]);
 
   // ── placeBid: unica entry-point per i bid (tasti + voce) ─────────────────
   // Contiene il guard isTransitioningRef, la mutation e l'estensione del timer.
@@ -104,7 +116,7 @@ export default function AstaLivePage() {
         id: auctionId,
         data: { player_id: targetPlayerId, fanta_team_id: fantaTeamId, amount_fm: amountAbsoluto },
       });
-      setDeadlineTs(Date.now() + timerSeconds * 1000);
+      // deadline_ts aggiornato via SSE; refetch come fallback
       refetch();
     } catch (err: unknown) {
       const body = (err as { data?: { error?: string } })?.data;
@@ -123,7 +135,6 @@ export default function AstaLivePage() {
     if (!auctionId || !data?.current_player) return;
     isTransitioningRef.current = true;
     setIsTransitioning(true);
-    setDeadlineTs(null);
     try {
       await assignMutation.mutateAsync({
         id: auctionId,
@@ -143,7 +154,6 @@ export default function AstaLivePage() {
     if (!auctionId || !data?.current_player) return;
     isTransitioningRef.current = true;
     setIsTransitioning(true);
-    setDeadlineTs(null);
     try {
       await skipMutation.mutateAsync({
         id: auctionId,
@@ -161,7 +171,6 @@ export default function AstaLivePage() {
     if (!auctionId || !canUndo || isTransitioningRef.current) return;
     isTransitioningRef.current = true;
     setIsTransitioning(true);
-    setDeadlineTs(null);
     try {
       await undoMutation.mutateAsync({ id: auctionId });
       await refetch();
@@ -172,17 +181,13 @@ export default function AstaLivePage() {
   };
 
   // ── handlePauseResume ────────────────────────────────────────────────────
+  // Il server gestisce il salvataggio/ripristino del tempo rimanente (pausedRemainingMs).
   const handlePauseResume = async () => {
     if (!auctionId) return;
     if (isPaused) {
-      const savedMs = remainingMsOnPauseRef.current;
       await resumeMutation.mutateAsync({ id: auctionId });
       await refetch();
-      if (savedMs > 0) setDeadlineTs(Date.now() + savedMs);
     } else {
-      const savedMs = deadlineTs ? Math.max(0, deadlineTs - Date.now()) : 0;
-      remainingMsOnPauseRef.current = savedMs;
-      setDeadlineTs(null);
       await pauseMutation.mutateAsync({ id: auctionId });
       await refetch();
     }
