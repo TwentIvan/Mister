@@ -235,9 +235,49 @@ export default function AstaLivePage() {
     name_auction: t.name_auction ?? null,
   }));
 
+  // Mappa player_id → nome squadra fantalega per etichetta "già di [squadra]" (C1)
+  const playerTeamMap = new Map<number, string>(
+    (data?.assignments ?? []).map((a) => {
+      const team = data?.squadre.find((s) => s.id === a.fanta_team_id);
+      return [a.player_id, team?.name_auction ?? team?.name ?? ""];
+    }),
+  );
+
+  // Ruolo aperto corrente (role_order C2/C3): primo ruolo P→D→C→A in cui non
+  // tutte le squadre hanno raggiunto la quota. Derivato da assignments + quote,
+  // nessuno stato extra. Auto-avanza quando il ruolo corrente è completato.
+  const ROLE_ORDER = ["GK", "DEF", "MID", "ATT"] as const;
+  type OpenRole = typeof ROLE_ORDER[number];
+  const ROLE_LABELS: Record<OpenRole, string> = {
+    GK: "Portieri", DEF: "Difensori", MID: "Centrocampisti", ATT: "Attaccanti",
+  };
+  const currentOpenRole: OpenRole | null = (() => {
+    if (!data?.auction.role_order || callMode !== "chiamata") return null;
+    const quotas: Record<string, number> = {
+      GK: data.auction.roster_p,
+      DEF: data.auction.roster_d,
+      MID: data.auction.roster_c,
+      ATT: data.auction.roster_a,
+    };
+    for (const role of ROLE_ORDER) {
+      const countByTeam = new Map<string, number>();
+      for (const a of data.assignments ?? []) {
+        if (a.role_classic === role)
+          countByTeam.set(a.fanta_team_id, (countByTeam.get(a.fanta_team_id) ?? 0) + 1);
+      }
+      const allFull = data.squadre.every((t) => (countByTeam.get(t.id) ?? 0) >= quotas[role]);
+      if (!allFull) return role;
+    }
+    return null;
+  })();
+
   // In chiamata mode: lista giocatori pending nella coda dell'asta (non dal catalogo globale)
+  // role_order ON → filtra per ruolo aperto corrente così la ricerca mostra solo il ruolo giusto
   const queueSearchParams = callMode === "chiamata"
-    ? { search: callSearch.length >= 2 ? callSearch : undefined }
+    ? {
+        search: callSearch.length >= 2 ? callSearch : undefined,
+        role: currentOpenRole ?? undefined,
+      }
     : undefined;
   const { data: queueData } = useGetAuctionQueue(
     auctionId!,
@@ -374,16 +414,21 @@ export default function AstaLivePage() {
       {/* ── CHIAMA IL PROSSIMO (solo in modalità chiamata, quando nessun giocatore è in asta) ── */}
       {callMode === "chiamata" && !data?.current_player && !isCompleted && !isPaused && (
         <div className="rounded-xl border-2 border-dashed border-primary/30 bg-card p-5 space-y-3">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <Phone className="h-4 w-4 text-primary" />
             <span className="font-semibold font-serif text-primary text-sm">Chiama il prossimo giocatore</span>
+            {currentOpenRole && (
+              <span className="font-mono text-xs font-bold border border-primary/40 rounded px-1.5 py-0.5 text-primary">
+                {ROLE_LABELS[currentOpenRole]}
+              </span>
+            )}
             <span className="text-xs text-muted-foreground font-mono ml-auto">
               Voce: «chiamo [nome] [squadra]»
             </span>
           </div>
           <input
             type="text"
-            placeholder="Cerca per nome o squadra…"
+            placeholder={currentOpenRole ? `Cerca ${ROLE_LABELS[currentOpenRole].toLowerCase()}…` : "Cerca per nome o squadra…"}
             value={callSearch}
             onChange={(e) => setCallSearch(e.target.value)}
             className="w-full h-9 rounded-md border bg-background px-3 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
@@ -395,6 +440,7 @@ export default function AstaLivePage() {
               ) : (
                 allFetchedPlayers.map((p) => {
                   const isAssigned = assignedPlayerIds.has(p.id);
+                  const ownerName = isAssigned ? (playerTeamMap.get(p.id) ?? "") : null;
                   return (
                     <button
                       key={p.id}
@@ -419,7 +465,9 @@ export default function AstaLivePage() {
                       <span className="font-mono font-semibold flex-1">{p.name}</span>
                       <span className="text-xs text-muted-foreground font-mono">{p.real_team}</span>
                       {isAssigned && (
-                        <span className="text-xs text-muted-foreground font-mono">già assegnato</span>
+                        <span className="text-xs text-muted-foreground font-mono">
+                          già di {ownerName || "altra squadra"}
+                        </span>
                       )}
                     </button>
                   );

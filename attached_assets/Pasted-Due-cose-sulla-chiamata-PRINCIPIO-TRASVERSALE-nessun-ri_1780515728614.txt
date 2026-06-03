@@ -1,0 +1,24 @@
+Due cose sulla chiamata. PRINCIPIO TRASVERSALE: nessun rifiuto di chiamata deve essere SILENZIOSO. Gia-assegnato, ruolo sbagliato, modalita errata: sempre un messaggio nella fascia feedback. Server-authoritative, niente polish grafico, typecheck pulito.
+
+==== PARTE 1 — la chiamata di un gia-assegnato e silenziosa (BUG) ====
+Oggi chiamare un giocatore gia in rosa "non fa nulla". Il server lo rifiuta gia (getOwnerTeam), ma il rifiuto non viene mostrato.
+- Nella RICERCA di chiamata: i gia-assegnati trasparentizzati e NON selezionabili, con "gia di [squadra]" (riusa ESATTAMENTE il trattamento della ricerca di aggiunta manuale: stessa mappa player->squadra).
+- Su qualsiasi tentativo (anche da VOCE) il messaggio del server "Giocatore gia di [squadra]" DEVE comparire nella fascia feedback. Mai silenzioso.
+
+==== PARTE 2 — Ordine di ruolo (era la Parte C, mai costruita) ====
+Per questo "chiamo Lautaro durante i portieri" passa: il vincolo non esiste ancora.
+Quando role_order e ON (e modalita chiamata):
+- Ruolo corrente aperto = primo ruolo nell'ordine P, D, C, A per cui NON tutte le squadre hanno raggiunto la quota (roster_R). DERIVATO dalle quote/assignments, nessuno stato extra.
+- Si possono chiamare solo giocatori del ruolo corrente: la ricerca e filtrata a quel ruolo; voce e server rifiutano gli altri ruoli con MOTIVO VISIBILE (es. "Si chiamano i portieri") nella fascia feedback. Mai silenzioso.
+- AUTO-AVANZAMENTO: quando TUTTE le squadre hanno riempito la quota del ruolo corrente, il ruolo successivo diventa automaticamente quello aperto (cade fuori dalla derivazione).
+- Mostra da qualche parte qual e il ruolo attualmente aperto, cosi il banditore lo sa.
+
+==== CRITERI ====
+C1. Chiamare (ricerca o voce) un gia-assegnato: nella ricerca e trasparentizzato/non selezionabile; un tentativo mostra "gia di [squadra]" nel feedback. MAI silenzioso.
+C2. role_order ON: chiamare un giocatore di ruolo diverso dal corrente e rifiutato con motivo VISIBILE; la ricerca mostra solo il ruolo corrente; il ruolo aperto e indicato a schermo.
+C3. Auto-avanzamento: riempite le quote del ruolo corrente per TUTTE le squadre, si apre il successivo. Esempio: porta tutte le squadre a 3/3 portieri, verifica che il ruolo aperto diventi "difensori".
+C4. role_order OFF: si chiama qualsiasi svincolato (nessun vincolo di ruolo), come ora.
+C5. REGRESSIONE: chiamata base A+B, offerte/timer/guard/voce/7.E/annullo/editor invariati.
+
+VINCOLI: server-authoritative su svincolato e su role_order; riusa l'helper svincolato condiviso; nessun rifiuto silenzioso; niente polish grafico; typecheck pulito, niente debug residuo.
+DELIVERABLE: diff; prova di C1 (messaggio visibile, non silenzioso), C2 (rifiuto ruolo sbagliato col motivo) e C3 (auto-avanzamento con esempio). La verifica a voce la faccio io.

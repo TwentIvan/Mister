@@ -91,6 +91,40 @@ async function getOwnerTeam(auctionId: string, playerId: number): Promise<string
   return row?.teamName ?? null;
 }
 
+// ── Helper ruolo aperto (role_order) ─────────────────────────────────────────
+// Restituisce il primo ruolo P→D→C→A per cui NON tutte le squadre hanno
+// raggiunto la quota (roster_p/d/c/a). null = tutti i ruoli completi.
+async function computeCurrentOpenRole(
+  auctionId: string,
+  leagueId: string,
+  rosterP: number,
+  rosterD: number,
+  rosterC: number,
+  rosterA: number,
+): Promise<"GK" | "DEF" | "MID" | "ATT" | null> {
+  const [teamRows, assignRows] = await Promise.all([
+    db.select({ id: fantaTeams.id }).from(fantaTeams).where(eq(fantaTeams.leagueId, leagueId)),
+    db
+      .select({ fantaTeamId: auctionAssignments.fantaTeamId, role: players.roleClassic })
+      .from(auctionAssignments)
+      .innerJoin(players, eq(auctionAssignments.playerId, players.id))
+      .where(eq(auctionAssignments.auctionId, auctionId)),
+  ]);
+
+  const quotas: Record<string, number> = { GK: rosterP, DEF: rosterD, MID: rosterC, ATT: rosterA };
+  const roleOrder = ["GK", "DEF", "MID", "ATT"] as const;
+
+  for (const role of roleOrder) {
+    const countByTeam = new Map<string, number>();
+    for (const a of assignRows) {
+      if (a.role === role) countByTeam.set(a.fantaTeamId, (countByTeam.get(a.fantaTeamId) ?? 0) + 1);
+    }
+    const allFull = teamRows.every((t) => (countByTeam.get(t.id) ?? 0) >= quotas[role]);
+    if (!allFull) return role;
+  }
+  return null;
+}
+
 // ── Giocatore corrente in asta ────────────────────────────────────────────────
 // listone  → primo 'pending'  (avanzamento automatico)
 // chiamata → primo 'called'   (chiamato esplicitamente dal banditore)
@@ -1119,6 +1153,36 @@ router.post("/auctions/:id/call", async (req, res): Promise<void> => {
   if (ownerTeam) {
     res.status(400).json({ error: `Giocatore già di ${ownerTeam}` });
     return;
+  }
+
+  // Guard: role_order — solo giocatori del ruolo corrente
+  if (auction.roleOrder) {
+    const [playerRow] = await db
+      .select({ role: players.roleClassic })
+      .from(players)
+      .where(eq(players.id, playerId));
+    if (!playerRow) {
+      res.status(400).json({ error: "Giocatore non trovato" });
+      return;
+    }
+    const openRole = await computeCurrentOpenRole(
+      id,
+      auction.leagueId,
+      auction.rosterP,
+      auction.rosterD,
+      auction.rosterC,
+      auction.rosterA,
+    );
+    if (openRole !== null && playerRow.role !== openRole) {
+      const roleLabel: Record<string, string> = {
+        GK: "i portieri",
+        DEF: "i difensori",
+        MID: "i centrocampisti",
+        ATT: "gli attaccanti",
+      };
+      res.status(403).json({ error: `Si chiamano ${roleLabel[openRole] ?? openRole}` });
+      return;
+    }
   }
 
   // Guard: c'è già un giocatore in corso d'asta
