@@ -1480,8 +1480,16 @@ export const GetMatchesResponse = zod.array(GetMatchesResponseItem)
 /**
  * @summary Avvia una nuova asta live per una lega
  */
+export const createAuctionBodyTimerSecondsDefault = 8;
+export const createAuctionBodyTimerSecondsMin = 5;
+export const createAuctionBodyTimerSecondsMax = 30;
+
+
+
 export const CreateAuctionBody = zod.object({
-  "league_id": zod.string()
+  "league_id": zod.string(),
+  "timer_seconds": zod.number().min(createAuctionBodyTimerSecondsMin).max(createAuctionBodyTimerSecondsMax).default(createAuctionBodyTimerSecondsDefault),
+  "team_names": zod.record(zod.string(), zod.string()).optional().describe('Mappa teamId -> nome voce (sovrascrive nome_asta)')
 })
 
 
@@ -1492,11 +1500,18 @@ export const GetAuctionParams = zod.object({
   "id": zod.coerce.string()
 })
 
+export const getAuctionResponseAuctionTimerSecondsDefault = 8;
+export const getAuctionResponseAuctionTimerSecondsMin = 5;
+export const getAuctionResponseAuctionTimerSecondsMax = 30;
+
+
+
 export const GetAuctionResponse = zod.object({
   "auction": zod.object({
   "id": zod.string(),
   "league_id": zod.string(),
   "status": zod.enum(['setup', 'running', 'paused', 'completed', 'cancelled']),
+  "timer_seconds": zod.number().min(getAuctionResponseAuctionTimerSecondsMin).max(getAuctionResponseAuctionTimerSecondsMax).default(getAuctionResponseAuctionTimerSecondsDefault),
   "started_at": zod.coerce.date().nullish(),
   "completed_at": zod.coerce.date().nullish(),
   "created_at": zod.coerce.date()
@@ -1546,7 +1561,14 @@ export const GetAuctionResponse = zod.object({
   "current": zod.number(),
   "total": zod.number(),
   "sold": zod.number()
-})
+}),
+  "assignments": zod.array(zod.object({
+  "player_id": zod.number(),
+  "player_name": zod.string(),
+  "role_classic": zod.enum(['GK', 'DEF', 'MID', 'ATT']),
+  "fanta_team_id": zod.string(),
+  "final_price_fm": zod.number()
+}))
 })
 
 
@@ -1608,10 +1630,17 @@ export const PauseAuctionParams = zod.object({
   "id": zod.coerce.string()
 })
 
+export const pauseAuctionResponseTimerSecondsDefault = 8;
+export const pauseAuctionResponseTimerSecondsMin = 5;
+export const pauseAuctionResponseTimerSecondsMax = 30;
+
+
+
 export const PauseAuctionResponse = zod.object({
   "id": zod.string(),
   "league_id": zod.string(),
   "status": zod.enum(['setup', 'running', 'paused', 'completed', 'cancelled']),
+  "timer_seconds": zod.number().min(pauseAuctionResponseTimerSecondsMin).max(pauseAuctionResponseTimerSecondsMax).default(pauseAuctionResponseTimerSecondsDefault),
   "started_at": zod.coerce.date().nullish(),
   "completed_at": zod.coerce.date().nullish(),
   "created_at": zod.coerce.date()
@@ -1625,10 +1654,17 @@ export const ResumeAuctionParams = zod.object({
   "id": zod.coerce.string()
 })
 
+export const resumeAuctionResponseTimerSecondsDefault = 8;
+export const resumeAuctionResponseTimerSecondsMin = 5;
+export const resumeAuctionResponseTimerSecondsMax = 30;
+
+
+
 export const ResumeAuctionResponse = zod.object({
   "id": zod.string(),
   "league_id": zod.string(),
   "status": zod.enum(['setup', 'running', 'paused', 'completed', 'cancelled']),
+  "timer_seconds": zod.number().min(resumeAuctionResponseTimerSecondsMin).max(resumeAuctionResponseTimerSecondsMax).default(resumeAuctionResponseTimerSecondsDefault),
   "started_at": zod.coerce.date().nullish(),
   "completed_at": zod.coerce.date().nullish(),
   "created_at": zod.coerce.date()
@@ -1642,10 +1678,17 @@ export const EndAuctionParams = zod.object({
   "id": zod.coerce.string()
 })
 
+export const endAuctionResponseTimerSecondsDefault = 8;
+export const endAuctionResponseTimerSecondsMin = 5;
+export const endAuctionResponseTimerSecondsMax = 30;
+
+
+
 export const EndAuctionResponse = zod.object({
   "id": zod.string(),
   "league_id": zod.string(),
   "status": zod.enum(['setup', 'running', 'paused', 'completed', 'cancelled']),
+  "timer_seconds": zod.number().min(endAuctionResponseTimerSecondsMin).max(endAuctionResponseTimerSecondsMax).default(endAuctionResponseTimerSecondsDefault),
   "started_at": zod.coerce.date().nullish(),
   "completed_at": zod.coerce.date().nullish(),
   "created_at": zod.coerce.date()

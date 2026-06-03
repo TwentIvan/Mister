@@ -8,6 +8,8 @@
 
 export * from './auction';
 export * from './auctionActionResponse';
+export * from './auctionAssignmentItem';
+export * from './auctionAssignmentItemRoleClassic';
 export * from './auctionBidItem';
 export * from './auctionPlayerActionBody';
 export * from './auctionPlayerEntry';
@@ -37,6 +39,7 @@ export * from './contractUpdateState';
 export * from './createAuctionBidBody';
 export * from './createAuctionBidResponse';
 export * from './createAuctionBody';
+export * from './createAuctionBodyTeamNames';
 export * from './createAuctionResponse';
 export * from './dashboardSummary';
 export * from './fantaTeam';

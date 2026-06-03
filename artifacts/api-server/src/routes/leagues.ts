@@ -10,7 +10,7 @@ import {
   contracts,
   DEFAULT_LEAGUE_CONFIG,
 } from "@workspace/db";
-import type { LeagueConfig } from "@workspace/db/schema";
+import type { LeagueConfig, RosterSnapshot } from "@workspace/db/schema";
 import {
   ListLeaguesQueryParams,
   ListLeaguesResponse,
@@ -125,7 +125,7 @@ router.post("/leagues", async (req, res): Promise<void> => {
               pattern: "solid" as const,
             },
             creditsRemaining: d.budget_initial,
-            roster: [],
+            roster: { gk: [], def: [], mid: [], att: [] } as RosterSnapshot,
           })),
         )
         .returning();

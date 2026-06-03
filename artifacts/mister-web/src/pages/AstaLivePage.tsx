@@ -16,13 +16,11 @@ import { CurrentBidPanel } from "@/components/asta/CurrentBidPanel";
 import { AstaControls } from "@/components/asta/AstaControls";
 import { SidebarSquadre } from "@/components/asta/SidebarSquadre";
 import { BidFeed } from "@/components/asta/BidFeed";
+import { RoseSquadrePanel } from "@/components/asta/RoseSquadrePanel";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { CheckCircle2, Gavel } from "lucide-react";
-
-// 7.D: sostituire con auction.timer_seconds
-const TIMER_SECONDS = 8;
 
 export default function AstaLivePage() {
   const { auctionId } = useParams<{ auctionId: string }>();
@@ -37,7 +35,8 @@ export default function AstaLivePage() {
   // deadlineTs: epoch ms della scadenza. null = idle (nessuna offerta per questo giocatore).
   // remaining è stato derivato, calcolato nel tick — NON più source of truth.
   const [deadlineTs, setDeadlineTs] = useState<number | null>(null);
-  const [remaining, setRemaining] = useState(TIMER_SECONDS);
+  const timerSeconds = data?.auction.timer_seconds ?? 8;
+  const [remaining, setRemaining] = useState(timerSeconds);
   // Remaining ms al momento della pausa, per riprendere esattamente da lì
   const remainingMsOnPauseRef = useRef<number>(0);
 
@@ -81,7 +80,7 @@ export default function AstaLivePage() {
   const currentPlayerId = data?.current_player?.player_id;
   useEffect(() => {
     setDeadlineTs(null);
-    setRemaining(TIMER_SECONDS);
+    setRemaining(timerSeconds);
     setBidError(null);
   }, [currentPlayerId]);
 
@@ -104,7 +103,7 @@ export default function AstaLivePage() {
         data: { player_id: targetPlayerId, fanta_team_id: fantaTeamId, amount_fm: currentAmount + delta },
       });
       // Ogni offerta riuscita: estende la deadline di TIMER_SECONDS da adesso (BUG 1 risolto)
-      setDeadlineTs(Date.now() + TIMER_SECONDS * 1000);
+      setDeadlineTs(Date.now() + timerSeconds * 1000);
       refetch();
     } catch (err: unknown) {
       const body = (err as { data?: { error?: string } })?.data;
@@ -275,6 +274,7 @@ export default function AstaLivePage() {
       )}
 
       {!isCompleted && (
+        <>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-5">
             {data.current_player ? (
@@ -286,7 +286,7 @@ export default function AstaLivePage() {
                   currentBid={data.current_bid ?? null}
                   squadre={squadreForComponents}
                   timerRemaining={remaining}
-                  timerTotal={TIMER_SECONDS}
+                  timerTotal={timerSeconds}
                   timerActive={timerActive}
                 />
                 {bidError && (
@@ -333,6 +333,24 @@ export default function AstaLivePage() {
             </div>
           </div>
         </div>
+
+        {/* ── FASCIA INFERIORE: rose e budget ──────────────────────────── */}
+        <RoseSquadrePanel
+          squadre={data.squadre.map((s) => ({
+            id: s.id,
+            name: s.name,
+            name_auction: s.name_auction,
+            credits_remaining: s.credits_remaining,
+          }))}
+          assignments={(data.assignments ?? []).map((a) => ({
+            player_id: a.player_id,
+            player_name: a.player_name,
+            role_classic: a.role_classic,
+            fanta_team_id: a.fanta_team_id,
+            final_price_fm: a.final_price_fm,
+          }))}
+        />
+        </>
       )}
     </div>
   );

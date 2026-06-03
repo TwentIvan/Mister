@@ -1,0 +1,65 @@
+TASK 7.D — ASTA VOCALE: config pre-asta, schermata unificata, integrazione voce
+
+PREREQUISITO OK: la state machine (timer su deadline + guard player_id) e verificata su 7 criteri. La voce DEVE passare per gli STESSI handler induriti (placeBid / handleAggiudica / handleSalta). Nessun path di bid parallelo.
+
+Lavora in tre parti. CHECKPOINT dopo la Parte 2: FERMATI, mostrami config + schermata, aspetta OK prima di iniziare la Parte 3 (voce).
+
+==== PARTE 1 — Config pre-asta ====
+Oggi "Avvia asta" fa direttamente POST /api/auctions. Inserisci uno step di config PRIMA della creazione (modal o pagina dedicata):
+- Campo "Durata rilancio (secondi)": numerico, default 8, range 5-30.
+- Lista dei partecipanti della lega, ognuno con un campo testo "Nome per la voce" EDITABILE, precompilato dal nome_asta attuale.
+Backend:
+- auctions: aggiungi colonna timer_seconds INTEGER NOT NULL DEFAULT 8 (migrazione Drizzle + schema TS).
+- POST /api/auctions: accetta { league_id, timer_seconds } e, per i nomi, aggiorna fanta_teams.nome_asta dei team modificati. RIUSA nome_asta, NON creare un campo nuovo.
+- L'asta usa timer_seconds; il frontend lo legge come durata del deadline (sostituisci la costante TIMER_SECONDS con auction.timer_seconds: il commento era gia li dal fix precedente).
+
+==== PARTE 2 — Schermata asta unificata ====
+Ristruttura AstaLivePage in due fasce.
+IN TESTA (header, il "bandito"):
+- Giocatore corrente: nome, ruolo, squadra reale.
+- Offerta corrente (importo + squadra in testa) e storico offerte (feed).
+- Tasti: +1/+5/+10 (relativi, per squadra come ora), Aggiudica, Salta, Pausa/Riprendi, e il toggle Microfono (cablato nella Parte 3).
+SOTTO (riepilogo rose + budget):
+- Per ogni squadra della lega: nome, budget residuo ATTUALIZZATO (credits_remaining), e la rosa acquistata in questa asta, raggruppata per ruolo (P/D/C/A).
+- Budget e rose si aggiornano dopo ogni aggiudicazione.
+Dati: estendi GET /api/auctions/:id (o aggiungi un campo) per restituire, per ogni squadra, la rosa assegnata in QUESTA asta (player + ruolo + prezzo). Squadre e credits ci sono gia.
+Stile: segui DESIGN_SYSTEM.md (verde scuro su cream, Fraunces + JetBrains Mono). Non inventare uno stile nuovo.
+
+----- CHECKPOINT: mostrami config + schermata, aspetta OK prima della Parte 3 -----
+
+==== PARTE 3 — Integrazione voce ====
+Web Speech API del browser (window.SpeechRecognition || webkitSpeechRecognition), lang 'it-IT', continuous=true, interimResults=true. NIENTE backend STT.
+Attivazione: pulsante toggle Microfono. On = ascolto continuo (il primo on fa comparire il prompt permessi del browser). Off = stop. Su recognition.onend, se il toggle e ancora ON, RIAVVIA il recognition (altrimenti Chrome lo ferma dopo il silenzio).
+Parsing (agisci SOLO sui risultati FINAL / isFinal; debounce comandi identici entro ~1.5s per non eseguirli due volte). Normalizza il transcript (minuscolo, niente accenti), poi in ordine:
+1) Controlli (wake-word "mister"):
+   - "mister salta"    -> handleSalta()
+   - "mister pausa"    -> pausa
+   - "mister riprendi" -> riprendi
+2) Aggiudica: "giocatore aggiudicato" -> handleAggiudica()
+3) Offerta: pattern "[nome] [numero]" -> offerta ASSOLUTA.
+   - Match del nome: FUZZY sui nome_asta dei team (normalizzati). Soglia ragionevole; gestisci nomi multi-parola.
+   - Numero: parsa sia cifre ("15") sia parole italiane ("quindici"). Mappa 0-99 + parsing cifre.
+   - Chiama lo STESSO placeBid(fantaTeamId, amountFmAssoluto) usato dai tasti. I tasti passano currentBid + N; la voce passa il numero assoluto. Cosi timer (setDeadlineTs) e guard (isTransitioningRef + match player_id) valgono identici per la voce. NESSUN path parallelo.
+   - Se il backend rifiuta (es. importo <= offerta corrente), l'errore inline gia presente si mostra.
+Feedback UI (visibile, serve in demo):
+   - Trascrizione live di cio che il mic sente.
+   - Conferma del comando riconosciuto (es. "Offerta: Trastevere 15", "Comando: salta") con un flash breve.
+   - Comando non riconosciuto: ignorato, nessun effetto.
+I tasti restano come fallback.
+
+==== CRITERI DI ACCETTAZIONE ====
+Parte 1-2:
+A1. "Avvia asta" apre la config: campo timer (default 8) + lista partecipanti con nome voce editabile (prefill nome_asta). Salvando, timer_seconds va su auctions e i nomi su fanta_teams. L'asta parte col timer scelto (il countdown parte dal valore scelto, non da 8 fisso).
+A2. Schermata: header con giocatore + offerta + storico + tasti; sotto, per ogni squadra budget residuo e rosa per ruolo. Dopo un'aggiudicazione, budget e rosa della squadra vincente si aggiornano.
+Parte 3:
+A3. Mic toggle: primo on -> prompt permessi; on = ascolto continuo; off = stop; auto-restart su onend mentre e on.
+A4. "Trastevere 15" (con giocatore attivo) -> offerta 15 di Trastevere via placeBid; il timer riparte (deadline estesa).
+A5. "Giocatore aggiudicato" -> aggiudica il corrente al miglior offerente e passa al successivo.
+A6. "Mister salta" / "Mister pausa" / "Mister riprendi" -> azioni rispettive.
+A7. Feedback: trascrizione live visibile; comando riconosciuto mostrato; non riconosciuto ignorato; offerta sotto la corrente -> errore inline.
+A8. Un singolo comando finale NON viene eseguito due volte (debounce).
+A9. REGRESSIONE: i 7 criteri della state machine restano verdi (la voce passa per gli stessi handler, non li bypassa).
+
+VINCOLI: Web Speech API only, Chrome. Voce SOLO numeri assoluti; +1/+5/+10 solo tasti. Nessun path di bid parallelo. Segui DESIGN_SYSTEM.md. Niente call vocale banditore (e 7.F). Typecheck pulito, niente debug residuo.
+
+DELIVERABLE: diff; screenshot della config; screenshot della schermata unificata (header + rose/budget); prova del flusso voce (trascrizione/log di "Trastevere 15" -> bid registrato e timer ripartito, e "Mister salta" -> skip).

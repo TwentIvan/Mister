@@ -36,6 +36,7 @@ function mapAuction(a: Auction) {
     id: a.id,
     league_id: a.leagueId,
     status: a.status,
+    timer_seconds: a.timerSeconds,
     started_at: a.startedAt ?? null,
     completed_at: a.completedAt ?? null,
     created_at: a.createdAt,
@@ -102,7 +103,7 @@ router.post("/auctions", async (req, res): Promise<void> => {
     res.status(400).json({ error: parsed.error.flatten() });
     return;
   }
-  const { league_id: leagueId } = parsed.data;
+  const { league_id: leagueId, timer_seconds = 8, team_names = {} } = parsed.data;
 
   const [league] = await db.select().from(leagues).where(eq(leagues.id, leagueId));
   if (!league) {
@@ -145,13 +146,24 @@ router.post("/auctions", async (req, res): Promise<void> => {
       asc(players.fullName),
     );
 
+  // Aggiorna nome_asta dei team se forniti nella config
+  if (Object.keys(team_names).length > 0) {
+    await Promise.all(
+      Object.entries(team_names).map(([teamId, nameAuction]) =>
+        db.update(fantaTeams)
+          .set({ nameAuction })
+          .where(and(eq(fantaTeams.id, teamId), eq(fantaTeams.leagueId, leagueId)))
+      )
+    );
+  }
+
   const auctionId = `auc-${nanoid(8)}`;
 
   try {
     const auction = await db.transaction(async (tx) => {
       const [row] = await tx
         .insert(auctions)
-        .values({ id: auctionId, leagueId, status: "running", startedAt: new Date() })
+        .values({ id: auctionId, leagueId, status: "running", startedAt: new Date(), timerSeconds: timer_seconds })
         .returning();
 
       if (playerPool.length > 0) {
@@ -225,6 +237,18 @@ router.get("/auctions/:id", async (req, res): Promise<void> => {
 
   const teams = await db.select().from(fantaTeams).where(eq(fantaTeams.leagueId, auction.leagueId));
 
+  const assignmentRows = await db
+    .select({
+      playerId: auctionAssignments.playerId,
+      playerName: players.name,
+      roleClassic: players.roleClassic,
+      fantaTeamId: auctionAssignments.fantaTeamId,
+      finalPriceFm: auctionAssignments.finalPriceFm,
+    })
+    .from(auctionAssignments)
+    .innerJoin(players, eq(auctionAssignments.playerId, players.id))
+    .where(eq(auctionAssignments.auctionId, id));
+
   const [totalRow] = await db
     .select({ count: count() })
     .from(auctionPlayerQueue)
@@ -245,6 +269,13 @@ router.get("/auctions/:id", async (req, res): Promise<void> => {
     bids_history: bidsHistory.map(mapBid),
     squadre: teams.map(mapFantaTeam),
     progress: { current: currentPosition + 1, total, sold },
+    assignments: assignmentRows.map((a) => ({
+      player_id: a.playerId,
+      player_name: a.playerName,
+      role_classic: a.roleClassic,
+      fanta_team_id: a.fantaTeamId,
+      final_price_fm: a.finalPriceFm,
+    })),
   });
 });
 

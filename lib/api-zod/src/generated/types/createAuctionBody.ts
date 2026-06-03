@@ -5,7 +5,15 @@
  * Mister — il fantacalcio manageriale
  * OpenAPI spec version: 0.1.0
  */
+import type { CreateAuctionBodyTeamNames } from './createAuctionBodyTeamNames';
 
 export interface CreateAuctionBody {
   league_id: string;
+  /**
+     * @minimum 5
+     * @maximum 30
+     */
+  timer_seconds?: number;
+  /** Mappa teamId -> nome voce (sovrascrive nome_asta) */
+  team_names?: CreateAuctionBodyTeamNames;
 }

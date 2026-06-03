@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { Auction } from './auction';
+import type { AuctionAssignmentItem } from './auctionAssignmentItem';
 import type { AuctionBidItem } from './auctionBidItem';
 import type { AuctionPlayerEntry } from './auctionPlayerEntry';
 import type { AuctionProgress } from './auctionProgress';
@@ -18,4 +19,5 @@ export interface AuctionState {
   bids_history: AuctionBidItem[];
   squadre: FantaTeam[];
   progress: AuctionProgress;
+  assignments: AuctionAssignmentItem[];
 }

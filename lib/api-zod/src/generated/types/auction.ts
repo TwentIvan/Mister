@@ -11,6 +11,11 @@ export interface Auction {
   id: string;
   league_id: string;
   status: AuctionStatus;
+  /**
+     * @minimum 5
+     * @maximum 30
+     */
+  timer_seconds: number;
   /** @nullable */
   started_at?: Date | null;
   /** @nullable */

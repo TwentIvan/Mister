@@ -6,6 +6,7 @@ import {
   useCreateAuction,
 } from "@workspace/api-client-react";
 import { useState } from "react";
+import { AstaConfigModal } from "@/components/asta/AstaConfigModal";
 import { useParams, Link, useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -21,15 +22,18 @@ export default function LeagueDetail() {
 
   const createAuction = useCreateAuction();
   const [astaError, setAstaError] = useState<string | null>(null);
+  const [isConfigOpen, setIsConfigOpen] = useState(false);
 
-  const handleAvviaAsta = async () => {
+  const handleAvviaAsta = async (timerSeconds: number, teamNames: Record<string, string>) => {
     if (!id) return;
     setAstaError(null);
+    setIsConfigOpen(false);
     try {
-      const result = await createAuction.mutateAsync({ data: { league_id: id } });
+      const result = await createAuction.mutateAsync({
+        data: { league_id: id, timer_seconds: timerSeconds, team_names: teamNames },
+      });
       navigate(`/asta/${result.auction.id}`);
     } catch (err: unknown) {
-      // customFetch lancia ApiError: il body parsato è in .data (non .response.data)
       const body = (err as { data?: { existing_auction_id?: string; error?: string } })?.data;
       if (body?.existing_auction_id) {
         navigate(`/asta/${body.existing_auction_id}`);
@@ -81,6 +85,7 @@ export default function LeagueDetail() {
   const isReadyForAuction = !league.started && (stats?.team_count ?? 0) >= 4;
 
   return (
+    <>
     <div className="space-y-8 animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
         <div>
@@ -128,7 +133,7 @@ export default function LeagueDetail() {
           {isReadyForAuction ? (
             <Button
               className="gap-2 bg-[#1f4733] text-[#efe6d3] hover:bg-[#1f4733]/90"
-              onClick={handleAvviaAsta}
+              onClick={() => setIsConfigOpen(true)}
               disabled={createAuction.isPending}
             >
               <Gavel className="h-4 w-4" />
@@ -333,5 +338,14 @@ export default function LeagueDetail() {
         </div>
       </div>
     </div>
+
+    <AstaConfigModal
+      open={isConfigOpen}
+      onOpenChange={setIsConfigOpen}
+      teams={(teams ?? []).map((t) => ({ id: t.id, name: t.name, name_auction: t.name_auction }))}
+      isLoading={createAuction.isPending}
+      onConfirm={handleAvviaAsta}
+    />
+    </>
   );
 }

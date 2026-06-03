@@ -12,6 +12,7 @@
 import {
   pgTable,
   text,
+  integer,
   timestamp,
   check,
 } from "drizzle-orm/pg-core";
@@ -34,6 +35,9 @@ export const auctions = pgTable("auctions", {
    * cancelled  — annullata (nessuna aggiudicazione prodotta)
    */
   status: text("status").notNull().default("setup"),
+
+  /** Durata del rilancio in secondi (range 5-30). Default 8. */
+  timerSeconds: integer("timer_seconds").notNull().default(8),
 
   startedAt: timestamp("started_at", { withTimezone: true }),
   completedAt: timestamp("completed_at", { withTimezone: true }),

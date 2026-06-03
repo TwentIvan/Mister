@@ -960,6 +960,11 @@ export interface Auction {
   id: string;
   league_id: string;
   status: AuctionStatus;
+  /**
+     * @minimum 5
+     * @maximum 30
+     */
+  timer_seconds: number;
   /** @nullable */
   started_at?: string | null;
   /** @nullable */
@@ -1014,6 +1019,24 @@ export interface AuctionProgress {
   sold: number;
 }
 
+export type AuctionAssignmentItemRoleClassic = typeof AuctionAssignmentItemRoleClassic[keyof typeof AuctionAssignmentItemRoleClassic];
+
+
+export const AuctionAssignmentItemRoleClassic = {
+  GK: 'GK',
+  DEF: 'DEF',
+  MID: 'MID',
+  ATT: 'ATT',
+} as const;
+
+export interface AuctionAssignmentItem {
+  player_id: number;
+  player_name: string;
+  role_classic: AuctionAssignmentItemRoleClassic;
+  fanta_team_id: string;
+  final_price_fm: number;
+}
+
 export interface AuctionState {
   auction: Auction;
   current_player?: AuctionPlayerEntry | null;
@@ -1021,10 +1044,23 @@ export interface AuctionState {
   bids_history: AuctionBidItem[];
   squadre: FantaTeam[];
   progress: AuctionProgress;
+  assignments: AuctionAssignmentItem[];
 }
+
+/**
+ * Mappa teamId -> nome voce (sovrascrive nome_asta)
+ */
+export type CreateAuctionBodyTeamNames = {[key: string]: string};
 
 export interface CreateAuctionBody {
   league_id: string;
+  /**
+     * @minimum 5
+     * @maximum 30
+     */
+  timer_seconds?: number;
+  /** Mappa teamId -> nome voce (sovrascrive nome_asta) */
+  team_names?: CreateAuctionBodyTeamNames;
 }
 
 export interface CreateAuctionResponse {

@@ -2273,7 +2273,7 @@ components:
     # ─── AUCTIONS ─────────────────────────────────────────────
     Auction:
       type: object
-      required: [id, league_id, status, created_at]
+      required: [id, league_id, status, created_at, timer_seconds]
       properties:
         id:
           type: string
@@ -2282,6 +2282,11 @@ components:
         status:
           type: string
           enum: [setup, running, paused, completed, cancelled]
+        timer_seconds:
+          type: integer
+          minimum: 5
+          maximum: 30
+          default: 8
         started_at:
           type: ["string", "null"]
           format: date-time
@@ -2348,7 +2353,7 @@ components:
 
     AuctionState:
       type: object
-      required: [auction, bids_history, squadre, progress]
+      required: [auction, bids_history, squadre, progress, assignments]
       properties:
         auction:
           $ref: "#/components/schemas/Auction"
@@ -2370,6 +2375,26 @@ components:
             $ref: "#/components/schemas/FantaTeam"
         progress:
           $ref: "#/components/schemas/AuctionProgress"
+        assignments:
+          type: array
+          items:
+            $ref: "#/components/schemas/AuctionAssignmentItem"
+
+    AuctionAssignmentItem:
+      type: object
+      required: [player_id, player_name, role_classic, fanta_team_id, final_price_fm]
+      properties:
+        player_id:
+          type: integer
+        player_name:
+          type: string
+        role_classic:
+          type: string
+          enum: [GK, DEF, MID, ATT]
+        fanta_team_id:
+          type: string
+        final_price_fm:
+          type: integer
 
     CreateAuctionBody:
       type: object
@@ -2377,6 +2402,16 @@ components:
       properties:
         league_id:
           type: string
+        timer_seconds:
+          type: integer
+          minimum: 5
+          maximum: 30
+          default: 8
+        team_names:
+          type: object
+          additionalProperties:
+            type: string
+          description: "Mappa teamId -> nome voce (sovrascrive nome_asta)"
 
     CreateAuctionResponse:
       type: object
