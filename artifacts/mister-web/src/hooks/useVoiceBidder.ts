@@ -1,45 +1,20 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-// ── Minimal Web Speech API types (not available as globals in all TS builds) ──
-interface SRAlternative {
-  readonly transcript: string;
-  readonly confidence: number;
-}
-interface SRResult {
-  readonly isFinal: boolean;
-  readonly length: number;
-  readonly [index: number]: SRAlternative;
-}
-interface SRResultList {
-  readonly length: number;
-  readonly [index: number]: SRResult;
-}
-interface SREvent {
-  readonly resultIndex: number;
-  readonly results: SRResultList;
-}
-interface SRErrorEvent {
-  readonly error: string;
-}
+// ── Minimal Web Speech API types ─────────────────────────────────────────────
+interface SRAlternative { readonly transcript: string; readonly confidence: number; }
+interface SRResult { readonly isFinal: boolean; readonly length: number; readonly [index: number]: SRAlternative; }
+interface SRResultList { readonly length: number; readonly [index: number]: SRResult; }
+interface SREvent { readonly resultIndex: number; readonly results: SRResultList; }
+interface SRErrorEvent { readonly error: string; }
 interface SRRecognition {
-  lang: string;
-  continuous: boolean;
-  interimResults: boolean;
-  maxAlternatives: number;
+  lang: string; continuous: boolean; interimResults: boolean; maxAlternatives: number;
   onresult: ((e: SREvent) => void) | null;
   onend: (() => void) | null;
   onerror: ((e: SRErrorEvent) => void) | null;
-  start(): void;
-  stop(): void;
-  abort(): void;
+  start(): void; stop(): void; abort(): void;
 }
-interface SRCtor {
-  new(): SRRecognition;
-}
-type WinWithSR = Window & {
-  SpeechRecognition?: SRCtor;
-  webkitSpeechRecognition?: SRCtor;
-};
+interface SRCtor { new(): SRRecognition; }
+type WinWithSR = Window & { SpeechRecognition?: SRCtor; webkitSpeechRecognition?: SRCtor; };
 
 function getSRCtor(): SRCtor | null {
   if (typeof window === "undefined") return null;
@@ -47,7 +22,7 @@ function getSRCtor(): SRCtor | null {
   return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null;
 }
 
-// ── Italian number words 1-100 ──────────────────────────────────────────────
+// ── Italian number words 1-100 ───────────────────────────────────────────────
 function buildItalianNumbers(): Map<string, number> {
   const m = new Map<string, number>();
   const ones = [
@@ -55,34 +30,27 @@ function buildItalianNumbers(): Map<string, number> {
     "dieci", "undici", "dodici", "tredici", "quattordici", "quindici",
     "sedici", "diciassette", "diciotto", "diciannove",
   ];
-  const tens = [
-    "", "", "venti", "trenta", "quaranta", "cinquanta",
-    "sessanta", "settanta", "ottanta", "novanta",
-  ];
+  const tens = ["", "", "venti", "trenta", "quaranta", "cinquanta", "sessanta", "settanta", "ottanta", "novanta"];
   for (let n = 1; n <= 99; n++) {
     if (n < 20) {
       if (ones[n]) m.set(ones[n], n);
     } else {
-      const t = Math.floor(n / 10);
-      const o = n % 10;
-      // Italian elision: tens loses trailing vowel before "uno" (1) and "otto" (8)
-      const base = o === 1 || o === 8 ? tens[t].slice(0, -1) : tens[t];
-      const word = o === 0 ? tens[t] : base + ones[o];
-      m.set(word, n);
+      const t = Math.floor(n / 10), o = n % 10;
+      const base = (o === 1 || o === 8) ? tens[t].slice(0, -1) : tens[t];
+      m.set(o === 0 ? tens[t] : base + ones[o], n);
     }
   }
   m.set("cento", 100);
   return m;
 }
-
 const ITALIAN_NUMBERS = buildItalianNumbers();
 
-// ── Text normalisation ───────────────────────────────────────────────────────
-function norm(s: string): string {
+// ── Text normalisation ────────────────────────────────────────────────────────
+export function norm(s: string): string {
   return s
     .toLowerCase()
     .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")  // strip diacritics
+    .replace(/[\u0300-\u036f]/g, "")
     .replace(/[^a-z0-9 ]/g, "")
     .replace(/\s+/g, " ")
     .trim();
@@ -94,61 +62,112 @@ function parseNumber(token: string): number | null {
   return ITALIAN_NUMBERS.get(token) ?? null;
 }
 
-// ── Fuzzy team-name matching ─────────────────────────────────────────────────
-interface Squadra {
-  id: string;
-  name: string;
-  name_auction?: string | null;
+// ── Levenshtein distance + normalised variant ─────────────────────────────────
+export function levenshtein(a: string, b: string): number {
+  const m = a.length, n = b.length;
+  if (m === 0) return n;
+  if (n === 0) return m;
+  let prev = Array.from({ length: n + 1 }, (_, j) => j);
+  for (let i = 1; i <= m; i++) {
+    const curr: number[] = [i];
+    for (let j = 1; j <= n; j++) {
+      curr[j] = a[i - 1] === b[j - 1]
+        ? prev[j - 1]
+        : 1 + Math.min(prev[j], curr[j - 1], prev[j - 1]);
+    }
+    prev = curr;
+  }
+  return prev[n];
 }
 
-function fuzzyMatch(fragment: string, squadre: Squadra[]): Squadra | null {
-  if (!fragment) return null;
-  const candidates = squadre.map((s) => ({
-    s,
+export function normalizedDist(a: string, b: string): number {
+  if (!a && !b) return 0;
+  const maxLen = Math.max(a.length, b.length);
+  return maxLen === 0 ? 0 : levenshtein(a, b) / maxLen;
+}
+
+// ── Fuzzy keyword presence check ──────────────────────────────────────────────
+// Returns true if any single token (or adjacent bigram) in `text` is within
+// `maxDist` normalised Levenshtein distance from `keyword`.
+export function fuzzyContainsKeyword(text: string, keyword: string, maxDist = 0.35): boolean {
+  const tokens = text.split(" ").filter(Boolean);
+  for (const t of tokens) {
+    if (normalizedDist(t, keyword) <= maxDist) return true;
+  }
+  // Bigrams: adjacent tokens concatenated (catches "a giudica" → "agiudica" ≈ "aggiudica")
+  for (let i = 0; i < tokens.length - 1; i++) {
+    const bigram = tokens[i] + tokens[i + 1];
+    if (normalizedDist(bigram, keyword) <= maxDist) return true;
+  }
+  return false;
+}
+
+// ── Team-name fuzzy matching — "pick the nearest" ────────────────────────────
+interface Squadra { id: string; name: string; name_auction?: string | null; }
+
+// Min distance from `frag` to `key`, also considering individual tokens in frag
+function bestTokenDist(frag: string, key: string): number {
+  const full = normalizedDist(frag, key);
+  const tokMin = frag
+    .split(" ")
+    .filter((t) => t.length >= 2)
+    .reduce((min, t) => Math.min(min, normalizedDist(t, key)), 1);
+  return Math.min(full, tokMin);
+}
+
+const TEAM_MAX_DIST  = 0.55; // reject if best match is farther than this
+const TEAM_AMB_MARGIN = 0.12; // second must be at least this much farther to be unambiguous
+
+export function fuzzyMatchTeam(fragment: string, squadre: Squadra[]): Squadra | null {
+  if (!fragment || squadre.length === 0) return null;
+  const frag = norm(fragment);
+  const ranked = squadre
+    .map((s) => ({ s, d: bestTokenDist(frag, norm(s.name_auction ?? s.name)) }))
+    .sort((a, b) => a.d - b.d);
+  const best = ranked[0];
+  if (best.d > TEAM_MAX_DIST) return null;
+  if (ranked.length > 1 && ranked[1].d - best.d < TEAM_AMB_MARGIN) return null;
+  return best.s;
+}
+
+// ── Voice-name conflict check (VV4) ──────────────────────────────────────────
+// Returns pairs of voice names that are too similar and risk being confused.
+export function checkVoiceNameConflicts(
+  squadre: Squadra[],
+  threshold = 0.35,
+): Array<{ a: string; b: string }> {
+  const entries = squadre.map((s) => ({
+    display: s.name_auction ?? s.name,
     key: norm(s.name_auction ?? s.name),
   }));
-  // 1. Exact
-  const exact = candidates.find((c) => c.key === fragment);
-  if (exact) return exact.s;
-  // 2. Starts-with either direction
-  const sw = candidates.find(
-    (c) => fragment.startsWith(c.key) || c.key.startsWith(fragment),
-  );
-  if (sw) return sw.s;
-  // 3. Any ≥3-char token overlap
-  const fragTokens = fragment.split(" ");
-  for (const { s, key } of candidates) {
-    const keyTokens = key.split(" ");
-    if (fragTokens.some((t) => t.length >= 3 && keyTokens.includes(t))) return s;
+  const conflicts: Array<{ a: string; b: string }> = [];
+  for (let i = 0; i < entries.length; i++) {
+    for (let j = i + 1; j < entries.length; j++) {
+      if (normalizedDist(entries[i].key, entries[j].key) <= threshold) {
+        conflicts.push({ a: entries[i].display, b: entries[j].display });
+      }
+    }
   }
-  return null;
+  return conflicts;
 }
 
-// ── Fuzzy player matching (per chiamata voce) ────────────────────────────────
-export interface PlayerVoice {
-  id: number;
-  name: string;
-  real_team: string;
-}
+// ── Fuzzy player matching (chiamata voce) ─────────────────────────────────────
+export interface PlayerVoice { id: number; name: string; real_team: string; }
 
 function fuzzyMatchAll(fragment: string, players: PlayerVoice[]): PlayerVoice[] {
   if (!fragment || players.length === 0) return [];
   const frag = norm(fragment);
   let results: PlayerVoice[];
 
-  // 1. Exact name
   results = players.filter((p) => norm(p.name) === frag);
   if (results.length > 0) return results;
 
-  // 2. Exact "name realteam"
   results = players.filter((p) => `${norm(p.name)} ${norm(p.real_team)}` === frag);
   if (results.length > 0) return results;
 
-  // 3. Starts-with name (either direction)
   results = players.filter((p) => { const pn = norm(p.name); return pn.startsWith(frag) || frag.startsWith(pn); });
   if (results.length > 0) return results;
 
-  // 4. Any ≥3-char token in name
   const fragTokens = frag.split(" ");
   return players.filter((p) => {
     const pTokens = norm(p.name).split(" ");
@@ -156,7 +175,81 @@ function fuzzyMatchAll(fragment: string, players: PlayerVoice[]): PlayerVoice[] 
   });
 }
 
-// ── Public interface ─────────────────────────────────────────────────────────
+// ── Pure intent parser (exported for unit testing) ───────────────────────────
+export type Intent =
+  | { type: "bid"; teamId: string; teamName: string; amount: number }
+  | { type: "aggiudica" }
+  | { type: "salta" }
+  | { type: "pausa" }
+  | { type: "riprendi" }
+  | { type: "chiama"; playerId: number; playerName: string }
+  | { type: "chiama_ambiguous"; candidates: PlayerVoice[] }
+  | { type: "seleziona"; n: number }
+  | null;
+
+export function parseIntent(
+  rawText: string,
+  squadre: Squadra[],
+  svincolati?: PlayerVoice[],
+): Intent {
+  const text   = norm(rawText);
+  const tokens = text.split(" ").filter(Boolean);
+  if (tokens.length === 0) return null;
+
+  // ── 0. Chiamata giocatore — "chiamo [nome] [squadra_reale]" ──────────────
+  // First token fuzzy-close to "chiamo"
+  if (svincolati?.length && normalizedDist(tokens[0], "chiamo") <= 0.35) {
+    const rest = tokens.slice(1).join(" ");
+    if (rest) {
+      const matches = fuzzyMatchAll(rest, svincolati);
+      if (matches.length === 1) return { type: "chiama", playerId: matches[0].id, playerName: matches[0].name };
+      if (matches.length > 1)   return { type: "chiama_ambiguous", candidates: matches };
+    }
+    return null;
+  }
+
+  // ── 0b. Selezione da disambiguazione — "seleziona (il numero)? N" ────────
+  const selMatch = /^seleziona(?:\s+il\s+numero)?\s+(\S+)$/.exec(text);
+  if (selMatch) {
+    const n = parseNumber(selMatch[1]);
+    if (n !== null) return { type: "seleziona", n };
+  }
+
+  // ── 1. Commands: aggiudica ────────────────────────────────────────────────
+  if (
+    fuzzyContainsKeyword(text, "aggiudica") ||
+    fuzzyContainsKeyword(text, "aggiudicato")
+  ) {
+    return { type: "aggiudica" };
+  }
+
+  // ── 2. Commands: mister salta / pausa / riprendi ──────────────────────────
+  if (fuzzyContainsKeyword(text, "mister")) {
+    if (fuzzyContainsKeyword(text, "salta"))    return { type: "salta" };
+    if (fuzzyContainsKeyword(text, "pausa"))    return { type: "pausa" };
+    if (fuzzyContainsKeyword(text, "riprendi")) return { type: "riprendi" };
+  }
+
+  // ── 3. Bid: "[nome squadra] [numero]" ─────────────────────────────────────
+  // Try last token as number, then second-to-last (multi-word team names)
+  if (tokens.length >= 2) {
+    for (const offset of [1, 2]) {
+      if (tokens.length <= offset) continue;
+      const numTok = tokens[tokens.length - offset];
+      const amount = parseNumber(numTok);
+      if (amount === null) continue;
+      const frag = tokens.slice(0, tokens.length - offset).join(" ");
+      const team = fuzzyMatchTeam(frag, squadre);
+      if (team) {
+        return { type: "bid", teamId: team.id, teamName: team.name_auction ?? team.name, amount };
+      }
+    }
+  }
+
+  return null;
+}
+
+// ── Public interface ──────────────────────────────────────────────────────────
 export interface UseVoiceBidderOptions {
   squadre: Squadra[];
   onPlaceBid: (teamId: string, amountAbsoluto: number) => void;
@@ -164,25 +257,23 @@ export interface UseVoiceBidderOptions {
   onSalta: () => void;
   onPausa: () => void;
   onRiprendi: () => void;
-  /** Solo in modalità chiamata: lista dei giocatori svincolati per il riconoscimento "chiamo [nome]" */
   svincolati?: PlayerVoice[];
-  /** Callback per chiamare un giocatore (modalità chiamata) — solo se match univoco */
   onChiama?: (playerId: number) => void;
-  /** Callback se "chiamo [nome]" produce più match — apre il modale di disambiguazione */
   onChiamaAmbiguous?: (candidates: PlayerVoice[]) => void;
-  /** Callback per "seleziona il numero N" dopo disambiguazione */
   onSeleziona?: (n: number) => void;
 }
 
 export interface UseVoiceBidderResult {
   isActive: boolean;
-  transcript: string;         // live interim text while speaking
-  lastCommand: string | null; // label of the most recently executed command (flash)
+  transcript: string;
+  lastCommand: string | null;
   supported: boolean;
   toggle: () => void;
+  /** Coppie di nomi voce troppo simili — mostrare avviso in UI */
+  voiceNameConflicts: Array<{ a: string; b: string }>;
 }
 
-// ── Hook ─────────────────────────────────────────────────────────────────────
+// ── Hook ──────────────────────────────────────────────────────────────────────
 export function useVoiceBidder({
   squadre,
   onPlaceBid,
@@ -199,163 +290,94 @@ export function useVoiceBidder({
   const [transcript, setTranscript]   = useState("");
   const [lastCommand, setLastCommand] = useState<string | null>(null);
 
-  // Stable refs — prevent stale closures inside recognition event handlers
   const isActiveRef = useRef(false);
   const recRef      = useRef<SRRecognition | null>(null);
   const debounceRef = useRef<{ key: string; ts: number } | null>(null);
-  const cbRef       = useRef({
-    onPlaceBid, onAggiudica, onSalta, onPausa, onRiprendi, squadre,
-    svincolati, onChiama, onChiamaAmbiguous, onSeleziona,
-  });
+  const cbRef       = useRef({ onPlaceBid, onAggiudica, onSalta, onPausa, onRiprendi, squadre, svincolati, onChiama, onChiamaAmbiguous, onSeleziona });
 
-  // Keep callback ref current on every render (no deps needed)
   useEffect(() => {
     cbRef.current = { onPlaceBid, onAggiudica, onSalta, onPausa, onRiprendi, squadre, svincolati, onChiama, onChiamaAmbiguous, onSeleziona };
   });
 
   const supported = !!getSRCtor();
 
-  // Flash a command label for 1.8s then clear
   const flash = useCallback((label: string) => {
     setLastCommand(label);
     setTimeout(() => setLastCommand((p) => (p === label ? null : p)), 1800);
   }, []);
 
-  // Parse and dispatch a FINAL transcript result
   const dispatch = useCallback(
     (text: string) => {
-      const normalized = norm(text);
-      const now = Date.now();
+      const now  = Date.now();
+      const nKey = norm(text);
 
-      // Debounce: identical command within 1.5s → skip
-      if (
-        debounceRef.current?.key === normalized &&
-        now - debounceRef.current.ts < 1500
-      ) return;
+      if (debounceRef.current?.key === nKey && now - debounceRef.current.ts < 1500) return;
 
-      // ── 0. Chiamata giocatore — "chiamo [nome] [squadra_reale]" ──────────
-      // Deve stare PRIMA del pattern offerta: il prefisso "chiamo" disambigua.
-      if (normalized.startsWith("chiamo ") && cbRef.current.onChiama && cbRef.current.svincolati?.length) {
-        const text2 = normalized.slice("chiamo ".length).trim();
-        const matches = fuzzyMatchAll(text2, cbRef.current.svincolati);
-        if (matches.length === 1) {
-          const key = `chiamo-${matches[0].id}`;
-          debounceRef.current = { key, ts: now };
-          flash(`Chiamata: ${matches[0].name}`);
-          cbRef.current.onChiama(matches[0].id);
-          return;
-        }
-        if (matches.length > 1 && cbRef.current.onChiamaAmbiguous) {
-          const key = `disamb-${text2}`;
-          debounceRef.current = { key, ts: now };
-          flash(`Disambiguazione: ${matches.length} giocatori`);
-          cbRef.current.onChiamaAmbiguous(matches);
-          return;
-        }
-        // Prefisso riconosciuto ma nessun match → ignora silenziosamente
-        return;
-      }
+      const intent = parseIntent(text, cbRef.current.squadre, cbRef.current.svincolati);
+      if (!intent) return;
 
-      // ── 0b. Selezione da lista disambiguazione — "seleziona (il numero)? N" ─
-      const selMatch = /^seleziona(?:\s+il\s+numero)?\s+(\S+)$/.exec(normalized);
-      if (selMatch && cbRef.current.onSeleziona) {
-        const n = parseNumber(selMatch[1]);
-        if (n !== null) {
-          const key = `seleziona-${n}`;
-          debounceRef.current = { key, ts: now };
-          flash(`Selezione: ${n}`);
-          cbRef.current.onSeleziona(n);
-          return;
-        }
-      }
+      // Debounce key per evitare doppi dispatch
+      debounceRef.current = { key: nKey, ts: now };
 
-      // ── 1. Control commands (prefix "mister") ────────────────────────────
-      if (normalized === "mister salta") {
-        debounceRef.current = { key: normalized, ts: now };
-        flash("Comando: salta");
-        cbRef.current.onSalta();
-        return;
-      }
-      if (normalized === "mister pausa") {
-        debounceRef.current = { key: normalized, ts: now };
-        flash("Comando: pausa");
-        cbRef.current.onPausa();
-        return;
-      }
-      if (normalized.includes("mister riprendi")) {
-        debounceRef.current = { key: normalized, ts: now };
-        flash("Comando: riprendi");
-        cbRef.current.onRiprendi();
-        return;
-      }
-
-      // ── 2. Aggiudica ─────────────────────────────────────────────────────
-      if (normalized.includes("aggiudicato") || normalized === "aggiudica") {
-        debounceRef.current = { key: normalized, ts: now };
-        flash("Comando: aggiudicato");
-        cbRef.current.onAggiudica();
-        return;
-      }
-
-      // ── 3. Bid: "[nome squadra] [numero]" ────────────────────────────────
-      // Try last token as number; everything before = team name fragment
-      const tokens = normalized.split(" ").filter(Boolean);
-      if (tokens.length >= 2) {
-        const lastTok = tokens[tokens.length - 1];
-        const amount  = parseNumber(lastTok);
-        if (amount !== null) {
-          const frag = tokens.slice(0, -1).join(" ");
-          const team = fuzzyMatch(frag, cbRef.current.squadre);
-          if (team) {
-            const key = `bid-${team.id}-${amount}`;
-            debounceRef.current = { key, ts: now };
-            flash(`Offerta: ${team.name_auction ?? team.name} ${amount}`);
-            cbRef.current.onPlaceBid(team.id, amount);
-            return;
+      switch (intent.type) {
+        case "chiama":
+          if (cbRef.current.onChiama) {
+            flash(`Chiamata: ${intent.playerName}`);
+            cbRef.current.onChiama(intent.playerId);
           }
-        }
-        // Fallback: second-to-last token as number (multi-word team names)
-        if (tokens.length >= 3) {
-          const secLast = tokens[tokens.length - 2];
-          const amount2 = parseNumber(secLast);
-          if (amount2 !== null) {
-            const frag2 = tokens.slice(0, -2).join(" ");
-            const team2 = fuzzyMatch(frag2, cbRef.current.squadre);
-            if (team2) {
-              const key2 = `bid-${team2.id}-${amount2}`;
-              debounceRef.current = { key: key2, ts: now };
-              flash(`Offerta: ${team2.name_auction ?? team2.name} ${amount2}`);
-              cbRef.current.onPlaceBid(team2.id, amount2);
-              return;
-            }
+          break;
+        case "chiama_ambiguous":
+          if (cbRef.current.onChiamaAmbiguous) {
+            flash(`Disambiguazione: ${intent.candidates.length} giocatori`);
+            cbRef.current.onChiamaAmbiguous(intent.candidates);
           }
-        }
+          break;
+        case "seleziona":
+          if (cbRef.current.onSeleziona) {
+            flash(`Selezione: ${intent.n}`);
+            cbRef.current.onSeleziona(intent.n);
+          }
+          break;
+        case "aggiudica":
+          flash("Comando: aggiudicato");
+          cbRef.current.onAggiudica();
+          break;
+        case "salta":
+          flash("Comando: salta");
+          cbRef.current.onSalta();
+          break;
+        case "pausa":
+          flash("Comando: pausa");
+          cbRef.current.onPausa();
+          break;
+        case "riprendi":
+          flash("Comando: riprendi");
+          cbRef.current.onRiprendi();
+          break;
+        case "bid":
+          flash(`Offerta: ${intent.teamName} ${intent.amount}`);
+          cbRef.current.onPlaceBid(intent.teamId, intent.amount);
+          break;
       }
-      // Not recognized → ignore silently
     },
     [flash],
   );
 
-  // Create and start a SpeechRecognition instance
   const startRec = useCallback(() => {
     const Ctor = getSRCtor();
     if (!Ctor) return;
     const rec = new Ctor();
-    rec.lang              = "it-IT";
-    rec.continuous        = true;
-    rec.interimResults    = true;
-    rec.maxAlternatives   = 1;
+    rec.lang           = "it-IT";
+    rec.continuous     = true;
+    rec.interimResults = true;
+    rec.maxAlternatives = 1;
 
     rec.onresult = (event: SREvent) => {
       let interim = "";
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const r = event.results[i];
-        if (r.isFinal) {
-          dispatch(r[0].transcript);
-          setTranscript("");
-        } else {
-          interim += r[0].transcript;
-        }
+        if (r.isFinal) { dispatch(r[0].transcript); setTranscript(""); }
+        else interim += r[0].transcript;
       }
       if (interim) setTranscript(interim);
     };
@@ -363,22 +385,17 @@ export function useVoiceBidder({
     rec.onend = () => {
       setTranscript("");
       if (isActiveRef.current) {
-        // CRITICO: Chrome ferma l'ascolto dopo silenzio prolungato → riavvia automaticamente
         setTimeout(() => {
-          if (isActiveRef.current) {
-            try { rec.start(); } catch { /* already started */ }
-          }
+          if (isActiveRef.current) { try { rec.start(); } catch { /* già avviato */ } }
         }, 150);
       }
     };
 
     rec.onerror = (event: SRErrorEvent) => {
       if (event.error === "not-allowed" || event.error === "service-not-allowed") {
-        // Permissions denied: stop mic
         isActiveRef.current = false;
         setIsActive(false);
       }
-      // no-speech / network / aborted → onend handles restart
     };
 
     recRef.current = rec;
@@ -399,7 +416,6 @@ export function useVoiceBidder({
     }
   }, [supported, startRec]);
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       isActiveRef.current = false;
@@ -407,5 +423,7 @@ export function useVoiceBidder({
     };
   }, []);
 
-  return { isActive, transcript, lastCommand, supported, toggle };
+  const voiceNameConflicts = checkVoiceNameConflicts(squadre);
+
+  return { isActive, transcript, lastCommand, supported, toggle, voiceNameConflicts };
 }

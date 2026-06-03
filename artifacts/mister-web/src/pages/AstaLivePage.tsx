@@ -444,6 +444,16 @@ export default function AstaLivePage() {
         />
       )}
 
+      {/* ── AVVISO NOMI VOCE SIMILI (VV4) ───────────────────────── */}
+      {voice.voiceNameConflicts.length > 0 && (
+        <div className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-mono text-amber-800 space-y-0.5">
+          <p className="font-semibold">Nomi voce troppo simili — rischio confusione:</p>
+          {voice.voiceNameConflicts.map(({ a, b }) => (
+            <p key={`${a}-${b}`}>• «{a}» e «{b}» — modifica uno dei due nomi voce per renderli distinti.</p>
+          ))}
+        </div>
+      )}
+
       {/* ── FEEDBACK VOCE ────────────────────────────────────────── */}
       {!isCompleted && (voice.isActive || !!voice.lastCommand) && (
         <div className="flex items-center gap-3 rounded-xl border bg-card px-4 py-2 text-sm font-mono min-h-[40px]">

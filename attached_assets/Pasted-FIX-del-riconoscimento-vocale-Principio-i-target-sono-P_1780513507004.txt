@@ -1,0 +1,30 @@
+FIX del riconoscimento vocale. Principio: i target sono POCHI e DISTINTI (8 nomi partecipanti + manciata di comandi). Quindi NIENTE match esatto o soglie rigide: mappa l'input (anche storpiato da Chrome) al target PIU VICINO. La rete di sicurezza esiste gia: conferma visiva + annullo. Tutto resta nello stesso parser (useVoiceBidder), niente path paralleli.
+
+1) NOMI PARTECIPANTI — al piu vicino, non a soglia
+- Parsing offerta: estrai il numero (in coda al transcript); il resto e il "nome parlato".
+- Confronta il nome parlato normalizzato (minuscolo, niente accenti) con i nomi voce delle 8 squadre normalizzati e scegli il PIU VICINO (distanza di Levenshtein normalizzata; opzionale una leggera forma fonetica).
+- Accetta il piu vicino SE e stato riconosciuto un numero (forma da offerta). Soglia minima molto permissiva: rifiuta solo se il migliore e palesemente lontanissimo, oppure se due nomi sono ~equidistanti (ambiguo) — in tal caso ignora e mostra "non capito".
+- Risultato: "Alby"/"Beste" mal trascritti finiscono comunque sul nome giusto tra gli 8.
+
+2) COMANDI — fuzzy, non substring esatto
+- Aggiudica: scatta se il transcript contiene un token FUZZY-vicino a "aggiudic..." (cattura "aggiudicato", "aggiudica", "aggiudico", e il malinteso comune "a giudica"). NON usare includes("aggiudicato") esatto.
+- Stessa tolleranza per "mister salta", "mister pausa", "mister riprendi" e "chiamo": match fuzzy sul keyword, non esatto.
+- Mappa anche qualche variante nota esplicitamente (es. "a giudica" -> aggiudica).
+
+3) SICUREZZA gia presente — valorizzala
+- La conferma visiva di cosa e stato interpretato deve restare ben leggibile ("Offerta: [nome] 15", "Aggiudicato", "Salto"...).
+- Con l'annullo gia esistente, un match sbagliato si corregge in un colpo: per questo possiamo permetterci il match aggressivo.
+
+4) AVVISO AMBIGUITA in iscrizione (safeguard)
+- Nella config dei nomi voce: dopo l'inserimento, controlla la similarita a coppie dei nomi voce; se due sono troppo simili (rischio confusione tra loro), segnalali e chiedi di renderli piu distinti. (Nota: questo copre il caso nomi-simili-tra-loro; la mal-trascrizione la copre il punto 1.)
+
+CRITERI (verifica vocale: la fa l'utente in Chrome col mic; tu garantisci la logica + un test unit del matcher):
+VV1. "Alby 15" e "Beste 15", anche con trascrizione imperfetta, registrano l'offerta sul partecipante giusto.
+VV2. "aggiudica" / "a giudica" / "giocatore aggiudicato" scatenano l'aggiudicazione.
+VV3. La conferma visiva mostra cosa e stato interpretato.
+VV4. In config, due nomi voce troppo simili vengono segnalati con richiesta di differenziarli.
+VV5. Regressione: ogni match passa sempre per placeBid / handleAggiudica / handleSalta (nessun path parallelo); resto invariato.
+- Aggiungi un test UNIT del solo matcher (input transcript -> intent) con casi: "alby quindici", "beste 15", "a giudica", "mister salta", e un input garbage che NON deve matchare. Cosi la logica e verificabile senza microfono.
+
+VINCOLI: niente polish grafico; typecheck pulito; niente debug residuo.
+DELIVERABLE: diff; esito del test unit del matcher (i casi sopra). La verifica a voce vera la faccio io.

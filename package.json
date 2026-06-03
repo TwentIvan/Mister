@@ -11,7 +11,8 @@
   "private": true,
   "devDependencies": {
     "prettier": "^3.8.3",
-    "typescript": "~5.9.3"
+    "typescript": "~5.9.3",
+    "vitest": "^4.1.8"
   },
   "dependencies": {
     "replicate": "^1.4.0",
