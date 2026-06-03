@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useParams } from "wouter";
 import {
   useGetAuction,
@@ -58,6 +59,7 @@ export default function AstaLivePage() {
   const endMutation    = useEndAuction();
   const undoMutation   = useUndoAuction();
   const callMutation   = useCallPlayer();
+  const queryClient    = useQueryClient();
 
   // ── Correggi panel ────────────────────────────────────────────────────────
   const [correggiOpen, setCorreggiOpen] = useState(false);
@@ -198,9 +200,14 @@ export default function AstaLivePage() {
     isTransitioningRef.current = true;
     setIsTransitioning(true);
     setDisambCandidates(null);
+    setBidError(null);
     try {
       await callMutation.mutateAsync({ id: auctionId, data: { player_id: playerId } });
       setCallSearch("");
+      // Invalida entrambe le cache queue (filtrata + voce) così i risultati di ricerca
+      // e il vocabolario vocale riflettono immediatamente il giocatore ora "in asta".
+      void queryClient.invalidateQueries({ queryKey: getGetAuctionQueueQueryKey(auctionId, queueSearchParams) });
+      void queryClient.invalidateQueries({ queryKey: getGetAuctionQueueQueryKey(auctionId, undefined) });
       await refetch();
     } catch (err: unknown) {
       const msg = (err as { data?: { error?: string } })?.data?.error;

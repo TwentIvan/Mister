@@ -290,9 +290,10 @@ export function useVoiceBidder({
   const [transcript, setTranscript]   = useState("");
   const [lastCommand, setLastCommand] = useState<string | null>(null);
 
-  const isActiveRef = useRef(false);
-  const recRef      = useRef<SRRecognition | null>(null);
-  const debounceRef = useRef<{ key: string; ts: number } | null>(null);
+  const isActiveRef     = useRef(false);
+  const recRef          = useRef<SRRecognition | null>(null);
+  const debounceRef     = useRef<{ key: string; ts: number } | null>(null);
+  const interimTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const cbRef       = useRef({ onPlaceBid, onAggiudica, onSalta, onPausa, onRiprendi, squadre, svincolati, onChiama, onChiamaAmbiguous, onSeleziona });
 
   useEffect(() => {
@@ -376,13 +377,30 @@ export function useVoiceBidder({
       let interim = "";
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const r = event.results[i];
-        if (r.isFinal) { dispatch(r[0].transcript); setTranscript(""); }
-        else interim += r[0].transcript;
+        if (r.isFinal) {
+          // Risultato definitivo: cancella il timer interim e processa subito
+          if (interimTimerRef.current) { clearTimeout(interimTimerRef.current); interimTimerRef.current = null; }
+          dispatch(r[0].transcript);
+          setTranscript("");
+        } else {
+          interim += r[0].transcript;
+        }
       }
-      if (interim) setTranscript(interim);
+      if (interim) {
+        setTranscript(interim);
+        // Fallback: se isFinal non scatta mai (comportamento Replit preview),
+        // processiamo il testo interim come finale dopo 600 ms di silenzio.
+        if (interimTimerRef.current) clearTimeout(interimTimerRef.current);
+        interimTimerRef.current = setTimeout(() => {
+          interimTimerRef.current = null;
+          dispatch(interim);
+          setTranscript("");
+        }, 600);
+      }
     };
 
     rec.onend = () => {
+      if (interimTimerRef.current) { clearTimeout(interimTimerRef.current); interimTimerRef.current = null; }
       setTranscript("");
       if (isActiveRef.current) {
         setTimeout(() => {
@@ -419,6 +437,7 @@ export function useVoiceBidder({
   useEffect(() => {
     return () => {
       isActiveRef.current = false;
+      if (interimTimerRef.current) { clearTimeout(interimTimerRef.current); interimTimerRef.current = null; }
       try { recRef.current?.stop(); } catch { /* ignore */ }
     };
   }, []);
