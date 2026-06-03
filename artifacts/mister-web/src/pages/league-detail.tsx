@@ -29,9 +29,8 @@ export default function LeagueDetail() {
       const result = await createAuction.mutateAsync({ data: { league_id: id } });
       navigate(`/asta/${result.auction.id}`);
     } catch (err: unknown) {
-      // Se c'è già un'asta attiva, reindirizza direttamente
-      const body = (err as { response?: { data?: { existing_auction_id?: string; error?: string } } })
-        ?.response?.data;
+      // customFetch lancia ApiError: il body parsato è in .data (non .response.data)
+      const body = (err as { data?: { existing_auction_id?: string; error?: string } })?.data;
       if (body?.existing_auction_id) {
         navigate(`/asta/${body.existing_auction_id}`);
         return;
