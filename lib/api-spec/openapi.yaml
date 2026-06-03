@@ -1235,6 +1235,31 @@ paths:
         "403":
           description: Asta non in corso o sospesa
 
+  /auctions/{id}/manual/update-price:
+    post:
+      operationId: manualUpdatePrice
+      tags: [auctions]
+      summary: Modifica il prezzo di un giocatore già in rosa, riconciliando i crediti (override banditore)
+      parameters:
+        - $ref: "#/components/parameters/StringId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ManualUpdatePriceBody"
+      responses:
+        "200":
+          description: Prezzo aggiornato, crediti riconciliati
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ManualUpdatePriceResponse"
+        "400":
+          description: Giocatore non in rosa o parametri non validi
+        "403":
+          description: Asta non in corso o sospesa
+
 components:
   parameters:
     StringId:
@@ -2634,6 +2659,34 @@ components:
         credits_remaining:
           type: integer
           minimum: 0
+
+    ManualUpdatePriceBody:
+      type: object
+      required: [fanta_team_id, player_id, new_price_fm]
+      properties:
+        fanta_team_id:
+          type: string
+        player_id:
+          type: integer
+        new_price_fm:
+          type: integer
+          minimum: 1
+
+    ManualUpdatePriceResponse:
+      type: object
+      required: [ok, old_price_fm, new_price_fm, credits_delta]
+      properties:
+        ok:
+          type: boolean
+        old_price_fm:
+          type: integer
+        new_price_fm:
+          type: integer
+        credits_delta:
+          type: integer
+          description: "Variazione crediti (positivo = rimborso, negativo = addebito)"
+        message:
+          type: string
 
     ManualChangeResponse:
       type: object

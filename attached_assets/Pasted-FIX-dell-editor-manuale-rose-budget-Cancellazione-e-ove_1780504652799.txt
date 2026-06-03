@@ -1,0 +1,29 @@
+FIX dell'editor manuale rose/budget. Cancellazione e override budget funzionano: NON toccarli (regressione). Tre interventi.
+
+1) SELEZIONE SQUADRA CON COMBO (non tab)
+Sostituisci le tab per-squadra con una select/combo delle 8 squadre. Sotto la combo si mostra l'editor della squadra selezionata (rosa per ruolo, aggiungi, override budget). Con 8 squadre le tab si stringono; la combo e piu pulita.
+
+2) AGGIUNTA GIOCATORE — FIX: il prezzo non viene portato dietro
+Il bug: il valore d'acquisto non arriva alla chiamata, quindi l'aggiunta fallisce.
+- Il form di aggiunta deve avere un campo prezzo PRECOMPILATO con un valore PROPOSTO ma MODIFICABILE: default = base d'asta del giocatore (1 FM se non disponibile). L'utente puo cambiarlo prima di confermare.
+- Assicurati che il valore (proposto o modificato) sia effettivamente bindato e PASSATO alla mutation. E qui che si rompeva.
+- Alla conferma: crea assignment + contract a quel prezzo, addebita i crediti (credits_remaining -= prezzo), riempie lo slot del ruolo.
+
+3) MODIFICA PREZZO DI UN GIOCATORE GIA ACQUISTATO — FIX/AGGIUNTA
+Su ogni riga della rosa, permetti di modificare il prezzo d'acquisto.
+- Alla conferma con nuovo prezzo P_nuovo (vecchio P_vecchio): aggiorna assignment.final_price_fm e contract.purchase_price_fm a P_nuovo, e RICONCILIA i crediti: credits_remaining += (P_vecchio - P_nuovo). (Se rincara, addebita la differenza; se cala, rimborsa.)
+- Lo slot e il ruolo restano invariati (stesso giocatore).
+
+VINCOLI (come gia stabilito per l'editor):
+- Tutte e tre le operazioni sono override del banditore: bypassano i blocchi 7.E (role cap / riserva), ma tengono COERENTI crediti, slot e rosa.
+- Transazionale, server-authoritative.
+- Il tabellone riflette in diretta ogni modifica (rosa e budget).
+- Non toccare timer/guard/voce/vincoli ne le funzioni gia ok (cancellazione, override budget).
+
+CRITERI:
+F1. Combo squadra al posto delle tab; selezionando una squadra appare il suo editor.
+F2. Aggiunta: prezzo proposto (base d'asta, editabile) effettivamente passato; conferma crea l'assignment, addebita i crediti, riempie lo slot. Verifica budget e slot prima/dopo.
+F3. Modifica prezzo di un giocatore in rosa: nuovo prezzo salvato, crediti riconciliati per la differenza (mostra un esempio: P_vecchio, P_nuovo, credits prima/dopo).
+F4. Regressione: cancellazione e override budget ancora ok; timer/guard/voce/7.E invariati; typecheck pulito.
+
+DELIVERABLE: diff; prova di F2 (budget/slot prima-dopo) e F3 (esempio con la differenza riconciliata); screenshot della modale con la combo.

@@ -1154,6 +1154,22 @@ export interface ManualSetBudgetBody {
   credits_remaining: number;
 }
 
+export interface ManualUpdatePriceBody {
+  fanta_team_id: string;
+  player_id: number;
+  /** @minimum 1 */
+  new_price_fm: number;
+}
+
+export interface ManualUpdatePriceResponse {
+  ok: boolean;
+  old_price_fm: number;
+  new_price_fm: number;
+  /** Variazione crediti (positivo = rimborso, negativo = addebito) */
+  credits_delta: number;
+  message?: string;
+}
+
 export interface ManualChangeResponse {
   ok: boolean;
   message?: string;

@@ -1834,3 +1834,28 @@ export const ManualSetBudgetResponse = zod.object({
 })
 
 
+/**
+ * @summary Modifica il prezzo di un giocatore già in rosa, riconciliando i crediti (override banditore)
+ */
+export const ManualUpdatePriceParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+
+
+
+export const ManualUpdatePriceBody = zod.object({
+  "fanta_team_id": zod.string(),
+  "player_id": zod.number(),
+  "new_price_fm": zod.number().min(1)
+})
+
+export const ManualUpdatePriceResponse = zod.object({
+  "ok": zod.boolean(),
+  "old_price_fm": zod.number(),
+  "new_price_fm": zod.number(),
+  "credits_delta": zod.number().describe('Variazione crediti (positivo = rimborso, negativo = addebito)'),
+  "message": zod.string().optional()
+})
+
+

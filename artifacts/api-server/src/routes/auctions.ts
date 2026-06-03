@@ -34,6 +34,8 @@ import {
   ManualRemovePlayerBody,
   ManualSetBudgetParams,
   ManualSetBudgetBody,
+  ManualUpdatePriceParams,
+  ManualUpdatePriceBody,
 } from "@workspace/api-zod";
 import { mapFantaTeam } from "../lib/mappers";
 
@@ -927,6 +929,81 @@ router.post("/auctions/:id/manual/remove", async (req, res): Promise<void> => {
     res.json({ ok: true, message: "Giocatore rimosso, crediti rimborsati" });
   } catch (err) {
     req.log.error({ err }, "Errore manual remove");
+    res.status(500).json({ error: "Errore interno" });
+  }
+});
+
+// ─── POST /auctions/:id/manual/update-price ──────────────
+
+router.post("/auctions/:id/manual/update-price", async (req, res): Promise<void> => {
+  const params = ManualUpdatePriceParams.safeParse(req.params);
+  if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
+  const body = ManualUpdatePriceBody.safeParse(req.body);
+  if (!body.success) { res.status(400).json({ error: body.error.flatten() }); return; }
+  const { id } = params.data;
+  const { fanta_team_id: fantaTeamId, player_id: playerId, new_price_fm: newPriceFm } = body.data;
+
+  const [auction] = await db.select().from(auctions).where(eq(auctions.id, id));
+  if (!auction || (auction.status !== "running" && auction.status !== "paused")) {
+    res.status(403).json({ error: "L'asta non è in corso" }); return;
+  }
+
+  // Recupera l'assignment esistente per leggere il prezzo attuale
+  const [asgn] = await db
+    .select()
+    .from(auctionAssignments)
+    .where(
+      and(
+        eq(auctionAssignments.auctionId, id),
+        eq(auctionAssignments.fantaTeamId, fantaTeamId),
+        eq(auctionAssignments.playerId, playerId),
+      ),
+    );
+  if (!asgn) { res.status(400).json({ error: "Giocatore non trovato in rosa" }); return; }
+
+  const oldPriceFm = asgn.finalPriceFm;
+  const creditsDelta = oldPriceFm - newPriceFm; // positivo = rimborso, negativo = addebito
+
+  try {
+    await db.transaction(async (tx) => {
+      // 1. Aggiorna il prezzo nell'assignment
+      await tx
+        .update(auctionAssignments)
+        .set({ finalPriceFm: newPriceFm })
+        .where(eq(auctionAssignments.id, asgn.id));
+
+      // 2. Aggiorna il contratto corrispondente
+      await tx
+        .update(contracts)
+        .set({
+          purchasePrice: newPriceFm,
+          purchasePriceFm: newPriceFm,
+          clauseDefault: Math.max(1, Math.round(newPriceFm * 0.8)),
+        })
+        .where(
+          and(
+            eq(contracts.leagueId, auction.leagueId),
+            eq(contracts.fantaTeamId, fantaTeamId),
+            eq(contracts.playerId, playerId),
+          ),
+        );
+
+      // 3. Riconcilia i crediti: += (vecchio - nuovo)
+      await tx
+        .update(fantaTeams)
+        .set({ creditsRemaining: sql`${fantaTeams.creditsRemaining} + ${creditsDelta}` })
+        .where(and(eq(fantaTeams.id, fantaTeamId), eq(fantaTeams.leagueId, auction.leagueId)));
+    });
+
+    res.json({
+      ok: true,
+      old_price_fm: oldPriceFm,
+      new_price_fm: newPriceFm,
+      credits_delta: creditsDelta,
+      message: `Prezzo aggiornato: ${oldPriceFm} → ${newPriceFm} FM (crediti ${creditsDelta >= 0 ? "+" : ""}${creditsDelta})`,
+    });
+  } catch (err) {
+    req.log.error({ err }, "Errore manual update-price");
     res.status(500).json({ error: "Errore interno" });
   }
 });

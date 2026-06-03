@@ -89,6 +89,8 @@ export * from './manualAddBody';
 export * from './manualChangeResponse';
 export * from './manualRemoveBody';
 export * from './manualSetBudgetBody';
+export * from './manualUpdatePriceBody';
+export * from './manualUpdatePriceResponse';
 export * from './marketEvent';
 export * from './marketEventConfig';
 export * from './marketEventInput';

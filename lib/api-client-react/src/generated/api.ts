@@ -63,6 +63,8 @@ import type {
   ManualChangeResponse,
   ManualRemoveBody,
   ManualSetBudgetBody,
+  ManualUpdatePriceBody,
+  ManualUpdatePriceResponse,
   MarketEvent,
   MarketEventInput,
   MarketEventUpdate,
@@ -4484,5 +4486,77 @@ export const useManualSetBudget = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getManualSetBudgetMutationOptions(options));
+    }
+
+export const getManualUpdatePriceUrl = (id: string,) => {
+
+
+
+
+  return `/api/auctions/${id}/manual/update-price`
+}
+
+/**
+ * @summary Modifica il prezzo di un giocatore già in rosa, riconciliando i crediti (override banditore)
+ */
+export const manualUpdatePrice = async (id: string,
+    manualUpdatePriceBody: ManualUpdatePriceBody, options?: RequestInit): Promise<ManualUpdatePriceResponse> => {
+
+  return customFetch<ManualUpdatePriceResponse>(getManualUpdatePriceUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      manualUpdatePriceBody,)
+  }
+);}
+
+
+
+
+export const getManualUpdatePriceMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof manualUpdatePrice>>, TError,{id: string;data: BodyType<ManualUpdatePriceBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof manualUpdatePrice>>, TError,{id: string;data: BodyType<ManualUpdatePriceBody>}, TContext> => {
+
+const mutationKey = ['manualUpdatePrice'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof manualUpdatePrice>>, {id: string;data: BodyType<ManualUpdatePriceBody>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  manualUpdatePrice(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ManualUpdatePriceMutationResult = NonNullable<Awaited<ReturnType<typeof manualUpdatePrice>>>
+    export type ManualUpdatePriceMutationBody = BodyType<ManualUpdatePriceBody>
+    export type ManualUpdatePriceMutationError = ErrorType<void>
+
+    /**
+ * @summary Modifica il prezzo di un giocatore già in rosa, riconciliando i crediti (override banditore)
+ */
+export const useManualUpdatePrice = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof manualUpdatePrice>>, TError,{id: string;data: BodyType<ManualUpdatePriceBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof manualUpdatePrice>>,
+        TError,
+        {id: string;data: BodyType<ManualUpdatePriceBody>},
+        TContext
+      > => {
+      return useMutation(getManualUpdatePriceMutationOptions(options));
     }
 
