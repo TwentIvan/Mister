@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   useManualAddPlayer,
   useManualRemovePlayer,
@@ -52,6 +52,18 @@ const ROLE_LABEL: Record<string, string> = {
 // ── CorreggiPanel ─────────────────────────────────────────────────────────────
 
 export function CorreggiPanel({ auctionId, squadre, assignments, onClose, onRefetch }: Props) {
+  // ── Mappa player_id → nome squadra (giocatori già assegnati in questa asta)
+  // Usata nella lista di ricerca per mostrare "già di [squadra]" e bloccare
+  // la selezione. Stessa logica che usa 7.F per la chiamata: unica fonte UI.
+  const assignedPlayerMap = useMemo(() => {
+    const map = new Map<number, string>();
+    for (const a of assignments) {
+      const team = squadre.find((t) => t.id === a.fanta_team_id);
+      if (team) map.set(a.player_id, team.name);
+    }
+    return map;
+  }, [assignments, squadre]);
+
   // ── Stato selezione squadra (F1: combo) ───────────────────────────────────
   const [activeTeamId, setActiveTeamId] = useState<string>(squadre[0]?.id ?? "");
 
@@ -426,27 +438,47 @@ export function CorreggiPanel({ auctionId, squadre, assignments, onClose, onRefe
                         Nessun risultato
                       </li>
                     ) : (
-                      (playerSearchData?.items ?? []).map((p) => (
-                        <li
-                          key={p.id}
-                          className="flex items-center gap-3 px-3 py-2 bg-card hover:bg-muted/40 cursor-pointer transition-colors"
-                          onClick={() => handleSelectPlayer({
-                            id: p.id,
-                            name: p.name,
-                            real_team: p.real_team,
-                            role_classic: p.role_classic,
-                          })}
-                        >
-                          <span className="w-5 text-center text-xs font-mono font-bold text-muted-foreground shrink-0">
-                            {ROLE_LABEL[p.role_classic] ?? p.role_classic}
-                          </span>
-                          <span className="flex-1 text-sm truncate">{p.name}</span>
-                          <span className="text-xs font-mono text-muted-foreground shrink-0">
-                            {p.real_team}
-                          </span>
-                          <Plus className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                        </li>
-                      ))
+                      (playerSearchData?.items ?? []).map((p) => {
+                        const ownerName = assignedPlayerMap.get(p.id);
+                        const isAssigned = !!ownerName;
+                        return (
+                          <li
+                            key={p.id}
+                            className={[
+                              "flex items-center gap-3 px-3 py-2 bg-card transition-colors",
+                              isAssigned
+                                ? "opacity-40 cursor-not-allowed"
+                                : "hover:bg-muted/40 cursor-pointer",
+                            ].join(" ")}
+                            onClick={() => {
+                              if (isAssigned) return;
+                              handleSelectPlayer({
+                                id: p.id,
+                                name: p.name,
+                                real_team: p.real_team,
+                                role_classic: p.role_classic,
+                              });
+                            }}
+                          >
+                            <span className="w-5 text-center text-xs font-mono font-bold text-muted-foreground shrink-0">
+                              {ROLE_LABEL[p.role_classic] ?? p.role_classic}
+                            </span>
+                            <span className="flex-1 text-sm truncate">{p.name}</span>
+                            {isAssigned ? (
+                              <span className="text-xs font-mono text-muted-foreground shrink-0 italic">
+                                già di {ownerName}
+                              </span>
+                            ) : (
+                              <>
+                                <span className="text-xs font-mono text-muted-foreground shrink-0">
+                                  {p.real_team}
+                                </span>
+                                <Plus className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                              </>
+                            )}
+                          </li>
+                        );
+                      })
                     )}
                   </ul>
                 )}

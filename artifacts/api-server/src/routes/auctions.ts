@@ -836,6 +836,24 @@ router.post("/auctions/:id/manual/add", async (req, res): Promise<void> => {
     .where(and(eq(fantaTeams.id, fantaTeamId), eq(fantaTeams.leagueId, auction.leagueId)));
   if (!team) { res.status(400).json({ error: "Squadra non trovata" }); return; }
 
+  // ── Regola svincolato: rifiuta se già assegnato in questa asta ────────────
+  // Questa stessa logica vale anche per la CHIAMATA (7.F): tenuta qui come
+  // unica fonte di verità server-side, identica per editor e chiamata.
+  const [existingAsgn] = await db
+    .select({ teamName: fantaTeams.name })
+    .from(auctionAssignments)
+    .innerJoin(fantaTeams, eq(fantaTeams.id, auctionAssignments.fantaTeamId))
+    .where(
+      and(
+        eq(auctionAssignments.auctionId, id),
+        eq(auctionAssignments.playerId, playerId),
+      ),
+    );
+  if (existingAsgn) {
+    res.status(400).json({ error: `Giocatore già di ${existingAsgn.teamName}` });
+    return;
+  }
+
   try {
     await db.transaction(async (tx) => {
       await tx.insert(auctionAssignments).values({
