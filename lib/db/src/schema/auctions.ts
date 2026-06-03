@@ -48,6 +48,14 @@ export const auctions = pgTable("auctions", {
   startedAt: timestamp("started_at", { withTimezone: true }),
   completedAt: timestamp("completed_at", { withTimezone: true }),
 
+  /**
+   * Marca "azione annullabile presente".
+   * Impostata a 'bid'/'skip'/'assign' dopo ogni azione; azzerata (null)
+   * dopo un undo. Il backend rifiuta /undo se null — protezione server-side
+   * contro doppio-undo indipendentemente dal client.
+   */
+  lastUndoableAction: text("last_undoable_action"),
+
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

@@ -49,6 +49,7 @@ function mapAuction(a: Auction) {
     roster_d: a.rosterD,
     roster_c: a.rosterC,
     roster_a: a.rosterA,
+    undoable: a.lastUndoableAction !== null && a.lastUndoableAction !== undefined,
     started_at: a.startedAt ?? null,
     completed_at: a.completedAt ?? null,
     created_at: a.createdAt,
@@ -447,6 +448,9 @@ router.post("/auctions/:id/bid", async (req, res): Promise<void> => {
     .values({ id: `bid-${nanoid(8)}`, auctionId: id, playerId, fantaTeamId, amountFm, valid: true })
     .returning();
 
+  // Marca azione annullabile (server-authoritative)
+  await db.update(auctions).set({ lastUndoableAction: "bid" }).where(eq(auctions.id, id));
+
   res.status(201).json({ bid: mapBid(bid), new_current_bid: mapBid(bid) });
 });
 
@@ -523,7 +527,13 @@ router.post("/auctions/:id/assign", async (req, res): Promise<void> => {
         .limit(1);
 
       if (!nextRow) {
-        await tx.update(auctions).set({ status: "completed", completedAt: new Date() }).where(eq(auctions.id, id));
+        await tx.update(auctions)
+          .set({ status: "completed", completedAt: new Date(), lastUndoableAction: "assign" })
+          .where(eq(auctions.id, id));
+      } else {
+        await tx.update(auctions)
+          .set({ lastUndoableAction: "assign" })
+          .where(eq(auctions.id, id));
       }
 
       return nextRow?.playerId ?? null;
@@ -572,7 +582,11 @@ router.post("/auctions/:id/skip", async (req, res): Promise<void> => {
 
   const nextRow = await getNextPendingPlayer(id);
   if (!nextRow) {
-    await db.update(auctions).set({ status: "completed", completedAt: new Date() }).where(eq(auctions.id, id));
+    await db.update(auctions)
+      .set({ status: "completed", completedAt: new Date(), lastUndoableAction: "skip" })
+      .where(eq(auctions.id, id));
+  } else {
+    await db.update(auctions).set({ lastUndoableAction: "skip" }).where(eq(auctions.id, id));
   }
 
   res.json({ next_player_id: nextRow?.playerId ?? null, auction_completed: nextRow === null });
@@ -620,6 +634,12 @@ router.post("/auctions/:id/undo", async (req, res): Promise<void> => {
     return;
   }
 
+  // ── Guard server-authoritative: un solo passo ────────────────────────────
+  if (!auction.lastUndoableAction) {
+    res.json({ undone: null, message: "Nessuna azione da annullare" });
+    return;
+  }
+
   try {
     // ── Determina l'ultima azione ──────────────────────────────────────────
     // 1. Se il giocatore corrente ha offerte valide → undo bid
@@ -648,10 +668,12 @@ router.post("/auctions/:id/undo", async (req, res): Promise<void> => {
 
     if (currentBid) {
       // ── UNDO BID ────────────────────────────────────────────────────────
-      // Elimina quest'offerta; ricalcola la top bid tra le rimanenti
       await db
         .delete(auctionBids)
         .where(eq(auctionBids.id, currentBid.id));
+
+      // Azzera: nessuna altra azione annullabile finché non se ne fa un'altra
+      await db.update(auctions).set({ lastUndoableAction: null }).where(eq(auctions.id, id));
 
       res.json({ undone: "bid", message: "Ultima offerta annullata" });
       return;
@@ -718,6 +740,9 @@ router.post("/auctions/:id/undo", async (req, res): Promise<void> => {
             eq(auctionPlayerQueue.playerId, lastSkipped!.playerId),
           ),
         );
+
+      await db.update(auctions).set({ lastUndoableAction: null }).where(eq(auctions.id, id));
+
       res.json({ undone: "skip", message: "Salto annullato, giocatore riportato in asta" });
       return;
     }
@@ -768,11 +793,16 @@ router.post("/auctions/:id/undo", async (req, res): Promise<void> => {
           ),
         );
 
-      // Se l'asta era completed, riportala a running
+      // Se l'asta era completed, riportala a running; in ogni caso azzera undoable
       if (auction.status === "completed") {
         await tx
           .update(auctions)
-          .set({ status: "running", completedAt: null })
+          .set({ status: "running", completedAt: null, lastUndoableAction: null })
+          .where(eq(auctions.id, id));
+      } else {
+        await tx
+          .update(auctions)
+          .set({ lastUndoableAction: null })
           .where(eq(auctions.id, id));
       }
     });

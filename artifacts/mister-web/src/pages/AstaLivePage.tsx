@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
 import { useParams } from "wouter";
 import {
   useGetAuction,
@@ -14,17 +13,16 @@ import {
 } from "@workspace/api-client-react";
 import { AstaHero } from "@/components/asta/AstaHero";
 import { TabelloneSquadre } from "@/components/asta/TabelloneSquadre";
+import { CorreggiPanel } from "@/components/asta/CorreggiPanel";
 import { useVoiceBidder } from "@/hooks/useVoiceBidder";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { CheckCircle2, Gavel, Mic } from "lucide-react";
+import { CheckCircle2, Gavel, Mic, Pencil } from "lucide-react";
 
 export default function AstaLivePage() {
   const { auctionId } = useParams<{ auctionId: string }>();
-  const queryClient = useQueryClient();
-
   const { data, isLoading: isLoadingAuction, isError, refetch } = useGetAuction(
     auctionId!,
     { query: { enabled: !!auctionId, queryKey: getGetAuctionQueryKey(auctionId!), refetchInterval: 5000 } },
@@ -51,8 +49,11 @@ export default function AstaLivePage() {
   const endMutation    = useEndAuction();
   const undoMutation   = useUndoAuction();
 
-  // ── "Un solo passo": true dopo bid/skip/assign, false dopo undo ───────────
-  const [canUndo, setCanUndo] = useState(false);
+  // ── Correggi panel ────────────────────────────────────────────────────────
+  const [correggiOpen, setCorreggiOpen] = useState(false);
+
+  // ── canUndo: server-authoritative (lastUndoableAction != null) ───────────
+  const canUndo = data?.auction.undoable ?? false;
 
   const auctionStatus = data?.auction.status;
   const isPaused      = auctionStatus === "paused";
@@ -91,7 +92,6 @@ export default function AstaLivePage() {
         data: { player_id: targetPlayerId, fanta_team_id: fantaTeamId, amount_fm: amountAbsoluto },
       });
       setDeadlineTs(Date.now() + timerSeconds * 1000);
-      setCanUndo(true);
       refetch();
     } catch (err: unknown) {
       const body = (err as { data?: { error?: string } })?.data;
@@ -117,7 +117,6 @@ export default function AstaLivePage() {
         data: { player_id: data.current_player.player_id },
       });
       setAggiudicatoVisible(true);
-      setCanUndo(true);
       await refetch();
       setTimeout(() => setAggiudicatoVisible(false), 1500);
     } finally {
@@ -137,7 +136,6 @@ export default function AstaLivePage() {
         id: auctionId,
         data: { player_id: data.current_player.player_id },
       });
-      setCanUndo(true);
       await refetch();
     } finally {
       isTransitioningRef.current = false;
@@ -153,7 +151,6 @@ export default function AstaLivePage() {
     setDeadlineTs(null);
     try {
       await undoMutation.mutateAsync({ id: auctionId });
-      setCanUndo(false);
       await refetch();
     } finally {
       isTransitioningRef.current = false;
@@ -261,17 +258,28 @@ export default function AstaLivePage() {
             <span className="font-bold text-foreground">{data.progress.sold}</span> aggiudicati
           </p>
         </div>
-        {!isCompleted && (
+        <div className="flex items-center gap-2">
           <Button
             variant="ghost"
             size="sm"
-            className="text-muted-foreground hover:text-destructive"
-            onClick={handleTermina}
-            disabled={isMutating}
+            className="text-muted-foreground hover:text-primary"
+            onClick={() => setCorreggiOpen(true)}
           >
-            Termina asta
+            <Pencil className="h-4 w-4 mr-1" />
+            Correggi
           </Button>
-        )}
+          {!isCompleted && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-muted-foreground hover:text-destructive"
+              onClick={handleTermina}
+              disabled={isMutating}
+            >
+              Termina asta
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* ── Flash "Aggiudicato!" ─────────────────────────────────── */}
@@ -369,6 +377,23 @@ export default function AstaLivePage() {
         isLoading={bidsDisabled}
         onBid={handleBid}
       />
+
+      {/* ── CORREGGI PANEL ───────────────────────────────────────── */}
+      {correggiOpen && (
+        <CorreggiPanel
+          auctionId={auctionId!}
+          squadre={squadreForComponents}
+          assignments={(data.assignments ?? []).map((a) => ({
+            player_id:      a.player_id,
+            player_name:    a.player_name,
+            role_classic:   a.role_classic,
+            fanta_team_id:  a.fanta_team_id,
+            final_price_fm: a.final_price_fm,
+          }))}
+          onClose={() => setCorreggiOpen(false)}
+          onRefetch={() => void refetch()}
+        />
+      )}
     </div>
   );
 }

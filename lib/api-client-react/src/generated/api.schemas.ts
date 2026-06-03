@@ -973,6 +973,8 @@ export interface Auction {
   roster_c: number;
   /** @minimum 1 */
   roster_a: number;
+  /** Vero se esiste un'azione annullabile (bid/skip/assign). Server-authoritative. */
+  undoable: boolean;
   /** @nullable */
   started_at?: string | null;
   /** @nullable */

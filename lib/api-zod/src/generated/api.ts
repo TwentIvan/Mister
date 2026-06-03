@@ -1536,6 +1536,7 @@ export const GetAuctionResponse = zod.object({
   "roster_d": zod.number().min(1).default(getAuctionResponseAuctionRosterDDefault),
   "roster_c": zod.number().min(1).default(getAuctionResponseAuctionRosterCDefault),
   "roster_a": zod.number().min(1).default(getAuctionResponseAuctionRosterADefault),
+  "undoable": zod.boolean().describe('Vero se esiste un\'azione annullabile (bid\/skip\/assign). Server-authoritative.'),
   "started_at": zod.coerce.date().nullish(),
   "completed_at": zod.coerce.date().nullish(),
   "created_at": zod.coerce.date()
@@ -1677,6 +1678,7 @@ export const PauseAuctionResponse = zod.object({
   "roster_d": zod.number().min(1).default(pauseAuctionResponseRosterDDefault),
   "roster_c": zod.number().min(1).default(pauseAuctionResponseRosterCDefault),
   "roster_a": zod.number().min(1).default(pauseAuctionResponseRosterADefault),
+  "undoable": zod.boolean().describe('Vero se esiste un\'azione annullabile (bid\/skip\/assign). Server-authoritative.'),
   "started_at": zod.coerce.date().nullish(),
   "completed_at": zod.coerce.date().nullish(),
   "created_at": zod.coerce.date()
@@ -1713,6 +1715,7 @@ export const ResumeAuctionResponse = zod.object({
   "roster_d": zod.number().min(1).default(resumeAuctionResponseRosterDDefault),
   "roster_c": zod.number().min(1).default(resumeAuctionResponseRosterCDefault),
   "roster_a": zod.number().min(1).default(resumeAuctionResponseRosterADefault),
+  "undoable": zod.boolean().describe('Vero se esiste un\'azione annullabile (bid\/skip\/assign). Server-authoritative.'),
   "started_at": zod.coerce.date().nullish(),
   "completed_at": zod.coerce.date().nullish(),
   "created_at": zod.coerce.date()
@@ -1749,6 +1752,7 @@ export const EndAuctionResponse = zod.object({
   "roster_d": zod.number().min(1).default(endAuctionResponseRosterDDefault),
   "roster_c": zod.number().min(1).default(endAuctionResponseRosterCDefault),
   "roster_a": zod.number().min(1).default(endAuctionResponseRosterADefault),
+  "undoable": zod.boolean().describe('Vero se esiste un\'azione annullabile (bid\/skip\/assign). Server-authoritative.'),
   "started_at": zod.coerce.date().nullish(),
   "completed_at": zod.coerce.date().nullish(),
   "created_at": zod.coerce.date()
