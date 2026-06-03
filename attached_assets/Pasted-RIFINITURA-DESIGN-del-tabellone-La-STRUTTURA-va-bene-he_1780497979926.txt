@@ -1,0 +1,37 @@
+RIFINITURA DESIGN del tabellone. La STRUTTURA va bene (hero 3 zone, colonne, slot, highlight, budget): questo e solo CSS/layout/markup di presentazione. NON toccare logica, endpoint, handler timer/guard/voce, ne i criteri gia verdi.
+
+Tre problemi da risolvere:
+
+1) NIENTE scroll orizzontale: le 8 squadre devono stare TUTTE nello schermo.
+   - Contenitore tabellone width:100%; grid-template-columns: repeat(8, minmax(0,1fr)); gap in rem.
+   - RIMUOVI ogni min-width / larghezza fissa che forza l'overflow (era un errore del mockup precedente, ora corretto).
+   - Le colonne si stringono per dividersi la larghezza. Sui figli usa min-width:0 cosi il contenuto non sfonda la colonna.
+   - Lo scroll resta SOLO verticale, per le rose lunghe.
+
+2) Layout FLUIDO, non a finestre fisse ("stitiche"):
+   - Niente larghezze in px fisse su pagina/hero/colonne. Usa fr, %, minmax(0,1fr), gap in rem.
+   - Tutto si adatta alla larghezza dello schermo. E un tabellone, spesso proiettato: deve RIEMPIRE lo spazio disponibile, non stare in un blocco centrale stretto.
+   - Anche l'hero (3 zone) usa grid fluida (es. 1.15fr / 0.9fr / 1fr), non larghezze fisse.
+
+3) FEDELTA al mockup = font del brand (questo e il motivo per cui "sembra lontano"):
+   - Fraunces (display) per i NOMI: giocatore in asta e nomi squadra.
+   - JetBrains Mono per TUTTI i numeri: budget, prezzi, conteggi "1/3", timer, indice giocatore.
+   - Nella build attuale sembra usato un sans generico ovunque: e quello che spegne il design. VERIFICA che i due font siano effettivamente caricati e applicati nei componenti (non solo dichiarati in DESIGN_SYSTEM.md).
+
+Dettagli di presentazione (allineati al mockup aggiornato che ti riallego):
+   - Budget: numero GRANDE in mono, dato piu visibile della colonna.
+   - Slot pieno: cognome (troncato con ellissi se non entra, niente allargamento colonna) + prezzo in mono accento oro.
+   - Slot vuoto: riga tratteggiata sottile + lettera ruolo.
+   - Squadra in testa all'offerta: bordo/accento oro.
+   - Palette: verde scuro su cream, come DESIGN_SYSTEM.md.
+
+CRITERI:
+D1. A larghezza desktop le 8 colonne sono tutte visibili: ZERO scrollbar orizzontale.
+D2. Ridimensionando la finestra il tabellone si adatta (colonne fluide), non resta a blocchi fissi.
+D3. Nomi in Fraunces, numeri in JetBrains Mono, verificabile a occhio (manda uno screenshot ravvicinato di una colonna).
+D4. Budget grande e leggibile in ogni colonna; slot con nome troncato che non sfonda.
+D5. REGRESSIONE: funzioni invariate (timer, aggiudica, slot che si riempiono, highlight, i 7 criteri).
+
+CHECKPOINT: screenshot dell'intero tabellone a larghezza desktop (tutte e 8 le squadre visibili, niente scroll orizzontale) + uno screenshot ravvicinato di una colonna per vedere i font. Poi sblocco la voce (Parte 3, brief gia pronto).
+
+VINCOLI: solo presentazione, nessun cambio di logica/dati; niente voce ancora; typecheck pulito; niente debug residuo.

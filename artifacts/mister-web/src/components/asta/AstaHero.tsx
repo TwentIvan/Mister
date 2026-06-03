@@ -1,4 +1,4 @@
-import { Mic, MicOff } from "lucide-react";
+import { MicOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const ROLE_COLORS: Record<string, { bg: string; text: string; label: string }> = {
@@ -8,7 +8,7 @@ const ROLE_COLORS: Record<string, { bg: string; text: string; label: string }> =
   ATT: { bg: "bg-red-100",    text: "text-red-800",    label: "A" },
 };
 
-const CIRC = 264; // 2π × r42
+const CIRC = 251; // 2π × r40
 
 interface AstaHeroProps {
   currentPlayer: {
@@ -61,7 +61,7 @@ export function AstaHero({
         ?? "—")
     : null;
 
-  // Timer ring
+  // Timer ring — r=40, CIRC ≈ 251
   const fraction = (timerActive || isPaused) ? timerRemaining / timerTotal : 1;
   const dashOffset = CIRC * (1 - fraction);
   const ringColor =
@@ -75,47 +75,52 @@ export function AstaHero({
     : "—";
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-[1.15fr_0.85fr_1fr] gap-3">
+    <div
+      className="grid gap-3"
+      style={{ gridTemplateColumns: "1.15fr 0.9fr 1fr" }}
+    >
       {/* ── SINISTRA: Giocatore corrente ─── */}
-      <div className="rounded-xl border bg-card p-4 flex flex-col gap-3">
+      <div className="rounded-xl border bg-card p-4 flex flex-col gap-2 min-w-0">
         <p className="text-[10px] font-mono font-semibold uppercase tracking-widest text-muted-foreground">
           In asta
         </p>
         {currentPlayer ? (
           <>
-            <div className="flex items-center gap-2.5">
+            <div className="flex items-center gap-2">
               {role && (
-                <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full font-bold font-mono text-sm ${role.bg} ${role.text}`}>
+                <span
+                  className={`inline-flex items-center justify-center w-7 h-7 rounded-full font-bold font-mono text-sm shrink-0 ${role.bg} ${role.text}`}
+                >
                   {role.label}
                 </span>
               )}
-              <span className="text-xs font-mono text-muted-foreground bg-muted/40 rounded-full px-2.5 py-0.5">
+              <span className="text-[11px] font-mono text-muted-foreground bg-muted/40 rounded-full px-2 py-0.5 truncate">
                 #{currentPlayer.position + 1} di {progress.total}
               </span>
             </div>
-            <div>
-              <h2 className="font-serif font-semibold text-[26px] leading-tight text-primary tracking-tight">
+            <div className="min-w-0">
+              <h2 className="font-serif font-semibold text-[28px] leading-tight text-primary tracking-tight truncate">
                 {currentPlayer.full_name}
               </h2>
-              <p className="text-sm text-muted-foreground mt-0.5 font-mono">{currentPlayer.real_team}</p>
+              <p className="text-sm text-muted-foreground mt-0.5 font-mono truncate">{currentPlayer.real_team}</p>
             </div>
-            <p className="text-xs text-muted-foreground font-mono mt-auto">
+            <p className="text-[11px] text-muted-foreground font-mono mt-auto">
               Base d'asta: <span className="font-bold text-foreground">1 FM</span>
             </p>
           </>
         ) : (
-          <p className="text-sm text-muted-foreground">In attesa del prossimo giocatore…</p>
+          <p className="text-sm text-muted-foreground font-mono">In attesa del prossimo giocatore…</p>
         )}
       </div>
 
       {/* ── CENTRO: Timer + Offerta corrente ─── */}
       <div className="rounded-xl border bg-card p-4 flex flex-col items-center justify-center gap-2 text-center">
-        {/* Timer ring */}
-        <div className="relative w-24 h-24">
-          <svg width="96" height="96" viewBox="0 0 96 96" style={{ transform: "rotate(-90deg)" }}>
-            <circle cx="48" cy="48" r="42" fill="none" stroke="#e0d4b6" strokeWidth="6" />
+        {/* Timer ring SVG */}
+        <div className="relative w-[92px] h-[92px] shrink-0">
+          <svg width="92" height="92" viewBox="0 0 92 92" style={{ transform: "rotate(-90deg)" }}>
+            <circle cx="46" cy="46" r="40" fill="none" stroke="#e0d4b6" strokeWidth="6" />
             <circle
-              cx="48" cy="48" r="42" fill="none"
+              cx="46" cy="46" r="40" fill="none"
               stroke={ringColor}
               strokeWidth="6"
               strokeLinecap="round"
@@ -125,7 +130,7 @@ export function AstaHero({
             />
           </svg>
           <div className="absolute inset-0 flex items-center justify-center">
-            <span className="font-serif font-semibold text-[32px] leading-none text-foreground">
+            <span className="font-serif font-semibold text-[30px] leading-none text-foreground">
               {timerDisplay}
             </span>
           </div>
@@ -137,11 +142,13 @@ export function AstaHero({
           </p>
           {currentBid ? (
             <>
-              <p className="font-serif font-semibold text-2xl text-primary">
-                {currentBid.amount_fm} <span className="text-base font-mono font-normal">FM</span>
+              <p className="font-serif font-semibold text-[23px] leading-tight text-primary">
+                {currentBid.amount_fm}{" "}
+                <span className="text-sm font-mono font-normal">FM</span>
               </p>
-              <p className="text-xs font-mono text-muted-foreground">
-                da <span className="font-bold text-amber-700">{leadingTeam}</span>
+              <p className="text-[12px] font-mono text-muted-foreground">
+                da{" "}
+                <span className="font-bold text-amber-700">{leadingTeam}</span>
               </p>
             </>
           ) : (
@@ -179,6 +186,7 @@ export function AstaHero({
             {isPaused ? "Riprendi" : "Pausa"}
           </Button>
         </div>
+
         <Button
           variant="ghost"
           className="w-full text-muted-foreground text-sm h-9"
