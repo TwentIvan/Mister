@@ -1187,6 +1187,34 @@ paths:
         "409":
           description: Giocatore già in asta o altro conflitto
 
+  /auctions/{id}/queue:
+    get:
+      operationId: getAuctionQueue
+      tags: [auctions]
+      summary: "Lista giocatori in attesa nella coda dell'asta (pending)"
+      parameters:
+        - $ref: "#/components/parameters/StringId"
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: "Filtra per nome o squadra reale"
+        - name: role
+          in: query
+          schema:
+            type: string
+            enum: [GK, DEF, MID, ATT]
+          description: "Filtra per ruolo"
+      responses:
+        "200":
+          description: Lista giocatori pendenti
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuctionQueueResponse"
+        "404":
+          description: Asta non trovata
+
   /auctions/{id}/manual/add:
     post:
       operationId: manualAddPlayer
@@ -2739,6 +2767,31 @@ components:
           type: boolean
         message:
           type: string
+
+    AuctionQueuePlayer:
+      type: object
+      required: [id, name, full_name, role_classic, real_team]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        full_name:
+          type: string
+        role_classic:
+          type: string
+          enum: [GK, DEF, MID, ATT]
+        real_team:
+          type: string
+
+    AuctionQueueResponse:
+      type: object
+      required: [players]
+      properties:
+        players:
+          type: array
+          items:
+            $ref: "#/components/schemas/AuctionQueuePlayer"
 
     CallPlayerBody:
       type: object

@@ -1201,6 +1201,28 @@ export interface ManualChangeResponse {
   message?: string;
 }
 
+export type AuctionQueuePlayerRoleClassic = typeof AuctionQueuePlayerRoleClassic[keyof typeof AuctionQueuePlayerRoleClassic];
+
+
+export const AuctionQueuePlayerRoleClassic = {
+  GK: 'GK',
+  DEF: 'DEF',
+  MID: 'MID',
+  ATT: 'ATT',
+} as const;
+
+export interface AuctionQueuePlayer {
+  id: number;
+  name: string;
+  full_name: string;
+  role_classic: AuctionQueuePlayerRoleClassic;
+  real_team: string;
+}
+
+export interface AuctionQueueResponse {
+  players: AuctionQueuePlayer[];
+}
+
 export interface CallPlayerBody {
   player_id: number;
 }
@@ -1273,4 +1295,25 @@ export type GetMatchesParams = {
 competitionId: string;
 giornata: number;
 };
+
+export type GetAuctionQueueParams = {
+/**
+ * Filtra per nome o squadra reale
+ */
+search?: string;
+/**
+ * Filtra per ruolo
+ */
+role?: GetAuctionQueueRole;
+};
+
+export type GetAuctionQueueRole = typeof GetAuctionQueueRole[keyof typeof GetAuctionQueueRole];
+
+
+export const GetAuctionQueueRole = {
+  GK: 'GK',
+  DEF: 'DEF',
+  MID: 'MID',
+  ATT: 'ATT',
+} as const;
 

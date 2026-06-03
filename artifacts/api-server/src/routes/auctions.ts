@@ -1157,6 +1157,56 @@ router.post("/auctions/:id/call", async (req, res): Promise<void> => {
   res.json({ ok: true, player_id: playerId, message: "Giocatore chiamato in asta" });
 });
 
+// ─── GET /auctions/:id/queue ─────────────────────────────
+// Lista giocatori pending nella coda dell'asta.
+// Usata dalla UI in modalità chiamata per la ricerca del giocatore da bandire.
+
+router.get("/auctions/:id/queue", async (req, res): Promise<void> => {
+  const { id } = req.params;
+  const search = typeof req.query.search === "string" ? req.query.search.trim().toLowerCase() : undefined;
+  const role = typeof req.query.role === "string" ? req.query.role : undefined;
+
+  const [auction] = await db.select({ id: auctions.id }).from(auctions).where(eq(auctions.id, id));
+  if (!auction) { res.status(404).json({ error: "Asta non trovata" }); return; }
+
+  const rows = await db
+    .select({
+      id: players.id,
+      name: players.name,
+      fullName: players.fullName,
+      roleClassic: players.roleClassic,
+      realTeam: players.realTeam,
+    })
+    .from(auctionPlayerQueue)
+    .innerJoin(players, eq(auctionPlayerQueue.playerId, players.id))
+    .where(
+      and(
+        eq(auctionPlayerQueue.auctionId, id),
+        eq(auctionPlayerQueue.status, "pending"),
+        role ? eq(players.roleClassic, role as "GK" | "DEF" | "MID" | "ATT") : undefined,
+      ),
+    )
+    .orderBy(auctionPlayerQueue.position);
+
+  const filtered = search
+    ? rows.filter((r) =>
+        r.name.toLowerCase().includes(search) ||
+        r.fullName.toLowerCase().includes(search) ||
+        r.realTeam.toLowerCase().includes(search),
+      )
+    : rows;
+
+  res.json({
+    players: filtered.map((r) => ({
+      id: r.id,
+      name: r.name,
+      full_name: r.fullName,
+      role_classic: r.roleClassic,
+      real_team: r.realTeam,
+    })),
+  });
+});
+
 // ─── POST /auctions/:id/end ──────────────────────────────
 
 router.post("/auctions/:id/end", async (req, res): Promise<void> => {

@@ -1806,6 +1806,29 @@ export const CallPlayerResponse = zod.object({
 
 
 /**
+ * @summary Lista giocatori in attesa nella coda dell'asta (pending)
+ */
+export const GetAuctionQueueParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const GetAuctionQueueQueryParams = zod.object({
+  "search": zod.coerce.string().optional().describe('Filtra per nome o squadra reale'),
+  "role": zod.enum(['GK', 'DEF', 'MID', 'ATT']).optional().describe('Filtra per ruolo')
+})
+
+export const GetAuctionQueueResponse = zod.object({
+  "players": zod.array(zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "full_name": zod.string(),
+  "role_classic": zod.enum(['GK', 'DEF', 'MID', 'ATT']),
+  "real_team": zod.string()
+}))
+})
+
+
+/**
  * @summary Aggiunge manualmente un giocatore alla rosa di una squadra (override banditore)
  */
 export const ManualAddPlayerParams = zod.object({

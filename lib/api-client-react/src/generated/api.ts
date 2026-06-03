@@ -23,6 +23,7 @@ import type {
   Auction,
   AuctionActionResponse,
   AuctionPlayerActionBody,
+  AuctionQueueResponse,
   AuctionState,
   CallPlayerBody,
   CallPlayerResponse,
@@ -44,6 +45,7 @@ import type {
   FantaTeamUpdate,
   Federation,
   FederationUpdate,
+  GetAuctionQueueParams,
   GetCompetitionMatchesParams,
   GetDashboardParams,
   GetLineupsParams,
@@ -4345,6 +4347,95 @@ export const useCallPlayer = <TError = ErrorType<void>,
       > => {
       return useMutation(getCallPlayerMutationOptions(options));
     }
+
+export const getGetAuctionQueueUrl = (id: string,
+    params?: GetAuctionQueueParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/auctions/${id}/queue?${stringifiedParams}` : `/api/auctions/${id}/queue`
+}
+
+/**
+ * @summary Lista giocatori in attesa nella coda dell'asta (pending)
+ */
+export const getAuctionQueue = async (id: string,
+    params?: GetAuctionQueueParams, options?: RequestInit): Promise<AuctionQueueResponse> => {
+
+  return customFetch<AuctionQueueResponse>(getGetAuctionQueueUrl(id,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetAuctionQueueQueryKey = (id: string,
+    params?: GetAuctionQueueParams,) => {
+    return [
+    `/api/auctions/${id}/queue`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetAuctionQueueQueryOptions = <TData = Awaited<ReturnType<typeof getAuctionQueue>>, TError = ErrorType<void>>(id: string,
+    params?: GetAuctionQueueParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAuctionQueue>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetAuctionQueueQueryKey(id,params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAuctionQueue>>> = ({ signal }) => getAuctionQueue(id,params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAuctionQueue>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetAuctionQueueQueryResult = NonNullable<Awaited<ReturnType<typeof getAuctionQueue>>>
+export type GetAuctionQueueQueryError = ErrorType<void>
+
+
+/**
+ * @summary Lista giocatori in attesa nella coda dell'asta (pending)
+ */
+
+export function useGetAuctionQueue<TData = Awaited<ReturnType<typeof getAuctionQueue>>, TError = ErrorType<void>>(
+ id: string,
+    params?: GetAuctionQueueParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAuctionQueue>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetAuctionQueueQueryOptions(id,params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 
 export const getManualAddPlayerUrl = (id: string,) => {
 

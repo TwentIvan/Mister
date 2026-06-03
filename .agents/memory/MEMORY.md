@@ -1,1 +1,1 @@
-- [Undo guard server-authoritative](undo-guard.md) — colonna `last_undoable_action` su `auctions` governa canUndo lato server; mai fidarsi solo del client.
+- [Drizzle CHECK constraint drift](drizzle-check-constraint-drift.md) — drizzle-kit push non rileva modifiche a CHECK constraint esistenti; aggiornare con ALTER TABLE diretto.

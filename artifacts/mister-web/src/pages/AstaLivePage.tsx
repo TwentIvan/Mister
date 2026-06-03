@@ -11,9 +11,10 @@ import {
   useEndAuction,
   useUndoAuction,
   useCallPlayer,
-  useListPlayers,
-  getListPlayersQueryKey,
+  useGetAuctionQueue,
+  getGetAuctionQueueQueryKey,
 } from "@workspace/api-client-react";
+import type { PlayerVoice } from "@/hooks/useVoiceBidder";
 import { AstaHero } from "@/components/asta/AstaHero";
 import { TabelloneSquadre } from "@/components/asta/TabelloneSquadre";
 import { CorreggiPanel } from "@/components/asta/CorreggiPanel";
@@ -22,6 +23,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { CheckCircle2, Gavel, Mic, Pencil, Phone } from "lucide-react";
 
 export default function AstaLivePage() {
@@ -46,6 +48,7 @@ export default function AstaLivePage() {
 
   // ── Chiamata mode: ricerca giocatore ─────────────────────────────────────
   const [callSearch, setCallSearch] = useState("");
+  const [disambCandidates, setDisambCandidates] = useState<PlayerVoice[] | null>(null);
 
   const bidMutation    = useCreateAuctionBid();
   const assignMutation = useAssignAuction();
@@ -194,12 +197,14 @@ export default function AstaLivePage() {
     if (!auctionId || isTransitioningRef.current) return;
     isTransitioningRef.current = true;
     setIsTransitioning(true);
+    setDisambCandidates(null);
     try {
       await callMutation.mutateAsync({ id: auctionId, data: { player_id: playerId } });
       setCallSearch("");
       await refetch();
-    } catch {
-      // Errore gestito dal refetch (la UI aggiornerà lo stato)
+    } catch (err: unknown) {
+      const msg = (err as { data?: { error?: string } })?.data?.error;
+      setBidError(msg ?? "Impossibile chiamare il giocatore.");
     } finally {
       isTransitioningRef.current = false;
       setIsTransitioning(false);
@@ -230,20 +235,18 @@ export default function AstaLivePage() {
     name_auction: t.name_auction ?? null,
   }));
 
-  // In chiamata mode: lista svincolati per voice "chiamo [nome]"
-  // Caricata sempre (niente hook condizionali); limitata a 200 per semplicità.
-  const assignedPlayerIds = new Set((data?.assignments ?? []).map((a) => a.player_id));
-  const listPlayersParams = callMode === "chiamata"
-    ? { limit: 200, search: callSearch.length >= 2 ? callSearch : undefined }
+  // In chiamata mode: lista giocatori pending nella coda dell'asta (non dal catalogo globale)
+  const queueSearchParams = callMode === "chiamata"
+    ? { search: callSearch.length >= 2 ? callSearch : undefined }
     : undefined;
-  const { data: playersData } = useListPlayers(
-    listPlayersParams,
-    { query: { enabled: callMode === "chiamata", staleTime: 30_000, queryKey: getListPlayersQueryKey(listPlayersParams) } },
+  const { data: queueData } = useGetAuctionQueue(
+    auctionId!,
+    queueSearchParams,
+    { query: { enabled: callMode === "chiamata" && !!auctionId, staleTime: 10_000, queryKey: getGetAuctionQueueQueryKey(auctionId!, queueSearchParams) } },
   );
-  const allFetchedPlayers = (playersData?.items ?? []) as Array<{ id: number; name: string; full_name: string; role_classic: string; real_team: string }>;
-  const svincolatiForVoice = allFetchedPlayers
-    .filter((p) => !assignedPlayerIds.has(p.id))
-    .map((p) => ({ id: p.id, name: p.name, real_team: p.real_team }));
+  const assignedPlayerIds = new Set((data?.assignments ?? []).map((a) => a.player_id));
+  const allFetchedPlayers = (queueData?.players ?? []);
+  const svincolatiForVoice = allFetchedPlayers.map((p) => ({ id: p.id, name: p.name, real_team: p.real_team }));
 
   const voice = useVoiceBidder({
     squadre: squadreForVoice,
@@ -254,8 +257,14 @@ export default function AstaLivePage() {
     // così "mister pausa" non fa riprendi se già in pausa e viceversa.
     onPausa:    () => { if (!isPaused) void handlePauseResume(); },
     onRiprendi: () => { if (isPaused)  void handlePauseResume(); },
-    svincolati: callMode === "chiamata" ? svincolatiForVoice : undefined,
-    onChiama:   callMode === "chiamata" ? handleCall : undefined,
+    svincolati:           callMode === "chiamata" ? svincolatiForVoice : undefined,
+    onChiama:             callMode === "chiamata" ? handleCall : undefined,
+    onChiamaAmbiguous:    callMode === "chiamata" ? (candidates) => setDisambCandidates(candidates) : undefined,
+    onSeleziona:          callMode === "chiamata" ? (n) => {
+      const p = disambCandidates?.[n - 1];
+      if (p) void handleCall(p.id);
+      else setDisambCandidates(null);
+    } : undefined,
   });
 
   // ── Loading / error ───────────────────────────────────────────────────────
@@ -359,7 +368,7 @@ export default function AstaLivePage() {
             <Phone className="h-4 w-4 text-primary" />
             <span className="font-semibold font-serif text-primary text-sm">Chiama il prossimo giocatore</span>
             <span className="text-xs text-muted-foreground font-mono ml-auto">
-              Voce: «chiamo [nome]»
+              Voce: «chiamo [nome] [squadra]»
             </span>
           </div>
           <input
@@ -479,6 +488,31 @@ export default function AstaLivePage() {
         isLoading={bidsDisabled}
         onBid={handleBid}
       />
+
+      {/* ── MODALE DISAMBIGUAZIONE CHIAMATA ─────────────────────── */}
+      <Dialog open={!!disambCandidates} onOpenChange={(open) => { if (!open) setDisambCandidates(null); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="font-serif text-primary">Quale giocatore?</DialogTitle>
+          </DialogHeader>
+          <p className="text-xs text-muted-foreground font-mono mb-2">
+            Dì «seleziona il numero» seguito dal numero, oppure clicca.
+          </p>
+          <div className="divide-y rounded-md border overflow-hidden">
+            {(disambCandidates ?? []).map((p, i) => (
+              <button
+                key={p.id}
+                onClick={() => void handleCall(p.id)}
+                className="w-full flex items-center gap-3 px-3 py-2.5 text-left text-sm hover:bg-muted transition-colors"
+              >
+                <span className="font-mono text-xs font-bold text-muted-foreground w-5 shrink-0">{i + 1}.</span>
+                <span className="font-mono font-semibold flex-1">{p.name}</span>
+                <span className="text-xs text-muted-foreground font-mono">{p.real_team}</span>
+              </button>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* ── CORREGGI PANEL ───────────────────────────────────────── */}
       {correggiOpen && (

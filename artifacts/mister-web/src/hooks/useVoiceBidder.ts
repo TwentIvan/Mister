@@ -131,30 +131,29 @@ export interface PlayerVoice {
   real_team: string;
 }
 
-function fuzzyMatchPlayer(fragment: string, players: PlayerVoice[]): PlayerVoice | null {
-  if (!fragment || players.length === 0) return null;
+function fuzzyMatchAll(fragment: string, players: PlayerVoice[]): PlayerVoice[] {
+  if (!fragment || players.length === 0) return [];
   const frag = norm(fragment);
+  let results: PlayerVoice[];
 
   // 1. Exact name
-  for (const p of players) {
-    if (norm(p.name) === frag) return p;
-  }
+  results = players.filter((p) => norm(p.name) === frag);
+  if (results.length > 0) return results;
+
   // 2. Exact "name realteam"
-  for (const p of players) {
-    if (`${norm(p.name)} ${norm(p.real_team)}` === frag) return p;
-  }
+  results = players.filter((p) => `${norm(p.name)} ${norm(p.real_team)}` === frag);
+  if (results.length > 0) return results;
+
   // 3. Starts-with name (either direction)
-  for (const p of players) {
-    const pn = norm(p.name);
-    if (pn.startsWith(frag) || frag.startsWith(pn)) return p;
-  }
+  results = players.filter((p) => { const pn = norm(p.name); return pn.startsWith(frag) || frag.startsWith(pn); });
+  if (results.length > 0) return results;
+
   // 4. Any ≥3-char token in name
   const fragTokens = frag.split(" ");
-  for (const p of players) {
+  return players.filter((p) => {
     const pTokens = norm(p.name).split(" ");
-    if (fragTokens.some((t) => t.length >= 3 && pTokens.includes(t))) return p;
-  }
-  return null;
+    return fragTokens.some((t) => t.length >= 3 && pTokens.includes(t));
+  });
 }
 
 // ── Public interface ─────────────────────────────────────────────────────────
@@ -167,8 +166,12 @@ export interface UseVoiceBidderOptions {
   onRiprendi: () => void;
   /** Solo in modalità chiamata: lista dei giocatori svincolati per il riconoscimento "chiamo [nome]" */
   svincolati?: PlayerVoice[];
-  /** Callback per chiamare un giocatore (modalità chiamata) */
+  /** Callback per chiamare un giocatore (modalità chiamata) — solo se match univoco */
   onChiama?: (playerId: number) => void;
+  /** Callback se "chiamo [nome]" produce più match — apre il modale di disambiguazione */
+  onChiamaAmbiguous?: (candidates: PlayerVoice[]) => void;
+  /** Callback per "seleziona il numero N" dopo disambiguazione */
+  onSeleziona?: (n: number) => void;
 }
 
 export interface UseVoiceBidderResult {
@@ -189,6 +192,8 @@ export function useVoiceBidder({
   onRiprendi,
   svincolati,
   onChiama,
+  onChiamaAmbiguous,
+  onSeleziona,
 }: UseVoiceBidderOptions): UseVoiceBidderResult {
   const [isActive, setIsActive]       = useState(false);
   const [transcript, setTranscript]   = useState("");
@@ -200,12 +205,12 @@ export function useVoiceBidder({
   const debounceRef = useRef<{ key: string; ts: number } | null>(null);
   const cbRef       = useRef({
     onPlaceBid, onAggiudica, onSalta, onPausa, onRiprendi, squadre,
-    svincolati, onChiama,
+    svincolati, onChiama, onChiamaAmbiguous, onSeleziona,
   });
 
   // Keep callback ref current on every render (no deps needed)
   useEffect(() => {
-    cbRef.current = { onPlaceBid, onAggiudica, onSalta, onPausa, onRiprendi, squadre, svincolati, onChiama };
+    cbRef.current = { onPlaceBid, onAggiudica, onSalta, onPausa, onRiprendi, squadre, svincolati, onChiama, onChiamaAmbiguous, onSeleziona };
   });
 
   const supported = !!getSRCtor();
@@ -232,17 +237,36 @@ export function useVoiceBidder({
       // Deve stare PRIMA del pattern offerta: il prefisso "chiamo" disambigua.
       if (normalized.startsWith("chiamo ") && cbRef.current.onChiama && cbRef.current.svincolati?.length) {
         const text2 = normalized.slice("chiamo ".length).trim();
-        const player = fuzzyMatchPlayer(text2, cbRef.current.svincolati);
-        if (player) {
-          const key = `chiamo-${player.id}`;
+        const matches = fuzzyMatchAll(text2, cbRef.current.svincolati);
+        if (matches.length === 1) {
+          const key = `chiamo-${matches[0].id}`;
           debounceRef.current = { key, ts: now };
-          flash(`Chiamata: ${player.name}`);
-          cbRef.current.onChiama(player.id);
+          flash(`Chiamata: ${matches[0].name}`);
+          cbRef.current.onChiama(matches[0].id);
           return;
         }
-        // Prefisso riconosciuto ma player non trovato → ignora silenziosamente
-        // (non scivolare nel pattern offerta: "chiamo" non è un nome di squadra)
+        if (matches.length > 1 && cbRef.current.onChiamaAmbiguous) {
+          const key = `disamb-${text2}`;
+          debounceRef.current = { key, ts: now };
+          flash(`Disambiguazione: ${matches.length} giocatori`);
+          cbRef.current.onChiamaAmbiguous(matches);
+          return;
+        }
+        // Prefisso riconosciuto ma nessun match → ignora silenziosamente
         return;
+      }
+
+      // ── 0b. Selezione da lista disambiguazione — "seleziona (il numero)? N" ─
+      const selMatch = /^seleziona(?:\s+il\s+numero)?\s+(\S+)$/.exec(normalized);
+      if (selMatch && cbRef.current.onSeleziona) {
+        const n = parseNumber(selMatch[1]);
+        if (n !== null) {
+          const key = `seleziona-${n}`;
+          debounceRef.current = { key, ts: now };
+          flash(`Selezione: ${n}`);
+          cbRef.current.onSeleziona(n);
+          return;
+        }
       }
 
       // ── 1. Control commands (prefix "mister") ────────────────────────────
