@@ -5,7 +5,7 @@ import {
   useListFantaTeams, getListFantaTeamsQueryKey,
   useCreateAuction,
 } from "@workspace/api-client-react";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { AstaConfigModal } from "@/components/asta/AstaConfigModal";
 import { useParams, Link, useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -80,6 +80,11 @@ export default function LeagueDetail() {
   const { data: competitions, isLoading: isLoadingComps } = useListCompetitions(
     id,
     { query: { enabled: !!id, queryKey: getListCompetitionsQueryKey(id) } }
+  );
+
+  const modalTeams = useMemo(
+    () => (teams ?? []).map((t) => ({ id: t.id, name: t.name, name_auction: t.name_auction })),
+    [teams],
   );
 
   if (isLoadingLeague) {
@@ -361,7 +366,7 @@ export default function LeagueDetail() {
     <AstaConfigModal
       open={isConfigOpen}
       onOpenChange={setIsConfigOpen}
-      teams={(teams ?? []).map((t) => ({ id: t.id, name: t.name, name_auction: t.name_auction }))}
+      teams={modalTeams}
       isLoading={createAuction.isPending}
       onConfirm={handleAvviaAsta}
     />

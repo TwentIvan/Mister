@@ -88,6 +88,11 @@ export function AstaConfigModal({
       setRosterA(6);
       setCallMode("listone");
       setRoleOrder(false);
+    }
+  }, [open]);
+
+  useEffect(() => {
+    if (open && teams.length > 0) {
       const initial: Record<string, string> = {};
       for (const t of teams) {
         initial[t.id] = t.name_auction ?? t.name;
