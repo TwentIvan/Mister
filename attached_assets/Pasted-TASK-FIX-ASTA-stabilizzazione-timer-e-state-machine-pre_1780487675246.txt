@@ -1,0 +1,47 @@
+TASK FIX-ASTA — stabilizzazione timer e state machine (prerequisito per 7.D / voce)
+
+CONTESTO / DIAGNOSI (gia confermata, NON ri-diagnosticare):
+Nel componente della schermata asta live ci sono due bug con radice comune.
+- La state machine e implicita su due booleani (timerActive, timerRemaining); il countdown e un setInterval stateful che decrementa. L'intervallo dipende solo dalla transizione di timerActive (deps [timerActive, isPaused]).
+- BUG 1 (rilancio): un rilancio riporta il valore a 8 ma, non essendoci transizione false->true di timerActive, lo useEffect non rigira e l'intervallo non viene ricreato -> countdown fermo. Stesso effetto dopo che il timer tocca 0 (timerActive resta true).
+- BUG 2 (skip->bid): in handleSalta il refetch() NON e awaited -> finestra di race in cui i tasti sono gia riabilitati ma current_player punta ancora al giocatore saltato. Un click manda il bid con player_id stale -> backend 403 -> handleBid non ha try/catch -> unhandled rejection -> resetTimer()/refetch() dopo l'await non vengono mai eseguiti -> il timer non parte.
+
+OBIETTIVO: rendere timer e state machine prevedibili. In questo task NIENTE voce, NIENTE UI di configurazione, NIENTE ridisegno della schermata (sono tutti 7.D).
+
+INTERVENTO 1 — timer su deadline assoluto (sostituisce il setInterval stateful)
+- Stato: deadlineTs: number | null (epoch ms; null = idle, nessun countdown). "remaining" e stato derivato, calcolato nel tick.
+- Un solo intervallo, deps [deadlineTs, isPaused]:
+    if (deadlineTs == null || isPaused) return;
+    id = setInterval(() => {
+      rem = Math.max(0, Math.ceil((deadlineTs - Date.now()) / 1000));
+      setRemaining(rem);
+      if (rem <= 0) clearInterval(id);   // si ferma a 0 ma la fase resta bidding: Aggiudica sbloccato al banditore
+    }, 250);
+    return () => clearInterval(id);
+- Avvio/estensione: setDeadlineTs(Date.now() + TIMER_SECONDS * 1000). Ogni rilancio cambia deadlineTs -> l'effect rigira -> intervallo fresco. Questo risolve BUG 1 e il caso [true][0].
+- Pausa/Riprendi (MANTIENI il comportamento "riprende da dove era"): su Pausa salva remainingMs = deadlineTs - Date.now() e setta isPaused=true; su Riprendi deadlineTs = Date.now() + remainingMs.
+- TIMER_SECONDS resta una COSTANTE unica (default 8) con commento: // 7.D: sostituire con auction.timer_seconds. Non aggiungere UI in questo task.
+
+INTERVENTO 2 — un solo path di avvio del timer
+- ELIMINA l'effect su bids_history che chiama setTimerActive(true) (secondo path ridondante, in race col primo).
+- L'unico punto che avvia/estende il timer e handleBid su successo (setDeadlineTs).
+- L'effect su currentPlayerId resetta a idle: setDeadlineTs(null). Rimuovi i ref ormai inutili (es. prevBidCount) se servivano solo al path eliminato.
+
+INTERVENTO 3 — chiusura della race su skip/aggiudica + errori non silenziosi
+- handleSalta e handleAggiudica: await della mutation, poi setDeadlineTs(null), poi AWAIT refetch() (aspetta che current_player avanzi davvero).
+- I tasti di offerta (+1/+5/+10) devono restare DISABILITATI dal click di Salta/Aggiudica finche la UI non mostra effettivamente il nuovo giocatore (usa un flag isTransitioning, oppure gate su isPending delle mutation + refetch in volo). Non riabilitarli prima.
+- handleBid: avvolgilo in try/catch. Manda il bid SOLO se data.current_player.player_id coincide al momento del click. Su errore: mostra il messaggio (inline o toast), NIENTE unhandled rejection, e fai refetch() per risincronizzare lo stato. Cosi un bid stale non parte, e se un errore arriva lo stato si recupera da solo.
+
+CRITERI DI ACCETTAZIONE (verifica e riportami l'esito di OGNUNO):
+1. Idle: nuovo giocatore mostrato, nessun countdown attivo.
+2. Prima offerta: countdown parte da 8 e scorre fino a 0; a 0 si ferma, Aggiudica sbloccato, la fase resta bidding.
+3. Rilancio PRIMA dello scadere: il valore torna a 8 E continua a scorrere (NON si ferma).            [BUG 1]
+4. Rilancio DOPO lo scadere (da 0): riparte da 8 e scorre.                                            [caso true/0]
+5. Pausa -> numero fermo; Riprendi -> riparte dal valore in cui era (NON da 8).
+6. Salta: passa al successivo in idle; i tasti offerta NON cliccabili durante la transizione; un click rapido NON manda un bid sul giocatore vecchio.   [BUG 2]
+7. Aggiudica: come il punto 6.
+8. Bid in errore (es. 403): messaggio visibile all'utente, nessun crash/unhandled rejection, stato risincronizzato.
+
+VINCOLI: niente voce, niente UI config timer, niente ridisegno schermata. Typecheck pulito a fine lavoro.
+
+DELIVERABLE: diff dei file toccati + esito dei criteri 1-8, con dettaglio su 3, 4, 5, 6 (i piu critici).

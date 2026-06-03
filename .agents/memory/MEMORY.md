@@ -3,3 +3,4 @@
 - [Auction route error pattern](auction-error-pattern.md) — per throw custom da transaction usare `{ code; message }` + narrowing con `"code" in err && "message" in err`, NON cast diretto a `{ message: string }`.
 - [useGetAuction queryKey required](orval-query-key.md) — le query hook Orval richiedono `queryKey` esplicito nelle options (es. `getGetAuctionQueryKey(id)`), altrimenti TS2741.
 - [leagues.ts pre-existing TS error](leagues-ts-error.md) — `roster: never[]` in leagues.ts line 115 è errore pre-esistente, non toccare.
+- [AstaLivePage timer design](asta-timer-design.md) — deadline-based timer (deadlineTs epoch ms); timerActive = deadlineTs !== null && !isPaused; Playwright env ~6s/step, non è un bug del codice.
