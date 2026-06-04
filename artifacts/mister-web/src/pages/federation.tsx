@@ -14,10 +14,11 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { BookOpen, Save, AlertTriangle, User, Trophy } from "lucide-react";
-import { useEffect, useRef } from "react";
+import { BookOpen, Save, AlertTriangle, User } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { FlagsEditor, DEFAULT_FLAG_VALUES } from "@/components/FlagsEditor";
+import { RulesEditor, DEFAULT_RULES, type FederationRules } from "@/components/RulesEditor";
 
 const federationSchema = z.object({
   name: z.string().min(1, "Il nome è obbligatorio"),
@@ -28,7 +29,34 @@ const federationSchema = z.object({
 
 type FormValues = z.infer<typeof federationSchema>;
 
-export default function FederationRules() {
+function mergeRules(defaults: FederationRules, live: unknown): FederationRules {
+  if (!live || typeof live !== "object") return defaults;
+  const l = live as Partial<FederationRules>;
+  return {
+    bonusMalus: { ...defaults.bonusMalus, ...(l.bonusMalus ?? {}) },
+    goalThresholds: { ...defaults.goalThresholds, ...(l.goalThresholds ?? {}) },
+    defenseModifier: {
+      ...defaults.defenseModifier,
+      ...(l.defenseModifier ?? {}),
+      table: {
+        ...defaults.defenseModifier.table,
+        ...((l.defenseModifier as { table?: Record<string, number> })?.table ?? {}),
+      },
+    },
+    midfieldModifier: {
+      ...defaults.midfieldModifier,
+      ...(l.midfieldModifier ?? {}),
+      table: {
+        ...defaults.midfieldModifier.table,
+        ...((l.midfieldModifier as { table?: Record<string, number> })?.table ?? {}),
+      },
+    },
+    homeAdvantage: { ...defaults.homeAdvantage, ...(l.homeAdvantage ?? {}) },
+    substitutions: { ...defaults.substitutions, ...(l.substitutions ?? {}) },
+  };
+}
+
+export default function FederationPage() {
   const { id } = useParams<{ id: string }>();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -50,6 +78,8 @@ export default function FederationRules() {
     },
   });
 
+  const [rules, setRules] = useState<FederationRules>(DEFAULT_RULES);
+
   const isInitialized = useRef(false);
 
   useEffect(() => {
@@ -63,6 +93,7 @@ export default function FederationRules() {
           ...((federation.feature_flags as Record<string, boolean | number>) ?? {}),
         },
       });
+      setRules(mergeRules(DEFAULT_RULES, federation.rules));
       isInitialized.current = true;
     }
   }, [federation, form]);
@@ -70,7 +101,13 @@ export default function FederationRules() {
   const onSubmit = (values: FormValues) => {
     if (!federation) return;
     updateMutation.mutate(
-      { leagueId: id, data: values },
+      {
+        leagueId: id,
+        data: {
+          ...values,
+          rules: rules as unknown as Parameters<typeof updateMutation.mutate>[0]["data"]["rules"],
+        },
+      },
       {
         onSuccess: (updated) => {
           toast({ title: "Regolamento aggiornato" });
@@ -113,7 +150,7 @@ export default function FederationRules() {
           <p className="font-medium text-amber-800 dark:text-amber-400">Le modifiche valgono per nuove leghe e nuove stagioni</p>
           <p className="text-amber-700 dark:text-amber-500">
             Le leghe già avviate usano il regolamento congelato al momento del primo avvio dell'asta.
-            Modificare i flag qui non cambia le regole di nessuna lega in corso.
+            Modificare flag o regole di punteggio qui non cambia le regole di nessuna lega in corso.
           </p>
         </div>
       </div>
@@ -191,24 +228,8 @@ export default function FederationRules() {
           {/* ─── FEATURE FLAG ────────────────────────────────────── */}
           <FlagsEditor control={form.control} />
 
-          {/* ─── REGOLE DI PUNTEGGIO — FASE 3 ───────────────────── */}
-          <Card className="opacity-60">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Trophy className="h-4 w-4 text-muted-foreground" />
-                  <CardTitle className="text-base">Regole di punteggio</CardTitle>
-                </div>
-                <span className="text-[10px] font-medium bg-muted text-muted-foreground px-2 py-0.5 rounded-full uppercase tracking-wide">
-                  In arrivo — Fase 3
-                </span>
-              </div>
-              <CardDescription>
-                Bonus, malus, soglie di punteggio, modificatori difesa e centrocampo.
-                Questa sezione sarà configurabile nella prossima fase di sviluppo.
-              </CardDescription>
-            </CardHeader>
-          </Card>
+          {/* ─── REGOLE DI PUNTEGGIO ─────────────────────────────── */}
+          <RulesEditor rules={rules} onChange={setRules} />
 
           <div className="flex justify-end">
             <Button

@@ -1,0 +1,22 @@
+FASE 3a — editor delle regole di punteggio, primo dei tre editor nuovi. Completa la sezione Federazione col posto lasciato in Fase 2. Persiste su federation.rules (fonte unica). Snapshot-aware come i flag. UI pulita ma NON il restyle finale.
+
+==== COSA ====
+Rendi editabili le FederationRules nella config Federazione:
+- bonusMalus: gol attaccante/centrocampista/difensore/portiere, assist, catena passaggi chiave, rigore parato/segnato/sbagliato, clean sheet portiere, gol subiti, ammonizione, espulsione, autogol, ecc. (tutti i campi presenti in DEFAULT_RULES).
+- goalThresholds: base, step, maxGoals.
+- Raggruppa sotto "Avanzate" (collassabile): modificatore difesa e centrocampo (le tabelle a fasce), vantaggio campo, sostituzioni automatiche.
+
+==== SEMANTICA ====
+- Persiste su federation.rules. Niente copie altrove.
+- Snapshot: come per i flag, le modifiche valgono per stagioni/leghe NUOVE; una lega gia avviata mantiene le regole CONGELATE. Stesso banner "vale per nuove stagioni/leghe".
+- Se esiste un motore di punteggio che consuma le rules, deve leggere lo SNAPSHOT della lega, non la federazione live. Dimmi se il motore esiste e cosa legge oggi; se non esiste, dillo (verifichiamo solo persistenza + snapshot).
+
+==== CRITERI ====
+R1. bonusMalus + goalThresholds editabili e persistiti su federation.rules (PATCH + GET confermano).
+R2. Modificatori difesa/centrocampo, vantaggio campo, sostituzioni editabili nel gruppo Avanzate e persistiti.
+R3. SNAPSHOT sulle rules (come F4, ma sui punteggi): modifica una regola dopo che una lega ha fatto lo snapshot -> la lega avviata mantiene il VECCHIO valore; una lega NUOVA prende il nuovo. Provalo coi valori osservati.
+R4. Motore di punteggio: se esiste, legge lo snapshot della lega; se non esiste, annotalo.
+R5. REGRESSIONE: config lega/squadre/flag e asta (creazione, offerta, guardia) invariati; typecheck pulito.
+
+VINCOLI: fonte unica federation.rules; snapshot-aware; niente path paralleli; UI pulita non finale; typecheck pulito, niente debug residuo.
+DELIVERABLE: diff; screenshot dell'editor regole (core + Avanzate); prova di R1/R2 (persistenza) e R3 (snapshot sulle rules, coi valori); nota sul motore di punteggio. CHECKPOINT prima della 3b (competizioni, con il vincolo additivo).

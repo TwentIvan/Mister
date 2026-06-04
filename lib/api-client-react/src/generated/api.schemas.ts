@@ -213,6 +213,54 @@ export interface PostAcquisitionWindow {
   default_contract_years?: number;
 }
 
+/**
+ * Bonus e malus per evento (gol, assist, ammonizioni, ecc.)
+ */
+export type FederationRulesBonusMalus = { [key: string]: unknown };
+
+/**
+ * Conversione punteggio squadra in fanta-gol
+ */
+export type FederationRulesGoalThresholds = { [key: string]: unknown };
+
+/**
+ * Modificatore difesa
+ */
+export type FederationRulesDefenseModifier = { [key: string]: unknown };
+
+/**
+ * Modificatore centrocampo
+ */
+export type FederationRulesMidfieldModifier = { [key: string]: unknown };
+
+/**
+ * Bonus padrone di casa
+ */
+export type FederationRulesHomeAdvantage = { [key: string]: unknown };
+
+/**
+ * Regole sostituzioni automatiche
+ */
+export type FederationRulesSubstitutions = { [key: string]: unknown };
+
+/**
+ * Regole di calcolo del punteggio fanta (bonus/malus, soglie, modificatori)
+ */
+export interface FederationRules {
+  /** Bonus e malus per evento (gol, assist, ammonizioni, ecc.) */
+  bonusMalus?: FederationRulesBonusMalus;
+  /** Conversione punteggio squadra in fanta-gol */
+  goalThresholds?: FederationRulesGoalThresholds;
+  /** Modificatore difesa */
+  defenseModifier?: FederationRulesDefenseModifier;
+  /** Modificatore centrocampo */
+  midfieldModifier?: FederationRulesMidfieldModifier;
+  /** Bonus padrone di casa */
+  homeAdvantage?: FederationRulesHomeAdvantage;
+  /** Regole sostituzioni automatiche */
+  substitutions?: FederationRulesSubstitutions;
+}
+
 export interface League {
   id: string;
   name: string;
@@ -271,6 +319,8 @@ export interface League {
      * @nullable
      */
   snapshot_locked_at?: string | null;
+  /** Snapshot delle regole di punteggio congelate alla prima asta (null = non ancora avvenuto) */
+  snapshot_rules?: FederationRules | null;
   created_at: string;
 }
 
@@ -460,54 +510,6 @@ export interface LeagueStats {
   competition_count: number;
   active_market_count: number;
   contract_count: number;
-}
-
-/**
- * Bonus e malus per evento (gol, assist, ammonizioni, ecc.)
- */
-export type FederationRulesBonusMalus = { [key: string]: unknown };
-
-/**
- * Conversione punteggio squadra in fanta-gol
- */
-export type FederationRulesGoalThresholds = { [key: string]: unknown };
-
-/**
- * Modificatore difesa
- */
-export type FederationRulesDefenseModifier = { [key: string]: unknown };
-
-/**
- * Modificatore centrocampo
- */
-export type FederationRulesMidfieldModifier = { [key: string]: unknown };
-
-/**
- * Bonus padrone di casa
- */
-export type FederationRulesHomeAdvantage = { [key: string]: unknown };
-
-/**
- * Regole sostituzioni automatiche
- */
-export type FederationRulesSubstitutions = { [key: string]: unknown };
-
-/**
- * Regole di calcolo del punteggio fanta (bonus/malus, soglie, modificatori)
- */
-export interface FederationRules {
-  /** Bonus e malus per evento (gol, assist, ammonizioni, ecc.) */
-  bonusMalus?: FederationRulesBonusMalus;
-  /** Conversione punteggio squadra in fanta-gol */
-  goalThresholds?: FederationRulesGoalThresholds;
-  /** Modificatore difesa */
-  defenseModifier?: FederationRulesDefenseModifier;
-  /** Modificatore centrocampo */
-  midfieldModifier?: FederationRulesMidfieldModifier;
-  /** Bonus padrone di casa */
-  homeAdvantage?: FederationRulesHomeAdvantage;
-  /** Regole sostituzioni automatiche */
-  substitutions?: FederationRulesSubstitutions;
 }
 
 export type FederationMode = typeof FederationMode[keyof typeof FederationMode];

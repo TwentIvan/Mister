@@ -1661,6 +1661,11 @@ components:
           type: ["string", "null"]
           format: date-time
           description: Timestamp del freeze delle regole federazione (null = non ancora avvenuto)
+        snapshot_rules:
+          allOf:
+            - $ref: "#/components/schemas/FederationRules"
+          nullable: true
+          description: Snapshot delle regole di punteggio congelate alla prima asta (null = non ancora avvenuto)
         created_at:
           type: string
           format: date-time

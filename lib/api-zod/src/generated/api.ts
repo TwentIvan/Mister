@@ -326,6 +326,26 @@ export const ListLeaguesResponseItem = zod.object({
   "default_contract_years": zod.number().optional().describe('Anni di contratto di default all\'acquisto')
 }).optional().describe('Finestra temporale post-acquisto'),
   "snapshot_locked_at": zod.coerce.date().nullish().describe('Timestamp del freeze delle regole federazione (null = non ancora avvenuto)'),
+  "snapshot_rules": zod.object({
+  "bonusMalus": zod.object({
+
+}).passthrough().optional().describe('Bonus e malus per evento (gol, assist, ammonizioni, ecc.)'),
+  "goalThresholds": zod.object({
+
+}).passthrough().optional().describe('Conversione punteggio squadra in fanta-gol'),
+  "defenseModifier": zod.object({
+
+}).passthrough().optional().describe('Modificatore difesa'),
+  "midfieldModifier": zod.object({
+
+}).passthrough().optional().describe('Modificatore centrocampo'),
+  "homeAdvantage": zod.object({
+
+}).passthrough().optional().describe('Bonus padrone di casa'),
+  "substitutions": zod.object({
+
+}).passthrough().optional().describe('Regole sostituzioni automatiche')
+}).describe('Regole di calcolo del punteggio fanta (bonus\/malus, soglie, modificatori)').nullish().describe('Snapshot delle regole di punteggio congelate alla prima asta (null = non ancora avvenuto)'),
   "created_at": zod.coerce.date()
 })
 export const ListLeaguesResponse = zod.array(ListLeaguesResponseItem)
@@ -416,6 +436,26 @@ export const GetLeagueResponse = zod.object({
   "default_contract_years": zod.number().optional().describe('Anni di contratto di default all\'acquisto')
 }).optional().describe('Finestra temporale post-acquisto'),
   "snapshot_locked_at": zod.coerce.date().nullish().describe('Timestamp del freeze delle regole federazione (null = non ancora avvenuto)'),
+  "snapshot_rules": zod.object({
+  "bonusMalus": zod.object({
+
+}).passthrough().optional().describe('Bonus e malus per evento (gol, assist, ammonizioni, ecc.)'),
+  "goalThresholds": zod.object({
+
+}).passthrough().optional().describe('Conversione punteggio squadra in fanta-gol'),
+  "defenseModifier": zod.object({
+
+}).passthrough().optional().describe('Modificatore difesa'),
+  "midfieldModifier": zod.object({
+
+}).passthrough().optional().describe('Modificatore centrocampo'),
+  "homeAdvantage": zod.object({
+
+}).passthrough().optional().describe('Bonus padrone di casa'),
+  "substitutions": zod.object({
+
+}).passthrough().optional().describe('Regole sostituzioni automatiche')
+}).describe('Regole di calcolo del punteggio fanta (bonus\/malus, soglie, modificatori)').nullish().describe('Snapshot delle regole di punteggio congelate alla prima asta (null = non ancora avvenuto)'),
   "created_at": zod.coerce.date()
 })
 
@@ -499,6 +539,26 @@ export const UpdateLeagueResponse = zod.object({
   "default_contract_years": zod.number().optional().describe('Anni di contratto di default all\'acquisto')
 }).optional().describe('Finestra temporale post-acquisto'),
   "snapshot_locked_at": zod.coerce.date().nullish().describe('Timestamp del freeze delle regole federazione (null = non ancora avvenuto)'),
+  "snapshot_rules": zod.object({
+  "bonusMalus": zod.object({
+
+}).passthrough().optional().describe('Bonus e malus per evento (gol, assist, ammonizioni, ecc.)'),
+  "goalThresholds": zod.object({
+
+}).passthrough().optional().describe('Conversione punteggio squadra in fanta-gol'),
+  "defenseModifier": zod.object({
+
+}).passthrough().optional().describe('Modificatore difesa'),
+  "midfieldModifier": zod.object({
+
+}).passthrough().optional().describe('Modificatore centrocampo'),
+  "homeAdvantage": zod.object({
+
+}).passthrough().optional().describe('Bonus padrone di casa'),
+  "substitutions": zod.object({
+
+}).passthrough().optional().describe('Regole sostituzioni automatiche')
+}).describe('Regole di calcolo del punteggio fanta (bonus\/malus, soglie, modificatori)').nullish().describe('Snapshot delle regole di punteggio congelate alla prima asta (null = non ancora avvenuto)'),
   "created_at": zod.coerce.date()
 })
 
@@ -1233,6 +1293,26 @@ export const GetDashboardResponse = zod.object({
   "default_contract_years": zod.number().optional().describe('Anni di contratto di default all\'acquisto')
 }).optional().describe('Finestra temporale post-acquisto'),
   "snapshot_locked_at": zod.coerce.date().nullish().describe('Timestamp del freeze delle regole federazione (null = non ancora avvenuto)'),
+  "snapshot_rules": zod.object({
+  "bonusMalus": zod.object({
+
+}).passthrough().optional().describe('Bonus e malus per evento (gol, assist, ammonizioni, ecc.)'),
+  "goalThresholds": zod.object({
+
+}).passthrough().optional().describe('Conversione punteggio squadra in fanta-gol'),
+  "defenseModifier": zod.object({
+
+}).passthrough().optional().describe('Modificatore difesa'),
+  "midfieldModifier": zod.object({
+
+}).passthrough().optional().describe('Modificatore centrocampo'),
+  "homeAdvantage": zod.object({
+
+}).passthrough().optional().describe('Bonus padrone di casa'),
+  "substitutions": zod.object({
+
+}).passthrough().optional().describe('Regole sostituzioni automatiche')
+}).describe('Regole di calcolo del punteggio fanta (bonus\/malus, soglie, modificatori)').nullish().describe('Snapshot delle regole di punteggio congelate alla prima asta (null = non ancora avvenuto)'),
   "created_at": zod.coerce.date()
 })),
   "active_markets": zod.array(zod.object({

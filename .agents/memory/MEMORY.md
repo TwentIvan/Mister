@@ -1,5 +1,2 @@
-- [Drizzle CHECK constraint drift](drizzle-check-constraint-drift.md) — drizzle-kit push non rileva modifiche a CHECK constraint esistenti; aggiornare con ALTER TABLE diretto.
-- [Voice chiamo — svincolati non filtrata](voice-chiamo-svincolati.md) — la lista voce deve venire da una query separata non filtrata; usare queueData filtrata azzera svincolati e blocca "chiamo" silenziosamente.
-- [FeatureFlags OpenAPI schema](feature-flags-openapi.md) — FeatureFlags ha proprietà esplicite; chiavi nuove vanno aggiunte lì O il Zod parser le stripa silenziosamente.
-- [Federation adopt/create](federation-adopt-create.md) — POST /leagues accetta `federation_id` opzionale; se assente auto-crea. SetupLegaPage legge `?federation_id` da query param.
-- [Snapshot federation flags](snapshot-federation-flags.md) — Prima asta di una lega congela i flag federation nelle colonne snapshot_*; bid handler usa snapshot > live federation.
+- [Zod route stripping + codegen](zod-codegen-rule.md) — aggiungere campi al mapper senza codegen li fa strippare dal Zod parse in route
+- [Api-server build](api-server-build.md) — bundle = dist/index.mjs (non .js); rebuild esplicito serve dopo ogni modifica a mapper/routes

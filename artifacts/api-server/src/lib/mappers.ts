@@ -46,6 +46,7 @@ export function mapLeague(l: League) {
         }
       : null,
     snapshot_locked_at: l.snapshotLockedAt?.toISOString() ?? null,
+    snapshot_rules: l.snapshotRules ?? null,
     created_at: l.createdAt,
   };
 }

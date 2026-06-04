@@ -5,6 +5,7 @@
  * Mister — il fantacalcio manageriale
  * OpenAPI spec version: 0.1.0
  */
+import type { FederationRules } from './federationRules';
 import type { LeagueAuctionMode } from './leagueAuctionMode';
 import type { LeagueLineupVisibility } from './leagueLineupVisibility';
 import type { LeagueRosterVisibility } from './leagueRosterVisibility';
@@ -69,5 +70,7 @@ export interface League {
      * @nullable
      */
   snapshot_locked_at?: Date | null;
+  /** Snapshot delle regole di punteggio congelate alla prima asta (null = non ancora avvenuto) */
+  snapshot_rules?: FederationRules | null;
   created_at: Date;
 }
