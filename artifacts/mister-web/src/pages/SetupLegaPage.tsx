@@ -3,13 +3,13 @@ import { useLocation, useSearch } from "wouter";
 import { useCreateLeague } from "@workspace/api-client-react";
 import StepIndicator from "@/components/setup/StepIndicator";
 import StepLega, { type LegaData } from "@/components/setup/StepLega";
-import StepSquadre, { type SquadraData } from "@/components/setup/StepSquadre";
+import StepSquadre from "@/components/setup/StepSquadre";
 import StepRiepilogo from "@/components/setup/StepRiepilogo";
 
 export type SetupState = {
   step: 1 | 2 | 3;
   lega: LegaData;
-  squadre: SquadraData[];
+  teamCount: number;
 };
 
 const DEFAULT_STATE: SetupState = {
@@ -26,11 +26,10 @@ const DEFAULT_STATE: SetupState = {
     federationChoice: "new",
     federationId: undefined,
   },
-  squadre: [],
+  teamCount: 8,
 };
 
 export default function SetupLegaPage() {
-  // Priorità: URL query param federation_id (legacy) < picker nel form
   const [state, setState] = useState<SetupState>(DEFAULT_STATE);
   const [, setLocation] = useLocation();
   const search = useSearch();
@@ -43,9 +42,6 @@ export default function SetupLegaPage() {
   const setLega = (lega: LegaData) =>
     setState(s => ({ ...s, lega }));
 
-  const setSquadre = (squadre: SquadraData[]) =>
-    setState(s => ({ ...s, squadre }));
-
   const handleCreate = () => {
     createLeagueMutation.mutate(
       {
@@ -57,18 +53,12 @@ export default function SetupLegaPage() {
           roster_d: state.lega.rosterD,
           roster_c: state.lega.rosterC,
           roster_a: state.lega.rosterA,
+          team_count: state.teamCount,
           ...(state.lega.federationChoice === "adopt" && state.lega.federationId
             ? { federation_id: state.lega.federationId }
             : federationId
             ? { federation_id: federationId }
             : {}),
-          fanta_teams: state.squadre.map(s => ({
-            name: s.name,
-            name_auction: s.nameAuction,
-            color_primary: s.colorPrimary,
-            color_secondary: s.colorSecondary,
-            logo_url: s.logoUrl ?? null,
-          })),
         },
       },
       {
@@ -94,8 +84,8 @@ export default function SetupLegaPage() {
 
       {state.step === 2 && (
         <StepSquadre
-          squadre={state.squadre}
-          onChange={setSquadre}
+          teamCount={state.teamCount}
+          onChange={count => setState(s => ({ ...s, teamCount: count }))}
           onNext={() => setStep(3)}
           onBack={() => setStep(1)}
         />

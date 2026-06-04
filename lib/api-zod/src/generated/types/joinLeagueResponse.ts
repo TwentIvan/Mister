@@ -7,6 +7,8 @@
  */
 import type { League } from './league';
 
-export interface LeagueWizardResponse {
+export interface JoinLeagueResponse {
   league: League;
+  already_member: boolean;
+  free_slots: number;
 }

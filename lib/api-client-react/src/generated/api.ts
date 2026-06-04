@@ -28,6 +28,8 @@ import type {
   AuctionState,
   CallPlayerBody,
   CallPlayerResponse,
+  ClaimSlotRequest,
+  ClaimSlotResponse,
   Competition,
   CompetitionInput,
   CompetitionMatch,
@@ -53,8 +55,11 @@ import type {
   GetMatchesParams,
   GetRosterParams,
   HealthStatus,
+  JoinLeagueRequest,
+  JoinLeagueResponse,
   League,
   LeagueInput,
+  LeagueInviteInfo,
   LeagueStats,
   LeagueUpdate,
   LeagueWizardResponse,
@@ -1078,6 +1083,227 @@ export function useGetLeagueStats<TData = Awaited<ReturnType<typeof getLeagueSta
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetLeagueStatsQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getJoinLeagueUrl = (id: string,) => {
+
+
+
+
+  return `/api/leagues/${id}/join`
+}
+
+/**
+ * @summary Entra nella lega con codice invito
+ */
+export const joinLeague = async (id: string,
+    joinLeagueRequest: JoinLeagueRequest, options?: RequestInit): Promise<JoinLeagueResponse> => {
+
+  return customFetch<JoinLeagueResponse>(getJoinLeagueUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      joinLeagueRequest,)
+  }
+);}
+
+
+
+
+export const getJoinLeagueMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof joinLeague>>, TError,{id: string;data: BodyType<JoinLeagueRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof joinLeague>>, TError,{id: string;data: BodyType<JoinLeagueRequest>}, TContext> => {
+
+const mutationKey = ['joinLeague'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof joinLeague>>, {id: string;data: BodyType<JoinLeagueRequest>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  joinLeague(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type JoinLeagueMutationResult = NonNullable<Awaited<ReturnType<typeof joinLeague>>>
+    export type JoinLeagueMutationBody = BodyType<JoinLeagueRequest>
+    export type JoinLeagueMutationError = ErrorType<void>
+
+    /**
+ * @summary Entra nella lega con codice invito
+ */
+export const useJoinLeague = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof joinLeague>>, TError,{id: string;data: BodyType<JoinLeagueRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof joinLeague>>,
+        TError,
+        {id: string;data: BodyType<JoinLeagueRequest>},
+        TContext
+      > => {
+      return useMutation(getJoinLeagueMutationOptions(options));
+    }
+
+export const getClaimSlotUrl = (id: string,) => {
+
+
+
+
+  return `/api/leagues/${id}/claim`
+}
+
+/**
+ * @summary Rivendica uno slot libero (crea o riusa la propria società)
+ */
+export const claimSlot = async (id: string,
+    claimSlotRequest: ClaimSlotRequest, options?: RequestInit): Promise<ClaimSlotResponse> => {
+
+  return customFetch<ClaimSlotResponse>(getClaimSlotUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      claimSlotRequest,)
+  }
+);}
+
+
+
+
+export const getClaimSlotMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof claimSlot>>, TError,{id: string;data: BodyType<ClaimSlotRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof claimSlot>>, TError,{id: string;data: BodyType<ClaimSlotRequest>}, TContext> => {
+
+const mutationKey = ['claimSlot'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof claimSlot>>, {id: string;data: BodyType<ClaimSlotRequest>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  claimSlot(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ClaimSlotMutationResult = NonNullable<Awaited<ReturnType<typeof claimSlot>>>
+    export type ClaimSlotMutationBody = BodyType<ClaimSlotRequest>
+    export type ClaimSlotMutationError = ErrorType<void>
+
+    /**
+ * @summary Rivendica uno slot libero (crea o riusa la propria società)
+ */
+export const useClaimSlot = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof claimSlot>>, TError,{id: string;data: BodyType<ClaimSlotRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof claimSlot>>,
+        TError,
+        {id: string;data: BodyType<ClaimSlotRequest>},
+        TContext
+      > => {
+      return useMutation(getClaimSlotMutationOptions(options));
+    }
+
+export const getGetLeagueInviteUrl = (id: string,) => {
+
+
+
+
+  return `/api/leagues/${id}/invite`
+}
+
+/**
+ * @summary Info invito e stato slot (admin)
+ */
+export const getLeagueInvite = async (id: string, options?: RequestInit): Promise<LeagueInviteInfo> => {
+
+  return customFetch<LeagueInviteInfo>(getGetLeagueInviteUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetLeagueInviteQueryKey = (id: string,) => {
+    return [
+    `/api/leagues/${id}/invite`
+    ] as const;
+    }
+
+
+export const getGetLeagueInviteQueryOptions = <TData = Awaited<ReturnType<typeof getLeagueInvite>>, TError = ErrorType<void>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getLeagueInvite>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetLeagueInviteQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getLeagueInvite>>> = ({ signal }) => getLeagueInvite(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getLeagueInvite>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetLeagueInviteQueryResult = NonNullable<Awaited<ReturnType<typeof getLeagueInvite>>>
+export type GetLeagueInviteQueryError = ErrorType<void>
+
+
+/**
+ * @summary Info invito e stato slot (admin)
+ */
+
+export function useGetLeagueInvite<TData = Awaited<ReturnType<typeof getLeagueInvite>>, TError = ErrorType<void>>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getLeagueInvite>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetLeagueInviteQueryOptions(id,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

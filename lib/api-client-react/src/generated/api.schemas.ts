@@ -324,20 +324,6 @@ export interface League {
   created_at: string;
 }
 
-export interface FantaTeamWizardInput {
-  /** @maxLength 50 */
-  name: string;
-  /**
-     * Nome pronunciato dal battitore in asta
-     * @maxLength 30
-     */
-  name_auction: string;
-  color_primary: string;
-  color_secondary: string;
-  /** @nullable */
-  logo_url?: string | null;
-}
-
 export interface LeagueInput {
   /** @maxLength 50 */
   name: string;
@@ -374,10 +360,65 @@ export interface LeagueInput {
   /** Se fornito, la lega adotta questa federazione esistente anziché crearne una nuova automaticamente. */
   federation_id?: string | null;
   /**
-     * @minItems 4
-     * @maxItems 8
+     * Numero di slot (squadre) da creare nella lega. Ogni slot è inizialmente vuoto e viene rivendicato con il flusso invito.
+     * @minimum 4
+     * @maximum 20
      */
-  fanta_teams: FantaTeamWizardInput[];
+  team_count: number;
+}
+
+export interface FantaTeamWizardInput {
+  /** @maxLength 50 */
+  name: string;
+  /**
+     * Nome pronunciato dal battitore in asta
+     * @maxLength 30
+     */
+  name_auction: string;
+  color_primary: string;
+  color_secondary: string;
+  /** @nullable */
+  logo_url?: string | null;
+}
+
+export interface LeagueWizardResponse {
+  league: League;
+}
+
+export interface JoinLeagueRequest {
+  /** @minLength 1 */
+  invitation_code: string;
+}
+
+export interface JoinLeagueResponse {
+  league: League;
+  already_member: boolean;
+  free_slots: number;
+}
+
+export interface SocietaInput {
+  /** @maxLength 50 */
+  name: string;
+  /**
+     * Nome pronunciato dal battitore in asta
+     * @maxLength 30
+     */
+  name_auction: string;
+  color_primary?: string;
+  color_secondary?: string;
+  /** @nullable */
+  logo_url?: string | null;
+}
+
+export interface ClaimSlotRequest {
+  slot_id: string;
+  /**
+     * Riusa una società esistente (il chiamante deve esserne proprietario)
+     * @nullable
+     */
+  societa_id?: string | null;
+  /** Crea una nuova società al momento del claim */
+  societa?: SocietaInput | null;
 }
 
 export interface FantaTeam {
@@ -418,9 +459,46 @@ export interface FantaTeam {
   created_at: string;
 }
 
-export interface LeagueWizardResponse {
-  league: League;
-  fanta_teams: FantaTeam[];
+export interface ClaimSlotResponse {
+  fanta_team: FantaTeam;
+}
+
+export interface InviteSlot {
+  id: string;
+  /** @nullable */
+  manager_user_id?: string | null;
+  /** @nullable */
+  societa_id?: string | null;
+  /** @nullable */
+  name?: string | null;
+  /** @nullable */
+  name_auction?: string | null;
+  is_claimed: boolean;
+}
+
+export type InviteMemberRole = typeof InviteMemberRole[keyof typeof InviteMemberRole];
+
+
+export const InviteMemberRole = {
+  admin: 'admin',
+  member: 'member',
+} as const;
+
+export interface InviteMember {
+  user_id: string;
+  role: InviteMemberRole;
+  joined_at: string;
+}
+
+export interface LeagueInviteInfo {
+  /** @nullable */
+  invitation_code?: string | null;
+  /** @nullable */
+  invite_link?: string | null;
+  slots: InviteSlot[];
+  members: InviteMember[];
+  free_slots: number;
+  total_slots: number;
 }
 
 export type LeagueUpdateVisibility = typeof LeagueUpdateVisibility[keyof typeof LeagueUpdateVisibility];

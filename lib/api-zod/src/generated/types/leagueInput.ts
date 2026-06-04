@@ -5,7 +5,6 @@
  * Mister — il fantacalcio manageriale
  * OpenAPI spec version: 0.1.0
  */
-import type { FantaTeamWizardInput } from './fantaTeamWizardInput';
 
 export interface LeagueInput {
   /** @maxLength 50 */
@@ -43,8 +42,9 @@ export interface LeagueInput {
   /** Se fornito, la lega adotta questa federazione esistente anziché crearne una nuova automaticamente. */
   federation_id?: string | null;
   /**
-     * @minItems 4
-     * @maxItems 8
+     * Numero di slot (squadre) da creare nella lega. Ogni slot è inizialmente vuoto e viene rivendicato con il flusso invito.
+     * @minimum 4
+     * @maximum 20
      */
-  fanta_teams: FantaTeamWizardInput[];
+  team_count: number;
 }

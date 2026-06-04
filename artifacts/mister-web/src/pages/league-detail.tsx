@@ -5,7 +5,9 @@ import {
   useListFantaTeams, getListFantaTeamsQueryKey,
   useCreateAuction,
   useCreateCompetition,
+  useGetLeagueInvite, getGetLeagueInviteQueryKey,
 } from "@workspace/api-client-react";
+import { useCurrentUser } from "@/contexts/AuthContext";
 import { useState, useMemo } from "react";
 import { AstaConfigModal } from "@/components/asta/AstaConfigModal";
 import { useParams, Link, useLocation } from "wouter";
@@ -21,7 +23,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
-import { Trophy, Users, Calendar, Activity, BookOpen, Gavel, ArrowLeft, Settings, Plus } from "lucide-react";
+import { Trophy, Users, Calendar, Activity, BookOpen, Gavel, ArrowLeft, Settings, Plus, Copy, Link2 } from "lucide-react";
 
 export default function LeagueDetail() {
   const { id } = useParams<{ id: string }>();
@@ -119,6 +121,14 @@ export default function LeagueDetail() {
   const { data: competitions, isLoading: isLoadingComps } = useListCompetitions(
     id,
     { query: { enabled: !!id, queryKey: getListCompetitionsQueryKey(id) } }
+  );
+
+  const { user } = useCurrentUser();
+  const isAdmin = !!league && !!user && league.admin_user_id === user.id;
+
+  const { data: inviteInfo } = useGetLeagueInvite(
+    id!,
+    { query: { enabled: isAdmin, queryKey: getGetLeagueInviteQueryKey(id!) } }
   );
 
   const modalTeams = useMemo(
@@ -429,6 +439,119 @@ export default function LeagueDetail() {
           </Card>
         </div>
       </div>
+
+      {isAdmin && (
+        <div className="space-y-4" data-testid="section-inviti">
+          <div className="flex items-center gap-2">
+            <Link2 className="h-5 w-5 text-[#1f4733]" />
+            <h2 className="text-xl font-serif font-bold text-[#1f4733]">Inviti</h2>
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm">Codice invito</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {inviteInfo?.invitation_code ? (
+                  <>
+                    <div className="flex items-center gap-2">
+                      <code className="flex-1 font-mono text-lg font-bold bg-muted px-3 py-1.5 rounded text-[#1f4733]" data-testid="text-invite-code">
+                        {inviteInfo.invitation_code}
+                      </code>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => {
+                          navigator.clipboard.writeText(inviteInfo.invitation_code ?? "");
+                          toast({ title: "Codice copiato" });
+                        }}
+                        data-testid="button-copy-invite-code"
+                      >
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    {inviteInfo.invite_link && (
+                      <div className="flex items-center gap-2">
+                        <p className="flex-1 text-xs text-muted-foreground font-mono truncate" data-testid="text-invite-link">
+                          {inviteInfo.invite_link}
+                        </p>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="shrink-0"
+                          onClick={() => {
+                            navigator.clipboard.writeText(inviteInfo.invite_link ?? "");
+                            toast({ title: "Link copiato" });
+                          }}
+                          data-testid="button-copy-invite-link"
+                        >
+                          <Copy className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
+                    <p className="text-xs text-muted-foreground">
+                      Condividi questo codice o il link. Ogni partecipante entra e sceglie uno slot.
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-sm text-muted-foreground">Nessun codice invito disponibile.</p>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm flex items-center justify-between">
+                  <span>Stato slot</span>
+                  {inviteInfo && (
+                    <span className="font-mono text-xs text-muted-foreground font-normal">
+                      {inviteInfo.free_slots}/{inviteInfo.total_slots} liberi
+                    </span>
+                  )}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {inviteInfo ? (
+                  <div className="space-y-1.5" data-testid="list-slots">
+                    {inviteInfo.slots.map((slot) => (
+                      <div
+                        key={slot.id}
+                        className={[
+                          "flex items-center justify-between px-2.5 py-2 rounded text-sm border",
+                          slot.is_claimed
+                            ? "border-border bg-muted/30"
+                            : "border-dashed border-border/50 bg-transparent",
+                        ].join(" ")}
+                        data-testid={`slot-row-${slot.id}`}
+                      >
+                        <span className={slot.is_claimed ? "font-medium" : "text-muted-foreground text-xs"}>
+                          {slot.is_claimed
+                            ? (slot.name ?? slot.name_auction ?? "Slot occupato")
+                            : "Slot libero"}
+                        </span>
+                        <Badge
+                          variant={slot.is_claimed ? "default" : "outline"}
+                          className={slot.is_claimed
+                            ? "bg-[#1f4733] text-[#efe6d3] text-[10px]"
+                            : "text-[10px]"}
+                        >
+                          {slot.is_claimed ? "occupato" : "libero"}
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {Array.from({ length: 3 }).map((_, i) => (
+                      <Skeleton key={i} className="h-9 w-full" />
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      )}
     </div>
 
     <AstaConfigModal

@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2, Users } from "lucide-react";
 import type { SetupState } from "@/pages/SetupLegaPage";
 
 interface StepRiepilogoProps {
@@ -18,9 +18,9 @@ export default function StepRiepilogo({
   isPending,
   error,
 }: StepRiepilogoProps) {
-  const { lega, squadre } = state;
+  const { lega, teamCount } = state;
   const rosterTotal = lega.rosterP + lega.rosterD + lega.rosterC + lega.rosterA;
-  const poolTotale = rosterTotal * squadre.length;
+  const poolTotale = rosterTotal * teamCount;
 
   const MODE_LABELS: Record<string, string> = {
     classico: "Classico",
@@ -85,35 +85,18 @@ export default function StepRiepilogo({
 
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-base text-[#1f4733]">
-            Squadre{" "}
-            <span className="font-mono text-muted-foreground text-sm">({squadre.length})</span>
+          <CardTitle className="text-base text-[#1f4733] flex items-center gap-2">
+            <Users className="h-4 w-4" />
+            Slot squadre{" "}
+            <span className="font-mono text-muted-foreground text-sm">({teamCount})</span>
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-wrap gap-2">
-            {squadre.map((s, i) => (
-              <div
-                key={i}
-                className="flex items-center gap-2 border rounded-md px-2 py-1.5 text-sm"
-              >
-                <div className="flex gap-0.5">
-                  <div
-                    className="w-3 h-3 rounded-full ring-1 ring-border"
-                    style={{ backgroundColor: s.colorPrimary }}
-                  />
-                  <div
-                    className="w-3 h-3 rounded-full ring-1 ring-border"
-                    style={{ backgroundColor: s.colorSecondary }}
-                  />
-                </div>
-                <span className="font-medium">{s.name}</span>
-                <span className="text-muted-foreground text-xs font-mono">
-                  "{s.nameAuction}"
-                </span>
-              </div>
-            ))}
-          </div>
+          <p className="text-sm text-muted-foreground">
+            Verranno creati{" "}
+            <span className="font-mono font-bold text-foreground">{teamCount}</span>{" "}
+            slot vuoti. I partecipanti entreranno con il codice invito e sceglieranno uno slot.
+          </p>
         </CardContent>
       </Card>
 
@@ -126,7 +109,7 @@ export default function StepRiepilogo({
       <div className="flex justify-between pt-2">
         <Button variant="ghost" onClick={onBack} disabled={isPending}>
           <ArrowLeft className="mr-2 h-4 w-4" />
-          Squadre
+          Slot
         </Button>
         <Button
           onClick={onConfirm}

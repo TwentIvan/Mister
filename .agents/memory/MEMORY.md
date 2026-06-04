@@ -4,3 +4,4 @@
 - [Auth cookie pattern](auth-cookie.md) — server usa cookie HTTP-only (non Bearer token nel body); test con curl richiedono -c/-b cookiejar
 - [isLeagueAdmin checks league_members](auth-guards.md) — guardLeagueAdmin verifica league_members.role='admin', non admin_user_id sulla leagues table
 - [CurrentUser shape](auth-current-user.md) — frontend CurrentUser ha id/email/display_name (non sub); server JWT payload usa sub; confronti ownership devono usare user.id nel client
+- [Fase 2 Inviti — architettura slot](fase2-inviti.md) — slot vuoti al setup; join/claim atomici; zod come dipendenza diretta api-server

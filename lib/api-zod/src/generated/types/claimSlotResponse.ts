@@ -5,8 +5,8 @@
  * Mister — il fantacalcio manageriale
  * OpenAPI spec version: 0.1.0
  */
-import type { League } from './league';
+import type { FantaTeam } from './fantaTeam';
 
-export interface LeagueWizardResponse {
-  league: League;
+export interface ClaimSlotResponse {
+  fanta_team: FantaTeam;
 }

@@ -5,8 +5,8 @@
  * Mister — il fantacalcio manageriale
  * OpenAPI spec version: 0.1.0
  */
-import type { League } from './league';
 
-export interface LeagueWizardResponse {
-  league: League;
+export interface JoinLeagueRequest {
+  /** @minLength 1 */
+  invitation_code: string;
 }

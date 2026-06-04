@@ -432,12 +432,8 @@ export const createLeagueBodyRosterCMax = 15;
 
 export const createLeagueBodyRosterAMax = 15;
 
-export const createLeagueBodyFantaTeamsItemNameMax = 50;
-
-export const createLeagueBodyFantaTeamsItemNameAuctionMax = 30;
-
-export const createLeagueBodyFantaTeamsMin = 4;
-export const createLeagueBodyFantaTeamsMax = 8;
+export const createLeagueBodyTeamCountMin = 4;
+export const createLeagueBodyTeamCountMax = 20;
 
 
 
@@ -450,13 +446,7 @@ export const CreateLeagueBody = zod.object({
   "roster_c": zod.number().min(1).max(createLeagueBodyRosterCMax),
   "roster_a": zod.number().min(1).max(createLeagueBodyRosterAMax),
   "federation_id": zod.string().nullish().describe('Se fornito, la lega adotta questa federazione esistente anziché crearne una nuova automaticamente.'),
-  "fanta_teams": zod.array(zod.object({
-  "name": zod.string().max(createLeagueBodyFantaTeamsItemNameMax),
-  "name_auction": zod.string().max(createLeagueBodyFantaTeamsItemNameAuctionMax).describe('Nome pronunciato dal battitore in asta'),
-  "color_primary": zod.string(),
-  "color_secondary": zod.string(),
-  "logo_url": zod.string().nullish()
-})).min(createLeagueBodyFantaTeamsMin).max(createLeagueBodyFantaTeamsMax)
+  "team_count": zod.number().min(createLeagueBodyTeamCountMin).max(createLeagueBodyTeamCountMax).describe('Numero di slot (squadre) da creare nella lega. Ogni slot è inizialmente vuoto e viene rivendicato con il flusso invito.')
 })
 
 
@@ -646,6 +636,133 @@ export const GetLeagueStatsResponse = zod.object({
   "competition_count": zod.number(),
   "active_market_count": zod.number(),
   "contract_count": zod.number()
+})
+
+
+/**
+ * @summary Entra nella lega con codice invito
+ */
+export const JoinLeagueParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+
+
+
+export const JoinLeagueBody = zod.object({
+  "invitation_code": zod.string().min(1)
+})
+
+export const JoinLeagueResponse = zod.object({
+  "league": zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "federation_id": zod.string().describe('ID federazione (sempre presente — creata automaticamente al setup)'),
+  "template_id": zod.string().nullish(),
+  "admin_user_id": zod.string(),
+  "co_admin_user_ids": zod.array(zod.string()).optional(),
+  "max_managers": zod.number(),
+  "season": zod.number(),
+  "visibility": zod.enum(['private', 'public', 'unlisted']),
+  "invitation_code": zod.string().nullish(),
+  "lineup_visibility": zod.enum(['always', 'after_deadline', 'hidden_all_season']).optional(),
+  "roster_visibility": zod.enum(['always', 'after_deadline', 'hidden_all_season']).optional(),
+  "started": zod.boolean(),
+  "notify_email": zod.boolean().optional(),
+  "notify_push": zod.boolean().optional(),
+  "timer_seconds": zod.number().describe('Secondi per ogni round d\'asta (default 8)'),
+  "budget_initial": zod.number().nullish().describe('Budget iniziale per squadra in FM'),
+  "roster_p": zod.number().nullish().describe('Portieri per squadra'),
+  "roster_d": zod.number().nullish().describe('Difensori per squadra'),
+  "roster_c": zod.number().nullish().describe('Centrocampisti per squadra'),
+  "roster_a": zod.number().nullish().describe('Attaccanti per squadra'),
+  "auction_mode": zod.union([zod.literal('classico'),zod.literal('manageriale'),zod.literal('manageriale_pro'),zod.literal(null)]).nullish().describe('Modalità asta'),
+  "post_acquisition_window": zod.object({
+  "enabled": zod.boolean().optional(),
+  "async_hours": zod.number().optional().describe('Ore di finestra per reclamare in modalità asincrona'),
+  "live_seconds": zod.number().optional().describe('Secondi di finestra in asta live'),
+  "default_clause_action": zod.enum(['leave_default', 'trigger_clause', 'no_clause']).optional(),
+  "default_contract_years": zod.number().optional().describe('Anni di contratto di default all\'acquisto')
+}).optional().describe('Finestra temporale post-acquisto'),
+  "snapshot_locked_at": zod.coerce.date().nullish().describe('Timestamp del freeze delle regole federazione (null = non ancora avvenuto)'),
+  "snapshot_rules": zod.object({
+  "bonusMalus": zod.object({
+
+}).passthrough().optional().describe('Bonus e malus per evento (gol, assist, ammonizioni, ecc.)'),
+  "goalThresholds": zod.object({
+
+}).passthrough().optional().describe('Conversione punteggio squadra in fanta-gol'),
+  "defenseModifier": zod.object({
+
+}).passthrough().optional().describe('Modificatore difesa'),
+  "midfieldModifier": zod.object({
+
+}).passthrough().optional().describe('Modificatore centrocampo'),
+  "homeAdvantage": zod.object({
+
+}).passthrough().optional().describe('Bonus padrone di casa'),
+  "substitutions": zod.object({
+
+}).passthrough().optional().describe('Regole sostituzioni automatiche')
+}).describe('Regole di calcolo del punteggio fanta (bonus\/malus, soglie, modificatori)').nullish().describe('Snapshot delle regole di punteggio congelate alla prima asta (null = non ancora avvenuto)'),
+  "created_at": zod.coerce.date()
+}),
+  "already_member": zod.boolean(),
+  "free_slots": zod.number()
+})
+
+
+/**
+ * @summary Rivendica uno slot libero (crea o riusa la propria società)
+ */
+export const ClaimSlotParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const claimSlotBodySocietaOneNameMax = 50;
+
+export const claimSlotBodySocietaOneNameAuctionMax = 30;
+
+
+
+export const ClaimSlotBody = zod.object({
+  "slot_id": zod.string(),
+  "societa_id": zod.string().nullish().describe('Riusa una società esistente (il chiamante deve esserne proprietario)'),
+  "societa": zod.object({
+  "name": zod.string().max(claimSlotBodySocietaOneNameMax),
+  "name_auction": zod.string().max(claimSlotBodySocietaOneNameAuctionMax).describe('Nome pronunciato dal battitore in asta'),
+  "color_primary": zod.string().optional(),
+  "color_secondary": zod.string().optional(),
+  "logo_url": zod.string().nullish()
+}).nullish().describe('Crea una nuova società al momento del claim')
+})
+
+
+/**
+ * @summary Info invito e stato slot (admin)
+ */
+export const GetLeagueInviteParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const GetLeagueInviteResponse = zod.object({
+  "invitation_code": zod.string().nullish(),
+  "invite_link": zod.string().nullish(),
+  "slots": zod.array(zod.object({
+  "id": zod.string(),
+  "manager_user_id": zod.string().nullish(),
+  "societa_id": zod.string().nullish(),
+  "name": zod.string().nullish(),
+  "name_auction": zod.string().nullish(),
+  "is_claimed": zod.boolean()
+})),
+  "members": zod.array(zod.object({
+  "user_id": zod.string(),
+  "role": zod.enum(['admin', 'member']),
+  "joined_at": zod.coerce.date()
+})),
+  "free_slots": zod.number(),
+  "total_slots": zod.number()
 })
 
 

@@ -39,7 +39,7 @@ async function main() {
     await db.transaction(async (tx) => {
       await tx.insert(societa).values({
         id:           socId,
-        ownerUserId:  team.managerUserId,
+        ownerUserId:  team.managerUserId ?? "unknown",
         name,
         nameAuction:  nameAuction  ?? undefined,
         logoUrl:      logoUrl      ?? undefined,

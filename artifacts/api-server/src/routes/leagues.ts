@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
-import { eq, count, and, sql } from "drizzle-orm";
+import { eq, count, and, sql, isNull, inArray } from "drizzle-orm";
 import { nanoid } from "nanoid";
+import { z } from "zod/v4";
 import { db } from "@workspace/db";
 import {
   leagues,
@@ -31,9 +32,37 @@ import {
   GetLeagueStatsResponse,
 } from "@workspace/api-zod";
 import { mapLeague, mapFantaTeam } from "../lib/mappers";
-import { guardLeagueAdmin } from "../lib/auth";
+import { guardLeagueAdmin, guardLeagueMember } from "../lib/auth";
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Inline Zod per endpoint Fase 2 (non dipendenti dal codegen generato)
+// ──────────────────────────────────────────────────────────────────────────────
+
+const LeagueIdParams = z.object({ id: z.string().min(1) });
+
+const JoinLeagueBodyLocal = z.object({
+  invitation_code: z.string().min(1),
+});
+
+const SocietaInputLocal = z.object({
+  name: z.string().min(1).max(50),
+  name_auction: z.string().min(1).max(30),
+  color_primary: z.string().optional(),
+  color_secondary: z.string().optional(),
+  logo_url: z.string().nullable().optional(),
+});
+
+const ClaimSlotBodyLocal = z.object({
+  slot_id: z.string().min(1),
+  societa_id: z.string().optional(),
+  societa: SocietaInputLocal.optional(),
+});
 
 const router: IRouter = Router();
+
+// ──────────────────────────────────────────────────────────────────────────────
+// GET /leagues
+// ──────────────────────────────────────────────────────────────────────────────
 
 router.get("/leagues", async (req, res): Promise<void> => {
   const parsed = ListLeaguesQueryParams.safeParse(req.query);
@@ -48,6 +77,10 @@ router.get("/leagues", async (req, res): Promise<void> => {
   res.json(ListLeaguesResponse.parse(rows.map(mapLeague)));
 });
 
+// ──────────────────────────────────────────────────────────────────────────────
+// POST /leagues — crea lega con slot vuoti + invitation_code
+// ──────────────────────────────────────────────────────────────────────────────
+
 router.post("/leagues", async (req, res): Promise<void> => {
   if (!req.user) {
     res.status(401).json({ error: "Autenticazione richiesta" });
@@ -60,25 +93,14 @@ router.post("/leagues", async (req, res): Promise<void> => {
   }
   const d = parsed.data;
 
-  const auctionNames = d.fanta_teams.map(t => t.name_auction);
-  const uniqueAuctionNames = new Set(auctionNames);
-  if (uniqueAuctionNames.size !== auctionNames.length) {
-    res.status(409).json({ error: "I nomi all'asta delle squadre devono essere univoci" });
-    return;
-  }
-
   const leagueId = `lg-${nanoid(8)}`;
-
-  const leagueConfig: LeagueConfig = {
-    ...DEFAULT_LEAGUE_CONFIG,
-  };
+  const invitationCode = nanoid(10);
+  const leagueConfig: LeagueConfig = { ...DEFAULT_LEAGUE_CONFIG };
 
   try {
     const result = await db.transaction(async (tx) => {
-      // Determina federation: adotta quella esistente o ne crea una nuova.
       let fedId: string;
       if (d.federation_id) {
-        // Validate federation exists
         const [existing] = await tx
           .select({ id: federations.id })
           .from(federations)
@@ -89,7 +111,6 @@ router.post("/leagues", async (req, res): Promise<void> => {
         }
         fedId = d.federation_id;
       } else {
-        // Auto-crea una Federazione dedicata per questa Lega.
         fedId = `fed-${nanoid(8)}`;
         await tx.insert(federations).values({
           id: fedId,
@@ -99,7 +120,6 @@ router.post("/leagues", async (req, res): Promise<void> => {
           mode: "classic",
           featureFlags: defaultFlagValues() as Record<string, boolean | number>,
           rules: DEFAULT_RULES,
-          // A3: owner_user_id = utente creatore (sempre loggato grazie al guard sopra).
           ownerUserId: req.user!.sub,
         });
       }
@@ -114,7 +134,8 @@ router.post("/leagues", async (req, res): Promise<void> => {
           name: d.name,
           adminUserId: creatorId,
           season: new Date().getFullYear(),
-          maxManagers: d.fanta_teams.length,
+          maxManagers: d.team_count,
+          invitationCode,
           config: leagueConfig,
           timerSeconds: d.timer_seconds,
           budgetInitial: d.budget_initial,
@@ -126,50 +147,29 @@ router.post("/leagues", async (req, res): Promise<void> => {
         })
         .returning();
 
-      // A3: chi crea la lega diventa admin in league_members.
+      // Admin in league_members — nessun slot d'ufficio.
       await tx.insert(leagueMembers).values({
-        userId: req.user!.sub,
+        userId: creatorId,
         leagueId: leagueId,
         role: "admin",
       });
 
-      // Per ogni squadra: crea prima la società (identità), poi la partecipazione
-      const teamWithSoc = await Promise.all(
-        d.fanta_teams.map(async (t) => {
-          const socId = `soc-${nanoid(8)}`;
-          const [soc] = await tx.insert(societa).values({
-            id: socId,
-            ownerUserId: creatorId,
-            name: t.name,
-            nameAuction: t.name_auction ?? undefined,
-            logoUrl: t.logo_url ?? undefined,
-            jersey: {
-              primaryColor: t.color_primary,
-              secondaryColor: t.color_secondary,
-              pattern: "solid" as const,
-            },
-          }).returning();
+      // Crea N slot vuoti (manager_user_id=NULL, societa_id=NULL).
+      const slotValues = Array.from({ length: d.team_count }, () => ({
+        id: `ft-${nanoid(8)}`,
+        leagueId: leagueId,
+        managerUserId: null as string | null,
+        societaId: null as string | null,
+        creditsRemaining: d.budget_initial,
+        roster: { gk: [], def: [], mid: [], att: [] } as RosterSnapshot,
+      }));
 
-          const [team] = await tx.insert(fantaTeams).values({
-            id: `ft-${nanoid(8)}`,
-            leagueId: leagueId,
-            managerUserId: creatorId,
-            societaId: socId,
-            creditsRemaining: d.budget_initial,
-            roster: { gk: [], def: [], mid: [], att: [] } as RosterSnapshot,
-          }).returning();
+      await tx.insert(fantaTeams).values(slotValues);
 
-          return { team, soc };
-        })
-      );
-
-      return { league, fantaTeams: teamWithSoc };
+      return { league };
     });
 
-    res.status(201).json({
-      league: mapLeague(result.league),
-      fanta_teams: result.fantaTeams.map(({ team, soc }) => mapFantaTeam(team, soc)),
-    });
+    res.status(201).json({ league: mapLeague(result.league) });
   } catch (err) {
     req.log.error({ err }, "Errore creazione lega wizard");
     const code = (err as { code?: number }).code;
@@ -180,6 +180,298 @@ router.post("/leagues", async (req, res): Promise<void> => {
     }
   }
 });
+
+// ──────────────────────────────────────────────────────────────────────────────
+// POST /leagues/:id/join — entra nella lega con invitation_code
+// ──────────────────────────────────────────────────────────────────────────────
+
+router.post("/leagues/:id/join", async (req, res): Promise<void> => {
+  if (!req.user) {
+    res.status(401).json({ error: "Autenticazione richiesta" });
+    return;
+  }
+
+  const params = LeagueIdParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+
+  const body = JoinLeagueBodyLocal.safeParse(req.body);
+  if (!body.success) {
+    res.status(400).json({ error: body.error.flatten() });
+    return;
+  }
+
+  const leagueId = params.data.id;
+  const userId = req.user.sub;
+
+  const [league] = await db
+    .select()
+    .from(leagues)
+    .where(eq(leagues.id, leagueId))
+    .limit(1);
+
+  if (!league) {
+    res.status(404).json({ error: "Lega non trovata" });
+    return;
+  }
+
+  // Verifica il codice invito.
+  if (league.invitationCode !== body.data.invitation_code) {
+    res.status(403).json({ error: "Codice invito non valido" });
+    return;
+  }
+
+  // Già membro — idempotente.
+  const [existingMember] = await db
+    .select()
+    .from(leagueMembers)
+    .where(and(eq(leagueMembers.leagueId, leagueId), eq(leagueMembers.userId, userId)))
+    .limit(1);
+
+  if (existingMember) {
+    const [freeCount] = await db
+      .select({ count: count() })
+      .from(fantaTeams)
+      .where(and(eq(fantaTeams.leagueId, leagueId), isNull(fantaTeams.managerUserId)));
+    res.json({
+      league: mapLeague(league),
+      already_member: true,
+      free_slots: Number(freeCount?.count ?? 0),
+    });
+    return;
+  }
+
+  // J5: verifica che ci sia almeno uno slot libero.
+  const [freeCheck] = await db
+    .select({ count: count() })
+    .from(fantaTeams)
+    .where(and(eq(fantaTeams.leagueId, leagueId), isNull(fantaTeams.managerUserId)));
+
+  if (Number(freeCheck?.count ?? 0) === 0) {
+    res.status(409).json({
+      error: "Lega al completo: tutti gli slot sono occupati",
+      code: "LEAGUE_FULL",
+    });
+    return;
+  }
+
+  await db.insert(leagueMembers).values({ userId, leagueId, role: "member" });
+
+  const [freeAfter] = await db
+    .select({ count: count() })
+    .from(fantaTeams)
+    .where(and(eq(fantaTeams.leagueId, leagueId), isNull(fantaTeams.managerUserId)));
+
+  res.json({
+    league: mapLeague(league),
+    already_member: false,
+    free_slots: Number(freeAfter?.count ?? 0),
+  });
+});
+
+// ──────────────────────────────────────────────────────────────────────────────
+// POST /leagues/:id/claim — rivendica uno slot (atomico)
+// ──────────────────────────────────────────────────────────────────────────────
+
+router.post("/leagues/:id/claim", async (req, res): Promise<void> => {
+  if (!req.user) {
+    res.status(401).json({ error: "Autenticazione richiesta" });
+    return;
+  }
+
+  const params = LeagueIdParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+
+  const body = ClaimSlotBodyLocal.safeParse(req.body);
+  if (!body.success) {
+    res.status(400).json({ error: body.error.flatten() });
+    return;
+  }
+
+  if (!body.data.societa_id && !body.data.societa) {
+    res.status(400).json({ error: "Fornire societa_id (riusa) oppure societa (crea nuova)" });
+    return;
+  }
+
+  const leagueId = params.data.id;
+  const userId = req.user.sub;
+
+  // Verifica che l'utente sia membro.
+  if (!await guardLeagueMember(req, res, leagueId)) return;
+
+  // J4: conflitto — l'utente ha già uno slot in questa lega.
+  const [existingSlot] = await db
+    .select({ id: fantaTeams.id })
+    .from(fantaTeams)
+    .where(and(eq(fantaTeams.leagueId, leagueId), eq(fantaTeams.managerUserId, userId)))
+    .limit(1);
+
+  if (existingSlot) {
+    res.status(409).json({
+      error: "Hai già una squadra in questa lega. Non puoi rivendicare un secondo slot.",
+      code: "SLOT_CONFLICT",
+      existing_slot_id: existingSlot.id,
+    });
+    return;
+  }
+
+  // Verifica che lo slot esista nella lega.
+  const [targetSlot] = await db
+    .select({ id: fantaTeams.id, managerUserId: fantaTeams.managerUserId })
+    .from(fantaTeams)
+    .where(and(eq(fantaTeams.id, body.data.slot_id), eq(fantaTeams.leagueId, leagueId)))
+    .limit(1);
+
+  if (!targetSlot) {
+    res.status(404).json({ error: "Slot non trovato in questa lega" });
+    return;
+  }
+
+  try {
+    const result = await db.transaction(async (tx) => {
+      let resolvedSocId: string;
+
+      if (body.data.societa_id) {
+        const [existingSoc] = await tx
+          .select({ id: societa.id, ownerUserId: societa.ownerUserId })
+          .from(societa)
+          .where(eq(societa.id, body.data.societa_id))
+          .limit(1);
+        if (!existingSoc) {
+          throw Object.assign(new Error("Società non trovata"), { code: 404 });
+        }
+        if (existingSoc.ownerUserId !== userId) {
+          throw Object.assign(new Error("Non sei il proprietario di questa società"), { code: 403 });
+        }
+        resolvedSocId = body.data.societa_id;
+      } else {
+        const s = body.data.societa!;
+        const socId = `soc-${nanoid(8)}`;
+        await tx.insert(societa).values({
+          id: socId,
+          ownerUserId: userId,
+          name: s.name,
+          nameAuction: s.name_auction,
+          logoUrl: s.logo_url ?? undefined,
+          jersey: {
+            primaryColor: s.color_primary ?? "#1f4733",
+            secondaryColor: s.color_secondary ?? "#efe6d3",
+            pattern: "solid" as const,
+          },
+        });
+        resolvedSocId = socId;
+      }
+
+      // J6: UPDATE atomico — aggiorna SOLO se lo slot è ancora libero.
+      const [updated] = await tx
+        .update(fantaTeams)
+        .set({ societaId: resolvedSocId, managerUserId: userId })
+        .where(
+          and(
+            eq(fantaTeams.id, body.data.slot_id),
+            eq(fantaTeams.leagueId, leagueId),
+            isNull(fantaTeams.managerUserId),
+          ),
+        )
+        .returning();
+
+      if (!updated) {
+        throw Object.assign(new Error("Slot già preso"), { code: 409 });
+      }
+
+      const [soc] = await tx
+        .select()
+        .from(societa)
+        .where(eq(societa.id, resolvedSocId))
+        .limit(1);
+
+      return { team: updated, soc: soc ?? null };
+    });
+
+    res.status(201).json({ fanta_team: mapFantaTeam(result.team, result.soc) });
+  } catch (err) {
+    const code = (err as { code?: number }).code;
+    if (code === 404) {
+      res.status(404).json({ error: (err as Error).message });
+    } else if (code === 403) {
+      res.status(403).json({ error: (err as Error).message });
+    } else if (code === 409) {
+      res.status(409).json({ error: (err as Error).message, code: "SLOT_TAKEN" });
+    } else {
+      req.log.error({ err }, "Errore claim slot");
+      res.status(500).json({ error: "Errore interno durante il claim dello slot" });
+    }
+  }
+});
+
+// ──────────────────────────────────────────────────────────────────────────────
+// GET /leagues/:id/invite — info invito lega (admin only)
+// ──────────────────────────────────────────────────────────────────────────────
+
+router.get("/leagues/:id/invite", async (req, res): Promise<void> => {
+  const params = LeagueIdParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+
+  const leagueId = params.data.id;
+
+  if (!await guardLeagueAdmin(req, res, leagueId)) return;
+
+  const [league, slots, members] = await Promise.all([
+    db.select().from(leagues).where(eq(leagues.id, leagueId)).limit(1).then(r => r[0]),
+    db.select().from(fantaTeams).where(eq(fantaTeams.leagueId, leagueId)),
+    db.select().from(leagueMembers).where(eq(leagueMembers.leagueId, leagueId)),
+  ]);
+
+  if (!league) {
+    res.status(404).json({ error: "Lega non trovata" });
+    return;
+  }
+
+  const socIds = slots.map(s => s.societaId).filter((id): id is string => id !== null);
+  const socRows = socIds.length > 0
+    ? await db.select().from(societa).where(inArray(societa.id, socIds))
+    : [];
+  const socById = Object.fromEntries(socRows.map(s => [s.id, s]));
+
+  const slotInfo = slots.map(s => ({
+    id: s.id,
+    manager_user_id: s.managerUserId ?? null,
+    societa_id: s.societaId ?? null,
+    name: s.societaId ? (socById[s.societaId]?.name ?? null) : null,
+    name_auction: s.societaId ? (socById[s.societaId]?.nameAuction ?? null) : null,
+    is_claimed: s.managerUserId !== null,
+  }));
+
+  const domain = process.env.REPLIT_DOMAINS?.split(",")[0] ?? "localhost";
+  const inviteLink = league.invitationCode
+    ? `https://${domain}/join/${league.id}/${league.invitationCode}`
+    : null;
+
+  res.json({
+    invitation_code: league.invitationCode ?? null,
+    invite_link: inviteLink,
+    slots: slotInfo,
+    members: members.map(m => ({
+      user_id: m.userId,
+      role: m.role,
+      joined_at: m.joinedAt,
+    })),
+    free_slots: slotInfo.filter(s => !s.is_claimed).length,
+    total_slots: slotInfo.length,
+  });
+});
+
+// ──────────────────────────────────────────────────────────────────────────────
+// GET /leagues/:id
+// ──────────────────────────────────────────────────────────────────────────────
 
 router.get("/leagues/:id", async (req, res): Promise<void> => {
   const params = GetLeagueParams.safeParse(req.params);
@@ -198,6 +490,10 @@ router.get("/leagues/:id", async (req, res): Promise<void> => {
   res.json(GetLeagueResponse.parse(mapLeague(row)));
 });
 
+// ──────────────────────────────────────────────────────────────────────────────
+// PATCH /leagues/:id
+// ──────────────────────────────────────────────────────────────────────────────
+
 router.patch("/leagues/:id", async (req, res): Promise<void> => {
   const params = UpdateLeagueParams.safeParse(req.params);
   if (!params.success) {
@@ -214,7 +510,6 @@ router.patch("/leagues/:id", async (req, res): Promise<void> => {
 
   const d = parsed.data;
 
-  // GUARD: campi che non possono cambiare mentre un'asta è in corso
   const hasGuardedChange =
     d.timer_seconds !== undefined ||
     d.budget_initial !== undefined ||
@@ -240,7 +535,6 @@ router.patch("/leagues/:id", async (req, res): Promise<void> => {
     }
   }
 
-  // Costruisci l'aggiornamento config JSONB per post_acquisition_window
   let configExpr: ReturnType<typeof sql> | undefined;
   if (d.post_acquisition_window) {
     const paw = d.post_acquisition_window;
@@ -285,6 +579,10 @@ router.patch("/leagues/:id", async (req, res): Promise<void> => {
   res.json(UpdateLeagueResponse.parse(mapLeague(row)));
 });
 
+// ──────────────────────────────────────────────────────────────────────────────
+// DELETE /leagues/:id
+// ──────────────────────────────────────────────────────────────────────────────
+
 router.delete("/leagues/:id", async (req, res): Promise<void> => {
   const params = DeleteLeagueParams.safeParse(req.params);
   if (!params.success) {
@@ -302,6 +600,10 @@ router.delete("/leagues/:id", async (req, res): Promise<void> => {
   }
   res.sendStatus(204);
 });
+
+// ──────────────────────────────────────────────────────────────────────────────
+// GET /leagues/:id/stats
+// ──────────────────────────────────────────────────────────────────────────────
 
 router.get("/leagues/:id/stats", async (req, res): Promise<void> => {
   const params = GetLeagueStatsParams.safeParse(req.params);

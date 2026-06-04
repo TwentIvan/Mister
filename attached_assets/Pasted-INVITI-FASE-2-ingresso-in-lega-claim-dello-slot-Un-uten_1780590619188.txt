@@ -1,0 +1,35 @@
+INVITI — FASE 2: ingresso in lega + claim dello slot. Un utente entra con l'invitation_code, sceglie uno slot libero e ci attacca la sua societa. Server-authoritative. La regola conflitto-d'interessi si IMPONE qui. UI pulita ma NON il restyle finale.
+
+==== 1. CREAZIONE LEGA -> SLOT VUOTI ====
+- POST /leagues ora crea SLOT (fanta_team con societa_id NULL), NON squadre gia possedute. Il creatore e admin (riga league_members role=admin) ma non possiede squadre d'ufficio: se gioca, claima uno slot come tutti.
+- StepSquadre si semplifica di conseguenza: l'admin decide QUANTI slot (+ budget/composizione, che sono config lega), non nomi/colori — l'identita la porta chi entra.
+- invitation_code: generato alla creazione lega (oggi non lo e mai). Unico, persistente.
+
+==== 2. INGRESSO (join) ====
+- Con l'invitation_code, un utente loggato diventa membro della lega: riga league_members role=member (se non gia presente).
+
+==== 3. CLAIM dello slot ====
+- Il membro sceglie uno slot libero (societa_id NULL) e ci attacca la sua SOCIETA: se e il suo primo ingresso in assoluto, crea la societa (form identita: nome, nome-voce, colori, stemma, stadio); altrimenti riusa quella esistente.
+- Claim = set societa_id + manager_user_id sullo slot. ATOMICO: due utenti sullo stesso slot -> il secondo riceve "slot gia preso".
+
+==== 4. REGOLA CONFLITTO (qui si impone) ====
+- Un membro che ha GIA uno slot in quella lega NON puo prenderne un secondo -> rifiutato con motivo. Una societa/utente per lega.
+
+==== 5. CAPACITA ====
+- Quando tutti gli slot sono presi -> "lega al completo": niente nuovi ingressi/claim.
+
+==== 6. FRONTEND ====
+- Admin: vista "Inviti" con il codice/link da condividere + lista membri e stato slot (pieni/liberi, chi e dove).
+- Entrante: flusso "entra in lega" -> (crea/usa societa) -> scegli uno slot libero -> fatto.
+
+==== CRITERI (i negativi contano) ====
+J1. Creazione lega: slot con societa_id NULL; creatore admin senza squadre d'ufficio; invitation_code generato.
+J2. Join: invitation_code valido -> membro (role=member); codice errato -> rifiutato.
+J3. Claim: scelgo uno slot libero, attacco la societa (creata o riusata), societa_id + manager_user_id valorizzati; persiste al reload.
+J4. CONFLITTO: membro che ha gia uno slot -> claim di un secondo nella stessa lega RIFIUTATO (status osservato + motivo).
+J5. CAPACITA: tutti gli slot presi -> ingresso/claim RIFIUTATO "lega al completo".
+J6. RACE: due claim sullo stesso slot -> uno solo riesce, l'altro "gia preso".
+J7. REGRESSIONE: asta/config/mobile/auth invariati; una lega creata a slot vuoti avvia comunque l'asta; typecheck pulito.
+
+VINCOLI: claim atomico; conflitto e capacita imposti server-side; una societa per utente (create-or-reuse); slot nascono NULL; server-authoritative; typecheck pulito, niente debug residuo.
+DELIVERABLE: diff; prova di J3 (claim + persistenza), J4 (secondo slot rifiutato, status+motivo), J5 (lega al completo), J6 (race); screenshot della vista inviti admin e del flusso entrante; conferma regressione. CHECKPOINT prima della Fase 3 (ritiro del token mobile).

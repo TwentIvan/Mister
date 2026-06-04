@@ -41,7 +41,11 @@ export const fantaTeams = pgTable("fanta_teams", {
   leagueId: text("league_id")
     .notNull()
     .references(() => leagues.id, { onDelete: "cascade" }),
-  managerUserId: text("manager_user_id").notNull(),
+  /**
+   * Manager della squadra. NULL = slot non rivendicato (in attesa di claim).
+   * Valorizzato atomicamente dal flusso di claim invito.
+   */
+  managerUserId: text("manager_user_id"),
 
   /**
    * Società collegata — fonte dell'identità (nome, stemma, colori).

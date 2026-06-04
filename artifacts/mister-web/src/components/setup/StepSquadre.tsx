@@ -1,209 +1,90 @@
-import { useState } from "react";
-import { Card, CardContent } from "@/components/ui/card";
+import { ArrowLeft, ArrowRight, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { ArrowLeft, ArrowRight, Plus, Trash2, Users } from "lucide-react";
 
-export interface SquadraData {
-  name: string;
-  nameAuction: string;
-  colorPrimary: string;
-  colorSecondary: string;
-  logoUrl?: string;
+export interface SlotCountData {
+  teamCount: number;
 }
 
-interface StepSquadreProps {
-  squadre: SquadraData[];
-  onChange: (squadre: SquadraData[]) => void;
+interface StepSlotProps {
+  teamCount: number;
+  onChange: (count: number) => void;
   onNext: () => void;
   onBack: () => void;
 }
 
-const EMPTY_SQUADRA: SquadraData = {
-  name: "",
-  nameAuction: "",
-  colorPrimary: "#1f4733",
-  colorSecondary: "#efe6d3",
-};
+const MIN_SLOTS = 4;
+const MAX_SLOTS = 20;
+const PRESETS = [4, 6, 8, 10, 12];
 
-function validateSquadre(squadre: SquadraData[]): string[] {
-  const errors: string[] = Array(squadre.length).fill("");
-  const auctionNames = squadre.map(s => s.nameAuction.trim().toLowerCase()).filter(Boolean);
-  squadre.forEach((s, i) => {
-    if (!s.name.trim()) {
-      errors[i] = "Nome squadra obbligatorio";
-    } else if (s.name.trim().length > 50) {
-      errors[i] = "Massimo 50 caratteri";
-    } else if (!s.nameAuction.trim()) {
-      errors[i] = "Nome all'asta obbligatorio";
-    } else if (s.nameAuction.trim().length > 30) {
-      errors[i] = "Massimo 30 caratteri";
-    } else {
-      const name = s.nameAuction.trim().toLowerCase();
-      const isDuplicate = auctionNames.filter(n => n === name).length > 1;
-      if (isDuplicate) {
-        errors[i] = "Nome all'asta già usato da un'altra squadra";
-      }
-    }
-  });
-  return errors;
-}
-
-export default function StepSquadre({ squadre, onChange, onNext, onBack }: StepSquadreProps) {
-  const [touched, setTouched] = useState<boolean[]>([]);
-
-  const errors = validateSquadre(squadre);
-  const hasErrors = errors.some(Boolean);
-  const canProceed = squadre.length >= 4 && !hasErrors;
-
-  const addSquadra = () => {
-    if (squadre.length >= 8) return;
-    onChange([...squadre, { ...EMPTY_SQUADRA }]);
-    setTouched(t => [...t, false]);
-  };
-
-  const removeSquadra = (i: number) => {
-    onChange(squadre.filter((_, idx) => idx !== i));
-    setTouched(t => t.filter((_, idx) => idx !== i));
-  };
-
-  const updateSquadra = (i: number, patch: Partial<SquadraData>) => {
-    const next = squadre.map((s, idx) => (idx === i ? { ...s, ...patch } : s));
-    onChange(next);
-    setTouched(t => {
-      const next = [...t];
-      next[i] = true;
-      return next;
-    });
-  };
-
-  const handleNext = () => {
-    setTouched(squadre.map(() => true));
-    if (canProceed) onNext();
-  };
+export default function StepSquadre({ teamCount, onChange, onNext, onBack }: StepSlotProps) {
+  const valid = teamCount >= MIN_SLOTS && teamCount <= MAX_SLOTS;
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-serif font-bold text-[#1f4733] tracking-tight">
-          Le squadre
+          Slot squadre
         </h1>
         <p className="text-muted-foreground mt-1 text-sm flex items-center gap-2">
           <Users className="h-4 w-4" />
           <span>
-            <span className="font-mono font-bold">{squadre.length}</span> / 8 squadre · minimo 4 per iniziare l'asta
+            Quanti manager possono iscriversi? I partecipanti porteranno la propria identità al momento dell'ingresso.
           </span>
         </p>
       </div>
 
-      <div className="space-y-3">
-        {squadre.length === 0 && (
-          <div className="text-center py-10 text-muted-foreground border-2 border-dashed rounded-lg">
-            <Users className="h-8 w-8 mx-auto mb-2 opacity-30" />
-            <p className="text-sm">Nessuna squadra aggiunta.</p>
-            <p className="text-xs mt-1">Aggiungi almeno 4 squadre per procedere.</p>
-          </div>
+      <div className="space-y-4">
+        <div className="flex flex-wrap gap-2">
+          {PRESETS.map(n => (
+            <button
+              key={n}
+              type="button"
+              onClick={() => onChange(n)}
+              className={[
+                "px-5 py-2.5 rounded-md border text-sm font-mono font-bold transition-colors",
+                teamCount === n
+                  ? "bg-[#1f4733] text-[#efe6d3] border-[#1f4733]"
+                  : "bg-background border-border text-foreground hover:border-[#1f4733]/50",
+              ].join(" ")}
+              data-testid={`preset-${n}`}
+            >
+              {n}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex items-center gap-3">
+          <span className="text-sm text-muted-foreground w-24">Personalizzato</span>
+          <input
+            type="number"
+            min={MIN_SLOTS}
+            max={MAX_SLOTS}
+            value={teamCount}
+            onChange={e => onChange(Number(e.target.value))}
+            className="w-20 h-9 px-2 rounded-md border border-border bg-background text-center font-mono font-bold text-sm focus:outline-none focus:ring-1 focus:ring-[#1f4733]"
+            data-testid="input-team-count"
+          />
+          <span className="text-xs text-muted-foreground">
+            da {MIN_SLOTS} a {MAX_SLOTS} slot
+          </span>
+        </div>
+
+        {!valid && (
+          <p className="text-xs text-destructive">
+            Il numero di slot deve essere compreso tra {MIN_SLOTS} e {MAX_SLOTS}.
+          </p>
         )}
 
-        {squadre.map((squadra, i) => {
-          const showError = touched[i] && errors[i];
-          return (
-            <Card key={i} className="border-border/60">
-              <CardContent className="pt-4 space-y-3">
-                <div className="flex items-start justify-between gap-2">
-                  <span className="text-xs font-mono text-muted-foreground pt-1">
-                    #{i + 1}
-                  </span>
-                  <div className="flex-1 grid grid-cols-2 gap-3">
-                    <div className="space-y-1">
-                      <Label className="text-xs text-muted-foreground">Nome squadra</Label>
-                      <Input
-                        value={squadra.name}
-                        maxLength={50}
-                        placeholder="es. I Gladiatori di Roma"
-                        onChange={e => updateSquadra(i, { name: e.target.value })}
-                        data-testid={`input-team-name-${i}`}
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-xs text-muted-foreground">
-                        Nome all'asta
-                      </Label>
-                      <Input
-                        value={squadra.nameAuction}
-                        maxLength={30}
-                        placeholder="es. Gladiatori"
-                        onChange={e => updateSquadra(i, { nameAuction: e.target.value })}
-                        data-testid={`input-team-auction-${i}`}
-                      />
-                      <p className="text-[10px] text-muted-foreground">
-                        Pronunciato al microfono durante l'asta. Usalo per disambiguare se hai omonimi tra i manager.
-                      </p>
-                    </div>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="text-muted-foreground hover:text-destructive mt-5"
-                    onClick={() => removeSquadra(i)}
-                    data-testid={`button-remove-team-${i}`}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-
-                <div className="flex items-center gap-4 pl-5">
-                  <div className="space-y-1">
-                    <Label className="text-xs text-muted-foreground">Colore primario</Label>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="color"
-                        value={squadra.colorPrimary}
-                        onChange={e => updateSquadra(i, { colorPrimary: e.target.value })}
-                        className="w-8 h-8 rounded cursor-pointer border border-border"
-                      />
-                      <span className="text-xs font-mono text-muted-foreground">
-                        {squadra.colorPrimary}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs text-muted-foreground">Colore secondario</Label>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="color"
-                        value={squadra.colorSecondary}
-                        onChange={e => updateSquadra(i, { colorSecondary: e.target.value })}
-                        className="w-8 h-8 rounded cursor-pointer border border-border"
-                      />
-                      <span className="text-xs font-mono text-muted-foreground">
-                        {squadra.colorSecondary}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {showError && (
-                  <p className="text-xs text-destructive pl-5">{errors[i]}</p>
-                )}
-              </CardContent>
-            </Card>
-          );
-        })}
+        <div className="border rounded-lg p-4 bg-muted/30 space-y-1.5">
+          <div className="flex items-center gap-2">
+            <span className="font-mono font-bold text-2xl text-[#1f4733]">{teamCount}</span>
+            <span className="text-sm text-muted-foreground">slot verranno creati, tutti vuoti</span>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            L'admin riceve un codice invito da condividere. Ogni partecipante sceglie uno slot e ci attacca la propria società.
+          </p>
+        </div>
       </div>
-
-      {squadre.length < 8 && (
-        <Button
-          variant="outline"
-          className="w-full border-dashed border-[#1f4733]/40 text-[#1f4733] hover:bg-[#1f4733]/5"
-          onClick={addSquadra}
-          data-testid="button-add-team"
-        >
-          <Plus className="mr-2 h-4 w-4" />
-          Aggiungi squadra
-        </Button>
-      )}
 
       <div className="flex justify-between pt-2">
         <Button variant="ghost" onClick={onBack}>
@@ -211,8 +92,8 @@ export default function StepSquadre({ squadre, onChange, onNext, onBack }: StepS
           Lega
         </Button>
         <Button
-          onClick={handleNext}
-          disabled={squadre.length < 4}
+          onClick={onNext}
+          disabled={!valid}
           data-testid="button-next-riepilogo"
         >
           Avanti: riepilogo

@@ -271,6 +271,86 @@ paths:
         "404":
           description: Not found
 
+  # ─── INVITI ───────────────────────────────────────────────────
+  /leagues/{id}/join:
+    post:
+      operationId: joinLeague
+      tags: [leagues]
+      summary: Entra nella lega con codice invito
+      parameters:
+        - $ref: "#/components/parameters/StringId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/JoinLeagueRequest"
+      responses:
+        "200":
+          description: OK (già membro o nuovo ingresso)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JoinLeagueResponse"
+        "401":
+          description: Non autenticato
+        "403":
+          description: Codice invito non valido
+        "404":
+          description: Lega non trovata
+        "409":
+          description: Lega al completo
+
+  /leagues/{id}/claim:
+    post:
+      operationId: claimSlot
+      tags: [leagues]
+      summary: Rivendica uno slot libero (crea o riusa la propria società)
+      parameters:
+        - $ref: "#/components/parameters/StringId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClaimSlotRequest"
+      responses:
+        "201":
+          description: Slot rivendicato
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClaimSlotResponse"
+        "401":
+          description: Non autenticato
+        "403":
+          description: Non sei membro di questa lega o non sei proprietario della società
+        "404":
+          description: Slot o società non trovati
+        "409":
+          description: Slot già preso (SLOT_TAKEN) o hai già uno slot in questa lega (SLOT_CONFLICT)
+
+  /leagues/{id}/invite:
+    get:
+      operationId: getLeagueInvite
+      tags: [leagues]
+      summary: Info invito e stato slot (admin)
+      parameters:
+        - $ref: "#/components/parameters/StringId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LeagueInviteInfo"
+        "401":
+          description: Non autenticato
+        "403":
+          description: Non sei admin
+        "404":
+          description: Lega non trovata
+
   # ─── FEDERATIONS ─────────────────────────────────────────────
   /leagues/{leagueId}/federation:
     get:
@@ -1695,7 +1775,7 @@ components:
 
     LeagueInput:
       type: object
-      required: [name, budget_initial, timer_seconds, roster_p, roster_d, roster_c, roster_a, fanta_teams]
+      required: [name, budget_initial, timer_seconds, roster_p, roster_d, roster_c, roster_a, team_count]
       properties:
         name:
           type: string
@@ -1728,12 +1808,11 @@ components:
           type: string
           description: Se fornito, la lega adotta questa federazione esistente anziché crearne una nuova automaticamente.
           nullable: true
-        fanta_teams:
-          type: array
-          items:
-            $ref: "#/components/schemas/FantaTeamWizardInput"
-          minItems: 4
-          maxItems: 8
+        team_count:
+          type: integer
+          minimum: 4
+          maximum: 20
+          description: Numero di slot (squadre) da creare nella lega. Ogni slot è inizialmente vuoto e viene rivendicato con il flusso invito.
 
     FantaTeamWizardInput:
       type: object
@@ -1757,14 +1836,122 @@ components:
 
     LeagueWizardResponse:
       type: object
-      required: [league, fanta_teams]
+      required: [league]
       properties:
         league:
           $ref: "#/components/schemas/League"
-        fanta_teams:
+
+    JoinLeagueRequest:
+      type: object
+      required: [invitation_code]
+      properties:
+        invitation_code:
+          type: string
+          minLength: 1
+
+    JoinLeagueResponse:
+      type: object
+      required: [league, already_member, free_slots]
+      properties:
+        league:
+          $ref: "#/components/schemas/League"
+        already_member:
+          type: boolean
+        free_slots:
+          type: integer
+
+    SocietaInput:
+      type: object
+      required: [name, name_auction]
+      properties:
+        name:
+          type: string
+          maxLength: 50
+        name_auction:
+          type: string
+          maxLength: 30
+          description: Nome pronunciato dal battitore in asta
+        color_primary:
+          type: string
+          example: "#1f4733"
+        color_secondary:
+          type: string
+          example: "#efe6d3"
+        logo_url:
+          type: ["string", "null"]
+
+    ClaimSlotRequest:
+      type: object
+      required: [slot_id]
+      properties:
+        slot_id:
+          type: string
+        societa_id:
+          type: ["string", "null"]
+          description: Riusa una società esistente (il chiamante deve esserne proprietario)
+        societa:
+          allOf:
+            - $ref: "#/components/schemas/SocietaInput"
+          nullable: true
+          description: Crea una nuova società al momento del claim
+
+    ClaimSlotResponse:
+      type: object
+      required: [fanta_team]
+      properties:
+        fanta_team:
+          $ref: "#/components/schemas/FantaTeam"
+
+    InviteSlot:
+      type: object
+      required: [id, is_claimed]
+      properties:
+        id:
+          type: string
+        manager_user_id:
+          type: ["string", "null"]
+        societa_id:
+          type: ["string", "null"]
+        name:
+          type: ["string", "null"]
+        name_auction:
+          type: ["string", "null"]
+        is_claimed:
+          type: boolean
+
+    InviteMember:
+      type: object
+      required: [user_id, role, joined_at]
+      properties:
+        user_id:
+          type: string
+        role:
+          type: string
+          enum: [admin, member]
+        joined_at:
+          type: string
+          format: date-time
+
+    LeagueInviteInfo:
+      type: object
+      required: [slots, members, free_slots, total_slots]
+      properties:
+        invitation_code:
+          type: ["string", "null"]
+        invite_link:
+          type: ["string", "null"]
+        slots:
           type: array
           items:
-            $ref: "#/components/schemas/FantaTeam"
+            $ref: "#/components/schemas/InviteSlot"
+        members:
+          type: array
+          items:
+            $ref: "#/components/schemas/InviteMember"
+        free_slots:
+          type: integer
+        total_slots:
+          type: integer
 
     PostAcquisitionWindow:
       type: object
