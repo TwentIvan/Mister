@@ -8,7 +8,6 @@ import {
   auctionBids,
   auctionAssignments,
   auctionPlayerQueue,
-  auctionTokens,
   fantaTeams,
   societa,
   players,
@@ -465,11 +464,9 @@ router.get("/auctions/:id/stream", (req, res): void => {
 // ─── POST /auctions/:id/bid ───────────────────────────────
 
 router.post("/auctions/:id/bid", async (req, res): Promise<void> => {
-  // ── Auth pre-check: rifiuta subito chi non è né loggato né in possesso di token mobile.
+  // ── Auth pre-check: richiede sessione autenticata.
   // Deve stare PRIMA di qualsiasi query DB per evitare information leak sullo stato dell'asta.
-  const hasSession = !!req.user;
-  const hasMobileToken = !!req.headers["x-auction-token"];
-  if (!hasSession && !hasMobileToken) {
+  if (!req.user) {
     res.status(401).json({ error: "Autenticazione richiesta" });
     return;
   }
@@ -512,33 +509,10 @@ router.post("/auctions/:id/bid", async (req, res): Promise<void> => {
   // ── Autorizzazione bid ────────────────────────────────────────────────────
   // Admin della lega: può fare offerte per qualsiasi squadra (banditore live).
   // Membro loggato: solo per la squadra che controlla (managerUserId).
-  // Token mobile (TRANSITORIO via x-auction-token): ponte per il mobile già
-  // distribuito. Verrà rimosso nella fase INVITI quando i membri loggati
-  // saranno legati alle loro squadre e diventeranno l'identità del rilancio.
-  if (req.user) {
-    const adminOk = await isLeagueAdmin(req.user.sub, auction.leagueId);
-    if (!adminOk && team.managerUserId !== req.user.sub) {
-      res.status(403).json({ error: "Non puoi fare offerte per una squadra non tua" });
-      return;
-    }
-  } else {
-    const auctionToken = req.headers["x-auction-token"] as string | undefined;
-    if (!auctionToken) {
-      res.status(401).json({ error: "Autenticazione richiesta" });
-      return;
-    }
-    const [tokenRow] = await db
-      .select({ fantaTeamId: auctionTokens.fantaTeamId })
-      .from(auctionTokens)
-      .where(and(eq(auctionTokens.token, auctionToken), eq(auctionTokens.auctionId, id)));
-    if (!tokenRow) {
-      res.status(403).json({ error: "Token non valido per questa asta" });
-      return;
-    }
-    if (tokenRow.fantaTeamId !== fantaTeamId) {
-      res.status(403).json({ error: "Il token non autorizza offerte per questa squadra" });
-      return;
-    }
+  const adminOk = await isLeagueAdmin(req.user.sub, auction.leagueId);
+  if (!adminOk && team.managerUserId !== req.user.sub) {
+    res.status(403).json({ error: "Non puoi fare offerte per una squadra non tua" });
+    return;
   }
 
   // ── Flag federazione: usa snapshot se disponibile, altrimenti live ────────
@@ -1508,78 +1482,6 @@ router.post("/auctions/:id/end", async (req, res): Promise<void> => {
   if (!auction) { res.status(404).json({ error: "Asta non trovata" }); return; }
   res.json(mapAuction(auction));
   notifyAuction(params.data.id);
-});
-
-// ─── POST /auctions/:id/tokens ───────────────────────────
-// Genera (o restituisce esistenti) token opachi per ogni squadra dell'asta.
-
-router.post("/auctions/:id/tokens", async (req, res): Promise<void> => {
-  const { id } = req.params;
-  const [auction] = await db.select().from(auctions).where(eq(auctions.id, id));
-  if (!auction) { res.status(404).json({ error: "Asta non trovata" }); return; }
-  if (!await guardLeagueAdmin(req, res, auction.leagueId)) return;
-
-  const teamRows = await db
-    .select()
-    .from(fantaTeams)
-    .leftJoin(societa, eq(fantaTeams.societaId, societa.id))
-    .where(eq(fantaTeams.leagueId, auction.leagueId));
-
-  const tokens = await Promise.all(teamRows.map(async (row) => {
-    const team = row.fanta_teams;
-    const soc  = row.societa;
-    const [existing] = await db
-      .select()
-      .from(auctionTokens)
-      .where(and(eq(auctionTokens.auctionId, id), eq(auctionTokens.fantaTeamId, team.id)));
-    const teamName = soc?.nameAuction ?? soc?.name ?? null;
-    if (existing) return { ...existing, teamName };
-
-    const newToken = crypto.randomUUID();
-    const [created] = await db
-      .insert(auctionTokens)
-      .values({ token: newToken, auctionId: id, fantaTeamId: team.id })
-      .returning();
-    return { ...created, teamName };
-  }));
-
-  res.json({
-    tokens: tokens.map((t) => ({
-      token: t.token,
-      auction_id: t.auctionId,
-      fanta_team_id: t.fantaTeamId,
-      team_name: t.teamName,
-    })),
-  });
-});
-
-// ─── GET /auction-tokens/:token ──────────────────────────
-// Risolve un token opaco al contesto (auction + squadra).
-
-router.get("/auction-tokens/:token", async (req, res): Promise<void> => {
-  const { token } = req.params;
-  const [row] = await db
-    .select({
-      token: auctionTokens.token,
-      auctionId: auctionTokens.auctionId,
-      fantaTeamId: auctionTokens.fantaTeamId,
-      teamName: societa.name,
-      teamNameAuction: societa.nameAuction,
-      creditsRemaining: fantaTeams.creditsRemaining,
-    })
-    .from(auctionTokens)
-    .innerJoin(fantaTeams, eq(auctionTokens.fantaTeamId, fantaTeams.id))
-    .leftJoin(societa, eq(fantaTeams.societaId, societa.id))
-    .where(eq(auctionTokens.token, token));
-
-  if (!row) { res.status(404).json({ error: "Token non trovato" }); return; }
-
-  res.json({
-    auction_id: row.auctionId,
-    fanta_team_id: row.fantaTeamId,
-    team_name: row.teamNameAuction ?? row.teamName,
-    credits_remaining: row.creditsRemaining,
-  });
 });
 
 export default router;

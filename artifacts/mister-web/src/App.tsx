@@ -37,7 +37,7 @@ function Router() {
       <Route path="/register" component={RegisterPage} />
 
       {/* ── Mobile player view — fuori da AppLayout ─────────── */}
-      <Route path="/m/:token" component={AstaMobilePage} />
+      <Route path="/m/:auctionId" component={AstaMobilePage} />
 
       {/* ── Invito lega — accessibile senza autenticazione ──── */}
       <Route path="/join/:leagueId/:code" component={JoinLegaPage} />

@@ -22,7 +22,6 @@ import type {
 import type {
   Auction,
   AuctionActionResponse,
-  AuctionInvitesResponse,
   AuctionPlayerActionBody,
   AuctionQueueResponse,
   AuctionState,
@@ -88,7 +87,6 @@ import type {
   TemplateInput,
   TemplateProfile,
   TemplateUpdate,
-  TokenResolveResponse,
   UndoAuctionResponse,
   ValidationErrors,
   VotoAlgorithmConfig,
@@ -5115,151 +5113,4 @@ export const useManualUpdatePrice = <TError = ErrorType<void>,
       > => {
       return useMutation(getManualUpdatePriceMutationOptions(options));
     }
-
-export const getGenerateAuctionTokensUrl = (id: string,) => {
-
-
-
-
-  return `/api/auctions/${id}/tokens`
-}
-
-/**
- * @summary Genera (o restituisce esistenti) token di invito opachi per ogni squadra dell'asta
- */
-export const generateAuctionTokens = async (id: string, options?: RequestInit): Promise<AuctionInvitesResponse> => {
-
-  return customFetch<AuctionInvitesResponse>(getGenerateAuctionTokensUrl(id),
-  {
-    ...options,
-    method: 'POST'
-
-
-  }
-);}
-
-
-
-
-export const getGenerateAuctionTokensMutationOptions = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof generateAuctionTokens>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof generateAuctionTokens>>, TError,{id: string}, TContext> => {
-
-const mutationKey = ['generateAuctionTokens'];
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof generateAuctionTokens>>, {id: string}> = (props) => {
-          const {id} = props ?? {};
-
-          return  generateAuctionTokens(id,requestOptions)
-        }
-
-
-
-
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type GenerateAuctionTokensMutationResult = NonNullable<Awaited<ReturnType<typeof generateAuctionTokens>>>
-
-    export type GenerateAuctionTokensMutationError = ErrorType<void>
-
-    /**
- * @summary Genera (o restituisce esistenti) token di invito opachi per ogni squadra dell'asta
- */
-export const useGenerateAuctionTokens = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof generateAuctionTokens>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
- ): UseMutationResult<
-        Awaited<ReturnType<typeof generateAuctionTokens>>,
-        TError,
-        {id: string},
-        TContext
-      > => {
-      return useMutation(getGenerateAuctionTokensMutationOptions(options));
-    }
-
-export const getResolveAuctionTokenUrl = (token: string,) => {
-
-
-
-
-  return `/api/auction-tokens/${token}`
-}
-
-/**
- * @summary Risolve un token opaco al contesto (auction + squadra)
- */
-export const resolveAuctionToken = async (token: string, options?: RequestInit): Promise<TokenResolveResponse> => {
-
-  return customFetch<TokenResolveResponse>(getResolveAuctionTokenUrl(token),
-  {
-    ...options,
-    method: 'GET'
-
-
-  }
-);}
-
-
-
-
-
-export const getResolveAuctionTokenQueryKey = (token: string,) => {
-    return [
-    `/api/auction-tokens/${token}`
-    ] as const;
-    }
-
-
-export const getResolveAuctionTokenQueryOptions = <TData = Awaited<ReturnType<typeof resolveAuctionToken>>, TError = ErrorType<void>>(token: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof resolveAuctionToken>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
-) => {
-
-const {query: queryOptions, request: requestOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getResolveAuctionTokenQueryKey(token);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof resolveAuctionToken>>> = ({ signal }) => resolveAuctionToken(token, { signal, ...requestOptions });
-
-
-
-
-
-   return  { queryKey, queryFn, enabled: !!(token), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof resolveAuctionToken>>, TError, TData> & { queryKey: QueryKey }
-}
-
-export type ResolveAuctionTokenQueryResult = NonNullable<Awaited<ReturnType<typeof resolveAuctionToken>>>
-export type ResolveAuctionTokenQueryError = ErrorType<void>
-
-
-/**
- * @summary Risolve un token opaco al contesto (auction + squadra)
- */
-
-export function useResolveAuctionToken<TData = Awaited<ReturnType<typeof resolveAuctionToken>>, TError = ErrorType<void>>(
- token: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof resolveAuctionToken>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
-
- ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
-
-  const queryOptions = getResolveAuctionTokenQueryOptions(token,options)
-
-  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
-
-  return { ...query, queryKey: queryOptions.queryKey };
-}
-
-
-
-
-
-
 

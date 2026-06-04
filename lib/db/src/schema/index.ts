@@ -25,4 +25,3 @@ export * from "./auctions";
 export * from "./auction-bids";
 export * from "./auction-assignments";
 export * from "./auction-player-queue";
-export * from "./auction-tokens";

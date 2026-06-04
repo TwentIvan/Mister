@@ -1,0 +1,23 @@
+INVITI — FASE 3: ritiro del token d'asta transitorio. Ora che i membri sono legati alle squadre (societa + claim), il rilancio da mobile passa all'IDENTITA DI SESSIONE, non piu al token anonimo. E l'ultimo pezzo del blocco inviti. Server-authoritative. UI pulita ma NON il restyle finale.
+
+==== COSA RIMUOVERE (i 3 punti del token) ====
+- POST /auctions/:id/tokens (genera token per squadra) -> rimuovi.
+- GET /auction-tokens/:token (risolve token -> squadra) -> rimuovi.
+- POST /auctions/:id/bid: il pre-check x-auction-token -> rimuovi. L'autorizzazione del bid resta quella gia costruita nel Passo B account: admin/banditore per qualunque squadra, membro loggato per la PROPRIA squadra (manager_user_id == utente).
+- Tabella auction_tokens -> drop (o deprecata). Nessun riferimento residuo a x-auction-token nel codice.
+
+==== MOBILE: IDENTITA DI SESSIONE ====
+- La pagina asta mobile non parte piu da un token: un MEMBRO LOGGATO apre l'asta di una lega in cui ha uno slot, e il sistema ricava la sua squadra (la partecipazione della sua societa in quella lega) dalla sessione.
+- Dentro un'asta il membro ha UNA squadra (regola una-per-lega): nessun selettore di squadra qui. La scelta "in quale lega/asta entro" e a monte (lista delle sue leghe).
+- Il QR/link, se lo teniamo, diventa un deep-link all'asta protetto da login (porta sulla tua vista dopo l'accesso), NON piu un'identita anonima.
+
+==== CRITERI ====
+T1. I 3 punti del token rimossi; auction_tokens drop/deprecata; grep su x-auction-token e auction-tokens nel codice -> zero riferimenti attivi.
+T2. Mobile: un membro loggato con uno slot nella lega apre l'asta e vede la SUA squadra (identita dalla sessione, non dal token).
+T3. Rilancio mobile da membro loggato per la PROPRIA squadra -> accettato e SINCRONIZZA (SSE) su banditore e altri client. Ri-verifica end-to-end, perche il percorso identita del mobile e cambiato.
+T4. NEGATIVO: utente loggato SENZA slot in quella lega -> non puo rilanciare (gia imposto dal Passo B; conferma che regge anche senza token).
+T5. NEGATIVO: i vecchi endpoint token (POST tokens, GET /auction-tokens/:token) -> 404/rimossi.
+T6. REGRESSIONE: l'asta intera (timer server, SSE, guard transizione, voce, chiamata, vincoli 7.E, annullo) invariata; banditore che rilancia per chiunque invariato; typecheck pulito.
+
+VINCOLI: nessun path token residuo; identita mobile dalla sessione; il bid resta autorizzato come nel Passo B; non rompere il sync SSE ne i 7 criteri timer; typecheck pulito, niente debug residuo.
+DELIVERABLE: diff; prova di T2/T3 (membro loggato vede e rilancia la sua squadra da mobile, con sync verificato), T4 (senza slot non rilancia), T5 (endpoint token spariti); conferma regressione asta. Con questo si chiude il blocco INVITI; restano gli ultimi due accessi (link magico, Google) e il design.

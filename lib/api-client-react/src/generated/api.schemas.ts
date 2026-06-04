@@ -1455,24 +1455,6 @@ export interface CallPlayerResponse {
   message?: string;
 }
 
-export interface AuctionInviteToken {
-  token: string;
-  auction_id: string;
-  fanta_team_id: string;
-  team_name: string;
-}
-
-export interface AuctionInvitesResponse {
-  tokens: AuctionInviteToken[];
-}
-
-export interface TokenResolveResponse {
-  auction_id: string;
-  fanta_team_id: string;
-  team_name: string;
-  credits_remaining: number;
-}
-
 export type ListTemplatesParams = {
 active_only?: boolean;
 };

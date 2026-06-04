@@ -2,12 +2,11 @@ import { useEffect, useRef, useState } from "react";
 import { useParams } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
 import {
-  useResolveAuctionToken,
-  getResolveAuctionTokenQueryKey,
   useGetAuction,
   getGetAuctionQueryKey,
   useCreateAuctionBid,
 } from "@workspace/api-client-react";
+import { useCurrentUser } from "@/contexts/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────
@@ -26,24 +25,21 @@ function formatRemaining(secs: number): string {
 // ─── Component ────────────────────────────────────────────────────────────
 
 export default function AstaMobilePage() {
-  const { token } = useParams<{ token: string }>();
-
-  // 1. Risolvi il token → {auction_id, fanta_team_id, team_name}
-  const { data: ctx, isLoading: loadingCtx, isError: errorCtx } =
-    useResolveAuctionToken(token ?? "", {
-      query: { enabled: !!token, queryKey: getResolveAuctionTokenQueryKey(token ?? "") },
-    });
-
-  const auctionId   = ctx?.auction_id;
-  const myTeamId    = ctx?.fanta_team_id;
+  const { auctionId } = useParams<{ auctionId: string }>();
+  const { user, isLoading: isAuthLoading } = useCurrentUser();
 
   const queryClient = useQueryClient();
 
-  // 2. Fetch stato asta (polling + SSE)
+  // 1. Fetch stato asta (polling + SSE) — identità dalla sessione, non dal token
   const { data, isLoading: loadingAuction, isError: errorAuction } = useGetAuction(
     auctionId!,
-    { query: { enabled: !!auctionId, queryKey: getGetAuctionQueryKey(auctionId!), refetchInterval: 30_000 } },
+    { query: { enabled: !!auctionId && !isAuthLoading && !!user, queryKey: getGetAuctionQueryKey(auctionId!), refetchInterval: 30_000 } },
   );
+
+  // 2. Ricava la squadra del membro loggato dall'elenco squadre dell'asta
+  const myTeamId = user
+    ? data?.squadre.find((t) => t.manager_user_id === user.id)?.id ?? null
+    : null;
 
   // 3. SSE — real-time
   useEffect(() => {
@@ -132,7 +128,8 @@ export default function AstaMobilePage() {
   }
 
   // ─── Loading / error ────────────────────────────────────────────────────
-  if (loadingCtx || loadingAuction) {
+
+  if (isAuthLoading) {
     return (
       <div className="min-h-screen bg-[#0d1f1a] flex flex-col items-center justify-center gap-4 p-6">
         <Skeleton className="h-6 w-40 bg-white/10" />
@@ -141,11 +138,40 @@ export default function AstaMobilePage() {
     );
   }
 
-  if (errorCtx || errorAuction || !ctx || !data) {
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-[#0d1f1a] flex items-center justify-center p-6">
+        <p className="text-[#efe6d3]/60 font-mono text-sm text-center">
+          Accedi al tuo account per partecipare all'asta.
+        </p>
+      </div>
+    );
+  }
+
+  if (loadingAuction) {
+    return (
+      <div className="min-h-screen bg-[#0d1f1a] flex flex-col items-center justify-center gap-4 p-6">
+        <Skeleton className="h-6 w-40 bg-white/10" />
+        <Skeleton className="h-32 w-full max-w-sm bg-white/10" />
+      </div>
+    );
+  }
+
+  if (errorAuction || !data) {
     return (
       <div className="min-h-screen bg-[#0d1f1a] flex items-center justify-center p-6">
         <p className="text-red-400 font-mono text-sm text-center">
-          Collegamento non valido o asta non trovata.
+          Asta non trovata o non accessibile.
+        </p>
+      </div>
+    );
+  }
+
+  if (!myTeamId) {
+    return (
+      <div className="min-h-screen bg-[#0d1f1a] flex items-center justify-center p-6">
+        <p className="text-[#efe6d3]/60 font-mono text-sm text-center">
+          Non hai uno slot in questa lega.
         </p>
       </div>
     );
@@ -156,8 +182,8 @@ export default function AstaMobilePage() {
 
   function btnDisabled(delta: number): boolean {
     if (!currentPlayer || isPaused || isCompleted || isTransitioning) return true;
-    if (roleFull && !imInLead) return true;  // ruolo pieno, non posso acquisirlo
-    if (roleFull && imInLead) return false;  // sto già vincendo — posso auto-rilanciare
+    if (roleFull && !imInLead) return true;
+    if (roleFull && imInLead) return false;
     if (currentAmount + delta > myCredits) return true;
     return false;
   }
@@ -182,7 +208,7 @@ export default function AstaMobilePage() {
           <div>
             <p className="text-xs text-[#efe6d3]/50 uppercase tracking-wider font-mono">La tua squadra</p>
             <p className="font-bold font-serif text-[#efe6d3] text-lg leading-tight">
-              {ctx.team_name}
+              {myTeam?.name_auction ?? myTeam?.name ?? "—"}
             </p>
           </div>
           <div className="text-right">

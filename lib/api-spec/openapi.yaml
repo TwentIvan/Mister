@@ -1434,44 +1434,6 @@ paths:
         "403":
           description: Asta non in corso o sospesa
 
-  /auctions/{id}/tokens:
-    post:
-      operationId: generateAuctionTokens
-      tags: [auctions]
-      summary: Genera (o restituisce esistenti) token di invito opachi per ogni squadra dell'asta
-      parameters:
-        - $ref: "#/components/parameters/StringId"
-      responses:
-        "200":
-          description: Token per ogni squadra
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AuctionInvitesResponse"
-        "404":
-          description: Asta non trovata
-
-  /auction-tokens/{token}:
-    get:
-      operationId: resolveAuctionToken
-      tags: [auctions]
-      summary: Risolve un token opaco al contesto (auction + squadra)
-      parameters:
-        - name: token
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        "200":
-          description: Contesto risolto
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/TokenResolveResponse"
-        "404":
-          description: Token non trovato
-
 components:
   parameters:
     StringId:
@@ -3194,37 +3156,3 @@ components:
         message:
           type: string
 
-    AuctionInviteToken:
-      type: object
-      required: [token, auction_id, fanta_team_id, team_name]
-      properties:
-        token:
-          type: string
-        auction_id:
-          type: string
-        fanta_team_id:
-          type: string
-        team_name:
-          type: string
-
-    AuctionInvitesResponse:
-      type: object
-      required: [tokens]
-      properties:
-        tokens:
-          type: array
-          items:
-            $ref: "#/components/schemas/AuctionInviteToken"
-
-    TokenResolveResponse:
-      type: object
-      required: [auction_id, fanta_team_id, team_name, credits_remaining]
-      properties:
-        auction_id:
-          type: string
-        fanta_team_id:
-          type: string
-        team_name:
-          type: string
-        credits_remaining:
-          type: integer
