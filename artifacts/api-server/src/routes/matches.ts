@@ -2,13 +2,15 @@ import { Router, type IRouter } from "express";
 import { eq, and } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { db } from "@workspace/db";
-import { competitionMatches, fantaTeams } from "@workspace/db";
+import { competitionMatches, fantaTeams, societa } from "@workspace/db";
 import { GetMatchesQueryParams, GetMatchesResponse } from "@workspace/api-zod";
 
 const router: IRouter = Router();
 
 const homeTeam = alias(fantaTeams, "home_team");
 const awayTeam = alias(fantaTeams, "away_team");
+const homeSocieta = alias(societa, "home_societa");
+const awaySocieta = alias(societa, "away_societa");
 
 router.get("/matches", async (req, res): Promise<void> => {
   const params = GetMatchesQueryParams.safeParse(req.query);
@@ -25,16 +27,18 @@ router.get("/matches", async (req, res): Promise<void> => {
       giornata: competitionMatches.giornata,
       matchOrder: competitionMatches.matchOrder,
       homeFantaTeamId: competitionMatches.homeFantaTeamId,
-      homeTeamName: homeTeam.name,
+      homeTeamName: homeSocieta.name,
       homeScore: competitionMatches.homeScore,
       awayFantaTeamId: competitionMatches.awayFantaTeamId,
-      awayTeamName: awayTeam.name,
+      awayTeamName: awaySocieta.name,
       awayScore: competitionMatches.awayScore,
       playedAt: competitionMatches.playedAt,
     })
     .from(competitionMatches)
     .innerJoin(homeTeam, eq(homeTeam.id, competitionMatches.homeFantaTeamId))
     .innerJoin(awayTeam, eq(awayTeam.id, competitionMatches.awayFantaTeamId))
+    .leftJoin(homeSocieta, eq(homeTeam.societaId, homeSocieta.id))
+    .leftJoin(awaySocieta, eq(awayTeam.societaId, awaySocieta.id))
     .where(
       and(
         eq(competitionMatches.competitionId, competitionId),

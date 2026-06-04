@@ -11,6 +11,7 @@ export * from "./leagues";
 export * from "./competitions";
 export * from "./market-events";
 export * from "./contracts";
+export * from "./societa";
 export * from "./fanta-teams";
 export * from "./players";
 export * from "./voto-algorithm-config";

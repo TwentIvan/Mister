@@ -252,7 +252,7 @@ export default function AstaLivePage() {
   // chiamate hook condizionali; se data non è ancora disponibile la lista è vuota.
   const squadreForVoice = (data?.squadre ?? []).map((t) => ({
     id: t.id,
-    name: t.name,
+    name: t.name ?? "",
     name_auction: t.name_auction ?? null,
   }));
 
@@ -376,7 +376,7 @@ export default function AstaLivePage() {
 
   const squadreForComponents = data.squadre.map((t) => ({
     id: t.id,
-    name: t.name,
+    name: t.name ?? "",
     name_auction: t.name_auction ?? null,
     credits_remaining: t.credits_remaining,
   }));

@@ -10,6 +10,7 @@ import {
   auctionPlayerQueue,
   auctionTokens,
   fantaTeams,
+  societa,
   players,
   contracts,
   leagues,
@@ -84,9 +85,10 @@ function mapBid(b: AuctionBid) {
 // o null se è svincolato.  Usare per rifiutare con "Giocatore già di [squadra]".
 async function getOwnerTeam(auctionId: string, playerId: number): Promise<string | null> {
   const [row] = await db
-    .select({ teamName: fantaTeams.name })
+    .select({ teamName: societa.name })
     .from(auctionAssignments)
     .innerJoin(fantaTeams, eq(fantaTeams.id, auctionAssignments.fantaTeamId))
+    .leftJoin(societa, eq(fantaTeams.societaId, societa.id))
     .where(
       and(
         eq(auctionAssignments.auctionId, auctionId),
@@ -202,7 +204,11 @@ async function buildAuctionState(id: string) {
       .orderBy(desc(auctionBids.createdAt)).limit(10);
   }
 
-  const teams = await db.select().from(fantaTeams).where(eq(fantaTeams.leagueId, auction.leagueId));
+  const teamJoinRows = await db
+    .select()
+    .from(fantaTeams)
+    .leftJoin(societa, eq(fantaTeams.societaId, societa.id))
+    .where(eq(fantaTeams.leagueId, auction.leagueId));
 
   const assignmentRows = await db
     .select({
@@ -232,7 +238,7 @@ async function buildAuctionState(id: string) {
     current_player: currentPlayerRow ? mapPlayerEntry(currentPlayerRow) : null,
     current_bid: currentBid ? mapBid(currentBid) : null,
     bids_history: bidsHistory.map(mapBid),
-    squadre: teams.map(mapFantaTeam),
+    squadre: teamJoinRows.map(r => mapFantaTeam(r.fanta_teams, r.societa)),
     progress: { current: currentPosition + 1, total, sold },
     assignments: assignmentRows.map((a) => ({
       player_id: a.playerId,
@@ -318,14 +324,18 @@ router.post("/auctions", async (req, res): Promise<void> => {
       asc(players.fullName),
     );
 
-  // Aggiorna nome_asta dei team se forniti nella config
+  // Aggiorna nome_asta della società se forniti nella config
   if (Object.keys(team_names).length > 0) {
     await Promise.all(
-      Object.entries(team_names).map(([teamId, nameAuction]) =>
-        db.update(fantaTeams)
-          .set({ nameAuction })
-          .where(and(eq(fantaTeams.id, teamId), eq(fantaTeams.leagueId, leagueId)))
-      )
+      Object.entries(team_names).map(async ([teamId, nameAuction]) => {
+        const [ft] = await db
+          .select({ societaId: fantaTeams.societaId })
+          .from(fantaTeams)
+          .where(and(eq(fantaTeams.id, teamId), eq(fantaTeams.leagueId, leagueId)));
+        if (ft?.societaId) {
+          await db.update(societa).set({ nameAuction }).where(eq(societa.id, ft.societaId));
+        }
+      })
     );
   }
 
@@ -1509,21 +1519,28 @@ router.post("/auctions/:id/tokens", async (req, res): Promise<void> => {
   if (!auction) { res.status(404).json({ error: "Asta non trovata" }); return; }
   if (!await guardLeagueAdmin(req, res, auction.leagueId)) return;
 
-  const teams = await db.select().from(fantaTeams).where(eq(fantaTeams.leagueId, auction.leagueId));
+  const teamRows = await db
+    .select()
+    .from(fantaTeams)
+    .leftJoin(societa, eq(fantaTeams.societaId, societa.id))
+    .where(eq(fantaTeams.leagueId, auction.leagueId));
 
-  const tokens = await Promise.all(teams.map(async (team) => {
+  const tokens = await Promise.all(teamRows.map(async (row) => {
+    const team = row.fanta_teams;
+    const soc  = row.societa;
     const [existing] = await db
       .select()
       .from(auctionTokens)
       .where(and(eq(auctionTokens.auctionId, id), eq(auctionTokens.fantaTeamId, team.id)));
-    if (existing) return { ...existing, teamName: team.nameAuction ?? team.name };
+    const teamName = soc?.nameAuction ?? soc?.name ?? null;
+    if (existing) return { ...existing, teamName };
 
     const newToken = crypto.randomUUID();
     const [created] = await db
       .insert(auctionTokens)
       .values({ token: newToken, auctionId: id, fantaTeamId: team.id })
       .returning();
-    return { ...created, teamName: team.nameAuction ?? team.name };
+    return { ...created, teamName };
   }));
 
   res.json({
@@ -1546,12 +1563,13 @@ router.get("/auction-tokens/:token", async (req, res): Promise<void> => {
       token: auctionTokens.token,
       auctionId: auctionTokens.auctionId,
       fantaTeamId: auctionTokens.fantaTeamId,
-      teamName: fantaTeams.name,
-      teamNameAuction: fantaTeams.nameAuction,
+      teamName: societa.name,
+      teamNameAuction: societa.nameAuction,
       creditsRemaining: fantaTeams.creditsRemaining,
     })
     .from(auctionTokens)
     .innerJoin(fantaTeams, eq(auctionTokens.fantaTeamId, fantaTeams.id))
+    .leftJoin(societa, eq(fantaTeams.societaId, societa.id))
     .where(eq(auctionTokens.token, token));
 
   if (!row) { res.status(404).json({ error: "Token non trovato" }); return; }

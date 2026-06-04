@@ -1,0 +1,28 @@
+INVITI — FASE 1: fondazione SOCIETA. Separa l'identita persistente (societa) dalla partecipazione per-lega (la fanta_team di oggi, snellita). PALETTO NON NEGOZIABILE: roster, budget e crediti sono SEMPRE per-lega, sulla partecipazione, MAI sulla societa. Migrazione che PRESERVA i dati. Da verificare prima degli inviti (Fase 2). La regola conflitto-d'interessi (una per lega) si IMPONE in Fase 2 (al claim), non qui.
+
+==== 1. ENTITA SOCIETA (nuova, posseduta dall'utente, persistente) ====
+- Tabella societa: id, owner_user_id (FK users), name, name_auction (nome voce), logo/stemma, jersey/colori, stadio (nuovo campo), created_at.
+- E l'identita che l'utente porta in ogni lega. Persistente, cross-lega. NESSUN campo di roster/budget/crediti qui dentro.
+
+==== 2. PARTECIPAZIONE (la fanta_team di oggi, snellita) ====
+- Resta legata alla lega: league_id, societa_id (FK societa, NULLABLE — null = slot non rivendicato), manager_user_id, credits_remaining/budget, head_coach_id, roster, classifica.
+- RIMUOVI da qui i campi identita (name, name_auction, logo, jersey): ora vivono sulla societa, letti via societa_id. Niente duplicazione.
+- ROSTER, BUDGET, CREDITI restano qui, per-lega. MAI sulla societa.
+
+==== 3. MIGRAZIONE (preserva tutto) ====
+- Per ogni fanta_team esistente: crea una societa con i suoi campi identita, posseduta dall'attuale manager_user_id, e collega societa_id. Nessun dato perso: l'identita si sposta, roster/budget restano sulla partecipazione.
+- Oggi l'admin e manager di piu squadre (legacy single-account): ognuna diventa la sua societa distinta (posseduta dall'admin). Va bene per la migrazione — la regola una-per-lega vale d'ora in avanti al claim, non retroattiva sul legacy.
+
+==== 4. LETTURE ====
+- Ovunque si mostrava nome/stemma/colori/nome-voce della squadra (asta, tabellone, mobile, config squadre, avviso ambiguita voce), ora si legge dalla societa via societa_id.
+- Roster, budget, crediti continuano a leggersi dalla partecipazione.
+
+==== CRITERI ====
+S1. Esiste societa (owner_user_id + identita); fanta_team snellita (campi identita rimossi, societa_id aggiunto, nullable).
+S2. Migrazione: ogni fanta_team esistente ha una societa collegata con l'identita corretta; nessun dato perso.
+S3. PALETTO: nello schema della societa NON c'e traccia di roster/budget/crediti; quei campi sono SOLO sulla partecipazione. Verificalo esplicitamente.
+S4. Letture: asta/tabellone/mobile/config mostrano l'identita dalla societa; roster/budget/crediti dalla partecipazione. L'avviso ambiguita voce confronta i name_auction delle societa partecipanti.
+S5. REGRESSIONE: asta (creazione + offerta con la nuova lettura identita), config, mobile, auth/cancello invariati nel comportamento; typecheck pulito.
+
+VINCOLI: roster/budget/crediti MAI sulla societa; migrazione data-preserving; identita letta via societa_id (nessuna duplicazione dei campi identita sulla partecipazione); la regola una-per-lega NON qui (e in Fase 2); typecheck pulito, niente debug residuo.
+DELIVERABLE: diff; note di migrazione (quante societa create e come collegate); prova S3 (schema societa: niente roster/budget) e S4 (identita dalla societa nelle viste chiave); conferma regressione S5. CHECKPOINT prima della Fase 2 (inviti/claim).

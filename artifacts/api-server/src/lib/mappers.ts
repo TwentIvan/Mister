@@ -7,6 +7,7 @@ import type {
   FantaTeam,
   Player,
   Contract,
+  Societa,
 } from "@workspace/db";
 import { defaultFlagValues } from "@workspace/db";
 
@@ -149,24 +150,33 @@ export function mapMarket(m: MarketEvent) {
   };
 }
 
-export function mapFantaTeam(t: FantaTeam) {
+/**
+ * Mappa FantaTeam (partecipazione per-lega) + Società (identità cross-lega).
+ *
+ * - Identità (name, name_auction, logo, colori) → letta dalla Società.
+ * - Dati per-lega (credits_remaining, roster, coach_name) → dalla FantaTeam.
+ *
+ * `s` è null per slot non ancora rivendicati (societa_id IS NULL).
+ */
+export function mapFantaTeam(t: FantaTeam, s: Societa | null = null) {
   return {
     id: t.id,
     league_id: t.leagueId,
     manager_user_id: t.managerUserId,
-    name: t.name,
-    name_auction: t.nameAuction ?? null,
-    logo_url: t.logoUrl ?? null,
-    color_primary: t.jersey?.primaryColor ?? null,
-    color_secondary: t.jersey?.secondaryColor ?? null,
+    societa_id: t.societaId ?? null,
+    name: s?.name ?? null,
+    name_auction: s?.nameAuction ?? null,
+    logo_url: s?.logoUrl ?? null,
+    color_primary: s?.jersey?.primaryColor ?? null,
+    color_secondary: s?.jersey?.secondaryColor ?? null,
     coach_name: t.coachName ?? null,
     credits_remaining: t.creditsRemaining,
     roster: (() => {
       const r = t.roster as unknown;
       if (!r) return [];
       if (Array.isArray(r)) return r as number[];
-      const s = r as Record<string, number[]>;
-      return [...(s.gk ?? []), ...(s.def ?? []), ...(s.mid ?? []), ...(s.att ?? [])];
+      const raw = r as Record<string, number[]>;
+      return [...(raw.gk ?? []), ...(raw.def ?? []), ...(raw.mid ?? []), ...(raw.att ?? [])];
     })(),
     created_at: t.createdAt,
   };

@@ -14,19 +14,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { leagues } from "./leagues";
 import { coaches } from "./coaches";
-
-// ============================================================
-// TIPI DI SUPPORTO
-// ============================================================
-
-/** Maglia personalizzata del manager (colori, dettagli). */
-export interface JerseyConfig {
-  primaryColor: string;
-  secondaryColor: string;
-  pattern: "solid" | "stripes_vertical" | "stripes_horizontal" | "halved" | "checkered";
-  /** Sponsor testuale opzionale sul petto */
-  sponsor?: string;
-}
+import { societa } from "./societa";
 
 /**
  * Rosa attuale (snapshot).
@@ -55,30 +43,22 @@ export const fantaTeams = pgTable("fanta_teams", {
     .references(() => leagues.id, { onDelete: "cascade" }),
   managerUserId: text("manager_user_id").notNull(),
 
-  /** Nome ufficiale della squadra */
-  name: text("name").notNull(),
   /**
-   * Nome usato dal battitore in asta (può essere diverso per ragioni di
-   * pronuncia, es. "Bar Roma" invece di "Champions del Bar Roma 2025").
+   * Società collegata — fonte dell'identità (nome, stemma, colori).
+   * Nullable: null = slot non rivendicato (nessun manager assegnato ancora).
    */
-  nameAuction: text("name_auction"),
+  societaId: text("societa_id").references(() => societa.id, { onDelete: "set null" }),
 
-  /** URL del logo della squadra (caricato dal manager). */
-  logoUrl: text("logo_url"),
-
-  /** Configurazione visuale della maglia. */
-  jersey: jsonb("jersey").$type<JerseyConfig>(),
-
-  /** Crediti disponibili in questo momento. */
+  /** Crediti disponibili in questa lega (per-lega, MAI sulla società). */
   creditsRemaining: integer("credits_remaining").notNull().default(0),
 
-  /** Snapshot della rosa attuale. */
+  /** Snapshot della rosa attuale (per-lega, MAI sulla società). */
   roster: jsonb("roster").$type<RosterSnapshot>().notNull(),
 
   /** Allenatore fanta scelto dal manager (riferisce coaches.id). */
   headCoachId: integer("head_coach_id").references(() => coaches.id, { onDelete: "set null" }),
 
-  /** Nome allenatore libero inserito dal manager (display only, indipendente dai dati reali). */
+  /** Nome allenatore libero inserito dal manager (display only). */
   coachName: text("coach_name"),
 
   createdAt: timestamp("created_at", { withTimezone: true })

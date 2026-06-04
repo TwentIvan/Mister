@@ -2102,7 +2102,7 @@ components:
     # ─── FANTA TEAM ───────────────────────────────────────────
     FantaTeam:
       type: object
-      required: [id, league_id, manager_user_id, name, credits_remaining, created_at]
+      required: [id, league_id, manager_user_id, credits_remaining, created_at]
       properties:
         id:
           type: string
@@ -2110,8 +2110,12 @@ components:
           type: string
         manager_user_id:
           type: string
+        societa_id:
+          type: ["string", "null"]
+          description: ID della società che rivendica questo slot. Null = slot non rivendicato.
         name:
-          type: string
+          type: ["string", "null"]
+          description: Nome della società (null per slot non rivendicati)
         name_auction:
           type: ["string", "null"]
         logo_url:

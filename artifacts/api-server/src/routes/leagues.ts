@@ -8,6 +8,7 @@ import {
   competitions,
   marketEvents,
   fantaTeams,
+  societa,
   contracts,
   auctions,
   leagueMembers,
@@ -132,33 +133,42 @@ router.post("/leagues", async (req, res): Promise<void> => {
         role: "admin",
       });
 
-      const teamRows = await tx
-        .insert(fantaTeams)
-        .values(
-          d.fanta_teams.map(t => ({
-            id: `ft-${nanoid(8)}`,
-            leagueId: leagueId,
-            managerUserId: creatorId,
+      // Per ogni squadra: crea prima la società (identità), poi la partecipazione
+      const teamWithSoc = await Promise.all(
+        d.fanta_teams.map(async (t) => {
+          const socId = `soc-${nanoid(8)}`;
+          const [soc] = await tx.insert(societa).values({
+            id: socId,
+            ownerUserId: creatorId,
             name: t.name,
-            nameAuction: t.name_auction,
-            logoUrl: t.logo_url ?? null,
+            nameAuction: t.name_auction ?? undefined,
+            logoUrl: t.logo_url ?? undefined,
             jersey: {
               primaryColor: t.color_primary,
               secondaryColor: t.color_secondary,
               pattern: "solid" as const,
             },
+          }).returning();
+
+          const [team] = await tx.insert(fantaTeams).values({
+            id: `ft-${nanoid(8)}`,
+            leagueId: leagueId,
+            managerUserId: creatorId,
+            societaId: socId,
             creditsRemaining: d.budget_initial,
             roster: { gk: [], def: [], mid: [], att: [] } as RosterSnapshot,
-          })),
-        )
-        .returning();
+          }).returning();
 
-      return { league, fantaTeams: teamRows };
+          return { team, soc };
+        })
+      );
+
+      return { league, fantaTeams: teamWithSoc };
     });
 
     res.status(201).json({
       league: mapLeague(result.league),
-      fanta_teams: result.fantaTeams.map(mapFantaTeam),
+      fanta_teams: result.fantaTeams.map(({ team, soc }) => mapFantaTeam(team, soc)),
     });
   } catch (err) {
     req.log.error({ err }, "Errore creazione lega wizard");

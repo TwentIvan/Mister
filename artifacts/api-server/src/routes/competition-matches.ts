@@ -2,24 +2,26 @@ import { Router, type IRouter } from "express";
 import { eq, and, isNotNull } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { db } from "@workspace/db";
-import { competitionMatches, fantaTeams, competitions } from "@workspace/db";
+import { competitionMatches, fantaTeams, societa, competitions } from "@workspace/db";
 import type { JerseyConfig } from "@workspace/db";
 
 const router: IRouter = Router();
 
 const homeTeam = alias(fantaTeams, "home_team");
 const awayTeam = alias(fantaTeams, "away_team");
+const homeSocieta = alias(societa, "home_societa");
+const awaySocieta = alias(societa, "away_societa");
 
 const BRAND_PRIMARY = "#1f4733";
 const BRAND_SECONDARY = "#efe6d3";
 
 function toMatchTeam(
   id: string,
-  name: string,
+  name: string | null,
   logoUrl: string | null,
   jersey: JerseyConfig | null,
 ) {
-  const raw = name.trim().toUpperCase();
+  const raw = (name ?? "???").trim().toUpperCase();
   const words = raw.split(/\s+/).filter(Boolean);
   const code3 =
     words.length >= 2
@@ -40,11 +42,11 @@ function toCompetitionMatch(row: {
   id: number;
   giornata: number;
   homeId: string;
-  homeName: string;
+  homeName: string | null;
   homeLogoUrl: string | null;
   homeJersey: JerseyConfig | null;
   awayId: string;
-  awayName: string;
+  awayName: string | null;
   awayLogoUrl: string | null;
   awayJersey: JerseyConfig | null;
   homeScore: string | null;
@@ -87,13 +89,13 @@ router.get("/competition/:competitionId/matches", async (req, res): Promise<void
       id: competitionMatches.id,
       giornata: competitionMatches.giornata,
       homeId: homeTeam.id,
-      homeName: homeTeam.name,
-      homeLogoUrl: homeTeam.logoUrl,
-      homeJersey: homeTeam.jersey,
+      homeName: homeSocieta.name,
+      homeLogoUrl: homeSocieta.logoUrl,
+      homeJersey: homeSocieta.jersey,
       awayId: awayTeam.id,
-      awayName: awayTeam.name,
-      awayLogoUrl: awayTeam.logoUrl,
-      awayJersey: awayTeam.jersey,
+      awayName: awaySocieta.name,
+      awayLogoUrl: awaySocieta.logoUrl,
+      awayJersey: awaySocieta.jersey,
       homeScore: competitionMatches.homeScore,
       awayScore: competitionMatches.awayScore,
       playedAt: competitionMatches.playedAt,
@@ -101,6 +103,8 @@ router.get("/competition/:competitionId/matches", async (req, res): Promise<void
     .from(competitionMatches)
     .innerJoin(homeTeam, eq(homeTeam.id, competitionMatches.homeFantaTeamId))
     .innerJoin(awayTeam, eq(awayTeam.id, competitionMatches.awayFantaTeamId))
+    .leftJoin(homeSocieta, eq(homeTeam.societaId, homeSocieta.id))
+    .leftJoin(awaySocieta, eq(awayTeam.societaId, awaySocieta.id))
     .where(
       round !== undefined
         ? and(
@@ -133,19 +137,21 @@ router.get("/competition/:competitionId/standings", async (req, res): Promise<vo
   const playedRows = await db
     .select({
       homeId: homeTeam.id,
-      homeName: homeTeam.name,
-      homeLogoUrl: homeTeam.logoUrl,
-      homeJersey: homeTeam.jersey,
+      homeName: homeSocieta.name,
+      homeLogoUrl: homeSocieta.logoUrl,
+      homeJersey: homeSocieta.jersey,
       awayId: awayTeam.id,
-      awayName: awayTeam.name,
-      awayLogoUrl: awayTeam.logoUrl,
-      awayJersey: awayTeam.jersey,
+      awayName: awaySocieta.name,
+      awayLogoUrl: awaySocieta.logoUrl,
+      awayJersey: awaySocieta.jersey,
       homeScore: competitionMatches.homeScore,
       awayScore: competitionMatches.awayScore,
     })
     .from(competitionMatches)
     .innerJoin(homeTeam, eq(homeTeam.id, competitionMatches.homeFantaTeamId))
     .innerJoin(awayTeam, eq(awayTeam.id, competitionMatches.awayFantaTeamId))
+    .leftJoin(homeSocieta, eq(homeTeam.societaId, homeSocieta.id))
+    .leftJoin(awaySocieta, eq(awayTeam.societaId, awaySocieta.id))
     .where(
       and(
         eq(competitionMatches.competitionId, competitionId),
@@ -154,7 +160,7 @@ router.get("/competition/:competitionId/standings", async (req, res): Promise<vo
     );
 
   type TeamRow = {
-    name: string;
+    name: string | null;
     logoUrl: string | null;
     jersey: JerseyConfig | null;
     playedMatches: number;
@@ -167,7 +173,7 @@ router.get("/competition/:competitionId/standings", async (req, res): Promise<vo
   };
   const table = new Map<string, TeamRow>();
 
-  const ensureTeam = (id: string, name: string, logoUrl: string | null, jersey: JerseyConfig | null) => {
+  const ensureTeam = (id: string, name: string | null, logoUrl: string | null, jersey: JerseyConfig | null) => {
     if (!table.has(id)) {
       table.set(id, { name, logoUrl, jersey, playedMatches: 0, wins: 0, draws: 0, losses: 0, goalsFor: 0, goalsAgainst: 0, points: 0 });
     }
@@ -178,8 +184,8 @@ router.get("/competition/:competitionId/standings", async (req, res): Promise<vo
     const hs = Math.round(parseFloat(row.homeScore) * 100) / 100;
     const as_ = Math.round(parseFloat(row.awayScore) * 100) / 100;
 
-    ensureTeam(row.homeId, row.homeName, row.homeLogoUrl, row.homeJersey);
-    ensureTeam(row.awayId, row.awayName, row.awayLogoUrl, row.awayJersey);
+    ensureTeam(row.homeId, row.homeName ?? null, row.homeLogoUrl, row.homeJersey);
+    ensureTeam(row.awayId, row.awayName ?? null, row.awayLogoUrl, row.awayJersey);
 
     const home = table.get(row.homeId)!;
     const away = table.get(row.awayId)!;
@@ -214,7 +220,7 @@ router.get("/competition/:competitionId/standings", async (req, res): Promise<vo
     const drB = Math.round((b.goalsFor - b.goalsAgainst) * 100) / 100;
     if (drB !== drA) return drB - drA;
     if (b.goalsFor !== a.goalsFor) return b.goalsFor - a.goalsFor;
-    return a.name.localeCompare(b.name);
+    return (a.name ?? "").localeCompare(b.name ?? "");
   });
 
   const standings = sorted.map(([id, r], idx) => ({
@@ -247,13 +253,13 @@ router.get("/matches/:matchId", async (req, res): Promise<void> => {
       id: competitionMatches.id,
       giornata: competitionMatches.giornata,
       homeId: homeTeam.id,
-      homeName: homeTeam.name,
-      homeLogoUrl: homeTeam.logoUrl,
-      homeJersey: homeTeam.jersey,
+      homeName: homeSocieta.name,
+      homeLogoUrl: homeSocieta.logoUrl,
+      homeJersey: homeSocieta.jersey,
       awayId: awayTeam.id,
-      awayName: awayTeam.name,
-      awayLogoUrl: awayTeam.logoUrl,
-      awayJersey: awayTeam.jersey,
+      awayName: awaySocieta.name,
+      awayLogoUrl: awaySocieta.logoUrl,
+      awayJersey: awaySocieta.jersey,
       homeScore: competitionMatches.homeScore,
       awayScore: competitionMatches.awayScore,
       playedAt: competitionMatches.playedAt,
@@ -261,6 +267,8 @@ router.get("/matches/:matchId", async (req, res): Promise<void> => {
     .from(competitionMatches)
     .innerJoin(homeTeam, eq(homeTeam.id, competitionMatches.homeFantaTeamId))
     .innerJoin(awayTeam, eq(awayTeam.id, competitionMatches.awayFantaTeamId))
+    .leftJoin(homeSocieta, eq(homeTeam.societaId, homeSocieta.id))
+    .leftJoin(awaySocieta, eq(awayTeam.societaId, awaySocieta.id))
     .where(eq(competitionMatches.id, matchId))
     .limit(1);
 

@@ -29,7 +29,8 @@
     "seed:round1-score": "tsx ./src/seeds/seed-round1-score.ts",
     "sync:batch-avatars-125": "tsx ./sync/batch-avatars-125.ts",
     "seed:step7a-backfill": "tsx ./src/seeds/seed-step7a-backfill.ts",
-    "migrate:federation": "tsx ./src/seeds/migrate-federation.ts"
+    "migrate:federation": "tsx ./src/seeds/migrate-federation.ts",
+    "migrate:societa": "tsx ./src/migrate-societa.ts"
   },
   "dependencies": {
     "@workspace/db": "workspace:*",

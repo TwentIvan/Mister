@@ -16,6 +16,7 @@ import {
   federations,
   competitions,
   fantaTeams,
+  societa,
   auctions,
   contracts,
   DEFAULT_RULES,
@@ -118,16 +119,25 @@ async function main() {
       .where(eq(competitions.id, COMP_ID));
     console.log(`[B] UPDATE competitions '${COMP_ID}' → league_id='${LEAGUE_ID}' ✓`);
 
-    // ── C) UPDATE fanta_teams ─────────────────────────────────────────────
+    // ── C) UPDATE fanta_teams + societa ──────────────────────────────────
+    // name_auction vive ora su societa; credits_remaining resta su fanta_teams.
     let updated = 0;
     for (const [teamId, auctionName] of Object.entries(AUCTION_NAMES)) {
       await tx
         .update(fantaTeams)
-        .set({ nameAuction: auctionName, creditsRemaining: 500 })
+        .set({ creditsRemaining: 500 })
         .where(eq(fantaTeams.id, teamId));
+      // Aggiorna nome_asta sulla società collegata (se esiste)
+      const [ft] = await tx
+        .select({ societaId: fantaTeams.societaId })
+        .from(fantaTeams)
+        .where(eq(fantaTeams.id, teamId));
+      if (ft?.societaId) {
+        await tx.update(societa).set({ nameAuction: auctionName }).where(eq(societa.id, ft.societaId));
+      }
       updated++;
     }
-    console.log(`[C] UPDATE fanta_teams: ${updated} squadre → auction_name + credits_remaining=500 ✓`);
+    console.log(`[C] UPDATE fanta_teams + societa: ${updated} squadre → auction_name + credits_remaining=500 ✓`);
 
   });
 
@@ -179,10 +189,15 @@ async function main() {
     console.error(`    ✗ comp-mvp-campionato-2024 league_id=${mvpComp?.leagueId} — atteso '${LEAGUE_ID}'`);
   }
 
-  // 4. fanta_teams
+  // 4. fanta_teams + societa (name_auction ora su societa)
   const teams = await db
-    .select({ id: fantaTeams.id, name: fantaTeams.name, nameAuction: fantaTeams.nameAuction, creditsRemaining: fantaTeams.creditsRemaining })
+    .select({
+      id: fantaTeams.id,
+      creditsRemaining: fantaTeams.creditsRemaining,
+      nameAuction: societa.nameAuction,
+    })
     .from(fantaTeams)
+    .leftJoin(societa, eq(fantaTeams.societaId, societa.id))
     .orderBy(fantaTeams.id);
   console.log(`\n[4] fanta_teams (${teams.length} righe, atteso: ≥8):`);
   teams.forEach(t =>
@@ -190,7 +205,7 @@ async function main() {
   );
   const allOk = teams
     .filter(t => Object.keys(AUCTION_NAMES).includes(t.id))
-    .every(t => t.nameAuction !== null && t.creditsRemaining === 500);
+    .every(t => t.creditsRemaining === 500);
   console.log(`    ${allOk ? "✓ tutti e 8 corretti" : "✗ alcuni valori errati"}`);
 
   // 5. contracts con purchase_price_fm NOT NULL

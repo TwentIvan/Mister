@@ -53,7 +53,7 @@ export default function CompetitionDetail() {
   const deleteMutation = useDeleteCompetition();
 
   const federationRules = federation?.rules as FederationRules | undefined ?? null;
-  const teams = (teamsData ?? []).map(t => ({ id: t.id, name: t.name }));
+  const teams = (teamsData ?? []).map(t => ({ id: t.id, name: t.name ?? "" }));
 
   const handleSave = (values: SavePayload) => {
     updateMutation.mutate(

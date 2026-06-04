@@ -145,8 +145,6 @@ export async function seedTestLeagueMvp(db: NodePgDatabase<Record<string, never>
       id: t.id,
       leagueId,
       managerUserId: `user-${t.manager.toLowerCase()}`,
-      name: t.name,
-      nameAuction: t.name,
       creditsRemaining: 500,
       roster,
     }).onConflictDoNothing();

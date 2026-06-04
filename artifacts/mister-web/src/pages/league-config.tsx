@@ -83,7 +83,7 @@ interface TeamEditCardProps {
 
 function TeamEditCard({ team, allAuctionNames, leagueId, onSaved }: TeamEditCardProps) {
   const [open, setOpen] = useState(false);
-  const [name, setName] = useState(team.name);
+  const [name, setName] = useState(team.name ?? "");
   const [nameAuction, setNameAuction] = useState(team.name_auction ?? "");
   const [logoUrl, setLogoUrl] = useState(team.logo_url ?? "");
   const [colorPrimary, setColorPrimary] = useState(team.color_primary ?? "#1f4733");

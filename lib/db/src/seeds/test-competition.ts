@@ -102,7 +102,7 @@ export async function seedTestCompetition(
 
   // 5. Carica gli 8 fanta_team ordinati per id (determinismo)
   const teams = await db
-    .select({ id: fantaTeams.id, name: fantaTeams.name })
+    .select({ id: fantaTeams.id })
     .from(fantaTeams)
     .where(eq(fantaTeams.leagueId, league.id))
     .orderBy(asc(fantaTeams.id));

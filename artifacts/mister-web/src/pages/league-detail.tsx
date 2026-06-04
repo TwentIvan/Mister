@@ -122,7 +122,7 @@ export default function LeagueDetail() {
   );
 
   const modalTeams = useMemo(
-    () => (teams ?? []).map((t) => ({ id: t.id, name: t.name, name_auction: t.name_auction })),
+    () => (teams ?? []).map((t) => ({ id: t.id, name: t.name ?? "", name_auction: t.name_auction })),
     [teams],
   );
 
