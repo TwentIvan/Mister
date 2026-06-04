@@ -41,7 +41,12 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       {/* Sidebar */}
       <aside className="w-64 border-r bg-sidebar flex flex-col hidden md:flex">
         <div className="h-16 flex items-center px-6 border-b border-sidebar-border">
-          <div className="font-serif font-bold text-2xl text-sidebar-primary tracking-tight">MISTER</div>
+          <img
+            src="/brand/wordmark_mister.svg"
+            alt="Mister"
+            className="h-6 w-auto brightness-0 invert opacity-90"
+            draggable="false"
+          />
         </div>
         
         <nav className="flex-1 py-6 px-3 space-y-1 overflow-y-auto">
@@ -122,7 +127,12 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       {/* Main content */}
       <main className="flex-1 flex flex-col overflow-hidden">
         <header className="h-16 border-b bg-card flex items-center justify-between px-6 md:hidden">
-          <div className="font-serif font-bold text-xl text-primary tracking-tight">MISTER</div>
+          <img
+            src="/brand/wordmark_mister.svg"
+            alt="Mister"
+            className="h-5 w-auto"
+            draggable="false"
+          />
         </header>
         <div className="flex-1 overflow-auto bg-muted/30">
           <div className="mx-auto max-w-6xl p-4 md:p-8">

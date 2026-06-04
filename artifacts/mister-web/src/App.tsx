@@ -18,6 +18,7 @@ import MatchDetailPage from "@/pages/competizione/MatchDetailPage";
 import AstaLivePage from "@/pages/AstaLivePage";
 import AstaMobilePage from "@/pages/AstaMobilePage";
 import JoinLegaPage from "@/pages/JoinLegaPage";
+import BrandPage from "@/pages/brand";
 import { Switch, Route, Router as WouterRouter } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -64,6 +65,7 @@ function Router() {
               <Route path="/players" component={PlayersList} />
               <Route path="/superadmin/templates" component={TemplatesManager} />
               <Route path="/superadmin/algoritmo-voto" component={VotoAlgorithm} />
+              <Route path="/brand" component={BrandPage} />
               <Route component={NotFound} />
             </Switch>
           </AppLayout>

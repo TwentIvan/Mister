@@ -61,6 +61,24 @@
 }
 
 :root {
+  /* ── Brand token — hex diretti (usare questi, niente nuovi hex hardcoded) ── */
+  --cream:   #efe6d3;
+  --paper:   #f7f1e4;
+  --cream2:  #e7dcc4;
+  --slot:    #cdbf9d;
+  --green:   #1f4733;
+  --green-d: #15301f;
+  --green-l: #2e6047;
+  --gold:    #c8922b;
+  --gold-l:  #e6b84d;
+  --live:    #e2554e;
+  --danger:  #bf3b30;
+  --muted-brand: #8a8266;
+  --line:    #d8ccae;
+  --line-soft: #e4dcc6;
+  --font-display: 'Fraunces', Georgia, serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
   --token-avatar-bg: #2d5848;
   --button-outline: rgba(0,0,0, .10);
   --badge-outline: rgba(0,0,0, .05);
@@ -68,55 +86,55 @@
   --elevate-1: rgba(0,0,0, .03);
   --elevate-2: rgba(0,0,0, .08);
 
-  /* Deep sports analytics theme - Light Mode */
-  --background: 210 20% 98%;
-  --foreground: 222 47% 11%;
-  --border: 214 32% 91%;
+  /* Tema Mister — carta crema + inchiostro verde */
+  --background: 40 47% 88%;   /* #efe6d3 cream */
+  --foreground: 150 39% 20%;  /* #1f4733 green */
+  --border: 38 33% 79%;       /* ~#d8ccae line */
   
-  --card: 0 0% 100%;
-  --card-foreground: 222 47% 11%;
-  --card-border: 214 32% 91%;
+  --card: 42 53% 94%;         /* ~#f7f1e4 paper */
+  --card-foreground: 150 39% 20%;
+  --card-border: 38 33% 79%;
   
-  --popover: 0 0% 100%;
-  --popover-foreground: 222 47% 11%;
-  --popover-border: 214 32% 91%;
+  --popover: 42 53% 94%;
+  --popover-foreground: 150 39% 20%;
+  --popover-border: 38 33% 79%;
   
-  --primary: 153 60% 33%; /* Rich Italian Green */
-  --primary-foreground: 0 0% 100%;
+  --primary: 150 39% 20%;     /* #1f4733 — brand green */
+  --primary-foreground: 40 47% 88%;
   
-  --secondary: 222 47% 11%; /* Dark Navy/Slate */
-  --secondary-foreground: 210 40% 98%;
+  --secondary: 38 28% 72%;    /* #cdbf9d slot */
+  --secondary-foreground: 150 39% 20%;
   
-  --muted: 210 40% 96.1%;
-  --muted-foreground: 215.4 16.3% 46.9%;
+  --muted: 40 30% 83%;
+  --muted-foreground: 37 12% 47%; /* #8a8266 */
   
-  --accent: 210 40% 96.1%;
-  --accent-foreground: 222.2 47.4% 11.2%;
+  --accent: 38 33% 79%;
+  --accent-foreground: 150 39% 20%;
   
-  --destructive: 0 84.2% 60.2%;
-  --destructive-foreground: 210 40% 98%;
+  --destructive: 3 49% 47%;   /* #bf3b30 danger */
+  --destructive-foreground: 40 47% 88%;
   
-  --input: 214.3 31.8% 91.4%;
-  --ring: 153 60% 33%;
+  --input: 38 28% 72%;
+  --ring: 150 39% 20%;
   
-  --chart-1: 153 60% 33%;
-  --chart-2: 222 47% 11%;
-  --chart-3: 45 93% 47%;
-  --chart-4: 210 40% 96%;
-  --chart-5: 0 84% 60%;
+  --chart-1: 150 39% 20%;
+  --chart-2: 36 67% 47%;      /* #c8922b gold */
+  --chart-3: 42 75% 60%;      /* #e6b84d gold-l */
+  --chart-4: 38 33% 79%;
+  --chart-5: 3 65% 60%;       /* #e2554e live */
   
-  --sidebar: 222 47% 11%;
-  --sidebar-foreground: 210 40% 98%;
-  --sidebar-border: 215 28% 17%;
-  --sidebar-primary: 153 60% 33%;
-  --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 215 28% 17%;
-  --sidebar-accent-foreground: 210 40% 98%;
-  --sidebar-ring: 153 60% 33%;
+  --sidebar: 163 41% 8%;      /* #0d1f1a sidebar dark */
+  --sidebar-foreground: 40 47% 88%;
+  --sidebar-border: 160 35% 13%;
+  --sidebar-primary: 40 47% 88%;
+  --sidebar-primary-foreground: 163 41% 8%;
+  --sidebar-accent: 160 35% 13%;
+  --sidebar-accent-foreground: 40 47% 88%;
+  --sidebar-ring: 40 47% 88%;
 
-  --app-font-sans: 'Inter', sans-serif;
+  --app-font-sans: 'JetBrains Mono', ui-monospace, monospace;
   --app-font-serif: 'Fraunces', Georgia, serif;
-  --app-font-mono: 'JetBrains Mono', Menlo, monospace;
+  --app-font-mono: 'JetBrains Mono', ui-monospace, monospace;
   --radius: 0.25rem;
 
   --shadow-2xs: 0px 1px 2px 0px rgba(0,0,0,0.05);
@@ -199,6 +217,24 @@
     @apply border-border;
   }
   body {
-    @apply font-sans antialiased bg-background text-foreground;
+    @apply font-mono antialiased bg-background text-foreground;
+    background-color: var(--cream);
+    color: var(--green);
+  }
+
+  /* Display: Fraunces con ss01 + optical sizing */
+  h1, h2, h3, .font-serif {
+    font-feature-settings: "ss01";
+    font-optical-sizing: auto;
+  }
+
+  /* Wordmark "Mister" — ricetta esatta */
+  .wordmark {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-feature-settings: "ss01";
+    font-optical-sizing: auto;
+    letter-spacing: -0.05em;
+    line-height: 0.9;
   }
 }

@@ -1,0 +1,53 @@
+CONTESTO
+Ti allego mister_brand.zip: identità visiva del progetto. In QUESTO passaggio devi solo posare le fondamenta del brand nel codice. NON ridisegnare schermate o componenti esistenti: lo faremo dopo, una alla volta. Limita le modifiche a quanto sotto e alla fine elenca i file toccati.
+
+1 — ESTRAI ASSET
+Estrai lo zip e copia gli asset del marchio in una cartella pubblica del frontend (es. client/public/brand/ o src/assets/brand/, secondo la struttura reale):
+  wordmark_mister.svg, icona_M.svg, icona_M_animata.svg, segno_M_carta.svg, lockup_impilato.svg, mister_volto_inciso.png
+Il README dentro lo zip è il riferimento: leggilo.
+
+2 — DESIGN TOKEN (variabili CSS)
+Nel CSS globale/tema, definisci questi token e usali da qui in poi (niente nuovi hex hardcoded nel codice del brand):
+  --cream:#efe6d3; --paper:#f7f1e4; --cream2:#e7dcc4; --slot:#cdbf9d;
+  --green:#1f4733; --green-d:#15301f; --green-l:#2e6047;
+  --gold:#c8922b; --gold-l:#e6b84d;
+  --live:#e2554e; --danger:#bf3b30;
+  --muted:#8a8266; --line:#d8ccae; --line-soft:#e4dcc6;
+  --font-display:'Fraunces', Georgia, serif;
+  --font-mono:'JetBrains Mono', ui-monospace, monospace;
+Imposta lo sfondo pagina su var(--cream) e il testo su var(--green) a livello globale (body), senza toccare i layout interni.
+
+3 — FONT
+Carica due famiglie (Google Fonts o self-host):
+  Fraunces (variabile, asse opsz 9..144, pesi inclusi 800; corsivo per la tagline)
+  JetBrains Mono (400/500/700)
+Regole:
+  - Corpo e dati/etichette: var(--font-mono). NIENTE DM Sans.
+  - Display/heading/wordmark: var(--font-display) con font-feature-settings:"ss01" e font-optical-sizing:auto.
+  - Ricetta ESATTA del wordmark "Mister": font-family Fraunces; font-weight:800; font-feature-settings:"ss01"; letter-spacing:-0.05em; line-height:0.9.
+Quando mostri la parola "Mister" come logo, usa l'SVG wordmark_mister.svg (è a tracciati, non dipende dal font); il testo display normale invece usa i font caricati.
+
+4 — MARCHIO: posizionamento e regola colore
+  - Favicon + icona PWA/app: usa icona_M.svg (M-formazione, oro su verde). Se servono PNG, generale 192/512 px su fondo verde da quell'SVG.
+  - Se esiste già un punto "logo/brand" nell'header, mettici il lockup (segno + wordmark) usando lockup_impilato.svg, oppure il wordmark SVG da solo. Mai una M-segno attaccata subito prima della parola "Mister".
+  - REGOLA COLORE del segno (rispettala se lo ricolori): i NODI sono sempre oro #c8922b; le LINEE prendono l'inchiostro del fondo (oro chiaro #e6b84d su verde, verde #1f4733 su carta). Mai linee e nodi dello stesso colore.
+  - Splash/loader: puoi usare icona_M_animata.svg (animazione M↔W, parte da sola). Come favicon non si anima: lì usa icona_M.svg.
+
+5 — ICONE (interim)
+Standardizza UNA sola libreria di icone (se usi lucide-react va bene) con default nostri, centralizzati in un piccolo wrapper :
+  strokeWidth 1.75 · strokeLinecap/Linejoin "round" · size 20 · color "currentColor" (così eredita i token).
+NON inventare icone custom o disegnate a mano: le icone nostre per le voci di menu arriveranno dopo, da noi. Per ora solo set standard armonizzato ai default.
+
+6 — ACQUAFORTE = ACCENTO
+mister_volto_inciso.png è una FIRMA rara: solo momenti hero (splash, onboarding, stati vuoti). NON usarlo come texture d'interfaccia, NON applicarlo alle facce dei calciatori.
+
+CRITERI DI ACCETTAZIONE (verifica prima di consegnare)
+  - Nessuna schermata/funzione ridisegnata oltre a: token, font, sfondo/testo globali, favicon, punto-logo header, default icone.
+  - I token CSS esistono e il brand li usa (niente nuovi colori hardcoded).
+  - ss01 attivo sul display (verificabile sul wordmark / lettere come a, g).
+  - Il wordmark-logo è reso via SVG, non ridigitato a mano (se proprio testo, usa la ricetta esatta).
+  - Nessuna icona custom introdotta; il set standard usa i default nostri (tratto/capi/colore).
+  - Volto inciso non usato come texture né su facce giocatori.
+
+OUTPUT
+Elenca i file creati/modificati. Opzionale ma utile: una rotta /brand che mostri wordmark, icona, palette e i due font, per una verifica visiva al volo.
