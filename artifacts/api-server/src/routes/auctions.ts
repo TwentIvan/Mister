@@ -679,13 +679,7 @@ router.post("/auctions/:id/assign", async (req, res): Promise<void> => {
     res.status(400).json({ error: params.error.message });
     return;
   }
-  const body = AssignAuctionBody.safeParse(req.body);
-  if (!body.success) {
-    res.status(400).json({ error: body.error.flatten() });
-    return;
-  }
   const { id } = params.data;
-  const { player_id: playerId } = body.data;
 
   const [auction] = await db.select().from(auctions).where(eq(auctions.id, id));
   if (!auction || auction.status !== "running") {
@@ -693,6 +687,13 @@ router.post("/auctions/:id/assign", async (req, res): Promise<void> => {
     return;
   }
   if (!await guardLeagueAdmin(req, res, auction.leagueId)) return;
+
+  const body = AssignAuctionBody.safeParse(req.body);
+  if (!body.success) {
+    res.status(400).json({ error: body.error.flatten() });
+    return;
+  }
+  const { player_id: playerId } = body.data;
 
   try {
     const { nextPlayerId, auctionCompleted } = await db.transaction(async (tx) => {
@@ -786,13 +787,7 @@ router.post("/auctions/:id/skip", async (req, res): Promise<void> => {
     res.status(400).json({ error: params.error.message });
     return;
   }
-  const body = SkipAuctionBody.safeParse(req.body);
-  if (!body.success) {
-    res.status(400).json({ error: body.error.flatten() });
-    return;
-  }
   const { id } = params.data;
-  const { player_id: playerId } = body.data;
 
   const [auction] = await db.select().from(auctions).where(eq(auctions.id, id));
   if (!auction || auction.status !== "running") {
@@ -800,6 +795,13 @@ router.post("/auctions/:id/skip", async (req, res): Promise<void> => {
     return;
   }
   if (!await guardLeagueAdmin(req, res, auction.leagueId)) return;
+
+  const body = SkipAuctionBody.safeParse(req.body);
+  if (!body.success) {
+    res.status(400).json({ error: body.error.flatten() });
+    return;
+  }
+  const { player_id: playerId } = body.data;
 
   await db
     .update(auctionPlayerQueue)
@@ -1081,16 +1083,17 @@ router.post("/auctions/:id/undo", async (req, res): Promise<void> => {
 router.post("/auctions/:id/manual/add", async (req, res): Promise<void> => {
   const params = ManualAddPlayerParams.safeParse(req.params);
   if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
-  const body = ManualAddPlayerBody.safeParse(req.body);
-  if (!body.success) { res.status(400).json({ error: body.error.flatten() }); return; }
   const { id } = params.data;
-  const { fanta_team_id: fantaTeamId, player_id: playerId, price_fm: priceFm } = body.data;
 
   const [auction] = await db.select().from(auctions).where(eq(auctions.id, id));
   if (!auction || (auction.status !== "running" && auction.status !== "paused")) {
     res.status(403).json({ error: "L'asta non è in corso" }); return;
   }
   if (!await guardLeagueAdmin(req, res, auction.leagueId)) return;
+
+  const body = ManualAddPlayerBody.safeParse(req.body);
+  if (!body.success) { res.status(400).json({ error: body.error.flatten() }); return; }
+  const { fanta_team_id: fantaTeamId, player_id: playerId, price_fm: priceFm } = body.data;
   const [team] = await db
     .select()
     .from(fantaTeams)
@@ -1152,16 +1155,17 @@ router.post("/auctions/:id/manual/add", async (req, res): Promise<void> => {
 router.post("/auctions/:id/manual/remove", async (req, res): Promise<void> => {
   const params = ManualRemovePlayerParams.safeParse(req.params);
   if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
-  const body = ManualRemovePlayerBody.safeParse(req.body);
-  if (!body.success) { res.status(400).json({ error: body.error.flatten() }); return; }
   const { id } = params.data;
-  const { fanta_team_id: fantaTeamId, player_id: playerId } = body.data;
 
   const [auction] = await db.select().from(auctions).where(eq(auctions.id, id));
   if (!auction || (auction.status !== "running" && auction.status !== "paused")) {
     res.status(403).json({ error: "L'asta non è in corso" }); return;
   }
   if (!await guardLeagueAdmin(req, res, auction.leagueId)) return;
+
+  const body = ManualRemovePlayerBody.safeParse(req.body);
+  if (!body.success) { res.status(400).json({ error: body.error.flatten() }); return; }
+  const { fanta_team_id: fantaTeamId, player_id: playerId } = body.data;
 
   const [asgn] = await db
     .select()
@@ -1210,16 +1214,17 @@ router.post("/auctions/:id/manual/remove", async (req, res): Promise<void> => {
 router.post("/auctions/:id/manual/update-price", async (req, res): Promise<void> => {
   const params = ManualUpdatePriceParams.safeParse(req.params);
   if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
-  const body = ManualUpdatePriceBody.safeParse(req.body);
-  if (!body.success) { res.status(400).json({ error: body.error.flatten() }); return; }
   const { id } = params.data;
-  const { fanta_team_id: fantaTeamId, player_id: playerId, new_price_fm: newPriceFm } = body.data;
 
   const [auction] = await db.select().from(auctions).where(eq(auctions.id, id));
   if (!auction || (auction.status !== "running" && auction.status !== "paused")) {
     res.status(403).json({ error: "L'asta non è in corso" }); return;
   }
   if (!await guardLeagueAdmin(req, res, auction.leagueId)) return;
+
+  const body = ManualUpdatePriceBody.safeParse(req.body);
+  if (!body.success) { res.status(400).json({ error: body.error.flatten() }); return; }
+  const { fanta_team_id: fantaTeamId, player_id: playerId, new_price_fm: newPriceFm } = body.data;
 
   // Recupera l'assignment esistente per leggere il prezzo attuale
   const [asgn] = await db
@@ -1287,16 +1292,17 @@ router.post("/auctions/:id/manual/update-price", async (req, res): Promise<void>
 router.post("/auctions/:id/manual/set-budget", async (req, res): Promise<void> => {
   const params = ManualSetBudgetParams.safeParse(req.params);
   if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
-  const body = ManualSetBudgetBody.safeParse(req.body);
-  if (!body.success) { res.status(400).json({ error: body.error.flatten() }); return; }
   const { id } = params.data;
-  const { fanta_team_id: fantaTeamId, credits_remaining: creditsRemaining } = body.data;
 
   const [auction] = await db.select().from(auctions).where(eq(auctions.id, id));
   if (!auction || (auction.status !== "running" && auction.status !== "paused")) {
     res.status(403).json({ error: "L'asta non è in corso" }); return;
   }
   if (!await guardLeagueAdmin(req, res, auction.leagueId)) return;
+
+  const body = ManualSetBudgetBody.safeParse(req.body);
+  if (!body.success) { res.status(400).json({ error: body.error.flatten() }); return; }
+  const { fanta_team_id: fantaTeamId, credits_remaining: creditsRemaining } = body.data;
 
   const [team] = await db
     .update(fantaTeams)
@@ -1317,11 +1323,7 @@ router.post("/auctions/:id/manual/set-budget", async (req, res): Promise<void> =
 router.post("/auctions/:id/call", async (req, res): Promise<void> => {
   const params = CallPlayerParams.safeParse(req.params);
   if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
-  const body = CallPlayerBody.safeParse(req.body);
-  if (!body.success) { res.status(400).json({ error: body.error.flatten() }); return; }
-
   const { id } = params.data;
-  const { player_id: playerId } = body.data;
 
   const [auction] = await db.select().from(auctions).where(eq(auctions.id, id));
   if (!auction || auction.status !== "running") {
@@ -1329,6 +1331,10 @@ router.post("/auctions/:id/call", async (req, res): Promise<void> => {
     return;
   }
   if (!await guardLeagueAdmin(req, res, auction.leagueId)) return;
+
+  const body = CallPlayerBody.safeParse(req.body);
+  if (!body.success) { res.status(400).json({ error: body.error.flatten() }); return; }
+  const { player_id: playerId } = body.data;
   if (auction.callMode !== "chiamata") {
     res.status(403).json({ error: "L'asta non è in modalità chiamata" });
     return;

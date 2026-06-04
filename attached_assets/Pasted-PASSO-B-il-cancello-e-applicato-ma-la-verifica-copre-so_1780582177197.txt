@@ -1,0 +1,27 @@
+PASSO B — il cancello e applicato, ma la verifica copre solo "senza auth -> 401" e "admin -> 200". Con l'auth, quei due casi non dimostrano la sicurezza: il caso pericoloso e il LOGGATO-MA-NON-AUTORIZZATO. Mi serve la matrice completa, status code per riga. Non ridare per buono nulla "a codice": esegui ogni caso e riporta il codice osservato.
+
+==== NEGATIVI (il cuore — questi provano il cancello) ====
+N1. Non loggato -> ogni classe di mutazione protetta -> 401. (Bastano alcuni rappresentativi: config, avvio asta, competizione, mercato.)
+N2. Membro LOGGATO ma NON admin -> ciascuna azione admin -> 403:
+    - PATCH /leagues/:id (config)
+    - avvio asta + un controllo asta (es. aggiudica o pausa)
+    - POST/PATCH/DELETE squadra
+    - POST competizione
+    - POST mercato
+    Riporta il 403 per CIASCUNA.
+N3. Admin di lega che ha ADOTTATO una federazione (NON proprietario) -> PATCH delle regole/flag della federazione -> 403.
+N4. Membro -> rilancio per una squadra NON sua -> rifiutato (status osservato).
+
+==== POSITIVI (non rompere) ====
+P1. Admin/banditore -> rilancio per QUALUNQUE squadra -> accettato.
+P2. Membro -> rilancio per la PROPRIA squadra -> accettato.
+P3. Token mobile transitorio (x-auction-token) -> rilancio -> accettato.
+P4. Proprietario della federazione -> modifica regole/flag -> accettato.
+P5. Admin -> azioni admin (config ecc.) -> accettate (gia visto il 200 su config/team; conferma che regge anche su asta/competizioni/mercati).
+
+==== SICUREZZA (Passo A da chiudere) ====
+S1. JWT_SECRET: viene DAVVERO da una variabile d'ambiente? Il fallback hardcoded "dev-secret-CHANGE-IN-PROD" non deve essere usato in prod — dev'essere dev-only e fallire rumorosamente altrove. Conferma com'e ora.
+S2. Cookie di sessione: HTTP-only E secure entrambi attivi? Conferma.
+
+VINCOLI: server-authoritative; nessun caso "verificato a codice" al posto della prova; il token mobile resta transitorio.
+DELIVERABLE: la matrice N1-N4 e P1-P5 con lo status code osservato riga per riga, e la conferma S1/S2. Se un negativo NON da 403/rifiuto (cioe il cancello lascia passare), e un buco: sistemalo e ri-testa. Questo e l'ultimo checkpoint della fondazione account.
