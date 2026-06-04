@@ -269,7 +269,10 @@ export default function LeagueDetail() {
           </CardContent>
         </Card>
 
-        <Card className="bg-card border-primary/20">
+        <Card
+          className="bg-card border-primary/20 cursor-pointer hover:border-primary/50 transition-colors"
+          onClick={() => navigate(`/leagues/${id}/markets`)}
+        >
           <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
             <CardTitle className="text-sm font-medium text-primary">Mercati attivi</CardTitle>
             <Calendar className="h-4 w-4 text-primary" />

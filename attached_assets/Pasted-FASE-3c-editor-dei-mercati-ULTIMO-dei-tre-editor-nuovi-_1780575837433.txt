@@ -1,0 +1,25 @@
+FASE 3c — editor dei mercati, ULTIMO dei tre editor nuovi e ultimo blocco funzionale. Stessa forma della 3b. PRINCIPIO CARDINE: quali mercati esistono lo decide la FEDERAZIONE (via flag); la lega configura solo finestre/parametri dei mercati concessi. La lega non puo abilitare un mercato vietato dalla federazione — e lo garantiamo PER COSTRUZIONE. UI pulita ma NON il restyle finale.
+
+==== VINCOLATO ALLA FEDERAZIONE (per costruzione) ====
+I flag di mercato della federazione abilitano i TIPI: repair_auction_january (asta riparazione), free_agent_pool (free agent), direct_trades (scambi diretti), always_on_markets (mercati continui).
+- L'editor mercati offre SOLO i tipi abilitati dai flag della federazione. I tipi con flag spento NON sono configurabili: mostrali come non disponibili, col perche (es. "disattivato nel regolamento della federazione").
+- Cosi abilitare un mercato vietato e impossibile: non c'e il controllo per farlo.
+
+==== COSA ====
+- Modello evento/finestra di mercato: tipo (tra quelli abilitati), finestra/calendario (date o "sempre attivo"), parametri specifici del tipo. Definisci un modello sensato.
+- Editor a livello lega: crea/configura/elimina eventi di mercato; i mercati che oggi esistono solo da seed/template diventano configurabili da UI.
+- Empty state con CTA (mai uno zero muto).
+
+==== FUORI SCOPE (annotare, non costruire) ====
+- Niente motore di esecuzione mercati (non si eseguono scambi/aste-riparazione reali ora): questa fase DEFINISCE gli eventi di mercato e i loro parametri.
+- Annota dove, in futuro, i tipi disponibili seguiranno lo SNAPSHOT della federazione della lega (flag congelati all'inizio stagione), non i flag live; e dove il motore di mercato si aggancera.
+
+==== CRITERI ====
+M1. Editor mercati a livello lega: crea/configura/elimina eventi/finestre (tipo, calendario, parametri). Persiste e ricompare al reload.
+M2. VINCOLATO PER COSTRUZIONE: l'editor offre SOLO i tipi abilitati dai flag federazione; i tipi disabilitati sono mostrati non disponibili col motivo, senza controllo per attivarli. Provalo: con un flag di mercato spento, quel tipo non e configurabile.
+M3. Creabili da UI (non piu solo da seed/template); empty state con CTA.
+M4. ANNOTAZIONE futura: i tipi disponibili seguiranno lo snapshot federazione della lega (non i flag live); dove si aggancera il motore.
+M5. REGRESSIONE: federazione/regole/flag/competizioni/lega/squadre/asta invariati; typecheck pulito.
+
+VINCOLI: vincolato ai flag federazione per costruzione (nessun path per abilitare un tipo vietato); niente motore di esecuzione ora; UI pulita non finale; typecheck pulito, niente debug residuo.
+DELIVERABLE: diff; screenshot dell'editor (coi tipi disabilitati mostrati non disponibili); prova di M1 (crea/persiste) e M2 (solo tipi abilitati, con un flag spento che rende il tipo non configurabile); conferma regressione. Con questo si chiude la Fase 3 e tutto il funzionale: il prossimo passo e il DESIGN.

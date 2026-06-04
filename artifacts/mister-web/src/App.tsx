@@ -6,6 +6,7 @@ import LeagueDetail from "@/pages/league-detail";
 import LeagueConfig from "@/pages/league-config";
 import FederationRules from "@/pages/federation";
 import CompetitionDetail from "@/pages/competition-detail";
+import MarketList from "@/pages/market-list";
 import TemplatesManager from "@/pages/templates-manager";
 import VotoAlgorithm from "@/pages/voto-algorithm";
 import FormazionePage from "@/pages/formazione/FormazionePage";
@@ -42,6 +43,7 @@ function Router() {
               <Route path="/leagues/:id/config" component={LeagueConfig} />
               <Route path="/leagues/:id/federation" component={FederationRules} />
               <Route path="/leagues/:leagueId/competitions/:id" component={CompetitionDetail} />
+              <Route path="/leagues/:id/markets" component={MarketList} />
               <Route path="/squadra/formazione" component={FormazionePage} />
               <Route path="/competizione/:competitionId" component={CompetizionePage} />
               <Route path="/partita/:matchId" component={MatchDetailPage} />
