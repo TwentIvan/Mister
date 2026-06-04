@@ -42,9 +42,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       <aside className="w-64 border-r bg-sidebar flex flex-col hidden md:flex">
         <div className="h-16 flex items-center px-6 border-b border-sidebar-border">
           <img
-            src="/brand/wordmark_mister.svg"
+            src="/brand/wordmark_mister_crema.svg"
             alt="Mister"
-            className="h-6 w-auto brightness-0 invert opacity-90"
+            className="h-6 w-auto"
             draggable="false"
           />
         </div>
