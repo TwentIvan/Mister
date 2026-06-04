@@ -12,7 +12,9 @@ export interface CompetitionUpdate {
   description?: string;
   start_giornata?: number;
   end_giornata?: number;
+  /** Intero oggetto config (CompetitionConfig): sostituisce l'intero config in DB. */
   settings?: CompetitionUpdateSettings;
   active?: boolean;
   completed?: boolean;
+  season?: number;
 }

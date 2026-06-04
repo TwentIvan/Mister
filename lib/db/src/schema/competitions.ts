@@ -212,6 +212,12 @@ export const competitions = pgTable("competitions", {
   leagueId: text("league_id")
     .notNull()
     .references(() => leagues.id, { onDelete: "cascade" }),
+  /**
+   * Scope federation-ready: oggi sempre "league" con scope_id = league_id.
+   * In futuro "federation" per competizioni interleghe (scope_id = federation_id).
+   */
+  scopeType: text("scope_type").notNull().default("league"),
+  scopeId: text("scope_id").notNull().default(""),
   name: text("name").notNull(),
   description: text("description").notNull().default(""),
   type: competitionTypeEnum("type").notNull(),

@@ -34,6 +34,7 @@ export * from './competitionInputType';
 export * from './competitionMatch';
 export * from './competitionMatchesResponse';
 export * from './competitionMatchStatus';
+export * from './competitionScopeType';
 export * from './competitionSuggestion';
 export * from './competitionSuggestionType';
 export * from './competitionType';

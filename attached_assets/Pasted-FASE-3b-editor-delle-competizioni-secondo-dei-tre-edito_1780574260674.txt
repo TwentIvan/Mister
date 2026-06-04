@@ -1,0 +1,27 @@
+FASE 3b — editor delle competizioni, secondo dei tre editor nuovi. Le competizioni le emana la LEGA. PRINCIPIO CARDINE: le regole di una competizione sono ADDITIVE, mai sovrascrivono ne emendano la federazione — e lo garantiamo PER COSTRUZIONE, non con una validazione. UI pulita ma NON il restyle finale.
+
+==== ADDITIVO PER COSTRUZIONE (il punto chiave) ====
+I domini sono disgiunti: la FEDERAZIONE definisce il punteggio del GIOCATORE (gol, assist, malus, soglie); la COMPETIZIONE definisce il FORMATO (girone/eliminazione/misto, classifica, punti vittoria/pareggio, spareggi) ed eventuali livelli extra. Quindi:
+- L'editor della competizione NON espone i punteggi-giocatore della federazione come modificabili. Li mostra in SOLA LETTURA come "ereditati dalla federazione".
+- La competizione memorizza SOLO le proprie addizioni (formato/classifica/extra), in uno schema separato — non una copia delle regole federazione che potrebbe divergere.
+- Cosi contraddire la federazione e impossibile: non c'e il controllo per farlo.
+
+==== COSA ====
+- Modello competizione: nome, formato/tipo (es. campionato a girone, coppa a eliminazione, misto), squadre partecipanti (dalla lega), regole additive di formato (es. punti vittoria/pareggio/sconfitta, criteri di spareggio, andata/ritorno). Definisci un modello sensato; i campi di formato sopra sono esempi.
+- Editor a livello lega: crea / modifica / elimina una competizione e configura quanto sopra. Le competizioni che oggi compaiono nella pagina lega diventano creabili/configurabili da UI (non piu solo da seed/script).
+- SCOPE FEDERATION-READY: modella lo scope della competizione in modo che in futuro possa appartenere a una FEDERAZIONE (interleghe), non solo a una lega. Per ora a livello lega. Mostralo nello schema (es. un riferimento di scope, oggi valorizzato sulla lega).
+
+==== FUORI SCOPE (da annotare, non costruire) ====
+- Niente motore di calendario/fixture/punteggio: non esiste ancora un match engine. Questa fase DEFINISCE le competizioni e le loro regole additive; non le esegue.
+- Annota dove, in futuro, il motore aggancera: regole effettive = snapshot federazione della lega (base) + addizioni della competizione; le addizioni si congeleranno all'avvio della competizione (stesso principio snapshot).
+
+==== CRITERI ====
+K1. Editor competizioni a livello lega: crea/modifica/elimina (nome, formato, squadre, regole additive). Persiste e ricompare al reload.
+K2. ADDITIVO PER COSTRUZIONE: l'editor NON ha controlli per i punteggi-giocatore della federazione; li mostra read-only come "ereditati". Le sole regole editabili sono additive (formato/classifica/extra).
+K3. FEDERATION-READY: lo schema della competizione ha uno scope che consente, in futuro, l'appartenenza a una federazione; oggi valorizzato sulla lega. Mostralo.
+K4. Le competizioni nella pagina lega si creano da UI, non piu solo da seed.
+K5. ANNOTAZIONE futura: dove il motore leggera snapshot federazione + addizioni competizione, e quando le addizioni si congelano.
+K6. REGRESSIONE: federazione/regole/flag/lega/squadre/asta invariati; typecheck pulito.
+
+VINCOLI: additivo per costruzione (nessun path di override; schema separato dalle regole federazione); scope federation-ready; niente match engine ora; UI pulita non finale; typecheck pulito, niente debug residuo.
+DELIVERABLE: diff; screenshot dell'editor (con le regole federazione mostrate read-only come ereditate); prova di K1 (crea/persiste), K2 (niente controlli di override), K3 (scope federation-ready nello schema); conferma regressione. CHECKPOINT prima della 3c (mercati).

@@ -7,6 +7,6 @@
  */
 
 /**
- * Configurazione specifica per tipo + tiebreaker + premi + partecipanti
+ * Regole additive di formato: scoring, tiebreaker, partecipanti, impostazioni tipo, premi.
  */
 export type CompetitionConfig = { [key: string]: unknown };

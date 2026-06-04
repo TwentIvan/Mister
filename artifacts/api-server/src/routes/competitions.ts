@@ -57,6 +57,8 @@ router.post("/leagues/:leagueId/competitions", async (req, res): Promise<void> =
     .values({
       id: nanoid(),
       leagueId: params.data.leagueId,
+      scopeType: "league",
+      scopeId: params.data.leagueId,
       name: d.name,
       description: d.description ?? "",
       type: d.type,
@@ -107,6 +109,7 @@ router.patch("/leagues/:leagueId/competitions/:id", async (req, res): Promise<vo
       ...(d.completed !== undefined && { completed: d.completed }),
       ...(d.start_giornata !== undefined && { startGiornata: d.start_giornata }),
       ...(d.end_giornata !== undefined && { endGiornata: d.end_giornata }),
+      ...(d.season !== undefined && { season: d.season }),
       ...(d.settings !== undefined && { config: d.settings as unknown as CompetitionConfig }),
     })
     .where(and(eq(competitions.leagueId, p.data.leagueId), eq(competitions.id, p.data.id)))

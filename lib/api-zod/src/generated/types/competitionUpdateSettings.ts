@@ -6,4 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
+/**
+ * Intero oggetto config (CompetitionConfig): sostituisce l'intero config in DB.
+ */
 export type CompetitionUpdateSettings = { [key: string]: unknown };

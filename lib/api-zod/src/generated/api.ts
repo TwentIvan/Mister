@@ -767,6 +767,8 @@ export const ListCompetitionsParams = zod.object({
 export const ListCompetitionsResponseItem = zod.object({
   "id": zod.string(),
   "league_id": zod.string(),
+  "scope_type": zod.enum(['league', 'federation']).describe('Oggi sempre \'league\'. In futuro \'federation\' per competizioni interleghe.'),
+  "scope_id": zod.string().describe('ID dello scope: oggi = league_id. In futuro = federation_id per interleghe.'),
   "name": zod.string(),
   "description": zod.string().optional(),
   "type": zod.enum(['campionato', 'coppa', 'battle_royale', 'sprint_race', 'formula_uno', 'punteggio_assoluto']),
@@ -775,7 +777,7 @@ export const ListCompetitionsResponseItem = zod.object({
   "end_giornata": zod.number(),
   "config": zod.object({
 
-}).passthrough().describe('Configurazione specifica per tipo + tiebreaker + premi + partecipanti'),
+}).passthrough().describe('Regole additive di formato: scoring, tiebreaker, partecipanti, impostazioni tipo, premi.'),
   "active": zod.boolean(),
   "completed": zod.boolean(),
   "starts_at": zod.coerce.date().nullish(),
@@ -818,6 +820,8 @@ export const GetCompetitionParams = zod.object({
 export const GetCompetitionResponse = zod.object({
   "id": zod.string(),
   "league_id": zod.string(),
+  "scope_type": zod.enum(['league', 'federation']).describe('Oggi sempre \'league\'. In futuro \'federation\' per competizioni interleghe.'),
+  "scope_id": zod.string().describe('ID dello scope: oggi = league_id. In futuro = federation_id per interleghe.'),
   "name": zod.string(),
   "description": zod.string().optional(),
   "type": zod.enum(['campionato', 'coppa', 'battle_royale', 'sprint_race', 'formula_uno', 'punteggio_assoluto']),
@@ -826,7 +830,7 @@ export const GetCompetitionResponse = zod.object({
   "end_giornata": zod.number(),
   "config": zod.object({
 
-}).passthrough().describe('Configurazione specifica per tipo + tiebreaker + premi + partecipanti'),
+}).passthrough().describe('Regole additive di formato: scoring, tiebreaker, partecipanti, impostazioni tipo, premi.'),
   "active": zod.boolean(),
   "completed": zod.boolean(),
   "starts_at": zod.coerce.date().nullish(),
@@ -850,14 +854,17 @@ export const UpdateCompetitionBody = zod.object({
   "end_giornata": zod.number().optional(),
   "settings": zod.object({
 
-}).passthrough().optional(),
+}).passthrough().optional().describe('Intero oggetto config (CompetitionConfig): sostituisce l\'intero config in DB.'),
   "active": zod.boolean().optional(),
-  "completed": zod.boolean().optional()
+  "completed": zod.boolean().optional(),
+  "season": zod.number().optional()
 })
 
 export const UpdateCompetitionResponse = zod.object({
   "id": zod.string(),
   "league_id": zod.string(),
+  "scope_type": zod.enum(['league', 'federation']).describe('Oggi sempre \'league\'. In futuro \'federation\' per competizioni interleghe.'),
+  "scope_id": zod.string().describe('ID dello scope: oggi = league_id. In futuro = federation_id per interleghe.'),
   "name": zod.string(),
   "description": zod.string().optional(),
   "type": zod.enum(['campionato', 'coppa', 'battle_royale', 'sprint_race', 'formula_uno', 'punteggio_assoluto']),
@@ -866,7 +873,7 @@ export const UpdateCompetitionResponse = zod.object({
   "end_giornata": zod.number(),
   "config": zod.object({
 
-}).passthrough().describe('Configurazione specifica per tipo + tiebreaker + premi + partecipanti'),
+}).passthrough().describe('Regole additive di formato: scoring, tiebreaker, partecipanti, impostazioni tipo, premi.'),
   "active": zod.boolean(),
   "completed": zod.boolean(),
   "starts_at": zod.coerce.date().nullish(),
@@ -1332,6 +1339,8 @@ export const GetDashboardResponse = zod.object({
   "recent_competitions": zod.array(zod.object({
   "id": zod.string(),
   "league_id": zod.string(),
+  "scope_type": zod.enum(['league', 'federation']).describe('Oggi sempre \'league\'. In futuro \'federation\' per competizioni interleghe.'),
+  "scope_id": zod.string().describe('ID dello scope: oggi = league_id. In futuro = federation_id per interleghe.'),
   "name": zod.string(),
   "description": zod.string().optional(),
   "type": zod.enum(['campionato', 'coppa', 'battle_royale', 'sprint_race', 'formula_uno', 'punteggio_assoluto']),
@@ -1340,7 +1349,7 @@ export const GetDashboardResponse = zod.object({
   "end_giornata": zod.number(),
   "config": zod.object({
 
-}).passthrough().describe('Configurazione specifica per tipo + tiebreaker + premi + partecipanti'),
+}).passthrough().describe('Regole additive di formato: scoring, tiebreaker, partecipanti, impostazioni tipo, premi.'),
   "active": zod.boolean(),
   "completed": zod.boolean(),
   "starts_at": zod.coerce.date().nullish(),

@@ -554,6 +554,17 @@ export interface FederationUpdate {
   rules?: FederationRules;
 }
 
+/**
+ * Oggi sempre 'league'. In futuro 'federation' per competizioni interleghe.
+ */
+export type CompetitionScopeType = typeof CompetitionScopeType[keyof typeof CompetitionScopeType];
+
+
+export const CompetitionScopeType = {
+  league: 'league',
+  federation: 'federation',
+} as const;
+
 export type CompetitionType = typeof CompetitionType[keyof typeof CompetitionType];
 
 
@@ -567,20 +578,24 @@ export const CompetitionType = {
 } as const;
 
 /**
- * Configurazione specifica per tipo + tiebreaker + premi + partecipanti
+ * Regole additive di formato: scoring, tiebreaker, partecipanti, impostazioni tipo, premi.
  */
 export type CompetitionConfig = { [key: string]: unknown };
 
 export interface Competition {
   id: string;
   league_id: string;
+  /** Oggi sempre 'league'. In futuro 'federation' per competizioni interleghe. */
+  scope_type: CompetitionScopeType;
+  /** ID dello scope: oggi = league_id. In futuro = federation_id per interleghe. */
+  scope_id: string;
   name: string;
   description?: string;
   type: CompetitionType;
   season: number;
   start_giornata: number;
   end_giornata: number;
-  /** Configurazione specifica per tipo + tiebreaker + premi + partecipanti */
+  /** Regole additive di formato: scoring, tiebreaker, partecipanti, impostazioni tipo, premi. */
   config: CompetitionConfig;
   active: boolean;
   completed: boolean;
@@ -617,6 +632,9 @@ export interface CompetitionInput {
   settings?: CompetitionInputSettings;
 }
 
+/**
+ * Intero oggetto config (CompetitionConfig): sostituisce l'intero config in DB.
+ */
 export type CompetitionUpdateSettings = { [key: string]: unknown };
 
 export interface CompetitionUpdate {
@@ -624,9 +642,11 @@ export interface CompetitionUpdate {
   description?: string;
   start_giornata?: number;
   end_giornata?: number;
+  /** Intero oggetto config (CompetitionConfig): sostituisce l'intero config in DB. */
   settings?: CompetitionUpdateSettings;
   active?: boolean;
   completed?: boolean;
+  season?: number;
 }
 
 /**

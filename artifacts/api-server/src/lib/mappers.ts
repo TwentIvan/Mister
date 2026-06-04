@@ -117,6 +117,8 @@ export function mapCompetition(c: Competition) {
   return {
     id: c.id,
     league_id: c.leagueId,
+    scope_type: c.scopeType ?? "league",
+    scope_id: c.scopeId || c.leagueId,
     name: c.name,
     description: c.description,
     type: c.type,

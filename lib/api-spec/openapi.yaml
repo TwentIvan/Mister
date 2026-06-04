@@ -1910,12 +1910,19 @@ components:
     # ─── COMPETITION ──────────────────────────────────────────
     Competition:
       type: object
-      required: [id, league_id, name, type, season, start_giornata, end_giornata, config, active, completed, created_at]
+      required: [id, league_id, scope_type, scope_id, name, type, season, start_giornata, end_giornata, config, active, completed, created_at]
       properties:
         id:
           type: string
         league_id:
           type: string
+        scope_type:
+          type: string
+          enum: [league, federation]
+          description: "Oggi sempre 'league'. In futuro 'federation' per competizioni interleghe."
+        scope_id:
+          type: string
+          description: "ID dello scope: oggi = league_id. In futuro = federation_id per interleghe."
         name:
           type: string
         description:
@@ -1931,7 +1938,7 @@ components:
           type: integer
         config:
           type: object
-          description: Configurazione specifica per tipo + tiebreaker + premi + partecipanti
+          description: "Regole additive di formato: scoring, tiebreaker, partecipanti, impostazioni tipo, premi."
         active:
           type: boolean
         completed:
@@ -1987,10 +1994,13 @@ components:
           type: integer
         settings:
           type: object
+          description: "Intero oggetto config (CompetitionConfig): sostituisce l'intero config in DB."
         active:
           type: boolean
         completed:
           type: boolean
+        season:
+          type: integer
 
     # ─── MARKET EVENT ─────────────────────────────────────────
     MarketEvent:

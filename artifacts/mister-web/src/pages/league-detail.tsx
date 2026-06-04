@@ -4,6 +4,7 @@ import {
   useListCompetitions, getListCompetitionsQueryKey,
   useListFantaTeams, getListFantaTeamsQueryKey,
   useCreateAuction,
+  useCreateCompetition,
 } from "@workspace/api-client-react";
 import { useState, useMemo } from "react";
 import { AstaConfigModal } from "@/components/asta/AstaConfigModal";
@@ -14,15 +15,30 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Trophy, Users, Calendar, Activity, BookOpen, Gavel, ArrowLeft, Settings } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
+import { useQueryClient } from "@tanstack/react-query";
+import { Trophy, Users, Calendar, Activity, BookOpen, Gavel, ArrowLeft, Settings, Plus } from "lucide-react";
 
 export default function LeagueDetail() {
   const { id } = useParams<{ id: string }>();
   const [, navigate] = useLocation();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const createAuction = useCreateAuction();
+  const createComp = useCreateCompetition();
   const [astaError, setAstaError] = useState<string | null>(null);
   const [isConfigOpen, setIsConfigOpen] = useState(false);
+  const [isCompOpen, setIsCompOpen] = useState(false);
+  const [newCompName, setNewCompName] = useState("");
+  const [newCompType, setNewCompType] = useState("campionato");
+  const [newCompSeason, setNewCompSeason] = useState(new Date().getFullYear());
+  const [newCompStart, setNewCompStart] = useState(1);
+  const [newCompEnd, setNewCompEnd] = useState(38);
 
   const handleAvviaAsta = async (
     timerSeconds: number,
@@ -59,6 +75,29 @@ export default function LeagueDetail() {
         return;
       }
       setAstaError(body?.error ?? "Impossibile avviare l'asta.");
+    }
+  };
+
+  const handleCreateComp = async () => {
+    if (!id || !newCompName.trim()) return;
+    try {
+      const result = await createComp.mutateAsync({
+        leagueId: id,
+        data: {
+          name: newCompName.trim(),
+          type: newCompType as "campionato" | "coppa" | "battle_royale" | "sprint_race" | "formula_uno" | "punteggio_assoluto",
+          season: newCompSeason,
+          start_giornata: newCompStart,
+          end_giornata: newCompEnd,
+        },
+      });
+      queryClient.invalidateQueries({ queryKey: getListCompetitionsQueryKey(id) });
+      setIsCompOpen(false);
+      setNewCompName("");
+      toast({ title: "Competizione creata" });
+      navigate(`/leagues/${id}/competitions/${result.id}`);
+    } catch {
+      toast({ variant: "destructive", title: "Creazione fallita" });
     }
   };
 
@@ -339,18 +378,32 @@ export default function LeagueDetail() {
           )}
 
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
+            <CardHeader className="flex flex-row items-center justify-between pb-3">
               <div>
                 <CardTitle>Competizioni</CardTitle>
-                <CardDescription>Tornei attivi</CardDescription>
+                <CardDescription>Tornei attivi in questa lega</CardDescription>
               </div>
+              <Button
+                size="sm"
+                variant="outline"
+                className="gap-1.5 border-primary/20 text-primary shrink-0"
+                onClick={() => setIsCompOpen(true)}
+                data-testid="button-crea-competizione"
+              >
+                <Plus className="h-3.5 w-3.5" /> Crea
+              </Button>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {isLoadingComps ? (
                   <Skeleton className="h-16 w-full" />
                 ) : competitions?.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">Nessuna competizione creata.</p>
+                  <div className="flex items-center justify-between py-2">
+                    <p className="text-sm text-muted-foreground">Nessuna competizione.</p>
+                    <Button size="sm" variant="ghost" className="gap-1 text-muted-foreground text-xs" onClick={() => setIsCompOpen(true)}>
+                      <Plus className="h-3 w-3" /> Crea la prima
+                    </Button>
+                  </div>
                 ) : competitions?.map((comp) => (
                   <Link key={comp.id} href={`/leagues/${league.id}/competitions/${comp.id}`}>
                     <div className="p-3 border rounded-lg hover:border-primary/50 hover:bg-muted/30 cursor-pointer transition-colors group">
@@ -358,8 +411,12 @@ export default function LeagueDetail() {
                         <span className="font-semibold group-hover:text-primary transition-colors">{comp.name}</span>
                         <Badge variant="outline" className="text-[10px] uppercase">{comp.type.replace(/_/g, ' ')}</Badge>
                       </div>
-                      <div className="text-xs text-muted-foreground font-mono">
-                        Giornate {comp.start_giornata}–{comp.end_giornata}
+                      <div className="flex items-center gap-3 text-xs text-muted-foreground font-mono">
+                        <span>Stagione {comp.season}</span>
+                        <span>G{comp.start_giornata}–G{comp.end_giornata}</span>
+                        {comp.scope_type && comp.scope_type !== "league" && (
+                          <Badge variant="outline" className="text-[9px] uppercase">{comp.scope_type}</Badge>
+                        )}
                       </div>
                     </div>
                   </Link>
@@ -383,6 +440,85 @@ export default function LeagueDetail() {
       initialRosterA={league?.roster_a ?? undefined}
       onConfirm={handleAvviaAsta}
     />
+
+    <Dialog open={isCompOpen} onOpenChange={setIsCompOpen}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="font-serif">Nuova competizione</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 py-2">
+          <div>
+            <Label className="text-xs text-muted-foreground mb-1.5 block">Nome</Label>
+            <Input
+              value={newCompName}
+              onChange={e => setNewCompName(e.target.value)}
+              placeholder="Es. Campionato 2025-26"
+              data-testid="input-new-comp-name"
+            />
+          </div>
+          <div>
+            <Label className="text-xs text-muted-foreground mb-1.5 block">Formato</Label>
+            <Select value={newCompType} onValueChange={setNewCompType}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="campionato">Campionato (girone all'italiana)</SelectItem>
+                <SelectItem value="coppa">Coppa (eliminazione diretta)</SelectItem>
+                <SelectItem value="battle_royale">Battle Royale (tutti contro tutti)</SelectItem>
+                <SelectItem value="sprint_race">Sprint Race (eliminazione giornaliera)</SelectItem>
+                <SelectItem value="formula_uno">Formula 1 (punteggio F1)</SelectItem>
+                <SelectItem value="punteggio_assoluto">Punteggio Assoluto (somma cumulativa)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <Label className="text-xs text-muted-foreground mb-1.5 block">Stagione</Label>
+              <Input
+                type="number"
+                value={newCompSeason}
+                onChange={e => setNewCompSeason(Number(e.target.value))}
+                className="font-mono"
+              />
+            </div>
+            <div>
+              <Label className="text-xs text-muted-foreground mb-1.5 block">G. inizio</Label>
+              <Input
+                type="number"
+                min={1} max={38}
+                value={newCompStart}
+                onChange={e => setNewCompStart(Number(e.target.value))}
+                className="font-mono"
+              />
+            </div>
+            <div>
+              <Label className="text-xs text-muted-foreground mb-1.5 block">G. fine</Label>
+              <Input
+                type="number"
+                min={1} max={38}
+                value={newCompEnd}
+                onChange={e => setNewCompEnd(Number(e.target.value))}
+                className="font-mono"
+              />
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Nome e formato non sono modificabili dopo la creazione. Le altre impostazioni si configurano nell'editor.
+          </p>
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={() => setIsCompOpen(false)}>Annulla</Button>
+          <Button
+            onClick={handleCreateComp}
+            disabled={!newCompName.trim() || createComp.isPending}
+            data-testid="button-confirm-new-comp"
+          >
+            {createComp.isPending ? "Creazione..." : "Crea e configura"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
     </>
   );
 }

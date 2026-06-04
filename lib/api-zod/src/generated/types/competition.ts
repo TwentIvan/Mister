@@ -6,18 +6,23 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { CompetitionConfig } from './competitionConfig';
+import type { CompetitionScopeType } from './competitionScopeType';
 import type { CompetitionType } from './competitionType';
 
 export interface Competition {
   id: string;
   league_id: string;
+  /** Oggi sempre 'league'. In futuro 'federation' per competizioni interleghe. */
+  scope_type: CompetitionScopeType;
+  /** ID dello scope: oggi = league_id. In futuro = federation_id per interleghe. */
+  scope_id: string;
   name: string;
   description?: string;
   type: CompetitionType;
   season: number;
   start_giornata: number;
   end_giornata: number;
-  /** Configurazione specifica per tipo + tiebreaker + premi + partecipanti */
+  /** Regole additive di formato: scoring, tiebreaker, partecipanti, impostazioni tipo, premi. */
   config: CompetitionConfig;
   active: boolean;
   completed: boolean;
