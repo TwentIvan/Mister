@@ -455,6 +455,15 @@ router.get("/auctions/:id/stream", (req, res): void => {
 // ─── POST /auctions/:id/bid ───────────────────────────────
 
 router.post("/auctions/:id/bid", async (req, res): Promise<void> => {
+  // ── Auth pre-check: rifiuta subito chi non è né loggato né in possesso di token mobile.
+  // Deve stare PRIMA di qualsiasi query DB per evitare information leak sullo stato dell'asta.
+  const hasSession = !!req.user;
+  const hasMobileToken = !!req.headers["x-auction-token"];
+  if (!hasSession && !hasMobileToken) {
+    res.status(401).json({ error: "Autenticazione richiesta" });
+    return;
+  }
+
   const params = CreateAuctionBidParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });

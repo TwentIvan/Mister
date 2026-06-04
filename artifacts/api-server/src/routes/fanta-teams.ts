@@ -122,6 +122,25 @@ router.patch("/leagues/:leagueId/teams/:id", async (req, res): Promise<void> => 
   res.json(UpdateFantaTeamResponse.parse(mapFantaTeam(row)));
 });
 
+router.delete("/leagues/:leagueId/teams/:id", async (req, res): Promise<void> => {
+  const p = UpdateFantaTeamParams.safeParse(req.params);
+  if (!p.success) {
+    res.status(400).json({ error: p.error.message });
+    return;
+  }
+  if (!await guardLeagueAdmin(req, res, p.data.leagueId)) return;
+
+  const [row] = await db
+    .delete(fantaTeams)
+    .where(and(eq(fantaTeams.leagueId, p.data.leagueId), eq(fantaTeams.id, p.data.id)))
+    .returning({ id: fantaTeams.id });
+  if (!row) {
+    res.status(404).json({ error: "Squadra non trovata" });
+    return;
+  }
+  res.status(204).send();
+});
+
 const SERIE_A_TEAM_CODE: Record<string, string> = {
   "Atalanta":      "ATA",
   "Bologna":       "BOL",
