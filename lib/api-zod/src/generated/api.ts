@@ -1192,7 +1192,7 @@ export const ListFantaTeamsParams = zod.object({
 export const ListFantaTeamsResponseItem = zod.object({
   "id": zod.string(),
   "league_id": zod.string(),
-  "manager_user_id": zod.string(),
+  "manager_user_id": zod.string().nullish(),
   "societa_id": zod.string().nullish().describe('ID della società che rivendica questo slot. Null = slot non rivendicato.'),
   "name": zod.string().nullish().describe('Nome della società (null per slot non rivendicati)'),
   "name_auction": zod.string().nullish(),
@@ -1235,7 +1235,7 @@ export const GetFantaTeamParams = zod.object({
 export const GetFantaTeamResponse = zod.object({
   "id": zod.string(),
   "league_id": zod.string(),
-  "manager_user_id": zod.string(),
+  "manager_user_id": zod.string().nullish(),
   "societa_id": zod.string().nullish().describe('ID della società che rivendica questo slot. Null = slot non rivendicato.'),
   "name": zod.string().nullish().describe('Nome della società (null per slot non rivendicati)'),
   "name_auction": zod.string().nullish(),
@@ -1271,7 +1271,7 @@ export const UpdateFantaTeamBody = zod.object({
 export const UpdateFantaTeamResponse = zod.object({
   "id": zod.string(),
   "league_id": zod.string(),
-  "manager_user_id": zod.string(),
+  "manager_user_id": zod.string().nullish(),
   "societa_id": zod.string().nullish().describe('ID della società che rivendica questo slot. Null = slot non rivendicato.'),
   "name": zod.string().nullish().describe('Nome della società (null per slot non rivendicati)'),
   "name_auction": zod.string().nullish(),
@@ -1939,7 +1939,7 @@ export const GetAuctionResponse = zod.object({
   "squadre": zod.array(zod.object({
   "id": zod.string(),
   "league_id": zod.string(),
-  "manager_user_id": zod.string(),
+  "manager_user_id": zod.string().nullish(),
   "societa_id": zod.string().nullish().describe('ID della società che rivendica questo slot. Null = slot non rivendicato.'),
   "name": zod.string().nullish().describe('Nome della società (null per slot non rivendicati)'),
   "name_auction": zod.string().nullish(),

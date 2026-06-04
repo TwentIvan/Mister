@@ -1,0 +1,14 @@
+Il claim (J1-J7) e verificato e il fix del roster e corretto. Ma il crash ha esposto due cose da chiudere prima di considerare la Fase 2 finita.
+
+PREMESSA (metodo, vale d'ora in poi): un errore visto durante la verifica si INDAGA, non si archivia come "preesistente / stale cache". L'errore di FormazionePage era stato liquidato cosi in Fase 2 ed era invece un bug vero che ha crashato l'app. "Probabilmente e la cache" e un'ipotesi, non un controllo.
+
+1. SWEEP dei contratti server <-> spec/client.
+Il refactor societa ha riscritto pesantemente fanta-teams.ts; il roster e solo l'endpoint crashato perche una pagina lo ha colpito. Controlla se ce ne sono ALTRI dove la FORMA della risposta del server NON combacia con lo schema OpenAPI (e quindi col client generato), nelle route toccate dal refactor: fanta-teams.ts, leagues.ts, auctions.ts, competition-matches.ts, matches.ts. In particolare: risposte avvolte in un oggetto ({players}, {items}, ...) dove la spec dichiara un array, o campi rinominati/rimossi col passaggio a societa. Riportami: il roster era ISOLATO o e un pattern? Se trovi altri, correggili nella direzione della spec/client.
+
+2. Conferma direzione del fix roster.
+Hai cambiato il server da {players:[...]} a array diretto. Conferma che e la direzione giusta: nessun altro consumatore (web o mobile) si aspettava {players}.
+
+3. FRONTEND del claim, davvero a schermo.
+J1-J7 sono via curl: le pagine del claim non sono mai state viste rendere, e una pagina frontend ha appena fatto crash. Con Playwright (cookie di sessione, come gia fatto per il tabellone): carica il flusso JoinLegaPage (i 3 step: info lega -> scegli slot -> form societa) e la vista Inviti dell'admin (codice + stato slot), e conferma che rendono SENZA errori in console. Screenshot o esito.
+
+DELIVERABLE: esito dello sweep (isolato o pattern, + eventuali fix), conferma direzione roster, conferma del frontend claim che rende pulito. Con questi tre, la Fase 2 e chiusa e si passa alla Fase 3 (ritiro del token mobile).

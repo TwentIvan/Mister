@@ -9,7 +9,8 @@
 export interface FantaTeam {
   id: string;
   league_id: string;
-  manager_user_id: string;
+  /** @nullable */
+  manager_user_id?: string | null;
   /**
      * ID della società che rivendica questo slot. Null = slot non rivendicato.
      * @nullable

@@ -2289,14 +2289,14 @@ components:
     # ─── FANTA TEAM ───────────────────────────────────────────
     FantaTeam:
       type: object
-      required: [id, league_id, manager_user_id, credits_remaining, created_at]
+      required: [id, league_id, credits_remaining, created_at]
       properties:
         id:
           type: string
         league_id:
           type: string
         manager_user_id:
-          type: string
+          type: ["string", "null"]
         societa_id:
           type: ["string", "null"]
           description: ID della società che rivendica questo slot. Null = slot non rivendicato.
