@@ -1,0 +1,30 @@
+FASE 2 — area Configurazione, UI editabile sui tre livelli, che legge il modello gia ripulito. Scrive SEMPRE sulla fonte canonica (colonne flat + semantica snapshot): la duplicazione NON deve rientrare. E la schermata dell'AMMINISTRATORE (gating vero con gli account dopo; per ora accessibile). UI pulita e leggibile ma NON il restyle finale: il design e un task a parte.
+
+==== 0. HOUSEKEEPING (prima cosa) ====
+UPDATE one-shot sul JSONB della lega legacy lg-mvp: rimuovi le chiavi duplicate morte (config.squad.gk/def/mid/att, config.budget.initialCredits), lasciando INTATTI captain, postAcquisitionWindow, squad.allowedModules/startersTotal. Cosi nessuna copia divergente resta da nessuna parte.
+
+==== 1. FEDERAZIONE (condivisa, separata) ====
+Evolvi la pagina Regolamento esistente:
+- name, description, mode (classic/mantra); i 20 flag editabili per categoria con le dipendenze padre-figlio gia presenti; il proprietario mostrato (stub).
+- Etichetta CHIARAMENTE che la federazione e condivisa e che le modifiche valgono per stagioni/leghe NUOVE, non per quelle gia avviate (riflette lo snapshot appena provato). Nessuna illusione di cambiare le regole a una lega in corso.
+- Le regole di punteggio (bonus/malus) arrivano in Fase 3: lasciane il posto, non implementarle ora.
+
+==== 2. LEGA (di questa lega) — EDITABILE dopo la creazione ====
+Nuova area Configurazione lega:
+- budget iniziale, composizione rosa (P/D/C/A), timer di default, modalita asta, visibilita/codice invito/max manager, notifiche (email/push), visibilita formazioni/rosa, finestra post-acquisto.
+- GUARDIA: le impostazioni da cui dipende un'asta/stagione in corso (composizione, budget, timer) NON si cambiano mentre e in corso — campi bloccati con motivo visibile durante un'asta running, oppure il cambio si applica solo dalla prossima. Scegli il comportamento piu sicuro. Nessun cambio silenzioso che sfasi un'asta viva.
+- Picker adotta/crea federazione (rimandato dalla Fase 1): esponilo come scelta ESPLICITA in creazione, con "crea nuova" preselezionato.
+
+==== 3. SQUADRE ====
+Per ogni squadra: name, name_auction (nome per la voce) con l'AVVISO AMBIGUITA previsto (se due nomi voce sono troppo simili tra loro, segnalalo e suggerisci di differenziarli), logo, maglia, allenatore.
+
+==== CRITERI ====
+G1. Federazione: 20 flag + name/desc/mode editabili e persistiti; la UI dice che vale per nuove stagioni/leghe.
+G2. Lega: tutte le impostazioni visibili e modificabili dopo la creazione; il salvataggio persiste sulla fonte canonica (colonne flat), senza reintrodurre copie nel JSONB.
+G3. Guardia: con un'asta running, le impostazioni che la influenzano sono bloccate con motivo (o si applicano solo alla prossima). PROVALO con un'asta running.
+G4. Squadre: nomi/nomi-voce/logo/maglia/allenatore editabili; l'avviso ambiguita scatta se due nomi voce sono troppo simili.
+G5. Adotta/crea: scelta esplicita in creazione, "crea nuova" preselezionato; adottando, la lega si collega.
+G6. REGRESSIONE: asta/offerte/voce/7.E/chiamata/mobile invariati; un'asta avviata DOPO un edit di config prende i valori aggiornati nello snapshot; typecheck pulito.
+
+VINCOLI: scrive sulla fonte canonica (no path paralleli, la duplicazione non rientra); guardia sui cambi durante asta in corso; owner = stub; UI pulita ma non il restyle finale; typecheck pulito, niente debug residuo.
+DELIVERABLE: diff; screenshot delle tre aree; prova di G2 (edit che persiste sulla canonica), G3 (guardia durante asta running) e G4 (avviso ambiguita); conferma regressione. CHECKPOINT prima della Fase 3 (editor regole + competizioni + mercati).

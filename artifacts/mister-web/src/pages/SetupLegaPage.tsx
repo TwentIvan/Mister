@@ -23,11 +23,14 @@ const DEFAULT_STATE: SetupState = {
     rosterC: 8,
     rosterA: 6,
     mode: "manageriale",
+    federationChoice: "new",
+    federationId: undefined,
   },
   squadre: [],
 };
 
 export default function SetupLegaPage() {
+  // Priorità: URL query param federation_id (legacy) < picker nel form
   const [state, setState] = useState<SetupState>(DEFAULT_STATE);
   const [, setLocation] = useLocation();
   const search = useSearch();
@@ -54,7 +57,11 @@ export default function SetupLegaPage() {
           roster_d: state.lega.rosterD,
           roster_c: state.lega.rosterC,
           roster_a: state.lega.rosterA,
-          ...(federationId ? { federation_id: federationId } : {}),
+          ...(state.lega.federationChoice === "adopt" && state.lega.federationId
+            ? { federation_id: state.lega.federationId }
+            : federationId
+            ? { federation_id: federationId }
+            : {}),
           fanta_teams: state.squadre.map(s => ({
             name: s.name,
             name_auction: s.nameAuction,

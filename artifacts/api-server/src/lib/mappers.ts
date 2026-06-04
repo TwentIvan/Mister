@@ -11,6 +11,8 @@ import type {
 import { defaultFlagValues } from "@workspace/db";
 
 export function mapLeague(l: League) {
+  const cfg = l.config as unknown as Record<string, unknown> | null | undefined;
+  const paw = cfg?.postAcquisitionWindow as Record<string, unknown> | undefined;
   return {
     id: l.id,
     name: l.name,
@@ -34,6 +36,15 @@ export function mapLeague(l: League) {
     roster_c: l.rosterC ?? null,
     roster_a: l.rosterA ?? null,
     auction_mode: l.auctionMode ?? null,
+    post_acquisition_window: paw
+      ? {
+          enabled: Boolean(paw.enabled ?? true),
+          async_hours: Number(paw.asyncHours ?? 12),
+          live_seconds: Number(paw.liveSeconds ?? 45),
+          default_clause_action: String(paw.defaultClauseAction ?? "leave_default"),
+          default_contract_years: Number(paw.defaultContractYears ?? 1),
+        }
+      : null,
     snapshot_locked_at: l.snapshotLockedAt?.toISOString() ?? null,
     created_at: l.createdAt,
   };
@@ -145,6 +156,7 @@ export function mapFantaTeam(t: FantaTeam) {
     logo_url: t.logoUrl ?? null,
     color_primary: t.jersey?.primaryColor ?? null,
     color_secondary: t.jersey?.secondaryColor ?? null,
+    coach_name: t.coachName ?? null,
     credits_remaining: t.creditsRemaining,
     roster: (() => {
       const r = t.roster as unknown;

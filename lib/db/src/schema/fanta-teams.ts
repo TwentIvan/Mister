@@ -78,6 +78,9 @@ export const fantaTeams = pgTable("fanta_teams", {
   /** Allenatore fanta scelto dal manager (riferisce coaches.id). */
   headCoachId: integer("head_coach_id").references(() => coaches.id, { onDelete: "set null" }),
 
+  /** Nome allenatore libero inserito dal manager (display only, indipendente dai dati reali). */
+  coachName: text("coach_name"),
+
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

@@ -9,6 +9,7 @@ import type { LeagueAuctionMode } from './leagueAuctionMode';
 import type { LeagueLineupVisibility } from './leagueLineupVisibility';
 import type { LeagueRosterVisibility } from './leagueRosterVisibility';
 import type { LeagueVisibility } from './leagueVisibility';
+import type { PostAcquisitionWindow } from './postAcquisitionWindow';
 
 export interface League {
   id: string;
@@ -61,6 +62,8 @@ export interface League {
      * @nullable
      */
   auction_mode?: LeagueAuctionMode;
+  /** Finestra temporale post-acquisto */
+  post_acquisition_window?: PostAcquisitionWindow;
   /**
      * Timestamp del freeze delle regole federazione (null = non ancora avvenuto)
      * @nullable

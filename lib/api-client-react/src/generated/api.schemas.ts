@@ -190,6 +190,29 @@ export const LeagueAuctionMode = {
   manageriale_pro: 'manageriale_pro',
 } as const;
 
+export type PostAcquisitionWindowDefaultClauseAction = typeof PostAcquisitionWindowDefaultClauseAction[keyof typeof PostAcquisitionWindowDefaultClauseAction];
+
+
+export const PostAcquisitionWindowDefaultClauseAction = {
+  leave_default: 'leave_default',
+  trigger_clause: 'trigger_clause',
+  no_clause: 'no_clause',
+} as const;
+
+/**
+ * Finestra temporale post-acquisto per reclami e opzioni contrattuali
+ */
+export interface PostAcquisitionWindow {
+  enabled?: boolean;
+  /** Ore di finestra per reclamare in modalità asincrona */
+  async_hours?: number;
+  /** Secondi di finestra in asta live */
+  live_seconds?: number;
+  default_clause_action?: PostAcquisitionWindowDefaultClauseAction;
+  /** Anni di contratto di default all'acquisto */
+  default_contract_years?: number;
+}
+
 export interface League {
   id: string;
   name: string;
@@ -241,6 +264,8 @@ export interface League {
      * @nullable
      */
   auction_mode?: LeagueAuctionMode;
+  /** Finestra temporale post-acquisto */
+  post_acquisition_window?: PostAcquisitionWindow;
   /**
      * Timestamp del freeze delle regole federazione (null = non ancora avvenuto)
      * @nullable
@@ -324,6 +349,11 @@ export interface FantaTeam {
      * @nullable
      */
   color_secondary?: string | null;
+  /**
+     * Nome allenatore inserito dal manager
+     * @nullable
+     */
+  coach_name?: string | null;
   credits_remaining: number;
   roster?: number[];
   created_at: string;
@@ -361,6 +391,18 @@ export const LeagueUpdateRosterVisibility = {
   hidden_all_season: 'hidden_all_season',
 } as const;
 
+/**
+ * GUARDED: non modificabile durante un'asta in corso
+ */
+export type LeagueUpdateAuctionMode = typeof LeagueUpdateAuctionMode[keyof typeof LeagueUpdateAuctionMode] | null;
+
+
+export const LeagueUpdateAuctionMode = {
+  classico: 'classico',
+  manageriale: 'manageriale',
+  manageriale_pro: 'manageriale_pro',
+} as const;
+
 export interface LeagueUpdate {
   name?: string;
   max_managers?: number;
@@ -370,6 +412,46 @@ export interface LeagueUpdate {
   started?: boolean;
   notify_email?: boolean;
   notify_push?: boolean;
+  /**
+     * GUARDED: non modificabile durante un'asta in corso
+     * @minimum 3
+     * @maximum 30
+     */
+  timer_seconds?: number;
+  /**
+     * GUARDED: non modificabile durante un'asta in corso
+     * @minimum 100
+     * @maximum 2000
+     */
+  budget_initial?: number;
+  /**
+     * GUARDED: non modificabile durante un'asta in corso
+     * @minimum 1
+     * @maximum 15
+     */
+  roster_p?: number;
+  /**
+     * GUARDED: non modificabile durante un'asta in corso
+     * @minimum 1
+     * @maximum 15
+     */
+  roster_d?: number;
+  /**
+     * GUARDED: non modificabile durante un'asta in corso
+     * @minimum 1
+     * @maximum 15
+     */
+  roster_c?: number;
+  /**
+     * GUARDED: non modificabile durante un'asta in corso
+     * @minimum 1
+     * @maximum 15
+     */
+  roster_a?: number;
+  /** GUARDED: non modificabile durante un'asta in corso */
+  auction_mode?: LeagueUpdateAuctionMode;
+  /** Finestra post-acquisto (aggiornabile anche con asta in corso) */
+  post_acquisition_window?: PostAcquisitionWindow;
 }
 
 export interface LeagueStats {
@@ -643,7 +725,13 @@ export interface FantaTeamInput {
 export interface FantaTeamUpdate {
   name?: string;
   name_auction?: string;
-  logo_url?: string;
+  logo_url?: string | null;
+  /** Colore primario maglia (hex) */
+  color_primary?: string;
+  /** Colore secondario maglia (hex) */
+  color_secondary?: string;
+  /** Nome dell'allenatore (visualizzato nel dettaglio squadra) */
+  coach_name?: string | null;
   credits_remaining?: number;
   roster?: number[];
 }

@@ -14,7 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Trophy, Users, Calendar, Activity, BookOpen, Gavel, ArrowLeft } from "lucide-react";
+import { Trophy, Users, Calendar, Activity, BookOpen, Gavel, ArrowLeft, Settings } from "lucide-react";
 
 export default function LeagueDetail() {
   const { id } = useParams<{ id: string }>();
@@ -147,12 +147,20 @@ export default function LeagueDetail() {
             </Button>
           </Link>
           {league.admin_user_id === "demo-user" && (
-            <Link href={`/leagues/${league.id}/federation`}>
-              <Button variant="outline" className="gap-2 border-primary/20 text-primary">
-                <BookOpen className="h-4 w-4" />
-                Regolamento
-              </Button>
-            </Link>
+            <>
+              <Link href={`/leagues/${league.id}/config`}>
+                <Button variant="outline" className="gap-2 border-primary/20 text-primary">
+                  <Settings className="h-4 w-4" />
+                  Configurazione
+                </Button>
+              </Link>
+              <Link href={`/leagues/${league.id}/federation`}>
+                <Button variant="outline" className="gap-2 border-primary/20 text-primary">
+                  <BookOpen className="h-4 w-4" />
+                  Regolamento
+                </Button>
+              </Link>
+            </>
           )}
           {isReadyForAuction ? (
             <Button

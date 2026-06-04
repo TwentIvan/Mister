@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, ArrowRight, Clock, Gavel, Crown } from "lucide-react";
+import { ArrowLeft, ArrowRight, Clock, Gavel, Crown, Network } from "lucide-react";
 
 export interface LegaData {
   name: string;
@@ -14,6 +14,8 @@ export interface LegaData {
   rosterC: number;
   rosterA: number;
   mode: "classico" | "manageriale" | "manageriale_pro";
+  federationChoice: "new" | "adopt";
+  federationId?: string;
 }
 
 interface StepLegaProps {
@@ -81,7 +83,9 @@ export default function StepLega({ data, onChange, onNext, onCancel }: StepLegaP
     data.budgetInitial <= 2000 &&
     data.timerSeconds >= 3 &&
     data.timerSeconds <= 30 &&
-    [data.rosterP, data.rosterD, data.rosterC, data.rosterA].every(v => v >= 1 && v <= 15);
+    [data.rosterP, data.rosterD, data.rosterC, data.rosterA].every(v => v >= 1 && v <= 15) &&
+    (data.federationChoice === "new" ||
+      (data.federationChoice === "adopt" && !!data.federationId?.trim()));
 
   const handleNext = () => {
     if (!data.name.trim()) {
@@ -254,6 +258,70 @@ export default function StepLega({ data, onChange, onNext, onCancel }: StepLegaP
             <span className="font-mono font-bold text-foreground">{rosterTotal}</span>{" "}
             giocatori per squadra
           </p>
+        </CardContent>
+      </Card>
+
+      {/* ─── FEDERAZIONE ─────────────────────────────────────── */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Network className="h-4 w-4 text-[#1f4733]" />
+            Federazione
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <div
+              className={`rounded-lg border-2 p-3 cursor-pointer transition-all ${
+                data.federationChoice === "new"
+                  ? "border-[#1f4733] bg-[#1f4733]/5"
+                  : "border-border hover:border-[#1f4733]/50"
+              }`}
+              onClick={() => update({ federationChoice: "new", federationId: undefined })}
+              data-testid="card-fed-new"
+            >
+              <p className={`text-sm font-semibold ${data.federationChoice === "new" ? "text-[#1f4733]" : ""}`}>
+                Crea nuova
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Regolamento dedicato a questa lega
+              </p>
+            </div>
+            <div
+              className={`rounded-lg border-2 p-3 cursor-pointer transition-all ${
+                data.federationChoice === "adopt"
+                  ? "border-[#1f4733] bg-[#1f4733]/5"
+                  : "border-border hover:border-[#1f4733]/50"
+              }`}
+              onClick={() => update({ federationChoice: "adopt" })}
+              data-testid="card-fed-adopt"
+            >
+              <p className={`text-sm font-semibold ${data.federationChoice === "adopt" ? "text-[#1f4733]" : ""}`}>
+                Adotta esistente
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Condivide regolamento con altre leghe
+              </p>
+            </div>
+          </div>
+
+          {data.federationChoice === "adopt" && (
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">ID federazione</Label>
+              <Input
+                placeholder="fed-XXXXXXXX"
+                value={data.federationId ?? ""}
+                onChange={e => update({ federationId: e.target.value || undefined })}
+                className="font-mono text-sm"
+                data-testid="input-federation-id"
+              />
+              {!data.federationId?.trim() && (
+                <p className="text-xs text-destructive">
+                  Inserisci l'ID della federazione da adottare
+                </p>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
 

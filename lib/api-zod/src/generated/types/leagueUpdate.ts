@@ -5,9 +5,11 @@
  * Mister — il fantacalcio manageriale
  * OpenAPI spec version: 0.1.0
  */
+import type { LeagueUpdateAuctionMode } from './leagueUpdateAuctionMode';
 import type { LeagueUpdateLineupVisibility } from './leagueUpdateLineupVisibility';
 import type { LeagueUpdateRosterVisibility } from './leagueUpdateRosterVisibility';
 import type { LeagueUpdateVisibility } from './leagueUpdateVisibility';
+import type { PostAcquisitionWindow } from './postAcquisitionWindow';
 
 export interface LeagueUpdate {
   name?: string;
@@ -18,4 +20,44 @@ export interface LeagueUpdate {
   started?: boolean;
   notify_email?: boolean;
   notify_push?: boolean;
+  /**
+     * GUARDED: non modificabile durante un'asta in corso
+     * @minimum 3
+     * @maximum 30
+     */
+  timer_seconds?: number;
+  /**
+     * GUARDED: non modificabile durante un'asta in corso
+     * @minimum 100
+     * @maximum 2000
+     */
+  budget_initial?: number;
+  /**
+     * GUARDED: non modificabile durante un'asta in corso
+     * @minimum 1
+     * @maximum 15
+     */
+  roster_p?: number;
+  /**
+     * GUARDED: non modificabile durante un'asta in corso
+     * @minimum 1
+     * @maximum 15
+     */
+  roster_d?: number;
+  /**
+     * GUARDED: non modificabile durante un'asta in corso
+     * @minimum 1
+     * @maximum 15
+     */
+  roster_c?: number;
+  /**
+     * GUARDED: non modificabile durante un'asta in corso
+     * @minimum 1
+     * @maximum 15
+     */
+  roster_a?: number;
+  /** GUARDED: non modificabile durante un'asta in corso */
+  auction_mode?: LeagueUpdateAuctionMode;
+  /** Finestra post-acquisto (aggiornabile anche con asta in corso) */
+  post_acquisition_window?: PostAcquisitionWindow;
 }

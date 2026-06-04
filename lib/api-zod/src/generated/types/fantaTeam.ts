@@ -25,6 +25,11 @@ export interface FantaTeam {
      * @nullable
      */
   color_secondary?: string | null;
+  /**
+     * Nome allenatore inserito dal manager
+     * @nullable
+     */
+  coach_name?: string | null;
   credits_remaining: number;
   roster?: number[];
   created_at: Date;

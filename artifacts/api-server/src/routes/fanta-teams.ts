@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, and, or, inArray } from "drizzle-orm";
+import { eq, and, or, inArray, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { db } from "@workspace/db";
 import { fantaTeams, players, contracts, teamColors, playerGiornataStats, serieAFixtures, coaches } from "@workspace/db";
@@ -90,13 +90,25 @@ router.patch("/leagues/:leagueId/teams/:id", async (req, res): Promise<void> => 
     return;
   }
   const d = parsed.data;
+
+  // Costruisci aggiornamento JSONB per jersey (merge, non sovrascrittura)
+  const jerseyPatch: Record<string, string> = {};
+  if (d.color_primary !== undefined) jerseyPatch.primaryColor = d.color_primary;
+  if (d.color_secondary !== undefined) jerseyPatch.secondaryColor = d.color_secondary;
+  const hasJerseyUpdate = Object.keys(jerseyPatch).length > 0;
+  const jerseyJson = hasJerseyUpdate ? JSON.stringify(jerseyPatch) : undefined;
+
   const [row] = await db
     .update(fantaTeams)
     .set({
       ...(d.name !== undefined && { name: d.name }),
       ...(d.name_auction !== undefined && { nameAuction: d.name_auction }),
       ...(d.logo_url !== undefined && { logoUrl: d.logo_url }),
+      ...(d.coach_name !== undefined && { coachName: d.coach_name }),
       ...(d.credits_remaining !== undefined && { creditsRemaining: d.credits_remaining }),
+      ...(jerseyJson !== undefined && {
+        jersey: sql`COALESCE(${fantaTeams.jersey}, '{}'::jsonb) || ${jerseyJson}::jsonb`,
+      }),
     })
     .where(and(eq(fantaTeams.leagueId, p.data.leagueId), eq(fantaTeams.id, p.data.id)))
     .returning();

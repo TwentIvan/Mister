@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { BookOpen, Save } from "lucide-react";
+import { BookOpen, Save, AlertTriangle, User, Trophy } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { FlagsEditor, DEFAULT_FLAG_VALUES } from "@/components/FlagsEditor";
@@ -103,7 +103,19 @@ export default function FederationRules() {
           <BookOpen className="h-8 w-8" />
           Regolamento Federazione
         </h1>
-        <p className="text-muted-foreground mt-1">Configura le regole e le meccaniche della lega</p>
+        <p className="text-muted-foreground mt-1">Configura le regole e le meccaniche condivise tra tutte le leghe di questa federazione.</p>
+      </div>
+
+      {/* ─── AVVISO SNAPSHOT ─────────────────────────────────── */}
+      <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm dark:border-amber-900/40 dark:bg-amber-900/10">
+        <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+        <div className="space-y-1">
+          <p className="font-medium text-amber-800 dark:text-amber-400">Le modifiche valgono per nuove leghe e nuove stagioni</p>
+          <p className="text-amber-700 dark:text-amber-500">
+            Le leghe già avviate usano il regolamento congelato al momento del primo avvio dell'asta.
+            Modificare i flag qui non cambia le regole di nessuna lega in corso.
+          </p>
+        </div>
       </div>
 
       <Form {...form}>
@@ -166,11 +178,37 @@ export default function FederationRules() {
                   </FormItem>
                 )}
               />
+
+              {/* Proprietario — stub (autenticazione in arrivo) */}
+              <div className="flex items-center gap-2 pt-2 border-t">
+                <User className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm text-muted-foreground">Proprietario:</span>
+                <span className="text-sm font-mono text-muted-foreground">— (autenticazione in arrivo)</span>
+              </div>
             </CardContent>
           </Card>
 
           {/* ─── FEATURE FLAG ────────────────────────────────────── */}
           <FlagsEditor control={form.control} />
+
+          {/* ─── REGOLE DI PUNTEGGIO — FASE 3 ───────────────────── */}
+          <Card className="opacity-60">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Trophy className="h-4 w-4 text-muted-foreground" />
+                  <CardTitle className="text-base">Regole di punteggio</CardTitle>
+                </div>
+                <span className="text-[10px] font-medium bg-muted text-muted-foreground px-2 py-0.5 rounded-full uppercase tracking-wide">
+                  In arrivo — Fase 3
+                </span>
+              </div>
+              <CardDescription>
+                Bonus, malus, soglie di punteggio, modificatori difesa e centrocampo.
+                Questa sezione sarà configurabile nella prossima fase di sviluppo.
+              </CardDescription>
+            </CardHeader>
+          </Card>
 
           <div className="flex justify-end">
             <Button

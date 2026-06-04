@@ -318,6 +318,13 @@ export const ListLeaguesResponseItem = zod.object({
   "roster_c": zod.number().nullish().describe('Centrocampisti per squadra'),
   "roster_a": zod.number().nullish().describe('Attaccanti per squadra'),
   "auction_mode": zod.union([zod.literal('classico'),zod.literal('manageriale'),zod.literal('manageriale_pro'),zod.literal(null)]).nullish().describe('Modalità asta'),
+  "post_acquisition_window": zod.object({
+  "enabled": zod.boolean().optional(),
+  "async_hours": zod.number().optional().describe('Ore di finestra per reclamare in modalità asincrona'),
+  "live_seconds": zod.number().optional().describe('Secondi di finestra in asta live'),
+  "default_clause_action": zod.enum(['leave_default', 'trigger_clause', 'no_clause']).optional(),
+  "default_contract_years": zod.number().optional().describe('Anni di contratto di default all\'acquisto')
+}).optional().describe('Finestra temporale post-acquisto'),
   "snapshot_locked_at": zod.coerce.date().nullish().describe('Timestamp del freeze delle regole federazione (null = non ancora avvenuto)'),
   "created_at": zod.coerce.date()
 })
@@ -401,6 +408,13 @@ export const GetLeagueResponse = zod.object({
   "roster_c": zod.number().nullish().describe('Centrocampisti per squadra'),
   "roster_a": zod.number().nullish().describe('Attaccanti per squadra'),
   "auction_mode": zod.union([zod.literal('classico'),zod.literal('manageriale'),zod.literal('manageriale_pro'),zod.literal(null)]).nullish().describe('Modalità asta'),
+  "post_acquisition_window": zod.object({
+  "enabled": zod.boolean().optional(),
+  "async_hours": zod.number().optional().describe('Ore di finestra per reclamare in modalità asincrona'),
+  "live_seconds": zod.number().optional().describe('Secondi di finestra in asta live'),
+  "default_clause_action": zod.enum(['leave_default', 'trigger_clause', 'no_clause']).optional(),
+  "default_contract_years": zod.number().optional().describe('Anni di contratto di default all\'acquisto')
+}).optional().describe('Finestra temporale post-acquisto'),
   "snapshot_locked_at": zod.coerce.date().nullish().describe('Timestamp del freeze delle regole federazione (null = non ancora avvenuto)'),
   "created_at": zod.coerce.date()
 })
@@ -413,6 +427,22 @@ export const UpdateLeagueParams = zod.object({
   "id": zod.coerce.string()
 })
 
+export const updateLeagueBodyTimerSecondsMin = 3;
+export const updateLeagueBodyTimerSecondsMax = 30;
+
+export const updateLeagueBodyBudgetInitialMin = 100;
+export const updateLeagueBodyBudgetInitialMax = 2000;
+
+export const updateLeagueBodyRosterPMax = 15;
+
+export const updateLeagueBodyRosterDMax = 15;
+
+export const updateLeagueBodyRosterCMax = 15;
+
+export const updateLeagueBodyRosterAMax = 15;
+
+
+
 export const UpdateLeagueBody = zod.object({
   "name": zod.string().optional(),
   "max_managers": zod.number().optional(),
@@ -421,7 +451,21 @@ export const UpdateLeagueBody = zod.object({
   "roster_visibility": zod.enum(['always', 'after_deadline', 'hidden_all_season']).optional(),
   "started": zod.boolean().optional(),
   "notify_email": zod.boolean().optional(),
-  "notify_push": zod.boolean().optional()
+  "notify_push": zod.boolean().optional(),
+  "timer_seconds": zod.number().min(updateLeagueBodyTimerSecondsMin).max(updateLeagueBodyTimerSecondsMax).optional().describe('GUARDED: non modificabile durante un\'asta in corso'),
+  "budget_initial": zod.number().min(updateLeagueBodyBudgetInitialMin).max(updateLeagueBodyBudgetInitialMax).optional().describe('GUARDED: non modificabile durante un\'asta in corso'),
+  "roster_p": zod.number().min(1).max(updateLeagueBodyRosterPMax).optional().describe('GUARDED: non modificabile durante un\'asta in corso'),
+  "roster_d": zod.number().min(1).max(updateLeagueBodyRosterDMax).optional().describe('GUARDED: non modificabile durante un\'asta in corso'),
+  "roster_c": zod.number().min(1).max(updateLeagueBodyRosterCMax).optional().describe('GUARDED: non modificabile durante un\'asta in corso'),
+  "roster_a": zod.number().min(1).max(updateLeagueBodyRosterAMax).optional().describe('GUARDED: non modificabile durante un\'asta in corso'),
+  "auction_mode": zod.enum(['classico', 'manageriale', 'manageriale_pro']).nullish().describe('GUARDED: non modificabile durante un\'asta in corso'),
+  "post_acquisition_window": zod.object({
+  "enabled": zod.boolean().optional(),
+  "async_hours": zod.number().optional().describe('Ore di finestra per reclamare in modalità asincrona'),
+  "live_seconds": zod.number().optional().describe('Secondi di finestra in asta live'),
+  "default_clause_action": zod.enum(['leave_default', 'trigger_clause', 'no_clause']).optional(),
+  "default_contract_years": zod.number().optional().describe('Anni di contratto di default all\'acquisto')
+}).optional().describe('Finestra post-acquisto (aggiornabile anche con asta in corso)')
 })
 
 export const UpdateLeagueResponse = zod.object({
@@ -447,6 +491,13 @@ export const UpdateLeagueResponse = zod.object({
   "roster_c": zod.number().nullish().describe('Centrocampisti per squadra'),
   "roster_a": zod.number().nullish().describe('Attaccanti per squadra'),
   "auction_mode": zod.union([zod.literal('classico'),zod.literal('manageriale'),zod.literal('manageriale_pro'),zod.literal(null)]).nullish().describe('Modalità asta'),
+  "post_acquisition_window": zod.object({
+  "enabled": zod.boolean().optional(),
+  "async_hours": zod.number().optional().describe('Ore di finestra per reclamare in modalità asincrona'),
+  "live_seconds": zod.number().optional().describe('Secondi di finestra in asta live'),
+  "default_clause_action": zod.enum(['leave_default', 'trigger_clause', 'no_clause']).optional(),
+  "default_contract_years": zod.number().optional().describe('Anni di contratto di default all\'acquisto')
+}).optional().describe('Finestra temporale post-acquisto'),
   "snapshot_locked_at": zod.coerce.date().nullish().describe('Timestamp del freeze delle regole federazione (null = non ancora avvenuto)'),
   "created_at": zod.coerce.date()
 })
@@ -901,6 +952,7 @@ export const ListFantaTeamsResponseItem = zod.object({
   "logo_url": zod.string().nullish(),
   "color_primary": zod.string().nullish().describe('Colore primario della maglia (da jersey.primaryColor)'),
   "color_secondary": zod.string().nullish().describe('Colore secondario della maglia (da jersey.secondaryColor)'),
+  "coach_name": zod.string().nullish().describe('Nome allenatore inserito dal manager'),
   "credits_remaining": zod.number(),
   "roster": zod.array(zod.number()).optional(),
   "created_at": zod.coerce.date()
@@ -942,6 +994,7 @@ export const GetFantaTeamResponse = zod.object({
   "logo_url": zod.string().nullish(),
   "color_primary": zod.string().nullish().describe('Colore primario della maglia (da jersey.primaryColor)'),
   "color_secondary": zod.string().nullish().describe('Colore secondario della maglia (da jersey.secondaryColor)'),
+  "coach_name": zod.string().nullish().describe('Nome allenatore inserito dal manager'),
   "credits_remaining": zod.number(),
   "roster": zod.array(zod.number()).optional(),
   "created_at": zod.coerce.date()
@@ -959,7 +1012,10 @@ export const UpdateFantaTeamParams = zod.object({
 export const UpdateFantaTeamBody = zod.object({
   "name": zod.string().optional(),
   "name_auction": zod.string().optional(),
-  "logo_url": zod.string().optional(),
+  "logo_url": zod.string().nullish(),
+  "color_primary": zod.string().optional().describe('Colore primario maglia (hex)'),
+  "color_secondary": zod.string().optional().describe('Colore secondario maglia (hex)'),
+  "coach_name": zod.string().nullish().describe('Nome dell\'allenatore (visualizzato nel dettaglio squadra)'),
   "credits_remaining": zod.number().optional(),
   "roster": zod.array(zod.number()).optional()
 })
@@ -973,6 +1029,7 @@ export const UpdateFantaTeamResponse = zod.object({
   "logo_url": zod.string().nullish(),
   "color_primary": zod.string().nullish().describe('Colore primario della maglia (da jersey.primaryColor)'),
   "color_secondary": zod.string().nullish().describe('Colore secondario della maglia (da jersey.secondaryColor)'),
+  "coach_name": zod.string().nullish().describe('Nome allenatore inserito dal manager'),
   "credits_remaining": zod.number(),
   "roster": zod.array(zod.number()).optional(),
   "created_at": zod.coerce.date()
@@ -1168,6 +1225,13 @@ export const GetDashboardResponse = zod.object({
   "roster_c": zod.number().nullish().describe('Centrocampisti per squadra'),
   "roster_a": zod.number().nullish().describe('Attaccanti per squadra'),
   "auction_mode": zod.union([zod.literal('classico'),zod.literal('manageriale'),zod.literal('manageriale_pro'),zod.literal(null)]).nullish().describe('Modalità asta'),
+  "post_acquisition_window": zod.object({
+  "enabled": zod.boolean().optional(),
+  "async_hours": zod.number().optional().describe('Ore di finestra per reclamare in modalità asincrona'),
+  "live_seconds": zod.number().optional().describe('Secondi di finestra in asta live'),
+  "default_clause_action": zod.enum(['leave_default', 'trigger_clause', 'no_clause']).optional(),
+  "default_contract_years": zod.number().optional().describe('Anni di contratto di default all\'acquisto')
+}).optional().describe('Finestra temporale post-acquisto'),
   "snapshot_locked_at": zod.coerce.date().nullish().describe('Timestamp del freeze delle regole federazione (null = non ancora avvenuto)'),
   "created_at": zod.coerce.date()
 })),
@@ -1610,6 +1674,7 @@ export const GetAuctionResponse = zod.object({
   "logo_url": zod.string().nullish(),
   "color_primary": zod.string().nullish().describe('Colore primario della maglia (da jersey.primaryColor)'),
   "color_secondary": zod.string().nullish().describe('Colore secondario della maglia (da jersey.secondaryColor)'),
+  "coach_name": zod.string().nullish().describe('Nome allenatore inserito dal manager'),
   "credits_remaining": zod.number(),
   "roster": zod.array(zod.number()).optional(),
   "created_at": zod.coerce.date()

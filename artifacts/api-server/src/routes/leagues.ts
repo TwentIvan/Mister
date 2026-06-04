@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, count } from "drizzle-orm";
+import { eq, count, and, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { db } from "@workspace/db";
 import {
@@ -9,6 +9,7 @@ import {
   marketEvents,
   fantaTeams,
   contracts,
+  auctions,
   DEFAULT_LEAGUE_CONFIG,
   defaultFlagValues,
 } from "@workspace/db";
@@ -182,6 +183,49 @@ router.patch("/leagues/:id", async (req, res): Promise<void> => {
     return;
   }
   const d = parsed.data;
+
+  // GUARD: campi che non possono cambiare mentre un'asta è in corso
+  const hasGuardedChange =
+    d.timer_seconds !== undefined ||
+    d.budget_initial !== undefined ||
+    d.roster_p !== undefined ||
+    d.roster_d !== undefined ||
+    d.roster_c !== undefined ||
+    d.roster_a !== undefined ||
+    d.auction_mode !== undefined;
+
+  if (hasGuardedChange) {
+    const [runningAuction] = await db
+      .select({ id: auctions.id })
+      .from(auctions)
+      .where(and(eq(auctions.leagueId, params.data.id), eq(auctions.status, "running")))
+      .limit(1);
+    if (runningAuction) {
+      res.status(409).json({
+        error:
+          "Impossibile modificare composizione rosa, budget o timer mentre un'asta è in corso. Attendi il termine dell'asta.",
+        running_auction_id: runningAuction.id,
+      });
+      return;
+    }
+  }
+
+  // Costruisci l'aggiornamento config JSONB per post_acquisition_window
+  let configExpr: ReturnType<typeof sql> | undefined;
+  if (d.post_acquisition_window) {
+    const paw = d.post_acquisition_window;
+    const pawPatch: Record<string, unknown> = {};
+    if (paw.enabled !== undefined) pawPatch.enabled = paw.enabled;
+    if (paw.async_hours !== undefined) pawPatch.asyncHours = paw.async_hours;
+    if (paw.live_seconds !== undefined) pawPatch.liveSeconds = paw.live_seconds;
+    if (paw.default_clause_action !== undefined)
+      pawPatch.defaultClauseAction = paw.default_clause_action;
+    if (paw.default_contract_years !== undefined)
+      pawPatch.defaultContractYears = paw.default_contract_years;
+    const pawJson = JSON.stringify({ postAcquisitionWindow: pawPatch });
+    configExpr = sql`COALESCE(${leagues.config}, '{}'::jsonb) || ${pawJson}::jsonb`;
+  }
+
   const [row] = await db
     .update(leagues)
     .set({
@@ -193,6 +237,14 @@ router.patch("/leagues/:id", async (req, res): Promise<void> => {
       ...(d.roster_visibility !== undefined && { rosterVisibility: d.roster_visibility }),
       ...(d.notify_email !== undefined && { notifyEmail: d.notify_email }),
       ...(d.notify_push !== undefined && { notifyPush: d.notify_push }),
+      ...(d.timer_seconds !== undefined && { timerSeconds: d.timer_seconds }),
+      ...(d.budget_initial !== undefined && { budgetInitial: d.budget_initial }),
+      ...(d.roster_p !== undefined && { rosterP: d.roster_p }),
+      ...(d.roster_d !== undefined && { rosterD: d.roster_d }),
+      ...(d.roster_c !== undefined && { rosterC: d.roster_c }),
+      ...(d.roster_a !== undefined && { rosterA: d.roster_a }),
+      ...(d.auction_mode !== undefined && { auctionMode: d.auction_mode }),
+      ...(configExpr !== undefined && { config: configExpr }),
     })
     .where(eq(leagues.id, params.data.id))
     .returning();

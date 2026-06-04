@@ -9,7 +9,13 @@
 export interface FantaTeamUpdate {
   name?: string;
   name_auction?: string;
-  logo_url?: string;
+  logo_url?: string | null;
+  /** Colore primario maglia (hex) */
+  color_primary?: string;
+  /** Colore secondario maglia (hex) */
+  color_secondary?: string;
+  /** Nome dell'allenatore (visualizzato nel dettaglio squadra) */
+  coach_name?: string | null;
   credits_remaining?: number;
   roster?: number[];
 }

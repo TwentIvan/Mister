@@ -1654,6 +1654,9 @@ components:
           type: ["string", "null"]
           enum: [classico, manageriale, manageriale_pro, null]
           description: Modalità asta
+        post_acquisition_window:
+          $ref: "#/components/schemas/PostAcquisitionWindow"
+          description: Finestra temporale post-acquisto
         snapshot_locked_at:
           type: ["string", "null"]
           format: date-time
@@ -1735,6 +1738,25 @@ components:
           items:
             $ref: "#/components/schemas/FantaTeam"
 
+    PostAcquisitionWindow:
+      type: object
+      description: Finestra temporale post-acquisto per reclami e opzioni contrattuali
+      properties:
+        enabled:
+          type: boolean
+        async_hours:
+          type: integer
+          description: Ore di finestra per reclamare in modalità asincrona
+        live_seconds:
+          type: integer
+          description: Secondi di finestra in asta live
+        default_clause_action:
+          type: string
+          enum: [leave_default, trigger_clause, no_clause]
+        default_contract_years:
+          type: integer
+          description: Anni di contratto di default all'acquisto
+
     LeagueUpdate:
       type: object
       properties:
@@ -1757,6 +1779,44 @@ components:
           type: boolean
         notify_push:
           type: boolean
+        timer_seconds:
+          type: integer
+          minimum: 3
+          maximum: 30
+          description: "GUARDED: non modificabile durante un'asta in corso"
+        budget_initial:
+          type: integer
+          minimum: 100
+          maximum: 2000
+          description: "GUARDED: non modificabile durante un'asta in corso"
+        roster_p:
+          type: integer
+          minimum: 1
+          maximum: 15
+          description: "GUARDED: non modificabile durante un'asta in corso"
+        roster_d:
+          type: integer
+          minimum: 1
+          maximum: 15
+          description: "GUARDED: non modificabile durante un'asta in corso"
+        roster_c:
+          type: integer
+          minimum: 1
+          maximum: 15
+          description: "GUARDED: non modificabile durante un'asta in corso"
+        roster_a:
+          type: integer
+          minimum: 1
+          maximum: 15
+          description: "GUARDED: non modificabile durante un'asta in corso"
+        auction_mode:
+          type: string
+          enum: [classico, manageriale, manageriale_pro]
+          nullable: true
+          description: "GUARDED: non modificabile durante un'asta in corso"
+        post_acquisition_window:
+          $ref: "#/components/schemas/PostAcquisitionWindow"
+          description: Finestra post-acquisto (aggiornabile anche con asta in corso)
 
     LeagueStats:
       type: object
@@ -2024,6 +2084,9 @@ components:
         color_secondary:
           type: ["string", "null"]
           description: Colore secondario della maglia (da jersey.secondaryColor)
+        coach_name:
+          type: ["string", "null"]
+          description: Nome allenatore inserito dal manager
         credits_remaining:
           type: integer
         roster:
@@ -2060,6 +2123,17 @@ components:
           type: string
         logo_url:
           type: string
+          nullable: true
+        color_primary:
+          type: string
+          description: Colore primario maglia (hex)
+        color_secondary:
+          type: string
+          description: Colore secondario maglia (hex)
+        coach_name:
+          type: string
+          nullable: true
+          description: Nome dell'allenatore (visualizzato nel dettaglio squadra)
         credits_remaining:
           type: integer
         roster:
