@@ -1,3 +1,6 @@
 - [Zod route stripping + codegen](zod-codegen-rule.md) — aggiungere campi al mapper senza codegen li fa strippare dal Zod parse in route
 - [Api-server build](api-server-build.md) — bundle = dist/index.mjs (non .js); rebuild esplicito serve dopo ogni modifica a mapper/routes
 - [Auth Passo A](auth-passo-a.md) — FK critica: insert league_members condizionale su req.user (demo-user non esiste in users table)
+- [Auth cookie pattern](auth-cookie.md) — server usa cookie HTTP-only (non Bearer token nel body); test con curl richiedono -c/-b cookiejar
+- [isLeagueAdmin checks league_members](auth-guards.md) — guardLeagueAdmin verifica league_members.role='admin', non admin_user_id sulla leagues table
+- [CurrentUser shape](auth-current-user.md) — frontend CurrentUser ha id/email/display_name (non sub); server JWT payload usa sub; confronti ownership devono usare user.id nel client

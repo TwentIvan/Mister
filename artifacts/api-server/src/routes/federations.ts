@@ -10,9 +10,28 @@ import {
   UpdateFederationResponse,
 } from "@workspace/api-zod";
 import { mapFederation } from "../lib/mappers";
+import { guardFederationOwner } from "../lib/auth";
 import type { FederationRules } from "@workspace/db";
 
 const router: IRouter = Router();
+
+// ─── GET /federations ─────────────────────────────────────────
+// Lista federazioni dell'utente corrente (o filtrate per owner_user_id).
+// Utilizzata dal wizard di setup lega per il picker "Adotta esistente".
+
+router.get("/federations", async (req, res): Promise<void> => {
+  const ownerUserId =
+    (req.query.owner_user_id as string | undefined) ?? req.user?.sub;
+  if (!ownerUserId) {
+    res.status(401).json({ error: "Autenticazione richiesta" });
+    return;
+  }
+  const rows = await db
+    .select()
+    .from(federations)
+    .where(eq(federations.ownerUserId, ownerUserId));
+  res.json(rows.map(mapFederation));
+});
 
 router.get("/leagues/:leagueId/federation", async (req, res): Promise<void> => {
   const params = GetFederationParams.safeParse(req.params);
@@ -66,6 +85,7 @@ router.patch("/leagues/:leagueId/federation", async (req, res): Promise<void> =>
     res.status(404).json({ error: "Questa lega non è associata a nessuna federazione" });
     return;
   }
+  if (!await guardFederationOwner(req, res, leagueRow.federationId)) return;
   const d = parsed.data;
   const [row] = await db
     .update(federations)

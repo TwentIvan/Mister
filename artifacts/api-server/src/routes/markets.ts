@@ -16,6 +16,7 @@ import {
   DeleteMarketEventParams,
 } from "@workspace/api-zod";
 import { mapMarket } from "../lib/mappers";
+import { guardLeagueAdmin } from "../lib/auth";
 import type { MarketEventConfig } from "@workspace/db";
 
 const router: IRouter = Router();
@@ -39,6 +40,7 @@ router.post("/leagues/:leagueId/markets", async (req, res): Promise<void> => {
     res.status(400).json({ error: params.error.message });
     return;
   }
+  if (!await guardLeagueAdmin(req, res, params.data.leagueId)) return;
   const parsed = CreateMarketEventBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -88,6 +90,7 @@ router.patch("/leagues/:leagueId/markets/:id", async (req, res): Promise<void> =
     res.status(400).json({ error: p.error.message });
     return;
   }
+  if (!await guardLeagueAdmin(req, res, p.data.leagueId)) return;
   const parsed = UpdateMarketEventBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -118,6 +121,7 @@ router.delete("/leagues/:leagueId/markets/:id", async (req, res): Promise<void> 
     res.status(400).json({ error: p.error.message });
     return;
   }
+  if (!await guardLeagueAdmin(req, res, p.data.leagueId)) return;
   const [row] = await db
     .delete(marketEvents)
     .where(and(eq(marketEvents.leagueId, p.data.leagueId), eq(marketEvents.id, p.data.id)))

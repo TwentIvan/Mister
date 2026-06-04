@@ -1,5 +1,6 @@
 import { Router, type IRouter, type Response } from "express";
 import { eq, and, asc, desc, count, sql } from "drizzle-orm";
+import { guardLeagueAdmin, isLeagueAdmin } from "../lib/auth";
 import { nanoid } from "nanoid";
 import { db } from "@workspace/db";
 import {
@@ -280,6 +281,7 @@ router.post("/auctions", async (req, res): Promise<void> => {
     res.status(400).json({ error: "Lega non trovata" });
     return;
   }
+  if (!await guardLeagueAdmin(req, res, leagueId)) return;
 
   const [teamCount] = await db
     .select({ count: count() })
@@ -473,6 +475,7 @@ router.post("/auctions/:id/bid", async (req, res): Promise<void> => {
   }
 
   const currentPlayer = await getCurrentQueuePlayer(id, auction.callMode);
+  // currentPlayer può essere null — la verifica avviene dopo
   if (!currentPlayer || currentPlayer.playerId !== playerId) {
     res.status(400).json({ error: "Il giocatore non è quello corrente in asta" });
     return;
@@ -485,6 +488,38 @@ router.post("/auctions/:id/bid", async (req, res): Promise<void> => {
   if (!team) {
     res.status(400).json({ error: "Squadra non trovata in questa lega" });
     return;
+  }
+
+  // ── Autorizzazione bid ────────────────────────────────────────────────────
+  // Admin della lega: può fare offerte per qualsiasi squadra (banditore live).
+  // Membro loggato: solo per la squadra che controlla (managerUserId).
+  // Token mobile (TRANSITORIO via x-auction-token): ponte per il mobile già
+  // distribuito. Verrà rimosso nella fase INVITI quando i membri loggati
+  // saranno legati alle loro squadre e diventeranno l'identità del rilancio.
+  if (req.user) {
+    const adminOk = await isLeagueAdmin(req.user.sub, auction.leagueId);
+    if (!adminOk && team.managerUserId !== req.user.sub) {
+      res.status(403).json({ error: "Non puoi fare offerte per una squadra non tua" });
+      return;
+    }
+  } else {
+    const auctionToken = req.headers["x-auction-token"] as string | undefined;
+    if (!auctionToken) {
+      res.status(401).json({ error: "Autenticazione richiesta" });
+      return;
+    }
+    const [tokenRow] = await db
+      .select({ fantaTeamId: auctionTokens.fantaTeamId })
+      .from(auctionTokens)
+      .where(and(eq(auctionTokens.token, auctionToken), eq(auctionTokens.auctionId, id)));
+    if (!tokenRow) {
+      res.status(403).json({ error: "Token non valido per questa asta" });
+      return;
+    }
+    if (tokenRow.fantaTeamId !== fantaTeamId) {
+      res.status(403).json({ error: "Il token non autorizza offerte per questa squadra" });
+      return;
+    }
   }
 
   // ── Flag federazione: usa snapshot se disponibile, altrimenti live ────────
@@ -657,6 +692,7 @@ router.post("/auctions/:id/assign", async (req, res): Promise<void> => {
     res.status(403).json({ error: "L'asta non è in corso" });
     return;
   }
+  if (!await guardLeagueAdmin(req, res, auction.leagueId)) return;
 
   try {
     const { nextPlayerId, auctionCompleted } = await db.transaction(async (tx) => {
@@ -763,6 +799,7 @@ router.post("/auctions/:id/skip", async (req, res): Promise<void> => {
     res.status(403).json({ error: "L'asta non è in corso" });
     return;
   }
+  if (!await guardLeagueAdmin(req, res, auction.leagueId)) return;
 
   await db
     .update(auctionPlayerQueue)
@@ -801,6 +838,7 @@ router.post("/auctions/:id/pause", async (req, res): Promise<void> => {
   const { id } = params.data;
   const [current] = await db.select().from(auctions).where(eq(auctions.id, id));
   if (!current) { res.status(404).json({ error: "Asta non trovata" }); return; }
+  if (!await guardLeagueAdmin(req, res, current.leagueId)) return;
   // Salva il tempo residuo del timer al momento della pausa
   const remaining = current.deadlineTs ? Math.max(0, current.deadlineTs.getTime() - Date.now()) : 0;
   const [auction] = await db.update(auctions)
@@ -823,6 +861,7 @@ router.post("/auctions/:id/resume", async (req, res): Promise<void> => {
   const { id } = params.data;
   const [current] = await db.select().from(auctions).where(eq(auctions.id, id));
   if (!current) { res.status(404).json({ error: "Asta non trovata" }); return; }
+  if (!await guardLeagueAdmin(req, res, current.leagueId)) return;
   // Ripristina il timer dal tempo residuo salvato alla pausa
   const newDeadline = current.pausedRemainingMs > 0 ? new Date(Date.now() + current.pausedRemainingMs) : null;
   const [auction] = await db.update(auctions)
@@ -849,6 +888,7 @@ router.post("/auctions/:id/undo", async (req, res): Promise<void> => {
     res.status(403).json({ error: "L'asta non è in corso" });
     return;
   }
+  if (!await guardLeagueAdmin(req, res, auction.leagueId)) return;
 
   // ── Guard server-authoritative: un solo passo ────────────────────────────
   if (!auction.lastUndoableAction) {
@@ -1050,6 +1090,7 @@ router.post("/auctions/:id/manual/add", async (req, res): Promise<void> => {
   if (!auction || (auction.status !== "running" && auction.status !== "paused")) {
     res.status(403).json({ error: "L'asta non è in corso" }); return;
   }
+  if (!await guardLeagueAdmin(req, res, auction.leagueId)) return;
   const [team] = await db
     .select()
     .from(fantaTeams)
@@ -1120,6 +1161,7 @@ router.post("/auctions/:id/manual/remove", async (req, res): Promise<void> => {
   if (!auction || (auction.status !== "running" && auction.status !== "paused")) {
     res.status(403).json({ error: "L'asta non è in corso" }); return;
   }
+  if (!await guardLeagueAdmin(req, res, auction.leagueId)) return;
 
   const [asgn] = await db
     .select()
@@ -1177,6 +1219,7 @@ router.post("/auctions/:id/manual/update-price", async (req, res): Promise<void>
   if (!auction || (auction.status !== "running" && auction.status !== "paused")) {
     res.status(403).json({ error: "L'asta non è in corso" }); return;
   }
+  if (!await guardLeagueAdmin(req, res, auction.leagueId)) return;
 
   // Recupera l'assignment esistente per leggere il prezzo attuale
   const [asgn] = await db
@@ -1253,6 +1296,7 @@ router.post("/auctions/:id/manual/set-budget", async (req, res): Promise<void> =
   if (!auction || (auction.status !== "running" && auction.status !== "paused")) {
     res.status(403).json({ error: "L'asta non è in corso" }); return;
   }
+  if (!await guardLeagueAdmin(req, res, auction.leagueId)) return;
 
   const [team] = await db
     .update(fantaTeams)
@@ -1284,6 +1328,7 @@ router.post("/auctions/:id/call", async (req, res): Promise<void> => {
     res.status(403).json({ error: "L'asta non è in corso" });
     return;
   }
+  if (!await guardLeagueAdmin(req, res, auction.leagueId)) return;
   if (auction.callMode !== "chiamata") {
     res.status(403).json({ error: "L'asta non è in modalità chiamata" });
     return;
@@ -1424,6 +1469,12 @@ router.post("/auctions/:id/end", async (req, res): Promise<void> => {
     res.status(400).json({ error: params.error.message });
     return;
   }
+  const [auctionToEnd] = await db
+    .select({ leagueId: auctions.leagueId })
+    .from(auctions)
+    .where(eq(auctions.id, params.data.id));
+  if (!auctionToEnd) { res.status(404).json({ error: "Asta non trovata" }); return; }
+  if (!await guardLeagueAdmin(req, res, auctionToEnd.leagueId)) return;
   const [auction] = await db
     .update(auctions)
     .set({ status: "completed", completedAt: new Date(), deadlineTs: null })
@@ -1441,6 +1492,7 @@ router.post("/auctions/:id/tokens", async (req, res): Promise<void> => {
   const { id } = req.params;
   const [auction] = await db.select().from(auctions).where(eq(auctions.id, id));
   if (!auction) { res.status(404).json({ error: "Asta non trovata" }); return; }
+  if (!await guardLeagueAdmin(req, res, auction.leagueId)) return;
 
   const teams = await db.select().from(fantaTeams).where(eq(fantaTeams.leagueId, auction.leagueId));
 

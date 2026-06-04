@@ -1,0 +1,38 @@
+ACCOUNT — FONDAZIONE, PASSO B: il cancello di autorizzazione + prove NEGATIVE. Il passaggio piu delicato: un endpoint mutante lasciato aperto e un buco che non si vede finche non viene sfruttato. SERVER-AUTHORITATIVE: nascondere un bottone nel frontend NON basta, l'endpoint DEVE rifiutare. I criteri qui sono soprattutto negativi.
+
+==== PRIMA — chiudere tre cose del Passo A ====
+- JWT_SECRET: oggi e il fallback hardcoded "dev-secret-CHANGE-IN-PROD". Un segreto noto = chiunque puo forgiare token. Fallo venire da una variabile d'ambiente; il fallback resti SOLO per dev e fallisca RUMOROSAMENTE in produzione. Non deve poter arrivare in prod un segreto noto.
+- Conferma che il cookie di sessione (mister_auth) e HTTP-only + secure (non leggibile da JS).
+- Conferma che il TOKEN MOBILE rilancia ancora (era in A5, non l'ho visto provato).
+
+==== MIDDLEWARE ====
+- requireAuth: risolve l'utente dal cookie JWT; 401 se assente/non valido.
+- requireLeagueAdmin(leagueId) / requireLeagueMember(leagueId): controlla league_members per il ruolo.
+- requireFederationOwner(federationId): controlla federations.owner_user_id.
+
+==== CANCELLO sulle MUTAZIONI (le azioni pericolose) ====
+- ADMIN della lega: PATCH /leagues (config), POST/PATCH/DELETE fanta-teams, avvio asta e controlli (pausa/riprendi/aggiudica/salta/chiama/annulla), POST/PATCH/DELETE competizioni e mercati, generazione token mobile.
+- PROPRIETARIO della federazione: PATCH /leagues/:id/federation (regole/flag). ATTENZIONE: la federazione e CONDIVISA — un admin che ha solo ADOTTATO una federazione NON puo modificarne le regole; solo il proprietario.
+- OFFERTA (bid) — DUE vie legittime (l'anonimo non serve):
+  (a) ADMIN/banditore della lega: rilancia per QUALUNQUE squadra. Copre tutta l'asta dal vivo in sala — le offerte parlate le inserisce il banditore, il controllo e sociale (le persone presenti).
+  (b) MEMBRO loggato: rilancia SOLO per la squadra che controlla (manager_user_id). Copre la partecipazione da remoto/mobile.
+  Un membro NON puo rilanciare per una squadra non sua.
+  PONTE TRANSITORIO: il token d'asta anonimo (auction_tokens) resta accettato SOLO per non rompere il mobile gia costruito, ma marcalo esplicitamente come TRANSITORIO — verra rimosso nella fase INVITI, quando i membri loggati saranno legati alle loro squadre e diventeranno l'identita del rilancio (via b). Annotalo nel codice.
+- LETTURE: per ora restano accessibili (membri + token mobile per la vista asta). La visibilita fine per-lega arriva dopo: concentriamo il cancello sulle mutazioni.
+- PUBBLICI: solo register e login.
+
+==== FRONTEND ====
+- Route protette: non loggato -> login. Schermate admin (config) nascoste/inaccessibili ai non-admin. La pagina asta MOBILE resta accessibile col token finche e transitorio.
+- Il server resta l'autorita: il frontend nasconde, l'endpoint rifiuta.
+
+==== CRITERI — i NEGATIVI sono il cuore ====
+B1. Non autenticato su una mutazione protetta -> 401.
+B2. Membro (non admin) che tenta azioni admin (config, avvio asta, gestione squadre, competizioni, mercati) -> 403. Provalo per CIASCUNA classe.
+B3. Admin di lega che ha ADOTTATO una federazione (non proprietario) tenta di modificarne le regole -> 403.
+B4. Membro che tenta di rilanciare per una squadra NON sua -> rifiutato.
+B5. POSITIVI (non rompere): l'admin/banditore rilancia per qualunque squadra e fa le azioni admin; il proprietario modifica la federazione; il membro rilancia per la PROPRIA squadra; il token mobile (transitorio) rilancia ancora.
+B6. JWT_SECRET da env (fallback solo dev, rumoroso in prod); cookie HTTP-only+secure confermati.
+B7. REGRESSIONE: tutti i flussi (asta, config, competizioni, mercati, mobile) funzionano per i ruoli giusti; typecheck pulito.
+
+VINCOLI: server-authoritative (gating sull'endpoint, non solo UI); token mobile solo come ponte transitorio (marcato per rimozione agli inviti); federazione editabile solo dal proprietario; segreto JWT da env; typecheck pulito, niente debug residuo.
+DELIVERABLE: diff; ESITO DELLE PROVE NEGATIVE B1-B4 una per una, con lo status code osservato; i positivi B5; conferma B6 (env secret + flag cookie). CHECKPOINT prima di proseguire con gli inviti.

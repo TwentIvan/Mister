@@ -30,6 +30,7 @@ import {
   GetLeagueStatsResponse,
 } from "@workspace/api-zod";
 import { mapLeague, mapFantaTeam } from "../lib/mappers";
+import { guardLeagueAdmin } from "../lib/auth";
 
 const router: IRouter = Router();
 
@@ -47,6 +48,10 @@ router.get("/leagues", async (req, res): Promise<void> => {
 });
 
 router.post("/leagues", async (req, res): Promise<void> => {
+  if (!req.user) {
+    res.status(401).json({ error: "Autenticazione richiesta" });
+    return;
+  }
   const parsed = CreateLeagueBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.flatten() });
@@ -199,6 +204,9 @@ router.patch("/leagues/:id", async (req, res): Promise<void> => {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
+
+  if (!await guardLeagueAdmin(req, res, params.data.id)) return;
+
   const d = parsed.data;
 
   // GUARD: campi che non possono cambiare mentre un'asta è in corso
@@ -278,6 +286,7 @@ router.delete("/leagues/:id", async (req, res): Promise<void> => {
     res.status(400).json({ error: params.error.message });
     return;
   }
+  if (!await guardLeagueAdmin(req, res, params.data.id)) return;
   const [row] = await db
     .delete(leagues)
     .where(eq(leagues.id, params.data.id))

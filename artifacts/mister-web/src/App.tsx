@@ -24,6 +24,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/theme-provider";
 import NotFound from "@/pages/not-found";
 import { AppLayout } from "@/components/layout/app-layout";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 
 const queryClient = new QueryClient();
 
@@ -40,6 +41,7 @@ function Router() {
       {/* ── Tutte le altre pagine con sidebar ───────────────── */}
       <Route>
         {() => (
+          <ProtectedRoute>
           <AppLayout>
             <Switch>
               <Route path="/" component={Dashboard} />
@@ -61,6 +63,7 @@ function Router() {
               <Route component={NotFound} />
             </Switch>
           </AppLayout>
+          </ProtectedRoute>
         )}
       </Route>
     </Switch>

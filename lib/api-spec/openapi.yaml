@@ -141,6 +141,29 @@ paths:
         "404":
           description: Not found
 
+  # ─── FEDERATIONS STANDALONE ─────────────────────────────────
+  /federations:
+    get:
+      operationId: listFederations
+      tags: [federations]
+      summary: Lista federazioni dell'utente corrente (o filtrate per proprietario)
+      parameters:
+        - in: query
+          name: owner_user_id
+          schema:
+            type: string
+          required: false
+          description: Filtra per proprietario. Se omesso e l'utente è autenticato, restituisce le federazioni dell'utente corrente.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Federation"
+
   # ─── LEAGUES ─────────────────────────────────────────────────
   /leagues:
     get:

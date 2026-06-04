@@ -93,6 +93,7 @@ export * from './lineup';
 export * from './lineupInput';
 export * from './lineupPlayer';
 export * from './lineupPlayerSlotPosition';
+export * from './listFederationsParams';
 export * from './listLeaguesParams';
 export * from './listPlayersParams';
 export * from './listPlayersRole';

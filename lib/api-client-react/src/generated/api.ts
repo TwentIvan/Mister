@@ -60,6 +60,7 @@ import type {
   LeagueWizardResponse,
   Lineup,
   LineupInput,
+  ListFederationsParams,
   ListLeaguesParams,
   ListPlayersParams,
   ListTemplatesParams,
@@ -553,6 +554,90 @@ export const useDeleteTemplate = <TError = ErrorType<void>,
       > => {
       return useMutation(getDeleteTemplateMutationOptions(options));
     }
+
+export const getListFederationsUrl = (params?: ListFederationsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/federations?${stringifiedParams}` : `/api/federations`
+}
+
+/**
+ * @summary Lista federazioni dell'utente corrente (o filtrate per proprietario)
+ */
+export const listFederations = async (params?: ListFederationsParams, options?: RequestInit): Promise<Federation[]> => {
+
+  return customFetch<Federation[]>(getListFederationsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListFederationsQueryKey = (params?: ListFederationsParams,) => {
+    return [
+    `/api/federations`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListFederationsQueryOptions = <TData = Awaited<ReturnType<typeof listFederations>>, TError = ErrorType<unknown>>(params?: ListFederationsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listFederations>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListFederationsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listFederations>>> = ({ signal }) => listFederations(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listFederations>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListFederationsQueryResult = NonNullable<Awaited<ReturnType<typeof listFederations>>>
+export type ListFederationsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Lista federazioni dell'utente corrente (o filtrate per proprietario)
+ */
+
+export function useListFederations<TData = Awaited<ReturnType<typeof listFederations>>, TError = ErrorType<unknown>>(
+ params?: ListFederationsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listFederations>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListFederationsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 
 export const getListLeaguesUrl = (params?: ListLeaguesParams,) => {
   const normalizedParams = new URLSearchParams();

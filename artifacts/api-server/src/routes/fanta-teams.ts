@@ -17,6 +17,7 @@ import {
 } from "@workspace/api-zod";
 import type { RosterSnapshot } from "@workspace/db";
 import { mapFantaTeam } from "../lib/mappers";
+import { guardLeagueAdmin } from "../lib/auth";
 
 const router: IRouter = Router();
 
@@ -39,6 +40,7 @@ router.post("/leagues/:leagueId/teams", async (req, res): Promise<void> => {
     res.status(400).json({ error: params.error.message });
     return;
   }
+  if (!await guardLeagueAdmin(req, res, params.data.leagueId)) return;
   const parsed = CreateFantaTeamBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -84,6 +86,7 @@ router.patch("/leagues/:leagueId/teams/:id", async (req, res): Promise<void> => 
     res.status(400).json({ error: p.error.message });
     return;
   }
+  if (!await guardLeagueAdmin(req, res, p.data.leagueId)) return;
   const parsed = UpdateFantaTeamBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });

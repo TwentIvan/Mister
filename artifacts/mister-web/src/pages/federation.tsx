@@ -223,7 +223,11 @@ export default function FederationPage() {
                 <User className="h-4 w-4 text-muted-foreground" />
                 <span className="text-sm text-muted-foreground">Proprietario:</span>
                 <span className="text-sm font-mono text-foreground">
-                  {user?.display_name ?? "—"}
+                  {federation.owner_user_id
+                    ? federation.owner_user_id === user?.id
+                      ? (user?.display_name ?? federation.owner_user_id)
+                      : federation.owner_user_id
+                    : "—"}
                 </span>
               </div>
             </CardContent>

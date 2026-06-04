@@ -3,7 +3,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, ArrowRight, Clock, Gavel, Crown, Network } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
+import { ArrowLeft, ArrowRight, Clock, Gavel, Crown, Network, Plus } from "lucide-react";
+import { useListFederations, getListFederationsQueryKey } from "@workspace/api-client-react";
 
 export interface LegaData {
   name: string;
@@ -70,6 +73,11 @@ function NumberInput({
 
 export default function StepLega({ data, onChange, onNext, onCancel }: StepLegaProps) {
   const [nameError, setNameError] = useState("");
+
+  const { data: myFederations, isLoading: isFedLoading } = useListFederations(
+    {},
+    { query: { enabled: data.federationChoice === "adopt", queryKey: getListFederationsQueryKey({}) } },
+  );
 
   const update = (patch: Partial<LegaData>) =>
     onChange({ ...data, ...patch });
@@ -306,18 +314,47 @@ export default function StepLega({ data, onChange, onNext, onCancel }: StepLegaP
           </div>
 
           {data.federationChoice === "adopt" && (
-            <div className="space-y-1">
-              <Label className="text-xs text-muted-foreground">ID federazione</Label>
-              <Input
-                placeholder="fed-XXXXXXXX"
-                value={data.federationId ?? ""}
-                onChange={e => update({ federationId: e.target.value || undefined })}
-                className="font-mono text-sm"
-                data-testid="input-federation-id"
-              />
-              {!data.federationId?.trim() && (
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">Scegli federazione</Label>
+              {isFedLoading ? (
+                <Skeleton className="h-9 w-full" />
+              ) : !myFederations?.length ? (
+                <div className="rounded-lg border border-dashed p-4 text-center space-y-2">
+                  <p className="text-sm text-muted-foreground">
+                    Non hai ancora nessuna federazione.
+                  </p>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => update({ federationChoice: "new", federationId: undefined })}
+                    className="gap-1.5"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    Crea nuova federazione
+                  </Button>
+                </div>
+              ) : (
+                <Select
+                  value={data.federationId ?? ""}
+                  onValueChange={v => update({ federationId: v || undefined })}
+                >
+                  <SelectTrigger data-testid="select-federation-id">
+                    <SelectValue placeholder="Seleziona una federazione..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {myFederations.map(fed => (
+                      <SelectItem key={fed.id} value={fed.id}>
+                        <span className="font-medium">{fed.name}</span>
+                        <span className="ml-2 text-xs font-mono text-muted-foreground">{fed.id}</span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+              {!isFedLoading && myFederations?.length && !data.federationId?.trim() && (
                 <p className="text-xs text-destructive">
-                  Inserisci l'ID della federazione da adottare
+                  Seleziona la federazione da adottare
                 </p>
               )}
             </div>

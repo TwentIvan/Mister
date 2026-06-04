@@ -16,6 +16,7 @@ import {
   DeleteCompetitionParams,
 } from "@workspace/api-zod";
 import { mapCompetition } from "../lib/mappers";
+import { guardLeagueAdmin } from "../lib/auth";
 import type { CompetitionConfig } from "@workspace/db";
 
 const router: IRouter = Router();
@@ -39,6 +40,7 @@ router.post("/leagues/:leagueId/competitions", async (req, res): Promise<void> =
     res.status(400).json({ error: params.error.message });
     return;
   }
+  if (!await guardLeagueAdmin(req, res, params.data.leagueId)) return;
   const parsed = CreateCompetitionBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -94,6 +96,7 @@ router.patch("/leagues/:leagueId/competitions/:id", async (req, res): Promise<vo
     res.status(400).json({ error: p.error.message });
     return;
   }
+  if (!await guardLeagueAdmin(req, res, p.data.leagueId)) return;
   const parsed = UpdateCompetitionBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -127,6 +130,7 @@ router.delete("/leagues/:leagueId/competitions/:id", async (req, res): Promise<v
     res.status(400).json({ error: p.error.message });
     return;
   }
+  if (!await guardLeagueAdmin(req, res, p.data.leagueId)) return;
   const [row] = await db
     .delete(competitions)
     .where(and(eq(competitions.leagueId, p.data.leagueId), eq(competitions.id, p.data.id)))

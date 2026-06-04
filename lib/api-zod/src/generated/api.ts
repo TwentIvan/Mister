@@ -289,6 +289,68 @@ export const DeleteTemplateParams = zod.object({
 
 
 /**
+ * @summary Lista federazioni dell'utente corrente (o filtrate per proprietario)
+ */
+export const ListFederationsQueryParams = zod.object({
+  "owner_user_id": zod.coerce.string().optional().describe('Filtra per proprietario. Se omesso e l\'utente è autenticato, restituisce le federazioni dell\'utente corrente.')
+})
+
+export const ListFederationsResponseItem = zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "description": zod.string().optional(),
+  "template_id": zod.string().nullish(),
+  "owner_user_id": zod.string().nullish().describe('Proprietario della federazione (null per federazioni di sistema o auto-create)'),
+  "mode": zod.enum(['classic', 'mantra']),
+  "feature_flags": zod.object({
+  "multi_season_contracts": zod.boolean().optional().describe('Contratti pluriennali (>1 stagione)'),
+  "max_contract_length": zod.number().optional().describe('Durata massima contratto in stagioni (1-10)'),
+  "contract_renewal": zod.boolean().optional().describe('Flusso esplicito di rinnovo contrattuale'),
+  "preemption_right": zod.boolean().optional().describe('Diritto di pareggio in asta per il detentore uscente'),
+  "repair_auction_january": zod.boolean().optional().describe('Asta di riparazione invernale di gennaio'),
+  "free_agent_pool": zod.boolean().optional().describe('Pool svincolati permanente disponibile'),
+  "direct_trades": zod.boolean().optional().describe('Scambi diretti 1-a-1 tra manager'),
+  "always_on_markets": zod.boolean().optional().describe('Mercati e scambi sempre attivi in stagione'),
+  "carryover_budget": zod.boolean().optional().describe('Budget residuo portato alla stagione successiva'),
+  "carryover_percentage": zod.number().optional().describe('Percentuale di budget residuo mantenuta (0-100)'),
+  "player_value_dynamic": zod.boolean().optional().describe('Valore di mercato del giocatore aggiornato dinamicamente'),
+  "amortization": zod.boolean().optional().describe('Ammortamento del prezzo d\'acquisto sugli anni di contratto'),
+  "release_clauses": zod.boolean().optional().describe('Clausole rescissorie attive'),
+  "clause_default_factor": zod.number().optional().describe('Moltiplicatore residuo per clausola di default (0.5-1.0)'),
+  "rescission_penalty": zod.boolean().optional().describe('Penale se il manager svincola prima della scadenza'),
+  "rescission_recovery_pct": zod.number().optional().describe('Percentuale crediti recuperata sullo svincolo (0-100)'),
+  "auction_role_cap": zod.boolean().optional().describe('Blocca offerta su ruolo già esaurito nella rosa della squadra offerente'),
+  "auction_reserve_budget": zod.boolean().optional().describe('Blocca offerta se lascerebbe meno di 1 FM per ogni slot ancora vuoto'),
+  "no_schema_tactics": zod.boolean().optional().describe('Formazione senza vincoli di modulo predefinito'),
+  "scouting_enabled": zod.boolean().optional().describe('Sistema di scouting giocatori giovani\/emergenti')
+}).describe('I 20 feature flag di configurazione lega (copiati dal template al momento della creazione). Chiavi aggiuntive future sono tollerate (additionalProperties).'),
+  "rules": zod.object({
+  "bonusMalus": zod.object({
+
+}).passthrough().optional().describe('Bonus e malus per evento (gol, assist, ammonizioni, ecc.)'),
+  "goalThresholds": zod.object({
+
+}).passthrough().optional().describe('Conversione punteggio squadra in fanta-gol'),
+  "defenseModifier": zod.object({
+
+}).passthrough().optional().describe('Modificatore difesa'),
+  "midfieldModifier": zod.object({
+
+}).passthrough().optional().describe('Modificatore centrocampo'),
+  "homeAdvantage": zod.object({
+
+}).passthrough().optional().describe('Bonus padrone di casa'),
+  "substitutions": zod.object({
+
+}).passthrough().optional().describe('Regole sostituzioni automatiche')
+}).describe('Regole di calcolo del punteggio fanta (bonus\/malus, soglie, modificatori)'),
+  "created_at": zod.coerce.date(),
+  "updated_at": zod.coerce.date()
+})
+export const ListFederationsResponse = zod.array(ListFederationsResponseItem)
+
+
+/**
  * @summary Lista leghe
  */
 export const ListLeaguesQueryParams = zod.object({

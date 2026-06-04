@@ -1389,6 +1389,13 @@ export type ListTemplatesParams = {
 active_only?: boolean;
 };
 
+export type ListFederationsParams = {
+/**
+ * Filtra per proprietario. Se omesso e l'utente è autenticato, restituisce le federazioni dell'utente corrente.
+ */
+owner_user_id?: string;
+};
+
 export type ListLeaguesParams = {
 admin_user_id?: string;
 };
