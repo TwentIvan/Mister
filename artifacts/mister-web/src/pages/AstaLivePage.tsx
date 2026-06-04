@@ -14,6 +14,8 @@ import {
   useCallPlayer,
   useGetAuctionQueue,
   getGetAuctionQueueQueryKey,
+  useGenerateAuctionTokens,
+  type AuctionInviteToken,
 } from "@workspace/api-client-react";
 import type { PlayerVoice } from "@/hooks/useVoiceBidder";
 import { AstaHero } from "@/components/asta/AstaHero";
@@ -25,7 +27,8 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { CheckCircle2, Gavel, Mic, Pencil, Phone } from "lucide-react";
+import { CheckCircle2, Copy, Gavel, Mic, Pencil, Phone, Users } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
 
 export default function AstaLivePage() {
   const { auctionId } = useParams<{ auctionId: string }>();
@@ -63,6 +66,12 @@ export default function AstaLivePage() {
 
   // ── Correggi panel ────────────────────────────────────────────────────────
   const [correggiOpen, setCorreggiOpen] = useState(false);
+
+  // ── Inviti panel ─────────────────────────────────────────────────────────
+  const [inviteOpen, setInviteOpen]     = useState(false);
+  const [inviteTokens, setInviteTokens] = useState<AuctionInviteToken[]>([]);
+  const [copiedToken, setCopiedToken]   = useState<string | null>(null);
+  const generateTokensMutation = useGenerateAuctionTokens();
 
   // ── canUndo: server-authoritative (lastUndoableAction != null) ───────────
   const canUndo = data?.auction.undoable ?? false;
@@ -390,6 +399,26 @@ export default function AstaLivePage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {/* Inviti: genera link + QR per ogni squadra */}
+          {!isCompleted && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-muted-foreground hover:text-primary"
+              onClick={async () => {
+                if (!auctionId) return;
+                try {
+                  const result = await generateTokensMutation.mutateAsync({ id: auctionId });
+                  setInviteTokens(result.tokens);
+                } catch { /* ignora */ }
+                setInviteOpen(true);
+              }}
+              disabled={generateTokensMutation.isPending}
+            >
+              <Users className="h-4 w-4 mr-1" />
+              Inviti
+            </Button>
+          )}
           <Button
             variant="ghost"
             size="sm"
@@ -607,6 +636,54 @@ export default function AstaLivePage() {
                 <span className="text-xs text-muted-foreground font-mono">{p.real_team}</span>
               </button>
             ))}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── INVITI PANEL ─────────────────────────────────────────── */}
+      <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
+        <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="font-serif flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              Link e QR per squadra
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-6 py-2">
+            {inviteTokens.length === 0 && (
+              <p className="text-sm text-muted-foreground font-mono text-center py-4">
+                Nessun token generato.
+              </p>
+            )}
+            {inviteTokens.map((t) => {
+              const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+              const url  = `${window.location.origin}${base}/m/${t.token}`;
+              return (
+                <div key={t.token} className="space-y-3 border-b pb-6 last:border-b-0">
+                  <p className="font-serif font-semibold text-primary">{t.team_name}</p>
+                  <div className="flex justify-center">
+                    <QRCodeSVG value={url} size={160} bgColor="transparent" fgColor="currentColor" className="text-foreground" />
+                  </div>
+                  <div className="flex items-center gap-2 rounded-md border bg-muted/40 px-3 py-2">
+                    <p className="font-mono text-xs text-muted-foreground flex-1 truncate">{url}</p>
+                    <button
+                      onClick={() => {
+                        void navigator.clipboard.writeText(url);
+                        setCopiedToken(t.token);
+                        setTimeout(() => setCopiedToken(null), 2000);
+                      }}
+                      className="shrink-0 text-muted-foreground hover:text-primary transition-colors"
+                      title="Copia link"
+                    >
+                      <Copy className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                  {copiedToken === t.token && (
+                    <p className="text-xs text-green-600 font-mono text-center">Link copiato</p>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </DialogContent>
       </Dialog>

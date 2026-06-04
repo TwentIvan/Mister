@@ -11,6 +11,7 @@ import FormazionePage from "@/pages/formazione/FormazionePage";
 import CompetizionePage from "@/pages/competizione/CompetizionePage";
 import MatchDetailPage from "@/pages/competizione/MatchDetailPage";
 import AstaLivePage from "@/pages/AstaLivePage";
+import AstaMobilePage from "@/pages/AstaMobilePage";
 import { Switch, Route, Router as WouterRouter } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -23,25 +24,35 @@ const queryClient = new QueryClient();
 
 function Router() {
   return (
-    <AppLayout>
-      <Switch>
-        <Route path="/" component={Dashboard} />
-        <Route path="/leagues" component={LeaguesList} />
-        <Route path="/leagues/new" component={SetupLegaPage} />
-        <Route path="/lega/nuova" component={SetupLegaPage} />
-        <Route path="/leagues/:id" component={LeagueDetail} />
-        <Route path="/leagues/:id/federation" component={FederationRules} />
-        <Route path="/leagues/:leagueId/competitions/:id" component={CompetitionDetail} />
-        <Route path="/squadra/formazione" component={FormazionePage} />
-        <Route path="/competizione/:competitionId" component={CompetizionePage} />
-        <Route path="/partita/:matchId" component={MatchDetailPage} />
-        <Route path="/asta/:auctionId" component={AstaLivePage} />
-        <Route path="/players" component={PlayersList} />
-        <Route path="/superadmin/templates" component={TemplatesManager} />
-        <Route path="/superadmin/algoritmo-voto" component={VotoAlgorithm} />
-        <Route component={NotFound} />
-      </Switch>
-    </AppLayout>
+    <Switch>
+      {/* ── Mobile player view — fuori da AppLayout ─────────── */}
+      <Route path="/m/:token" component={AstaMobilePage} />
+
+      {/* ── Tutte le altre pagine con sidebar ───────────────── */}
+      <Route>
+        {() => (
+          <AppLayout>
+            <Switch>
+              <Route path="/" component={Dashboard} />
+              <Route path="/leagues" component={LeaguesList} />
+              <Route path="/leagues/new" component={SetupLegaPage} />
+              <Route path="/lega/nuova" component={SetupLegaPage} />
+              <Route path="/leagues/:id" component={LeagueDetail} />
+              <Route path="/leagues/:id/federation" component={FederationRules} />
+              <Route path="/leagues/:leagueId/competitions/:id" component={CompetitionDetail} />
+              <Route path="/squadra/formazione" component={FormazionePage} />
+              <Route path="/competizione/:competitionId" component={CompetizionePage} />
+              <Route path="/partita/:matchId" component={MatchDetailPage} />
+              <Route path="/asta/:auctionId" component={AstaLivePage} />
+              <Route path="/players" component={PlayersList} />
+              <Route path="/superadmin/templates" component={TemplatesManager} />
+              <Route path="/superadmin/algoritmo-voto" component={VotoAlgorithm} />
+              <Route component={NotFound} />
+            </Switch>
+          </AppLayout>
+        )}
+      </Route>
+    </Switch>
   );
 }
 

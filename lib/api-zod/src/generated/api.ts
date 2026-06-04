@@ -1936,3 +1936,35 @@ export const ManualUpdatePriceResponse = zod.object({
 })
 
 
+/**
+ * @summary Genera (o restituisce esistenti) token di invito opachi per ogni squadra dell'asta
+ */
+export const GenerateAuctionTokensParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const GenerateAuctionTokensResponse = zod.object({
+  "tokens": zod.array(zod.object({
+  "token": zod.string(),
+  "auction_id": zod.string(),
+  "fanta_team_id": zod.string(),
+  "team_name": zod.string()
+}))
+})
+
+
+/**
+ * @summary Risolve un token opaco al contesto (auction + squadra)
+ */
+export const ResolveAuctionTokenParams = zod.object({
+  "token": zod.coerce.string()
+})
+
+export const ResolveAuctionTokenResponse = zod.object({
+  "auction_id": zod.string(),
+  "fanta_team_id": zod.string(),
+  "team_name": zod.string(),
+  "credits_remaining": zod.number()
+})
+
+

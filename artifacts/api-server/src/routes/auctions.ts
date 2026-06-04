@@ -7,6 +7,7 @@ import {
   auctionBids,
   auctionAssignments,
   auctionPlayerQueue,
+  auctionTokens,
   fantaTeams,
   players,
   contracts,
@@ -463,23 +464,6 @@ router.post("/auctions/:id/bid", async (req, res): Promise<void> => {
     return;
   }
 
-  const [topBid] = await db
-    .select()
-    .from(auctionBids)
-    .where(and(eq(auctionBids.auctionId, id), eq(auctionBids.playerId, playerId), eq(auctionBids.valid, true)))
-    .orderBy(desc(auctionBids.amountFm))
-    .limit(1);
-
-  const minBid = topBid ? topBid.amountFm + 1 : 1;
-  if (amountFm < minBid) {
-    res.status(409).json({ error: `L'offerta deve essere almeno ${minBid} FM` });
-    return;
-  }
-  if (amountFm > team.creditsRemaining) {
-    res.status(400).json({ error: "Crediti insufficienti" });
-    return;
-  }
-
   // ── Flag federazione (default ON se lega senza federation) ────────────────
   const [leagueRow] = await db
     .select({ federationId: leagues.federationId })
@@ -494,7 +478,6 @@ router.post("/auctions/:id/bid", async (req, res): Promise<void> => {
       .where(eq(federations.id, leagueRow.federationId));
     featureFlags = (fed?.featureFlags ?? {}) as Record<string, unknown>;
   }
-  // Se un flag non è esplicitamente impostato a false lo consideriamo ON
   const flagRoleCap       = featureFlags["auction_role_cap"]       !== false;
   const flagReserveBudget = featureFlags["auction_reserve_budget"] !== false;
 
@@ -549,7 +532,6 @@ router.post("/auctions/:id/bid", async (req, res): Promise<void> => {
       );
     const teamAcquired   = Number(acquiredRow?.n ?? 0);
     const emptySlots     = totalSlots - teamAcquired;
-    // Dopo questo acquisto restano emptySlots-1 slot vuoti, ognuno richiede ≥1 FM
     const offertaMassima = team.creditsRemaining - (emptySlots - 1);
     if (amountFm > offertaMassima) {
       res.status(400).json({
@@ -559,18 +541,66 @@ router.post("/auctions/:id/bid", async (req, res): Promise<void> => {
     }
   }
 
-  const [bid] = await db
-    .insert(auctionBids)
-    .values({ id: `bid-${nanoid(8)}`, auctionId: id, playerId, fantaTeamId, amountFm, valid: true })
-    .returning();
+  // ── Sezione critica: serializzata con SELECT … FOR UPDATE ─────────────────
+  // Garantisce che bid concorrenti non passino entrambi la check topBid+1.
+  // La riga dell'asta è il lock naturale per tutti i bid della stessa sessione.
+  interface BidError { httpStatus: number; message: string }
+  let insertedBid: AuctionBid;
+  try {
+    insertedBid = await db.transaction(async (tx) => {
+      // Acquisisce il lock esclusivo sulla riga asta → un solo bid alla volta
+      const [locked] = await tx
+        .select({ status: auctions.status, timerSeconds: auctions.timerSeconds })
+        .from(auctions)
+        .where(eq(auctions.id, id))
+        .for("update");
 
-  // Timer server-authoritative: imposta deadline = now + timer_seconds
-  const newDeadline = new Date(Date.now() + auction.timerSeconds * 1000);
-  await db.update(auctions)
-    .set({ lastUndoableAction: "bid", deadlineTs: newDeadline })
-    .where(eq(auctions.id, id));
+      if (!locked || locked.status !== "running") {
+        const err: BidError = { httpStatus: 403, message: "L'asta non è in corso" };
+        throw err;
+      }
 
-  res.status(201).json({ bid: mapBid(bid), new_current_bid: mapBid(bid) });
+      // Re-legge il topBid dentro la tx (ora serializzato)
+      const [txTopBid] = await tx
+        .select()
+        .from(auctionBids)
+        .where(and(eq(auctionBids.auctionId, id), eq(auctionBids.playerId, playerId), eq(auctionBids.valid, true)))
+        .orderBy(desc(auctionBids.amountFm))
+        .limit(1);
+
+      const txMinBid = txTopBid ? txTopBid.amountFm + 1 : 1;
+      if (amountFm < txMinBid) {
+        const err: BidError = { httpStatus: 409, message: `L'offerta deve essere almeno ${txMinBid} FM` };
+        throw err;
+      }
+      if (amountFm > team.creditsRemaining) {
+        const err: BidError = { httpStatus: 400, message: "Crediti insufficienti" };
+        throw err;
+      }
+
+      const deadline = new Date(Date.now() + locked.timerSeconds * 1000);
+
+      const [newBid] = await tx
+        .insert(auctionBids)
+        .values({ id: `bid-${nanoid(8)}`, auctionId: id, playerId, fantaTeamId, amountFm, valid: true })
+        .returning();
+
+      await tx.update(auctions)
+        .set({ lastUndoableAction: "bid", deadlineTs: deadline })
+        .where(eq(auctions.id, id));
+
+      return newBid;
+    });
+  } catch (err: unknown) {
+    const e = err as Partial<BidError>;
+    if (e.httpStatus) {
+      res.status(e.httpStatus).json({ error: e.message });
+      return;
+    }
+    throw err;
+  }
+
+  res.status(201).json({ bid: mapBid(insertedBid), new_current_bid: mapBid(insertedBid) });
   notifyAuction(id);
 });
 
@@ -1370,6 +1400,69 @@ router.post("/auctions/:id/end", async (req, res): Promise<void> => {
   if (!auction) { res.status(404).json({ error: "Asta non trovata" }); return; }
   res.json(mapAuction(auction));
   notifyAuction(params.data.id);
+});
+
+// ─── POST /auctions/:id/tokens ───────────────────────────
+// Genera (o restituisce esistenti) token opachi per ogni squadra dell'asta.
+
+router.post("/auctions/:id/tokens", async (req, res): Promise<void> => {
+  const { id } = req.params;
+  const [auction] = await db.select().from(auctions).where(eq(auctions.id, id));
+  if (!auction) { res.status(404).json({ error: "Asta non trovata" }); return; }
+
+  const teams = await db.select().from(fantaTeams).where(eq(fantaTeams.leagueId, auction.leagueId));
+
+  const tokens = await Promise.all(teams.map(async (team) => {
+    const [existing] = await db
+      .select()
+      .from(auctionTokens)
+      .where(and(eq(auctionTokens.auctionId, id), eq(auctionTokens.fantaTeamId, team.id)));
+    if (existing) return { ...existing, teamName: team.nameAuction ?? team.name };
+
+    const newToken = crypto.randomUUID();
+    const [created] = await db
+      .insert(auctionTokens)
+      .values({ token: newToken, auctionId: id, fantaTeamId: team.id })
+      .returning();
+    return { ...created, teamName: team.nameAuction ?? team.name };
+  }));
+
+  res.json({
+    tokens: tokens.map((t) => ({
+      token: t.token,
+      auction_id: t.auctionId,
+      fanta_team_id: t.fantaTeamId,
+      team_name: t.teamName,
+    })),
+  });
+});
+
+// ─── GET /auction-tokens/:token ──────────────────────────
+// Risolve un token opaco al contesto (auction + squadra).
+
+router.get("/auction-tokens/:token", async (req, res): Promise<void> => {
+  const { token } = req.params;
+  const [row] = await db
+    .select({
+      token: auctionTokens.token,
+      auctionId: auctionTokens.auctionId,
+      fantaTeamId: auctionTokens.fantaTeamId,
+      teamName: fantaTeams.name,
+      teamNameAuction: fantaTeams.nameAuction,
+      creditsRemaining: fantaTeams.creditsRemaining,
+    })
+    .from(auctionTokens)
+    .innerJoin(fantaTeams, eq(auctionTokens.fantaTeamId, fantaTeams.id))
+    .where(eq(auctionTokens.token, token));
+
+  if (!row) { res.status(404).json({ error: "Token non trovato" }); return; }
+
+  res.json({
+    auction_id: row.auctionId,
+    fanta_team_id: row.fantaTeamId,
+    team_name: row.teamNameAuction ?? row.teamName,
+    credits_remaining: row.creditsRemaining,
+  });
 });
 
 export default router;
