@@ -289,7 +289,7 @@ router.get("/roster", async (req, res): Promise<void> => {
     };
   });
 
-  res.json({ players: roster });
+  res.json(roster);
 });
 
 router.get("/coach-voto", async (req, res): Promise<void> => {
