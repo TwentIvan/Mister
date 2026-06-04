@@ -1,0 +1,34 @@
+ACCOUNT — FONDAZIONE, PASSO A: nucleo identita + appartenenza. SOLO questo: il cancello di autorizzazione e le prove negative sono il PASSO B, subito dopo al checkpoint. L'EMAIL E LA CHIAVE APPLICATIVA UNIVOCA: un account per email. Server-authoritative. Sicurezza: niente password in chiaro, mai.
+
+==== 1. UTENTI ====
+- Tabella users: id, email (UNIQUE — la chiave dell'app), password_hash, display_name, created_at.
+- Email unica: registrare due volte la stessa email fallisce.
+
+==== 2. AUTH EMAIL/PASSWORD ====
+- POST /auth/register (email, password, nome): crea utente; password con hashing vero (bcrypt o argon2, MAI in chiaro); rifiuta email duplicata.
+- POST /auth/login (email, password): verifica e apre una sessione.
+- POST /auth/logout: chiude la sessione.
+- GET /auth/me: restituisce l'utente loggato (per il frontend).
+- Sessione: cookie HTTP-only + secure (sessione server-side o token firmato nel cookie), scadenza sensata. NIENTE token in localStorage.
+- VERIFICA EMAIL: rimandata alla fase email (link magico). Per ora l'email e la chiave ma non e verificata; annotalo nel codice.
+
+==== 3. APPARTENENZA + RUOLI (solo dati, enforcement nel Passo B) ====
+- Tabella league_members: user_id, league_id, role (admin | member), joined_at; UNIQUE (user_id, league_id).
+- Chi CREA una lega ne diventa admin (riga league_members role=admin alla creazione).
+- federations.owner_user_id valorizzato con l'utente creatore alla creazione della federazione.
+- manager_user_id sulle squadre: dove oggi e "demo-user", collegalo all'utente reale dove sensato (es. l'admin creatore). Il legame "ogni partecipante -> la sua squadra" arriva col flusso di invito (fase successiva). NON rompere la creazione squadre/asta.
+
+==== 4. FRONTEND ====
+- UI di registrazione e login.
+- Contesto auth (useCurrentUser) che sostituisce il "Demo User" hardcoded e mostra l'utente vero.
+- Il cancello sulle route e il Passo B; qui basta che l'app sappia chi sei e lo mostri.
+
+==== CRITERI (Passo A) ====
+A1. Registrazione: email unica; password hashata (verifica che nel DB NON ci sia mai la password in chiaro); email duplicata rifiutata.
+A2. Login/logout/me: login apre sessione (cookie HTTP-only), /me restituisce l'utente, logout la chiude.
+A3. Creare una lega rende il creatore admin (riga in league_members con role=admin); la federazione creata ha owner_user_id = creatore.
+A4. Il frontend mostra l'utente loggato al posto di "Demo User".
+A5. REGRESSIONE: asta/config/competizioni/mercati e il TOKEN MOBILE ancora funzionanti (qui non c'e gating, quindi nulla deve rompersi); typecheck pulito.
+
+VINCOLI: email = chiave unica; password hashata, mai in chiaro; sessione cookie HTTP-only/secure; verifica email rimandata e annotata; non rompere creazione squadre/asta ne il token mobile; typecheck pulito, niente debug residuo.
+DELIVERABLE: diff; prova A1 (nel DB nessuna password in chiaro + duplicato rifiutato), A2 (login/me/logout), A3 (creatore = admin + owner federazione), A4 (utente mostrato); conferma regressione. CHECKPOINT, poi Passo B (cancello di autorizzazione + prove negative).

@@ -7,6 +7,9 @@ import LeagueConfig from "@/pages/league-config";
 import FederationRules from "@/pages/federation";
 import CompetitionDetail from "@/pages/competition-detail";
 import MarketList from "@/pages/market-list";
+import LoginPage from "@/pages/LoginPage";
+import RegisterPage from "@/pages/RegisterPage";
+import { AuthProvider } from "@/contexts/AuthContext";
 import TemplatesManager from "@/pages/templates-manager";
 import VotoAlgorithm from "@/pages/voto-algorithm";
 import FormazionePage from "@/pages/formazione/FormazionePage";
@@ -27,6 +30,10 @@ const queryClient = new QueryClient();
 function Router() {
   return (
     <Switch>
+      {/* ── Auth — senza sidebar ─────────────────────────────── */}
+      <Route path="/login" component={LoginPage} />
+      <Route path="/register" component={RegisterPage} />
+
       {/* ── Mobile player view — fuori da AppLayout ─────────── */}
       <Route path="/m/:token" component={AstaMobilePage} />
 
@@ -66,7 +73,9 @@ function App() {
       <ThemeProvider>
         <TooltipProvider>
           <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-            <Router />
+            <AuthProvider>
+              <Router />
+            </AuthProvider>
           </WouterRouter>
           <Toaster />
         </TooltipProvider>

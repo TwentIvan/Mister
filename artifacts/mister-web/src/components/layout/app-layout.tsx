@@ -11,13 +11,16 @@ import {
   Shield,
   Flag,
   PlusCircle,
+  LogOut,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "@/components/theme-provider";
+import { useCurrentUser } from "@/contexts/AuthContext";
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
   const { theme, setTheme } = useTheme();
+  const { user, logout } = useCurrentUser();
 
   const navItems = [
     { href: "/", label: "Cruscotto", icon: LayoutDashboard },
@@ -83,21 +86,36 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           ))}
         </nav>
 
-        <div className="p-4 border-t border-sidebar-border flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-sidebar-primary flex items-center justify-center text-sidebar-primary-foreground font-bold">
-              U
+        <div className="p-4 border-t border-sidebar-border flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="w-8 h-8 rounded-full bg-sidebar-primary flex items-center justify-center text-sidebar-primary-foreground font-bold shrink-0">
+              {user ? user.display_name.charAt(0).toUpperCase() : "?"}
             </div>
-            <div className="text-sm font-medium text-sidebar-foreground">Demo User</div>
+            <div className="text-sm font-medium text-sidebar-foreground truncate">
+              {user ? user.display_name : "Non loggato"}
+            </div>
           </div>
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="text-sidebar-foreground/70 hover:text-sidebar-foreground"
-            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-          >
-            {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-          </Button>
+          <div className="flex items-center gap-1 shrink-0">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="text-sidebar-foreground/70 hover:text-sidebar-foreground h-7 w-7"
+              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            >
+              {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+            </Button>
+            {user && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="text-sidebar-foreground/70 hover:text-sidebar-foreground h-7 w-7"
+                onClick={logout}
+                title="Esci"
+              >
+                <LogOut className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
         </div>
       </aside>
 

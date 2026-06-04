@@ -10,6 +10,7 @@ import {
   fantaTeams,
   contracts,
   auctions,
+  leagueMembers,
   DEFAULT_LEAGUE_CONFIG,
   defaultFlagValues,
 } from "@workspace/db";
@@ -92,8 +93,13 @@ router.post("/leagues", async (req, res): Promise<void> => {
           mode: "classic",
           featureFlags: defaultFlagValues() as Record<string, boolean | number>,
           rules: DEFAULT_RULES,
+          // A3: owner_user_id valorizzato con l'utente creatore (se loggato).
+          // Passo B aggiungerà requireAuth: qui accettiamo anche richieste anonime.
+          ownerUserId: req.user?.sub ?? null,
         });
       }
+
+      const creatorId = req.user?.sub ?? "demo-user";
 
       const [league] = await tx
         .insert(leagues)
@@ -101,7 +107,7 @@ router.post("/leagues", async (req, res): Promise<void> => {
           id: leagueId,
           federationId: fedId,
           name: d.name,
-          adminUserId: "demo-user",
+          adminUserId: creatorId,
           season: new Date().getFullYear(),
           maxManagers: d.fanta_teams.length,
           config: leagueConfig,
@@ -115,13 +121,24 @@ router.post("/leagues", async (req, res): Promise<void> => {
         })
         .returning();
 
+      // A3: chi crea la lega diventa admin in league_members.
+      // Solo se loggato (req.user presente) — FK su users.id non permette "demo-user".
+      // Passo B aggiungerà requireAuth così tutte le nuove leghe avranno sempre il creatore.
+      if (req.user) {
+        await tx.insert(leagueMembers).values({
+          userId: req.user.sub,
+          leagueId: leagueId,
+          role: "admin",
+        });
+      }
+
       const teamRows = await tx
         .insert(fantaTeams)
         .values(
           d.fanta_teams.map(t => ({
             id: `ft-${nanoid(8)}`,
             leagueId: leagueId,
-            managerUserId: "demo-user",
+            managerUserId: creatorId,
             name: t.name,
             nameAuction: t.name_auction,
             logoUrl: t.logo_url ?? null,

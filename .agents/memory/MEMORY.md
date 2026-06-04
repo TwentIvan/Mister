@@ -1,2 +1,3 @@
 - [Zod route stripping + codegen](zod-codegen-rule.md) — aggiungere campi al mapper senza codegen li fa strippare dal Zod parse in route
 - [Api-server build](api-server-build.md) — bundle = dist/index.mjs (non .js); rebuild esplicito serve dopo ogni modifica a mapper/routes
+- [Auth Passo A](auth-passo-a.md) — FK critica: insert league_members condizionale su req.user (demo-user non esiste in users table)

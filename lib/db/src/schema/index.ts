@@ -3,6 +3,8 @@
  * migration e tipi.
  */
 
+export * from "./users";
+export * from "./league-members";
 export * from "./template-profiles";
 export * from "./federations";
 export * from "./leagues";

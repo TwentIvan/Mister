@@ -2,6 +2,7 @@ import {
   useGetFederation, getGetFederationQueryKey,
   useUpdateFederation, FederationUpdateMode
 } from "@workspace/api-client-react";
+import { useCurrentUser } from "@/contexts/AuthContext";
 import { useParams } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -60,6 +61,7 @@ export default function FederationPage() {
   const { id } = useParams<{ id: string }>();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { user } = useCurrentUser();
 
   const { data: federation, isLoading } = useGetFederation(
     id,
@@ -216,11 +218,13 @@ export default function FederationPage() {
                 )}
               />
 
-              {/* Proprietario — stub (autenticazione in arrivo) */}
+              {/* Proprietario */}
               <div className="flex items-center gap-2 pt-2 border-t">
                 <User className="h-4 w-4 text-muted-foreground" />
                 <span className="text-sm text-muted-foreground">Proprietario:</span>
-                <span className="text-sm font-mono text-muted-foreground">— (autenticazione in arrivo)</span>
+                <span className="text-sm font-mono text-foreground">
+                  {user?.display_name ?? "—"}
+                </span>
               </div>
             </CardContent>
           </Card>
