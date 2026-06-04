@@ -1,0 +1,17 @@
+FASE 2 — checkpoint NON chiuso. Avete costruito la pagina config, le PATCH e il picker, ma una prova chiave e fatta a tavolino e durante i test la CREAZIONE ASTA E FALLITA senza diagnosi. Quel fallimento e il campanello della regressione: va capito, non aggirato.
+
+==== PRIORITA 0 — perche la creazione asta e fallita? ====
+Durante i test "la creazione asta e fallita". Riproduci e TROVA LA CAUSA. E una regressione dai cambi config/dedup? (Es: lo snapshot lega->asta ora legge le colonne flat — un campo mancante o un null rompe la creazione?) Riportami causa + fix. Se l'asta non si crea piu, niente Fase 3: e il cuore dell'app.
+
+==== PROVE VERE (dopo che l'asta si crea di nuovo) ====
+1. G3 COMPORTAMENTALE, non code review: con un'asta RUNNING, prova che cambiare composizione/budget/timer e bloccato con motivo visibile (409 + messaggio). Lo volevo provato dal vivo, non letto nel codice.
+2. G6 — la complementare di F4: avvia un'asta DOPO aver modificato la config della lega e verifica che lo snapshot dell'asta prenda i valori NUOVI. Poi una passata di regressione: offerta, voce, chiamata, mobile/SSE ancora funzionanti dopo i cambi.
+
+==== FIX (non solo prove) ====
+3. G4 — CAMPO SBAGLIATO. L'avviso ambiguita deve confrontare i NOMI VOCE (name_auction), non i nomi visualizzati delle squadre: tutto il senso di quell'avviso e il riconoscitore vocale (Alby/Beste). E il name_auction dev'essere EDITABILE nel tab Squadre — oggi sembra che si modifichino solo colori e allenatore. Senza il nome voce modificabile, la consolidazione per la voce non c'e.
+4. G1 — federazione editabile e che PERSISTE: prova che modificare un flag (e nome/descrizione/mode) sulla federazione si salva davvero. Se non c'e una PATCH federation, implementala. Il banner "vale per nuove stagioni" c'e, ma serve che l'edit avvenga.
+5. G2 — completare: verifica che ANCHE le altre impostazioni lega (composizione, modalita asta, visibilita, max manager, notifiche, finestra post-acquisto) si salvino, non solo budget/timer; e conferma che gli edit scrivono sulla fonte canonica (colonne flat) SENZA reintrodurre copie nel JSONB.
+
+Minore: il picker — se e facile, preseleziona "crea nuova" di default (oggi e una scelta forzata con Avanti disabilitato). Accettabile anche cosi.
+
+DELIVERABLE: causa del fallimento creazione asta + fix; G3 provato dal vivo su asta running; G6 (snapshot nuovo + regressione end-to-end); G4 sul campo giusto + name_auction editabile; G1 persistenza federazione provata; G2 completo + conferma no-dupe. CHECKPOINT prima della Fase 3.

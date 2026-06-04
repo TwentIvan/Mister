@@ -376,6 +376,11 @@ export default function LeagueDetail() {
       onOpenChange={setIsConfigOpen}
       teams={modalTeams}
       isLoading={createAuction.isPending}
+      initialTimer={league?.timer_seconds ?? undefined}
+      initialRosterP={league?.roster_p ?? undefined}
+      initialRosterD={league?.roster_d ?? undefined}
+      initialRosterC={league?.roster_c ?? undefined}
+      initialRosterA={league?.roster_a ?? undefined}
       onConfirm={handleAvviaAsta}
     />
     </>

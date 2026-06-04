@@ -22,6 +22,11 @@ interface AstaConfigModalProps {
   onOpenChange: (open: boolean) => void;
   teams: Team[];
   isLoading: boolean;
+  initialTimer?: number | null;
+  initialRosterP?: number | null;
+  initialRosterD?: number | null;
+  initialRosterC?: number | null;
+  initialRosterA?: number | null;
   onConfirm: (
     timerSeconds: number,
     teamNames: Record<string, string>,
@@ -68,28 +73,33 @@ export function AstaConfigModal({
   onOpenChange,
   teams,
   isLoading,
+  initialTimer,
+  initialRosterP,
+  initialRosterD,
+  initialRosterC,
+  initialRosterA,
   onConfirm,
 }: AstaConfigModalProps) {
-  const [timerSeconds, setTimerSeconds] = useState(8);
-  const [rosterP, setRosterP] = useState(3);
-  const [rosterD, setRosterD] = useState(8);
-  const [rosterC, setRosterC] = useState(8);
-  const [rosterA, setRosterA] = useState(6);
+  const [timerSeconds, setTimerSeconds] = useState(initialTimer ?? 8);
+  const [rosterP, setRosterP] = useState(initialRosterP ?? 3);
+  const [rosterD, setRosterD] = useState(initialRosterD ?? 8);
+  const [rosterC, setRosterC] = useState(initialRosterC ?? 8);
+  const [rosterA, setRosterA] = useState(initialRosterA ?? 6);
   const [teamNames, setTeamNames] = useState<Record<string, string>>({});
   const [callMode, setCallMode] = useState<"listone" | "chiamata">("listone");
   const [roleOrder, setRoleOrder] = useState(false);
 
   useEffect(() => {
     if (open) {
-      setTimerSeconds(8);
-      setRosterP(3);
-      setRosterD(8);
-      setRosterC(8);
-      setRosterA(6);
+      setTimerSeconds(initialTimer ?? 8);
+      setRosterP(initialRosterP ?? 3);
+      setRosterD(initialRosterD ?? 8);
+      setRosterC(initialRosterC ?? 8);
+      setRosterA(initialRosterA ?? 6);
       setCallMode("listone");
       setRoleOrder(false);
     }
-  }, [open]);
+  }, [open, initialTimer, initialRosterP, initialRosterD, initialRosterC, initialRosterA]);
 
   useEffect(() => {
     if (open && teams.length > 0) {
@@ -136,7 +146,10 @@ export function AstaConfigModal({
                 }}
                 className="w-24 font-mono text-center text-lg"
               />
-              <span className="text-xs text-muted-foreground">Range: 5–30 s &nbsp;·&nbsp; Default: 8 s</span>
+              <span className="text-xs text-muted-foreground">
+                Range: 5–30 s &nbsp;·&nbsp;
+                {initialTimer ? `Configurato: ${initialTimer} s` : "Default: 8 s"}
+              </span>
             </div>
           </div>
 
@@ -183,17 +196,19 @@ export function AstaConfigModal({
               Composizione rosa per squadra
             </Label>
             <div className="flex items-end gap-3">
-              <NumInput label="Portieri"      value={rosterP} onChange={setRosterP} color="text-amber-700" />
-              <NumInput label="Difensori"     value={rosterD} onChange={setRosterD} color="text-blue-700"  />
-              <NumInput label="Centroc."      value={rosterC} onChange={setRosterC} color="text-green-700" />
-              <NumInput label="Attacc."       value={rosterA} onChange={setRosterA} color="text-red-700"   />
+              <NumInput label="Portieri"  value={rosterP} onChange={setRosterP} color="text-amber-700" />
+              <NumInput label="Difensori" value={rosterD} onChange={setRosterD} color="text-blue-700"  />
+              <NumInput label="Centroc."  value={rosterC} onChange={setRosterC} color="text-green-700" />
+              <NumInput label="Attacc."   value={rosterA} onChange={setRosterA} color="text-red-700"   />
               <div className="ml-auto pb-0.5 text-right">
                 <span className="text-xs text-muted-foreground font-mono">Totale</span>
                 <p className="font-mono font-bold text-primary text-lg leading-tight">{slotTotal}</p>
               </div>
             </div>
             <p className="text-xs text-muted-foreground">
-              Default classico: 3P · 8D · 8C · 6A = 25 giocatori
+              {initialRosterP || initialRosterD || initialRosterC || initialRosterA
+                ? `Configurato: ${initialRosterP ?? 3}P · ${initialRosterD ?? 8}D · ${initialRosterC ?? 8}C · ${initialRosterA ?? 6}A`
+                : "Default classico: 3P · 8D · 8C · 6A = 25 giocatori"}
             </p>
           </div>
 
