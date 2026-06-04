@@ -15,6 +15,11 @@ export interface Federation {
   description?: string;
   /** @nullable */
   template_id?: string | null;
+  /**
+     * Proprietario della federazione (null per federazioni di sistema o auto-create)
+     * @nullable
+     */
+  owner_user_id?: string | null;
   mode: FederationMode;
   feature_flags: FeatureFlags;
   rules: FederationRules;

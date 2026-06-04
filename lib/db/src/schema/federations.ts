@@ -190,6 +190,12 @@ export const federations = pgTable("federations", {
    */
   rules: jsonb("rules").$type<FederationRules>().notNull(),
 
+  /**
+   * Proprietario della federazione (stub: no auth ora, si popola dopo).
+   * Nullable: federazioni di sistema e demo non hanno un owner.
+   */
+  ownerUserId: text("owner_user_id"),
+
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

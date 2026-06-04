@@ -4,13 +4,16 @@ import { nanoid } from "nanoid";
 import { db } from "@workspace/db";
 import {
   leagues,
+  federations,
   competitions,
   marketEvents,
   fantaTeams,
   contracts,
   DEFAULT_LEAGUE_CONFIG,
+  defaultFlagValues,
 } from "@workspace/db";
 import type { LeagueConfig, RosterSnapshot } from "@workspace/db/schema";
+import { DEFAULT_RULES } from "@workspace/db/schema";
 import {
   ListLeaguesQueryParams,
   ListLeaguesResponse,
@@ -59,41 +62,43 @@ router.post("/leagues", async (req, res): Promise<void> => {
   const leagueId = `lg-${nanoid(8)}`;
 
   const leagueConfig: LeagueConfig = {
-    squad: {
-      gk: d.roster_p,
-      def: d.roster_d,
-      mid: d.roster_c,
-      att: d.roster_a,
-      startersTotal: 11,
-      allowedModules: ["3-4-3", "3-5-2", "4-3-3", "4-4-2", "4-5-1", "5-3-2", "5-4-1"],
-    },
-    captain: {
-      enabled: true,
-      multiplier: 1.0,
-      useVice: true,
-    },
-    budget: {
-      initialCredits: d.budget_initial,
-      minimumBid: 1,
-      allowNegativeBalance: false,
-      reserveForUnfilledRoles: true,
-    },
-    postAcquisitionWindow: {
-      enabled: true,
-      liveSeconds: 45,
-      asyncHours: 12,
-      defaultContractYears: 1,
-      defaultClauseAction: "leave_default",
-    },
+    ...DEFAULT_LEAGUE_CONFIG,
   };
 
   try {
     const result = await db.transaction(async (tx) => {
+      // Determina federation: adotta quella esistente o ne crea una nuova.
+      let fedId: string;
+      if (d.federation_id) {
+        // Validate federation exists
+        const [existing] = await tx
+          .select({ id: federations.id })
+          .from(federations)
+          .where(eq(federations.id, d.federation_id))
+          .limit(1);
+        if (!existing) {
+          throw Object.assign(new Error("Federazione non trovata"), { code: 404 });
+        }
+        fedId = d.federation_id;
+      } else {
+        // Auto-crea una Federazione dedicata per questa Lega.
+        fedId = `fed-${nanoid(8)}`;
+        await tx.insert(federations).values({
+          id: fedId,
+          name: `Regolamento ${d.name}`,
+          description: "Creato automaticamente al setup della lega.",
+          templateId: null,
+          mode: "classic",
+          featureFlags: defaultFlagValues() as Record<string, boolean | number>,
+          rules: DEFAULT_RULES,
+        });
+      }
+
       const [league] = await tx
         .insert(leagues)
         .values({
           id: leagueId,
-          federationId: null,
+          federationId: fedId,
           name: d.name,
           adminUserId: "demo-user",
           season: new Date().getFullYear(),
@@ -139,7 +144,12 @@ router.post("/leagues", async (req, res): Promise<void> => {
     });
   } catch (err) {
     req.log.error({ err }, "Errore creazione lega wizard");
-    res.status(500).json({ error: "Errore interno durante la creazione della lega" });
+    const code = (err as { code?: number }).code;
+    if (code === 404) {
+      res.status(404).json({ error: (err as Error).message });
+    } else {
+      res.status(500).json({ error: "Errore interno durante la creazione della lega" });
+    }
   }
 });
 

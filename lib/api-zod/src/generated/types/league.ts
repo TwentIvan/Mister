@@ -13,8 +13,8 @@ import type { LeagueVisibility } from './leagueVisibility';
 export interface League {
   id: string;
   name: string;
-  /** @nullable */
-  federation_id?: string | null;
+  /** ID federazione (sempre presente — creata automaticamente al setup) */
+  federation_id: string;
   /** @nullable */
   template_id?: string | null;
   admin_user_id: string;
@@ -61,5 +61,10 @@ export interface League {
      * @nullable
      */
   auction_mode?: LeagueAuctionMode;
+  /**
+     * Timestamp del freeze delle regole federazione (null = non ancora avvenuto)
+     * @nullable
+     */
+  snapshot_locked_at?: Date | null;
   created_at: Date;
 }

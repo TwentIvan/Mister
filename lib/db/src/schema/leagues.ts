@@ -22,6 +22,8 @@ import {
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { federations } from "./federations";
+import type { FederationRules } from "./federations";
+import type { FeatureFlagValues } from "./template-profiles";
 
 // ============================================================
 // ENUMS
@@ -45,16 +47,13 @@ export type LineupVisibility = (typeof lineupVisibilityEnum.enumValues)[number];
 // TIPI DI SUPPORTO (serializzati come JSONB in `config`)
 // ============================================================
 
-/** Composizione rosa. */
+/**
+ * Composizione rosa — solo campi NON denormalizzati.
+ * Portieri/Difensori/Centrocampisti/Attaccanti vivono nelle colonne flat
+ * roster_p/d/c/a sulla tabella leagues (fonte canonica). Qui restano
+ * solo i campi che non hanno colonna flat dedicata.
+ */
 export interface SquadComposition {
-  /** Portieri */
-  gk: number;
-  /** Difensori */
-  def: number;
-  /** Centrocampisti */
-  mid: number;
-  /** Attaccanti */
-  att: number;
   /** Totale titolari schierati per giornata (tipicamente 11) */
   startersTotal: number;
   /** Moduli ammessi nella lega, es. ["3-4-3", "4-3-3", "4-4-2"] */
@@ -69,9 +68,12 @@ export interface CaptainRules {
   useVice: boolean;
 }
 
-/** Crediti d'asta e regole di gestione budget. */
+/**
+ * Regole budget — solo campi NON denormalizzati.
+ * Il budget iniziale vive nella colonna flat budget_initial sulla tabella
+ * leagues (fonte canonica). Qui restano le regole di gestione.
+ */
 export interface BudgetRules {
-  initialCredits: number;
   minimumBid: number;
   allowNegativeBalance: boolean;
   reserveForUnfilledRoles: boolean;
@@ -106,10 +108,6 @@ export interface LeagueConfig {
 
 export const DEFAULT_LEAGUE_CONFIG: LeagueConfig = {
   squad: {
-    gk: 3,
-    def: 8,
-    mid: 8,
-    att: 6,
     startersTotal: 11,
     allowedModules: [
       "3-4-3",
@@ -127,7 +125,6 @@ export const DEFAULT_LEAGUE_CONFIG: LeagueConfig = {
     useVice: true,
   },
   budget: {
-    initialCredits: 500,
     minimumBid: 1,
     allowNegativeBalance: false,
     reserveForUnfilledRoles: true,
@@ -150,10 +147,12 @@ export const leagues = pgTable("leagues", {
   name: text("name").notNull(),
 
   /**
-   * Referenza alla Federation (1-a-1). Nullable: leghe standalone create
-   * fuori dal flusso federation (es. setup asta demo) possono non averla.
+   * Referenza alla Federation (1-a-1, NOT NULL).
+   * Ogni lega deve avere una federazione: il POST /leagues la crea
+   * automaticamente se non ne viene passata una esistente.
    */
   federationId: text("federation_id")
+    .notNull()
     .references(() => federations.id, { onDelete: "cascade" }),
 
   /** Slug del template di origine. Denormalizzato per UI rapide. */
@@ -208,6 +207,16 @@ export const leagues = pgTable("leagues", {
    * Check constraint SQL applicato a livello tabella.
    */
   auctionMode: text("auction_mode"),
+
+  /**
+   * Snapshot delle regole federazione congelato all'avvio della prima asta
+   * della stagione. Null finché non è avvenuto il freeze.
+   * Dopo il freeze, il bid handler usa questi valori — non quelli live della
+   * federazione — garantendo invarianza per leghe già avviate.
+   */
+  snapshotFeatureFlags: jsonb("snapshot_feature_flags").$type<FeatureFlagValues>(),
+  snapshotRules: jsonb("snapshot_rules").$type<FederationRules>(),
+  snapshotLockedAt: timestamp("snapshot_locked_at", { withTimezone: true }),
 
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()

@@ -7,7 +7,7 @@
  */
 
 /**
- * I 18 feature flag copiati dal template al momento della creazione della lega
+ * I 20 feature flag di configurazione lega (copiati dal template al momento della creazione). Chiavi aggiuntive future sono tollerate (additionalProperties).
  */
 export interface FeatureFlags {
   /** Contratti pluriennali (>1 stagione) */
@@ -42,8 +42,13 @@ export interface FeatureFlags {
   rescission_penalty?: boolean;
   /** Percentuale crediti recuperata sullo svincolo (0-100) */
   rescission_recovery_pct?: number;
+  /** Blocca offerta su ruolo già esaurito nella rosa della squadra offerente */
+  auction_role_cap?: boolean;
+  /** Blocca offerta se lascerebbe meno di 1 FM per ogni slot ancora vuoto */
+  auction_reserve_budget?: boolean;
   /** Formazione senza vincoli di modulo predefinito */
   no_schema_tactics?: boolean;
   /** Sistema di scouting giocatori giovani/emergenti */
   scouting_enabled?: boolean;
-}
+  [key: string]: unknown;
+ }

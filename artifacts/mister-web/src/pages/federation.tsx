@@ -58,7 +58,10 @@ export default function FederationRules() {
         name: federation.name,
         description: federation.description ?? "",
         mode: federation.mode as FederationUpdateMode,
-        feature_flags: (federation.feature_flags as Record<string, boolean | number>) ?? {},
+        feature_flags: {
+          ...DEFAULT_FLAG_VALUES,
+          ...((federation.feature_flags as Record<string, boolean | number>) ?? {}),
+        },
       });
       isInitialized.current = true;
     }

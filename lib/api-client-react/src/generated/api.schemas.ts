@@ -10,7 +10,7 @@ export interface HealthStatus {
 }
 
 /**
- * I 18 feature flag copiati dal template al momento della creazione della lega
+ * I 20 feature flag di configurazione lega (copiati dal template al momento della creazione). Chiavi aggiuntive future sono tollerate (additionalProperties).
  */
 export interface FeatureFlags {
   /** Contratti pluriennali (>1 stagione) */
@@ -45,11 +45,16 @@ export interface FeatureFlags {
   rescission_penalty?: boolean;
   /** Percentuale crediti recuperata sullo svincolo (0-100) */
   rescission_recovery_pct?: number;
+  /** Blocca offerta su ruolo già esaurito nella rosa della squadra offerente */
+  auction_role_cap?: boolean;
+  /** Blocca offerta se lascerebbe meno di 1 FM per ogni slot ancora vuoto */
+  auction_reserve_budget?: boolean;
   /** Formazione senza vincoli di modulo predefinito */
   no_schema_tactics?: boolean;
   /** Sistema di scouting giocatori giovani/emergenti */
   scouting_enabled?: boolean;
-}
+  [key: string]: unknown;
+ }
 
 export type MarketEventSuggestionType = typeof MarketEventSuggestionType[keyof typeof MarketEventSuggestionType];
 
@@ -188,8 +193,8 @@ export const LeagueAuctionMode = {
 export interface League {
   id: string;
   name: string;
-  /** @nullable */
-  federation_id?: string | null;
+  /** ID federazione (sempre presente — creata automaticamente al setup) */
+  federation_id: string;
   /** @nullable */
   template_id?: string | null;
   admin_user_id: string;
@@ -236,6 +241,11 @@ export interface League {
      * @nullable
      */
   auction_mode?: LeagueAuctionMode;
+  /**
+     * Timestamp del freeze delle regole federazione (null = non ancora avvenuto)
+     * @nullable
+     */
+  snapshot_locked_at?: string | null;
   created_at: string;
 }
 
@@ -286,6 +296,8 @@ export interface LeagueInput {
      * @maximum 15
      */
   roster_a: number;
+  /** Se fornito, la lega adotta questa federazione esistente anziché crearne una nuova automaticamente. */
+  federation_id?: string | null;
   /**
      * @minItems 4
      * @maxItems 8
@@ -430,6 +442,11 @@ export interface Federation {
   description?: string;
   /** @nullable */
   template_id?: string | null;
+  /**
+     * Proprietario della federazione (null per federazioni di sistema o auto-create)
+     * @nullable
+     */
+  owner_user_id?: string | null;
   mode: FederationMode;
   feature_flags: FeatureFlags;
   rules: FederationRules;

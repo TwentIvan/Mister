@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useLocation } from "wouter";
+import { useLocation, useSearch } from "wouter";
 import { useCreateLeague } from "@workspace/api-client-react";
 import StepIndicator from "@/components/setup/StepIndicator";
 import StepLega, { type LegaData } from "@/components/setup/StepLega";
@@ -30,6 +30,8 @@ const DEFAULT_STATE: SetupState = {
 export default function SetupLegaPage() {
   const [state, setState] = useState<SetupState>(DEFAULT_STATE);
   const [, setLocation] = useLocation();
+  const search = useSearch();
+  const federationId = new URLSearchParams(search).get("federation_id") ?? undefined;
   const createLeagueMutation = useCreateLeague();
 
   const setStep = (step: 1 | 2 | 3) =>
@@ -52,6 +54,7 @@ export default function SetupLegaPage() {
           roster_d: state.lega.rosterD,
           roster_c: state.lega.rosterC,
           roster_a: state.lega.rosterA,
+          ...(federationId ? { federation_id: federationId } : {}),
           fanta_teams: state.squadre.map(s => ({
             name: s.name,
             name_auction: s.nameAuction,

@@ -13,6 +13,7 @@ import {
   contracts,
   leagues,
   federations,
+  defaultFlagValues,
   type Auction,
   type AuctionBid,
 } from "@workspace/db";
@@ -330,6 +331,28 @@ router.post("/auctions", async (req, res): Promise<void> => {
 
   try {
     const auction = await db.transaction(async (tx) => {
+      // ── Snapshot delle regole federazione (una sola volta per stagione) ─────
+      // Al momento della prima asta congeliamo feature_flags + rules della
+      // federazione nella lega. Le aste successive usano il snapshot, non le
+      // regole live — garantisce invarianza per leghe già avviate.
+      if (!league.snapshotLockedAt && league.federationId) {
+        const [fed] = await tx
+          .select({ featureFlags: federations.featureFlags, rules: federations.rules })
+          .from(federations)
+          .where(eq(federations.id, league.federationId));
+        if (fed) {
+          const mergedFlags = { ...defaultFlagValues(), ...(fed.featureFlags ?? {}) };
+          await tx
+            .update(leagues)
+            .set({
+              snapshotFeatureFlags: mergedFlags as Record<string, boolean | number>,
+              snapshotRules: fed.rules,
+              snapshotLockedAt: new Date(),
+            })
+            .where(eq(leagues.id, leagueId));
+        }
+      }
+
       const [row] = await tx
         .insert(auctions)
         .values({
@@ -464,19 +487,28 @@ router.post("/auctions/:id/bid", async (req, res): Promise<void> => {
     return;
   }
 
-  // ── Flag federazione (default ON se lega senza federation) ────────────────
+  // ── Flag federazione: usa snapshot se disponibile, altrimenti live ────────
+  // Lo snapshot viene congelato al momento della prima asta (POST /auctions).
+  // Garantisce che i flag non cambino a metà di una sessione d'asta.
   const [leagueRow] = await db
-    .select({ federationId: leagues.federationId })
+    .select({
+      federationId: leagues.federationId,
+      snapshotFeatureFlags: leagues.snapshotFeatureFlags,
+    })
     .from(leagues)
     .where(eq(leagues.id, auction.leagueId));
 
-  let featureFlags: Record<string, unknown> = {};
-  if (leagueRow?.federationId) {
+  let featureFlags: Record<string, unknown> = defaultFlagValues() as Record<string, unknown>;
+  if (leagueRow?.snapshotFeatureFlags) {
+    // Snapshot presente: usa quello (lega con asta già avviata almeno una volta)
+    featureFlags = leagueRow.snapshotFeatureFlags as Record<string, unknown>;
+  } else if (leagueRow?.federationId) {
+    // Nessuno snapshot: leggi i flag live dalla federazione + merge default
     const [fed] = await db
       .select({ featureFlags: federations.featureFlags })
       .from(federations)
       .where(eq(federations.id, leagueRow.federationId));
-    featureFlags = (fed?.featureFlags ?? {}) as Record<string, unknown>;
+    featureFlags = { ...defaultFlagValues(), ...(fed?.featureFlags ?? {}) } as Record<string, unknown>;
   }
   const flagRoleCap       = featureFlags["auction_role_cap"]       !== false;
   const flagReserveBudget = featureFlags["auction_reserve_budget"] !== false;

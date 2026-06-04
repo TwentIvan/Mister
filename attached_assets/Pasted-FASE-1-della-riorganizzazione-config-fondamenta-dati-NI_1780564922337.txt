@@ -1,0 +1,36 @@
+FASE 1 della riorganizzazione config: fondamenta dati. NIENTE UI nuova oltre allo stretto necessario. PRINCIPIO GUIDA: una sola fonte di verita per ogni impostazione; ogni livello fa uno SNAPSHOT del livello superiore al proprio avvio (federazione -> lega all'inizio stagione; lega -> asta all'avvio asta, gia esistente). Server-authoritative. Migrazioni che PRESERVANO i dati. Questa fase va verificata prima di qualunque schermata (Fase 2).
+
+==== 1. FEDERAZIONE: condivisa, posseduta, obbligatoria ====
+- federation_id sulla lega diventa OBBLIGATORIO (oggi nullable). Migrazione: alle leghe esistenti senza federazione (es. lega demo standalone) va assegnata/creata una federazione, cosi nessuna resta orfana.
+- Relazione 1-N: una federazione puo avere PIU leghe. (Strutturalmente c'e gia via FK; verifica che nulla assuma 1-1.)
+- Aggiungi alla federazione un campo PROPRIETARio (owner, anche solo stub nullable per ora): la federazione e un'entita posseduta. Nessuna auth adesso, solo il campo, cosi gli account ci si appoggiano dopo.
+
+==== 2. CREAZIONE LEGA: adotta / crea ====
+- Nel flusso di creazione lega aggiungi la scelta: ADOTTA una federazione esistente OPPURE CREA una nuova. Default preselezionato: "crea nuova" (come fa oggi, dal template).
+- "Crea nuova": come ora (federazione dal template + collega). "Adotta": collega alla federazione scelta.
+
+==== 3. SNAPSHOT lega <- federazione all'inizio stagione ====
+- La lega CONGELA le regole della federazione (feature_flags + rules) all'inizio della sua stagione, in una copia propria. Un cambio delle regole della federazione DOPO non tocca le leghe gia avviate; vale solo per stagioni/leghe nuove.
+- Trigger "inizio stagione": se non esiste un evento esplicito, usa il piu sensato (tipicamente l'avvio della PRIMA asta della stagione) e CONGELA UNA VOLTA SOLA (le aste successive, es. riparazione, non ri-congelano). Dimmi quale trigger hai usato.
+
+==== 4. DEDUPLICA fonte di verita ====
+Oggi timer, budget e composizione rosa vivono in piu posti: config JSONB della lega, colonne flat denormalizzate sulla lega, e (timer/composizione) anche lo snapshot asta.
+- Per OGNUNO (timer_seconds, budget iniziale, roster P/D/C/A): scegli UNA fonte canonica a livello lega (config JSONB oppure colonna flat, ma UNA sola), aggiorna tutti i lettori, elimina/deriva l'altra copia. Dimmi quale casa canonica hai scelto per ciascuno.
+- Lo snapshot sull'asta RESTA: e l'unica copia legittima, fatta all'avvio. Non e duplicazione, e congelamento.
+
+==== 5. LE DUE MAGAGNE ====
+- auction_reserve_budget: oggi e un check INLINE nel bid handler, non nel catalogo. Registralo in flags.ts (categoria economy, default true) come auction_role_cap, e fai leggere al bid handler il flag dal catalogo. Comportamento 7.E INVARIATO, solo reso governabile.
+- Pagina Regolamento mostra ~6 flag invece di 18(+1). Investiga (probabile: l'API ritorna solo i flag con valore impostato, non i default) e correggi: devono comparire TUTTI con i loro default.
+
+==== CRITERI ====
+F1. Nessuna lega senza federazione; la lega demo migrata; creare una lega senza federazione fallisce.
+F2. Federazione con campo proprietario; 1-N verificato (due leghe sulla stessa federazione).
+F3. Creazione lega: scelta adotta/crea, "crea nuova" preselezionato; adottando, la lega si collega.
+F4. Snapshot regole: adotta una federazione, avvia (trigger inizio stagione), poi cambia un flag sulla federazione -> la lega avviata vede ancora il VECCHIO valore; una lega NUOVA vede il nuovo. PROVALO.
+F5. Dedup: ogni impostazione ha UNA fonte canonica; cambiando il valore canonico non restano copie divergenti; lo snapshot asta resta. PROVALO.
+F6. auction_reserve_budget nel catalogo + letto dal flag; 7.E invariato.
+F7. Regolamento mostra tutti i 18(+1) flag con i default.
+F8. REGRESSIONE: asta, offerte, voce, 7.E, chiamata, mobile/SSE invariati; typecheck pulito.
+
+VINCOLI: migrazioni data-preserving; una sola fonte di verita (no path paralleli); owner = stub (niente auth ora); niente polish grafico; typecheck pulito, niente debug residuo.
+DELIVERABLE: diff; note di migrazione (cosa e successo alla lega demo); prova di F4 (snapshot che congela) e F5 (dedup senza copie divergenti); casa canonica scelta per timer/budget/composizione; trigger usato per lo snapshot; conferma regressione. CHECKPOINT prima della Fase 2.

@@ -1395,7 +1395,8 @@ components:
     # ─── FEATURE FLAGS ────────────────────────────────────────
     FeatureFlags:
       type: object
-      description: I 18 feature flag copiati dal template al momento della creazione della lega
+      description: I 20 feature flag di configurazione lega (copiati dal template al momento della creazione). Chiavi aggiuntive future sono tollerate (additionalProperties).
+      additionalProperties: true
       properties:
         multi_season_contracts:
           type: boolean
@@ -1445,6 +1446,12 @@ components:
         rescission_recovery_pct:
           type: number
           description: Percentuale crediti recuperata sullo svincolo (0-100)
+        auction_role_cap:
+          type: boolean
+          description: Blocca offerta su ruolo già esaurito nella rosa della squadra offerente
+        auction_reserve_budget:
+          type: boolean
+          description: Blocca offerta se lascerebbe meno di 1 FM per ogni slot ancora vuoto
         no_schema_tactics:
           type: boolean
           description: Formazione senza vincoli di modulo predefinito
@@ -1587,14 +1594,15 @@ components:
     # ─── LEAGUE ───────────────────────────────────────────────
     League:
       type: object
-      required: [id, name, admin_user_id, max_managers, season, visibility, started, timer_seconds, created_at]
+      required: [id, name, federation_id, admin_user_id, max_managers, season, visibility, started, timer_seconds, created_at]
       properties:
         id:
           type: string
         name:
           type: string
         federation_id:
-          type: ["string", "null"]
+          type: string
+          description: ID federazione (sempre presente — creata automaticamente al setup)
         template_id:
           type: ["string", "null"]
         admin_user_id:
@@ -1646,6 +1654,10 @@ components:
           type: ["string", "null"]
           enum: [classico, manageriale, manageriale_pro, null]
           description: Modalità asta
+        snapshot_locked_at:
+          type: ["string", "null"]
+          format: date-time
+          description: Timestamp del freeze delle regole federazione (null = non ancora avvenuto)
         created_at:
           type: string
           format: date-time
@@ -1681,6 +1693,10 @@ components:
           type: integer
           minimum: 1
           maximum: 15
+        federation_id:
+          type: string
+          description: Se fornito, la lega adotta questa federazione esistente anziché crearne una nuova automaticamente.
+          nullable: true
         fanta_teams:
           type: array
           items:
@@ -1794,6 +1810,9 @@ components:
           type: string
         template_id:
           type: ["string", "null"]
+        owner_user_id:
+          type: ["string", "null"]
+          description: Proprietario della federazione (null per federazioni di sistema o auto-create)
         mode:
           type: string
           enum: [classic, mantra]

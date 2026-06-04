@@ -40,6 +40,8 @@ export interface LeagueInput {
      * @maximum 15
      */
   roster_a: number;
+  /** Se fornito, la lega adotta questa federazione esistente anziché crearne una nuova automaticamente. */
+  federation_id?: string | null;
   /**
      * @minItems 4
      * @maxItems 8

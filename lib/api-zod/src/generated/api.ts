@@ -48,9 +48,11 @@ export const ListTemplatesResponseItem = zod.object({
   "clause_default_factor": zod.number().optional().describe('Moltiplicatore residuo per clausola di default (0.5-1.0)'),
   "rescission_penalty": zod.boolean().optional().describe('Penale se il manager svincola prima della scadenza'),
   "rescission_recovery_pct": zod.number().optional().describe('Percentuale crediti recuperata sullo svincolo (0-100)'),
+  "auction_role_cap": zod.boolean().optional().describe('Blocca offerta su ruolo già esaurito nella rosa della squadra offerente'),
+  "auction_reserve_budget": zod.boolean().optional().describe('Blocca offerta se lascerebbe meno di 1 FM per ogni slot ancora vuoto'),
   "no_schema_tactics": zod.boolean().optional().describe('Formazione senza vincoli di modulo predefinito'),
   "scouting_enabled": zod.boolean().optional().describe('Sistema di scouting giocatori giovani\/emergenti')
-}).describe('I 18 feature flag copiati dal template al momento della creazione della lega'),
+}).describe('I 20 feature flag di configurazione lega (copiati dal template al momento della creazione). Chiavi aggiuntive future sono tollerate (additionalProperties).'),
   "suggested_markets": zod.array(zod.object({
   "name": zod.string(),
   "type": zod.enum(['auction', 'trade', 'release', 'free_agent']),
@@ -104,9 +106,11 @@ export const GetTemplateResponse = zod.object({
   "clause_default_factor": zod.number().optional().describe('Moltiplicatore residuo per clausola di default (0.5-1.0)'),
   "rescission_penalty": zod.boolean().optional().describe('Penale se il manager svincola prima della scadenza'),
   "rescission_recovery_pct": zod.number().optional().describe('Percentuale crediti recuperata sullo svincolo (0-100)'),
+  "auction_role_cap": zod.boolean().optional().describe('Blocca offerta su ruolo già esaurito nella rosa della squadra offerente'),
+  "auction_reserve_budget": zod.boolean().optional().describe('Blocca offerta se lascerebbe meno di 1 FM per ogni slot ancora vuoto'),
   "no_schema_tactics": zod.boolean().optional().describe('Formazione senza vincoli di modulo predefinito'),
   "scouting_enabled": zod.boolean().optional().describe('Sistema di scouting giocatori giovani\/emergenti')
-}).describe('I 18 feature flag copiati dal template al momento della creazione della lega'),
+}).describe('I 20 feature flag di configurazione lega (copiati dal template al momento della creazione). Chiavi aggiuntive future sono tollerate (additionalProperties).'),
   "suggested_markets": zod.array(zod.object({
   "name": zod.string(),
   "type": zod.enum(['auction', 'trade', 'release', 'free_agent']),
@@ -154,9 +158,11 @@ export const CreateTemplateBody = zod.object({
   "clause_default_factor": zod.number().optional().describe('Moltiplicatore residuo per clausola di default (0.5-1.0)'),
   "rescission_penalty": zod.boolean().optional().describe('Penale se il manager svincola prima della scadenza'),
   "rescission_recovery_pct": zod.number().optional().describe('Percentuale crediti recuperata sullo svincolo (0-100)'),
+  "auction_role_cap": zod.boolean().optional().describe('Blocca offerta su ruolo già esaurito nella rosa della squadra offerente'),
+  "auction_reserve_budget": zod.boolean().optional().describe('Blocca offerta se lascerebbe meno di 1 FM per ogni slot ancora vuoto'),
   "no_schema_tactics": zod.boolean().optional().describe('Formazione senza vincoli di modulo predefinito'),
   "scouting_enabled": zod.boolean().optional().describe('Sistema di scouting giocatori giovani\/emergenti')
-}).describe('I 18 feature flag copiati dal template al momento della creazione della lega'),
+}).describe('I 20 feature flag di configurazione lega (copiati dal template al momento della creazione). Chiavi aggiuntive future sono tollerate (additionalProperties).'),
   "suggested_markets": zod.array(zod.object({
   "name": zod.string(),
   "type": zod.enum(['auction', 'trade', 'release', 'free_agent']),
@@ -204,9 +210,11 @@ export const UpdateTemplateBody = zod.object({
   "clause_default_factor": zod.number().optional().describe('Moltiplicatore residuo per clausola di default (0.5-1.0)'),
   "rescission_penalty": zod.boolean().optional().describe('Penale se il manager svincola prima della scadenza'),
   "rescission_recovery_pct": zod.number().optional().describe('Percentuale crediti recuperata sullo svincolo (0-100)'),
+  "auction_role_cap": zod.boolean().optional().describe('Blocca offerta su ruolo già esaurito nella rosa della squadra offerente'),
+  "auction_reserve_budget": zod.boolean().optional().describe('Blocca offerta se lascerebbe meno di 1 FM per ogni slot ancora vuoto'),
   "no_schema_tactics": zod.boolean().optional().describe('Formazione senza vincoli di modulo predefinito'),
   "scouting_enabled": zod.boolean().optional().describe('Sistema di scouting giocatori giovani\/emergenti')
-}).optional().describe('I 18 feature flag copiati dal template al momento della creazione della lega'),
+}).optional().describe('I 20 feature flag di configurazione lega (copiati dal template al momento della creazione). Chiavi aggiuntive future sono tollerate (additionalProperties).'),
   "suggested_markets": zod.array(zod.object({
   "name": zod.string(),
   "type": zod.enum(['auction', 'trade', 'release', 'free_agent']),
@@ -247,9 +255,11 @@ export const UpdateTemplateResponse = zod.object({
   "clause_default_factor": zod.number().optional().describe('Moltiplicatore residuo per clausola di default (0.5-1.0)'),
   "rescission_penalty": zod.boolean().optional().describe('Penale se il manager svincola prima della scadenza'),
   "rescission_recovery_pct": zod.number().optional().describe('Percentuale crediti recuperata sullo svincolo (0-100)'),
+  "auction_role_cap": zod.boolean().optional().describe('Blocca offerta su ruolo già esaurito nella rosa della squadra offerente'),
+  "auction_reserve_budget": zod.boolean().optional().describe('Blocca offerta se lascerebbe meno di 1 FM per ogni slot ancora vuoto'),
   "no_schema_tactics": zod.boolean().optional().describe('Formazione senza vincoli di modulo predefinito'),
   "scouting_enabled": zod.boolean().optional().describe('Sistema di scouting giocatori giovani\/emergenti')
-}).describe('I 18 feature flag copiati dal template al momento della creazione della lega'),
+}).describe('I 20 feature flag di configurazione lega (copiati dal template al momento della creazione). Chiavi aggiuntive future sono tollerate (additionalProperties).'),
   "suggested_markets": zod.array(zod.object({
   "name": zod.string(),
   "type": zod.enum(['auction', 'trade', 'release', 'free_agent']),
@@ -288,7 +298,7 @@ export const ListLeaguesQueryParams = zod.object({
 export const ListLeaguesResponseItem = zod.object({
   "id": zod.string(),
   "name": zod.string(),
-  "federation_id": zod.string().nullish(),
+  "federation_id": zod.string().describe('ID federazione (sempre presente — creata automaticamente al setup)'),
   "template_id": zod.string().nullish(),
   "admin_user_id": zod.string(),
   "co_admin_user_ids": zod.array(zod.string()).optional(),
@@ -308,6 +318,7 @@ export const ListLeaguesResponseItem = zod.object({
   "roster_c": zod.number().nullish().describe('Centrocampisti per squadra'),
   "roster_a": zod.number().nullish().describe('Attaccanti per squadra'),
   "auction_mode": zod.union([zod.literal('classico'),zod.literal('manageriale'),zod.literal('manageriale_pro'),zod.literal(null)]).nullish().describe('Modalità asta'),
+  "snapshot_locked_at": zod.coerce.date().nullish().describe('Timestamp del freeze delle regole federazione (null = non ancora avvenuto)'),
   "created_at": zod.coerce.date()
 })
 export const ListLeaguesResponse = zod.array(ListLeaguesResponseItem)
@@ -349,6 +360,7 @@ export const CreateLeagueBody = zod.object({
   "roster_d": zod.number().min(1).max(createLeagueBodyRosterDMax),
   "roster_c": zod.number().min(1).max(createLeagueBodyRosterCMax),
   "roster_a": zod.number().min(1).max(createLeagueBodyRosterAMax),
+  "federation_id": zod.string().nullish().describe('Se fornito, la lega adotta questa federazione esistente anziché crearne una nuova automaticamente.'),
   "fanta_teams": zod.array(zod.object({
   "name": zod.string().max(createLeagueBodyFantaTeamsItemNameMax),
   "name_auction": zod.string().max(createLeagueBodyFantaTeamsItemNameAuctionMax).describe('Nome pronunciato dal battitore in asta'),
@@ -369,7 +381,7 @@ export const GetLeagueParams = zod.object({
 export const GetLeagueResponse = zod.object({
   "id": zod.string(),
   "name": zod.string(),
-  "federation_id": zod.string().nullish(),
+  "federation_id": zod.string().describe('ID federazione (sempre presente — creata automaticamente al setup)'),
   "template_id": zod.string().nullish(),
   "admin_user_id": zod.string(),
   "co_admin_user_ids": zod.array(zod.string()).optional(),
@@ -389,6 +401,7 @@ export const GetLeagueResponse = zod.object({
   "roster_c": zod.number().nullish().describe('Centrocampisti per squadra'),
   "roster_a": zod.number().nullish().describe('Attaccanti per squadra'),
   "auction_mode": zod.union([zod.literal('classico'),zod.literal('manageriale'),zod.literal('manageriale_pro'),zod.literal(null)]).nullish().describe('Modalità asta'),
+  "snapshot_locked_at": zod.coerce.date().nullish().describe('Timestamp del freeze delle regole federazione (null = non ancora avvenuto)'),
   "created_at": zod.coerce.date()
 })
 
@@ -414,7 +427,7 @@ export const UpdateLeagueBody = zod.object({
 export const UpdateLeagueResponse = zod.object({
   "id": zod.string(),
   "name": zod.string(),
-  "federation_id": zod.string().nullish(),
+  "federation_id": zod.string().describe('ID federazione (sempre presente — creata automaticamente al setup)'),
   "template_id": zod.string().nullish(),
   "admin_user_id": zod.string(),
   "co_admin_user_ids": zod.array(zod.string()).optional(),
@@ -434,6 +447,7 @@ export const UpdateLeagueResponse = zod.object({
   "roster_c": zod.number().nullish().describe('Centrocampisti per squadra'),
   "roster_a": zod.number().nullish().describe('Attaccanti per squadra'),
   "auction_mode": zod.union([zod.literal('classico'),zod.literal('manageriale'),zod.literal('manageriale_pro'),zod.literal(null)]).nullish().describe('Modalità asta'),
+  "snapshot_locked_at": zod.coerce.date().nullish().describe('Timestamp del freeze delle regole federazione (null = non ancora avvenuto)'),
   "created_at": zod.coerce.date()
 })
 
@@ -474,6 +488,7 @@ export const GetFederationResponse = zod.object({
   "name": zod.string(),
   "description": zod.string().optional(),
   "template_id": zod.string().nullish(),
+  "owner_user_id": zod.string().nullish().describe('Proprietario della federazione (null per federazioni di sistema o auto-create)'),
   "mode": zod.enum(['classic', 'mantra']),
   "feature_flags": zod.object({
   "multi_season_contracts": zod.boolean().optional().describe('Contratti pluriennali (>1 stagione)'),
@@ -492,9 +507,11 @@ export const GetFederationResponse = zod.object({
   "clause_default_factor": zod.number().optional().describe('Moltiplicatore residuo per clausola di default (0.5-1.0)'),
   "rescission_penalty": zod.boolean().optional().describe('Penale se il manager svincola prima della scadenza'),
   "rescission_recovery_pct": zod.number().optional().describe('Percentuale crediti recuperata sullo svincolo (0-100)'),
+  "auction_role_cap": zod.boolean().optional().describe('Blocca offerta su ruolo già esaurito nella rosa della squadra offerente'),
+  "auction_reserve_budget": zod.boolean().optional().describe('Blocca offerta se lascerebbe meno di 1 FM per ogni slot ancora vuoto'),
   "no_schema_tactics": zod.boolean().optional().describe('Formazione senza vincoli di modulo predefinito'),
   "scouting_enabled": zod.boolean().optional().describe('Sistema di scouting giocatori giovani\/emergenti')
-}).describe('I 18 feature flag copiati dal template al momento della creazione della lega'),
+}).describe('I 20 feature flag di configurazione lega (copiati dal template al momento della creazione). Chiavi aggiuntive future sono tollerate (additionalProperties).'),
   "rules": zod.object({
   "bonusMalus": zod.object({
 
@@ -548,9 +565,11 @@ export const UpdateFederationBody = zod.object({
   "clause_default_factor": zod.number().optional().describe('Moltiplicatore residuo per clausola di default (0.5-1.0)'),
   "rescission_penalty": zod.boolean().optional().describe('Penale se il manager svincola prima della scadenza'),
   "rescission_recovery_pct": zod.number().optional().describe('Percentuale crediti recuperata sullo svincolo (0-100)'),
+  "auction_role_cap": zod.boolean().optional().describe('Blocca offerta su ruolo già esaurito nella rosa della squadra offerente'),
+  "auction_reserve_budget": zod.boolean().optional().describe('Blocca offerta se lascerebbe meno di 1 FM per ogni slot ancora vuoto'),
   "no_schema_tactics": zod.boolean().optional().describe('Formazione senza vincoli di modulo predefinito'),
   "scouting_enabled": zod.boolean().optional().describe('Sistema di scouting giocatori giovani\/emergenti')
-}).optional().describe('I 18 feature flag copiati dal template al momento della creazione della lega'),
+}).optional().describe('I 20 feature flag di configurazione lega (copiati dal template al momento della creazione). Chiavi aggiuntive future sono tollerate (additionalProperties).'),
   "rules": zod.object({
   "bonusMalus": zod.object({
 
@@ -578,6 +597,7 @@ export const UpdateFederationResponse = zod.object({
   "name": zod.string(),
   "description": zod.string().optional(),
   "template_id": zod.string().nullish(),
+  "owner_user_id": zod.string().nullish().describe('Proprietario della federazione (null per federazioni di sistema o auto-create)'),
   "mode": zod.enum(['classic', 'mantra']),
   "feature_flags": zod.object({
   "multi_season_contracts": zod.boolean().optional().describe('Contratti pluriennali (>1 stagione)'),
@@ -596,9 +616,11 @@ export const UpdateFederationResponse = zod.object({
   "clause_default_factor": zod.number().optional().describe('Moltiplicatore residuo per clausola di default (0.5-1.0)'),
   "rescission_penalty": zod.boolean().optional().describe('Penale se il manager svincola prima della scadenza'),
   "rescission_recovery_pct": zod.number().optional().describe('Percentuale crediti recuperata sullo svincolo (0-100)'),
+  "auction_role_cap": zod.boolean().optional().describe('Blocca offerta su ruolo già esaurito nella rosa della squadra offerente'),
+  "auction_reserve_budget": zod.boolean().optional().describe('Blocca offerta se lascerebbe meno di 1 FM per ogni slot ancora vuoto'),
   "no_schema_tactics": zod.boolean().optional().describe('Formazione senza vincoli di modulo predefinito'),
   "scouting_enabled": zod.boolean().optional().describe('Sistema di scouting giocatori giovani\/emergenti')
-}).describe('I 18 feature flag copiati dal template al momento della creazione della lega'),
+}).describe('I 20 feature flag di configurazione lega (copiati dal template al momento della creazione). Chiavi aggiuntive future sono tollerate (additionalProperties).'),
   "rules": zod.object({
   "bonusMalus": zod.object({
 
@@ -1126,7 +1148,7 @@ export const GetDashboardResponse = zod.object({
   "my_leagues": zod.array(zod.object({
   "id": zod.string(),
   "name": zod.string(),
-  "federation_id": zod.string().nullish(),
+  "federation_id": zod.string().describe('ID federazione (sempre presente — creata automaticamente al setup)'),
   "template_id": zod.string().nullish(),
   "admin_user_id": zod.string(),
   "co_admin_user_ids": zod.array(zod.string()).optional(),
@@ -1146,6 +1168,7 @@ export const GetDashboardResponse = zod.object({
   "roster_c": zod.number().nullish().describe('Centrocampisti per squadra'),
   "roster_a": zod.number().nullish().describe('Attaccanti per squadra'),
   "auction_mode": zod.union([zod.literal('classico'),zod.literal('manageriale'),zod.literal('manageriale_pro'),zod.literal(null)]).nullish().describe('Modalità asta'),
+  "snapshot_locked_at": zod.coerce.date().nullish().describe('Timestamp del freeze delle regole federazione (null = non ancora avvenuto)'),
   "created_at": zod.coerce.date()
 })),
   "active_markets": zod.array(zod.object({

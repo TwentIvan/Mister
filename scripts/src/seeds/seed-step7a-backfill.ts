@@ -10,15 +10,18 @@
  * NON tocca contracts.purchase_price_fm (rimane NULL per i 200 esistenti).
  */
 
-import { db } from "@workspace/db";
+import { db, defaultFlagValues } from "@workspace/db";
 import {
   leagues,
+  federations,
   competitions,
   fantaTeams,
   auctions,
   contracts,
+  DEFAULT_RULES,
 } from "@workspace/db/schema";
 import { eq, count, isNotNull } from "drizzle-orm";
+import { randomBytes } from "crypto";
 import type { LeagueConfig } from "@workspace/db/schema";
 
 // ─── Configurazione lega MVP ───────────────────────────────────────────────
@@ -27,10 +30,6 @@ const LEAGUE_ID = "lg-mvp";
 
 const MVP_CONFIG: LeagueConfig = {
   squad: {
-    gk: 3,
-    def: 8,
-    mid: 8,
-    att: 6,
     startersTotal: 11,
     allowedModules: ["3-4-3", "3-5-2", "4-3-3", "4-4-2", "4-5-1", "5-3-2", "5-4-1"],
   },
@@ -40,7 +39,6 @@ const MVP_CONFIG: LeagueConfig = {
     useVice: true,
   },
   budget: {
-    initialCredits: 500,
     minimumBid: 1,
     allowNegativeBalance: false,
     reserveForUnfilledRoles: true,
@@ -82,10 +80,21 @@ async function main() {
     if (existing.length > 0) {
       console.log(`[A] leagues '${LEAGUE_ID}' già presente — skip INSERT.`);
     } else {
+      // Ogni lega richiede una federazione (FK NOT NULL).
+      const fedId = `fed-${randomBytes(4).toString("hex")}`;
+      await tx.insert(federations).values({
+        id: fedId,
+        name: "Regolamento Lega MVP",
+        description: "Federazione seed per la Lega MVP.",
+        templateId: null,
+        mode: "classic",
+        featureFlags: defaultFlagValues() as Record<string, boolean | number>,
+        rules: DEFAULT_RULES,
+      });
       await tx.insert(leagues).values({
         id: LEAGUE_ID,
         name: "Lega MVP",
-        federationId: null,
+        federationId: fedId,
         adminUserId: "system",
         season: 2024,
         maxManagers: 8,
@@ -98,7 +107,7 @@ async function main() {
         rosterA: 6,
         auctionMode: "manageriale",
       });
-      console.log(`[A] INSERT leagues '${LEAGUE_ID}' ✓`);
+      console.log(`[A] INSERT federations '${fedId}' + leagues '${LEAGUE_ID}' ✓`);
     }
 
     // ── B) UPDATE competitions ────────────────────────────────────────────

@@ -8,6 +8,7 @@ import type {
   Player,
   Contract,
 } from "@workspace/db";
+import { defaultFlagValues } from "@workspace/db";
 
 export function mapLeague(l: League) {
   return {
@@ -33,6 +34,7 @@ export function mapLeague(l: League) {
     roster_c: l.rosterC ?? null,
     roster_a: l.rosterA ?? null,
     auction_mode: l.auctionMode ?? null,
+    snapshot_locked_at: l.snapshotLockedAt?.toISOString() ?? null,
     created_at: l.createdAt,
   };
 }
@@ -82,13 +84,17 @@ export function mapTemplate(t: TemplateProfile) {
 }
 
 export function mapFederation(f: Federation) {
+  // Merge con i default server-side: garantisce che tutti i flag appaiano
+  // nell'API anche se il record DB è stato creato prima di un nuovo flag.
+  const mergedFlags = { ...defaultFlagValues(), ...(f.featureFlags ?? {}) };
   return {
     id: f.id,
     name: f.name,
     description: f.description,
     template_id: f.templateId ?? null,
+    owner_user_id: f.ownerUserId ?? null,
     mode: f.mode,
-    feature_flags: f.featureFlags,
+    feature_flags: mergedFlags,
     rules: f.rules,
     created_at: f.createdAt,
     updated_at: f.updatedAt,
