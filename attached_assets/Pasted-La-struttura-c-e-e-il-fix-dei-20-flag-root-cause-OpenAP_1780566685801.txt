@@ -1,0 +1,26 @@
+La struttura c'e e il fix dei 20 flag (root cause OpenAPI/Zod) e centrato. Ma il checkpoint e sul COMPORTAMENTO: "lo snapshot scatta" non e "lo snapshot isola", e "typecheck verde" non e "l'asta funziona ancora". Quattro prove, poi Fase 2.
+
+=== 1. F4 — ISOLAMENTO dello snapshot (la prova centrale del modello) ===
+Non "lo snapshot scatta alla prima asta", ma che PROTEGGE dai cambi successivi:
+a) Lega A adotta la federazione F, poi avvia (snapshot fatto, snapshot_locked_at valorizzato).
+b) Cambia un flag su F dopo l'avvio (es. scouting_enabled: off -> on).
+c) La lega A deve vedere ANCORA il vecchio valore (off).
+d) Una lega NUOVA B creata sotto F deve vedere il NUOVO valore (on).
+Riportami i 4 passi con i valori osservati a ogni passo.
+
+=== 2. F8 — REGRESSIONE asta (hai toccato snapshot + bid handler) ===
+Il typecheck non basta. Avvia un'asta vera e in una passata end-to-end verifica che, dopo la deduplica config e i cambi allo snapshot:
+- la composizione e il budget arrivano correttamente nello snapshot dell'asta;
+- un'offerta va a buon fine e il timer server-side riparte;
+- i vincoli 7.E (ruolo pieno / riserva budget) bloccano ancora.
+Una conferma che l'asta gira come prima, non solo che compila.
+
+=== 3. F6 — reserve budget letto DAL FLAG, comportamento invariato ===
+Conferma che il bid handler legge auction_reserve_budget dal catalogo (non piu come check inline) E che il vincolo riserva-budget blocca ancora correttamente. Prova del comportamento, non solo "il flag e nel catalogo".
+
+=== 4. F5 — niente copie divergenti ===
+Conferma che tutti i lettori usano la fonte canonica (le colonne flat che hai scelto) e che i campi della config JSONB NON duplicati — captain, postAcquisitionWindow, squad.allowedModules — sono rimasti intatti dopo la deduplica (hai rimosso solo i doppioni di timer/budget/composizione, non il resto).
+
+Solo dopo queste quattro, procedi con la Fase 2 (area Configurazione UI sui tre livelli). La scelta adotta/crea via query param va bene per ora: il picker esplicito lo costruiamo nella UI di Fase 2.
+
+DELIVERABLE: i 4 passi di F4 con i valori; l'esito end-to-end di F8; conferma di F6 (comportamento) e F5 (canonica unica + JSONB intatto). Nessun nuovo lavoro oltre a chiudere queste prove; se una non passa, sistemala e ri-testala.
