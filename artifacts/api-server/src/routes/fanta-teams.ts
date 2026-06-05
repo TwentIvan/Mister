@@ -233,15 +233,10 @@ router.get("/roster", async (req, res): Promise<void> => {
     .select({
       playerId: contracts.playerId,
       name: players.name,
-      fullName: players.fullName,
       realTeam: players.realTeam,
       roleClassic: players.roleClassic,
-      rolesMantra: players.rolesMantra,
-      injured: players.injured,
       photoUrl: players.photoUrl,
-      purchasePrice: contracts.purchasePrice,
-      durationSeasons: contracts.durationSeasons,
-      clauseDefault: contracts.clauseDefault,
+      photoCartoonUrl: players.photoCartoonUrl,
     })
     .from(contracts)
     .innerJoin(players, eq(players.id, contracts.playerId))
@@ -265,27 +260,25 @@ router.get("/roster", async (req, res): Promise<void> => {
 
   const colorMap = Object.fromEntries(teamColorRows.map(c => [c.teamName, c]));
 
+  // Risposta conforme allo schema RosterPlayer del contratto OpenAPI (camelCase)
   const roster = rows.map(r => {
     const tc = colorMap[r.realTeam];
-    const code = SERIE_A_TEAM_CODE[r.realTeam] ?? r.realTeam.slice(0, 3).toUpperCase();
     return {
-      player_id: r.playerId,
+      id: r.playerId,
       name: r.name,
-      full_name: r.fullName,
-      real_team: r.realTeam,
-      real_team_code: code,
-      role_classic: r.roleClassic,
-      roles_mantra: r.rolesMantra,
-      injured: r.injured,
-      photo_url: r.photoUrl,
-      purchase_price: r.purchasePrice,
-      duration_seasons: r.durationSeasons,
-      clause_default: r.clauseDefault,
-      team_primary_color:   tc?.primaryHex   ?? null,
-      team_secondary_color: tc?.secondaryHex ?? null,
-      team_logo_url:        tc != null
+      roleClassic: r.roleClassic,
+      photoUrl: r.photoUrl ?? null,
+      photoCartoonUrl: r.photoCartoonUrl ?? null,
+      realTeamName: r.realTeam ?? null,
+      realTeamId: tc?.teamId ?? null,
+      realTeamColorPrimary: tc?.primaryHex ?? null,
+      realTeamColorSecondary: tc?.secondaryHex ?? null,
+      logoUrl: tc != null
         ? `https://media.api-sports.io/football/teams/${tc.teamId}.png`
         : null,
+      votoMister: null,
+      opponentCode: null,
+      opponentIsHome: null,
     };
   });
 
