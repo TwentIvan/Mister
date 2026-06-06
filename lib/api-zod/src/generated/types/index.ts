@@ -71,6 +71,7 @@ export * from './federationUpdateMode';
 export * from './feedEvent';
 export * from './feedEventType';
 export * from './feedMatchData';
+export * from './feedMatchDataOutcome';
 export * from './feedResponse';
 export * from './feedTeamInfo';
 export * from './getAuctionQueueParams';

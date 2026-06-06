@@ -8,8 +8,10 @@ import {
   societa,
   competitions,
   leagues,
+  federations,
 } from "@workspace/db";
-import type { JerseyConfig } from "@workspace/db";
+import type { JerseyConfig, GoalThresholds } from "@workspace/db";
+import { resolveMatchResult, DEFAULT_THRESHOLDS } from "../lib/competition-result";
 
 const router: IRouter = Router();
 
@@ -39,33 +41,40 @@ function ordinal(n: number): string {
   return `${n}ª`;
 }
 
+/** Headline editoriale: solo [Vincitore] [verbo] [Perdente]. Niente punteggio nel titolo. */
 function risultatoHeadline(
   homeName: string,
   awayName: string,
-  homeScore: number,
-  awayScore: number,
+  homeGoals: number,
+  awayGoals: number,
   giornata: number,
 ): { headline: string; body: string } {
-  const diff = Math.abs(homeScore - awayScore);
-  const winnerName = homeScore > awayScore ? homeName : awayName;
-  const loserName = homeScore > awayScore ? awayName : homeName;
-  const winScore = Math.max(homeScore, awayScore).toFixed(2);
-  const loseScore = Math.min(homeScore, awayScore).toFixed(2);
   const ord = ordinal(giornata);
+  const goalMargin = Math.abs(homeGoals - awayGoals);
 
-  let headline: string;
-  if (diff > 8) {
-    headline = `${winnerName} travolge ${loserName}: ${winScore}–${loseScore} nella ${ord} giornata.`;
-  } else if (diff > 4) {
-    headline = `${winnerName} domina la ${ord} giornata: ${winScore}–${loseScore} il finale.`;
-  } else if (diff > 2) {
-    headline = `${winnerName} supera ${loserName} nella ${ord} giornata: ${winScore}–${loseScore}.`;
-  } else {
-    headline = `${ord} giornata: ${winnerName} spunta di misura su ${loserName}, ${winScore}–${loseScore}.`;
+  if (homeGoals === awayGoals) {
+    // Pareggio
+    return {
+      headline: `${homeName} e ${awayName} si dividono la posta.`,
+      body: `${homeGoals}–${awayGoals} in gol classici · ${ord} giornata`,
+    };
   }
 
-  const body = `${winnerName} porta a casa i 3 punti con ${winScore}. ${loserName} si ferma a ${loseScore}.`;
-  return { headline, body };
+  const winnerName = homeGoals > awayGoals ? homeName : awayName;
+  const loserName = homeGoals > awayGoals ? awayName : homeName;
+  const winGoals = Math.max(homeGoals, awayGoals);
+  const loseGoals = Math.min(homeGoals, awayGoals);
+
+  let verb: string;
+  if (goalMargin >= 5) verb = "travolge";
+  else if (goalMargin >= 3) verb = "domina";
+  else if (goalMargin >= 2) verb = "supera";
+  else verb = "batte";
+
+  return {
+    headline: `${winnerName} ${verb} ${loserName}.`,
+    body: `${winGoals}–${loseGoals} in gol classici · ${ord} giornata`,
+  };
 }
 
 // ─── GET /feed ────────────────────────────────────────────────────────────────
@@ -92,6 +101,7 @@ router.get("/feed", async (req, res): Promise<void> => {
       playedAt: competitionMatches.playedAt,
       leagueId: leagues.id,
       leagueName: leagues.name,
+      fedRules: federations.rules,
       homeId: homeFt.id,
       homeName: homeSoc.name,
       homeJersey: homeSoc.jersey,
@@ -105,6 +115,7 @@ router.get("/feed", async (req, res): Promise<void> => {
       eq(competitions.id, competitionMatches.competitionId),
     )
     .innerJoin(leagues, eq(leagues.id, competitions.leagueId))
+    .innerJoin(federations, eq(federations.id, leagues.federationId))
     .leftJoin(homeFt, eq(homeFt.id, competitionMatches.homeFantaTeamId))
     .leftJoin(homeSoc, eq(homeFt.societaId, homeSoc.id))
     .leftJoin(awayFt, eq(awayFt.id, competitionMatches.awayFantaTeamId))
@@ -119,11 +130,20 @@ router.get("/feed", async (req, res): Promise<void> => {
   const events = pageRows.map((row) => {
     const hs = parseFloat(row.homeScore ?? "0");
     const as_ = parseFloat(row.awayScore ?? "0");
+
+    // Soglie dalla federazione — stessa fonte della Classifica
+    const thresholds: GoalThresholds =
+      row.fedRules?.goalThresholds ?? DEFAULT_THRESHOLDS;
+
+    // Risultato ufficiale via helper condiviso — Feed e Classifica non divergono
+    const result = resolveMatchResult(hs, as_, thresholds);
+    const { homeGoals, awayGoals, outcome } = result;
+
     const { headline, body } = risultatoHeadline(
       row.homeName ?? "Casa",
       row.awayName ?? "Ospite",
-      hs,
-      as_,
+      homeGoals,
+      awayGoals,
       row.giornata,
     );
 
@@ -139,6 +159,9 @@ router.get("/feed", async (req, res): Promise<void> => {
       body,
       matchData: {
         giornata: row.giornata,
+        outcome,
+        homeGoals,
+        awayGoals,
         homeTeam: {
           id: row.homeId ?? "",
           name: row.homeName ?? "Casa",
@@ -151,8 +174,6 @@ router.get("/feed", async (req, res): Promise<void> => {
           code: teamCode(row.awayName),
           ...jerseyColors(row.awayJersey as JerseyConfig | null),
         },
-        homeScore: hs,
-        awayScore: as_,
       },
     };
   });

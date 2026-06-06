@@ -1469,12 +1469,28 @@ export interface FeedTeamInfo {
   colorSecondary: string;
 }
 
+/**
+ * Esito ufficiale determinato dai gol classici
+ */
+export type FeedMatchDataOutcome = typeof FeedMatchDataOutcome[keyof typeof FeedMatchDataOutcome];
+
+
+export const FeedMatchDataOutcome = {
+  home: 'home',
+  away: 'away',
+  draw: 'draw',
+} as const;
+
 export interface FeedMatchData {
   giornata: number;
   homeTeam: FeedTeamInfo;
   awayTeam: FeedTeamInfo;
-  homeScore: number;
-  awayScore: number;
+  /** Gol classici ufficiali (scoreToGol con soglie federazione) */
+  homeGoals: number;
+  /** Gol classici ufficiali (scoreToGol con soglie federazione) */
+  awayGoals: number;
+  /** Esito ufficiale determinato dai gol classici */
+  outcome: FeedMatchDataOutcome;
 }
 
 export type FeedEventType = typeof FeedEventType[keyof typeof FeedEventType];

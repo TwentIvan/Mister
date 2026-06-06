@@ -4,6 +4,7 @@ import { alias } from "drizzle-orm/pg-core";
 import { db } from "@workspace/db";
 import { competitionMatches, fantaTeams, societa, competitions, leagues, federations } from "@workspace/db";
 import type { JerseyConfig } from "@workspace/db";
+import { resolveMatchResult, DEFAULT_THRESHOLDS } from "../lib/competition-result";
 
 const router: IRouter = Router();
 
@@ -141,20 +142,7 @@ router.get("/competition/:competitionId/standings", async (req, res): Promise<vo
   }
 
   // goalThresholds della federazione (default classico se mancanti)
-  const thresholds = compWithFed[0]!.fedRules?.goalThresholds ?? { base: 66, step: 6, maxGoals: 8 };
-
-  /**
-   * Conversione punteggio giornata → gol classico.
-   * Formula: score < base → 0; altrimenti floor((score - (base - step)) / step), cappato a maxGoals.
-   * Esempio (base=66, step=6): 65→0, 66→1, 72→2, 78→3 …
-   */
-  function scoreToGol(score: number): number {
-    if (score < thresholds.base) return 0;
-    return Math.min(
-      thresholds.maxGoals,
-      Math.floor((score - (thresholds.base - thresholds.step)) / thresholds.step),
-    );
-  }
+  const thresholds = compWithFed[0]!.fedRules?.goalThresholds ?? DEFAULT_THRESHOLDS;
 
   const playedRows = await db
     .select({
@@ -210,15 +198,15 @@ router.get("/competition/:competitionId/standings", async (req, res): Promise<vo
     const hs = Math.round(parseFloat(row.homeScore) * 100) / 100;
     const as_ = Math.round(parseFloat(row.awayScore) * 100) / 100;
 
-    // Conversione per-partita: punteggio → gol classico
-    const homeGol = scoreToGol(hs);
-    const awayGol = scoreToGol(as_);
-
     ensureTeam(row.homeId, row.homeName ?? null, row.homeLogoUrl, row.homeJersey);
     ensureTeam(row.awayId, row.awayName ?? null, row.awayLogoUrl, row.awayJersey);
 
     const home = table.get(row.homeId)!;
     const away = table.get(row.awayId)!;
+
+    // Risultato ufficiale: vincitore determinato dai GOL CLASSICI (non dal punteggio assoluto)
+    const result = resolveMatchResult(hs, as_, thresholds);
+    const { homeGoals: homeGol, awayGoals: awayGol } = result;
 
     home.playedMatches++;
     home.gf += homeGol;
@@ -230,11 +218,11 @@ router.get("/competition/:competitionId/standings", async (req, res): Promise<vo
     away.gs += homeGol;
     away.pf = Math.round((away.pf + as_) * 100) / 100;
 
-    if (hs > as_) {
+    if (result.outcome === "home") {
       home.wins++;
       home.points += 3;
       away.losses++;
-    } else if (as_ > hs) {
+    } else if (result.outcome === "away") {
       away.wins++;
       away.points += 3;
       home.losses++;

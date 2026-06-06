@@ -21,11 +21,12 @@ function tempoRelativo(iso: string): string {
   return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
 
-// ─── C-crest ──────────────────────────────────────────────────────────────────
+// ─── C-crest (disco-squadra tondo: identità fanta) ────────────────────────────
+// Usare per squadre fantacalcio. Il crest quadrato del club reale è per i giocatori.
 
-function Crest({
+function Disco({
   team,
-  size = 26,
+  size = 28,
 }: {
   team: FeedTeamInfo;
   size?: number;
@@ -35,7 +36,7 @@ function Crest({
       style={{
         width: size,
         height: size,
-        borderRadius: 7,
+        borderRadius: "50%",
         flexShrink: 0,
         background: `linear-gradient(135deg, ${team.colorPrimary} 0 49%, ${team.colorSecondary} 51% 100%)`,
         display: "flex",
@@ -43,7 +44,7 @@ function Crest({
         justifyContent: "center",
         color: "#fff",
         fontFamily: "var(--mono)",
-        fontSize: size * 0.29 + "px",
+        fontSize: size * 0.28 + "px",
         fontWeight: 700,
         boxShadow: "inset 0 0 0 .5px rgba(0,0,0,.25)",
         letterSpacing: ".02em",
@@ -54,103 +55,80 @@ function Crest({
   );
 }
 
-// ─── Mini scoreboard partita ───────────────────────────────────────────────────
+// ─── Scoreboard risultato (fix B) ──────────────────────────────────────────────
+// Disco tondo + gol + separatore + gol + disco tondo. Niente nomi troncati.
 
-function MiniScoreboard({ event }: { event: FeedEvent }) {
+function ScoreboardRisultato({ event }: { event: FeedEvent }) {
   const m = event.matchData;
   if (!m) return null;
-  const homeWin = m.homeScore > m.awayScore;
-  const awayWin = m.awayScore > m.homeScore;
+  const homeWin = m.outcome === "home";
+  const awayWin = m.outcome === "away";
+  const isDraw = m.outcome === "draw";
+
   return (
     <div
       style={{
         display: "flex",
         alignItems: "center",
-        gap: 8,
-        marginTop: 9,
-        background: "rgba(31,71,51,.06)",
-        borderRadius: 10,
-        padding: "8px 11px",
+        justifyContent: "center",
+        gap: 10,
+        marginTop: 10,
+        background: "rgba(31,71,51,.055)",
+        borderRadius: 11,
+        padding: "9px 14px",
       }}
     >
-      <Crest team={m.homeTeam} size={24} />
-      <span
-        style={{
-          fontFamily: "var(--disp)",
-          fontWeight: 600,
-          fontSize: 12.5,
-          color: "var(--green)",
-          flex: 1,
-          whiteSpace: "nowrap",
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-        }}
-      >
-        {m.homeTeam.name}
-      </span>
+      <Disco team={m.homeTeam} size={26} />
       <span
         style={{
           fontFamily: "var(--mono)",
           fontWeight: 700,
-          fontSize: 13,
-          color: homeWin ? "var(--green)" : "var(--muted)",
-          minWidth: 38,
-          textAlign: "right",
+          fontSize: 18,
+          color: homeWin ? "var(--green)" : isDraw ? "var(--green-l)" : "var(--muted)",
+          minWidth: 18,
+          textAlign: "center",
         }}
       >
-        {m.homeScore.toFixed(2)}
+        {m.homeGoals}
       </span>
       <span
         style={{
           fontFamily: "var(--mono)",
-          fontSize: 11,
+          fontSize: 13,
           color: "var(--muted)",
-          padding: "0 3px",
         }}
       >
-        ·
+        –
       </span>
       <span
         style={{
           fontFamily: "var(--mono)",
           fontWeight: 700,
-          fontSize: 13,
-          color: awayWin ? "var(--green)" : "var(--muted)",
-          minWidth: 38,
-          textAlign: "left",
+          fontSize: 18,
+          color: awayWin ? "var(--green)" : isDraw ? "var(--green-l)" : "var(--muted)",
+          minWidth: 18,
+          textAlign: "center",
         }}
       >
-        {m.awayScore.toFixed(2)}
+        {m.awayGoals}
       </span>
-      <span
-        style={{
-          fontFamily: "var(--disp)",
-          fontWeight: 600,
-          fontSize: 12.5,
-          color: "var(--green)",
-          flex: 1,
-          whiteSpace: "nowrap",
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-          textAlign: "right",
-        }}
-      >
-        {m.awayTeam.name}
-      </span>
-      <Crest team={m.awayTeam} size={24} />
+      <Disco team={m.awayTeam} size={26} />
     </div>
   );
 }
 
 // ─── Accenti per tipo card ─────────────────────────────────────────────────────
 
-const TYPE_ACCENT: Record<string, { border: string; tagColor: string; borderStyle?: string }> = {
-  live: { border: "var(--live)", tagColor: "var(--live)" },
-  colpo: { border: "var(--gold)", tagColor: "var(--gold)" },
-  rumor: { border: "var(--muted)", tagColor: "var(--muted)", borderStyle: "dashed" },
+const TYPE_ACCENT: Record<
+  string,
+  { border: string; tagColor: string; borderStyle?: string }
+> = {
+  live:      { border: "var(--live)",    tagColor: "var(--live)" },
+  colpo:     { border: "var(--gold)",    tagColor: "var(--gold)" },
+  rumor:     { border: "var(--muted)",   tagColor: "var(--muted)", borderStyle: "dashed" },
   risultato: { border: "var(--green-l)", tagColor: "var(--green-l)" },
-  finestra: { border: "var(--green)", tagColor: "var(--green)" },
-  albo: { border: "var(--gold)", tagColor: "var(--gold)" },
+  finestra:  { border: "var(--green)",   tagColor: "var(--green)" },
+  albo:      { border: "var(--gold)",    tagColor: "var(--gold)" },
 };
 
 // ─── C-card-evento ────────────────────────────────────────────────────────────
@@ -205,7 +183,7 @@ function CardEvento({
         <span>{tempoRelativo(event.timestamp)}</span>
       </div>
 
-      {/* Headline */}
+      {/* Headline — solo titolo editoriale, niente punteggio (fix A) */}
       <h2
         style={{
           fontFamily: "var(--disp)",
@@ -220,25 +198,27 @@ function CardEvento({
         {event.headline}
       </h2>
 
-      {/* Body */}
+      {/* Body — scoreline + giornata */}
       {event.body && (
         <p
           style={{
-            fontSize: 11.5,
-            color: "var(--green-l)",
-            margin: "5px 0 0",
-            lineHeight: 1.45,
+            fontSize: 10.5,
+            color: "var(--muted)",
+            margin: "4px 0 0",
+            lineHeight: 1.4,
             fontFamily: "var(--mono)",
+            textTransform: "uppercase",
+            letterSpacing: ".05em",
           }}
         >
           {event.body}
         </p>
       )}
 
-      {/* Mini scoreboard per risultato */}
-      {event.type === "risultato" && <MiniScoreboard event={event} />}
+      {/* Scoreboard tondo per risultato (fix B) */}
+      {event.type === "risultato" && <ScoreboardRisultato event={event} />}
 
-      {/* CTA per finestre/live — SOLO se ha contesto */}
+      {/* CTA per finestre/live — solo se ha contesto */}
       {event.type === "finestra" && event.competitionId && (
         <button
           style={{
@@ -267,91 +247,38 @@ function CardEvento({
 // ─── SVG icons ────────────────────────────────────────────────────────────────
 
 const IcoHamburger = () => (
-  <svg
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth={1.9}
-    style={{ width: 22, height: 22 }}
-  >
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} style={{ width: 22, height: 22 }}>
     <path d="M4 7h16M4 12h16M4 17h16" />
   </svg>
 );
-
 const IcoSearch = () => (
-  <svg
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth={1.8}
-    style={{ width: 19, height: 19 }}
-  >
-    <circle cx="11" cy="11" r="7" />
-    <path d="m20 20-3.5-3.5" />
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} style={{ width: 19, height: 19 }}>
+    <circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" />
   </svg>
 );
-
 const IcoBell = () => (
-  <svg
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth={1.8}
-    style={{ width: 19, height: 19 }}
-  >
-    <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
-    <path d="M10 21a2 2 0 0 0 4 0" />
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} style={{ width: 19, height: 19 }}>
+    <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" /><path d="M10 21a2 2 0 0 0 4 0" />
   </svg>
 );
-
 const IcoHome = () => (
-  <svg
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth={1.8}
-    style={{ width: 21, height: 21 }}
-  >
-    <path d="M3 11l9-7 9 7" />
-    <path d="M5 10v10h14V10" />
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} style={{ width: 21, height: 21 }}>
+    <path d="M3 11l9-7 9 7" /><path d="M5 10v10h14V10" />
   </svg>
 );
-
 const IcoLeghe = () => (
-  <svg
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth={1.8}
-    style={{ width: 21, height: 21 }}
-  >
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} style={{ width: 21, height: 21 }}>
     <path d="M4 6h16M4 12h16M4 18h10" />
   </svg>
 );
-
 const IcoNotifiche = () => (
-  <svg
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth={1.8}
-    style={{ width: 21, height: 21 }}
-  >
-    <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
-    <path d="M10 21a2 2 0 0 0 4 0" />
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} style={{ width: 21, height: 21 }}>
+    <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" /><path d="M10 21a2 2 0 0 0 4 0" />
   </svg>
 );
-
 const IcoProfilo = () => (
-  <svg
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth={1.8}
-    style={{ width: 21, height: 21 }}
-  >
-    <circle cx="12" cy="8" r="4" />
-    <path d="M4 21c0-4 4-6 8-6s8 2 8 6" />
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} style={{ width: 21, height: 21 }}>
+    <circle cx="12" cy="8" r="4" /><path d="M4 21c0-4 4-6 8-6s8 2 8 6" />
   </svg>
 );
 
@@ -361,9 +288,7 @@ export default function FeedPage() {
   const params = useParams<{ leagueId?: string }>();
   const leagueId = params.leagueId;
 
-  const { data, isLoading, isError } = useGetFeed(
-    leagueId ? { leagueId } : {},
-  );
+  const { data, isLoading, isError } = useGetFeed(leagueId ? { leagueId } : {});
 
   function handleTap(event: FeedEvent) {
     if (event.competitionId) {
@@ -371,16 +296,11 @@ export default function FeedPage() {
     }
   }
 
-  // Data per masthead
   const oggi = new Date();
   const GIORNI = ["dom", "lun", "mar", "mer", "gio", "ven", "sab"];
-  const MESI = [
-    "gen", "feb", "mar", "apr", "mag", "giu",
-    "lug", "ago", "set", "ott", "nov", "dic",
-  ];
+  const MESI = ["gen", "feb", "mar", "apr", "mag", "giu", "lug", "ago", "set", "ott", "nov", "dic"];
   const dataStr = `${GIORNI[oggi.getDay()]} · ${oggi.getDate()} ${MESI[oggi.getMonth()]}`;
 
-  // ── Outer shell ─────────────────────────────────────────────────────────────
   return (
     <div
       style={{
@@ -406,135 +326,46 @@ export default function FeedPage() {
         }}
       >
         {/* ── Masthead ── */}
-        <div
-          style={{
-            padding: "16px 16px 10px",
-            borderBottom: "2px solid var(--green)",
-          }}
-        >
-          {/* Row 1: hamburger + mark + wordmark + icone */}
+        <div style={{ padding: "16px 16px 10px", borderBottom: "2px solid var(--green)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
-            <button
-              style={{
-                background: "none",
-                border: "none",
-                padding: 0,
-                color: "var(--green)",
-                display: "flex",
-                cursor: "pointer",
-              }}
-            >
+            <button style={{ background: "none", border: "none", padding: 0, color: "var(--green)", display: "flex", cursor: "pointer" }}>
               <IcoHamburger />
             </button>
 
             {/* Segno M */}
             <div style={{ width: 22, flexShrink: 0 }}>
               <svg viewBox="0 0 512 512" style={{ width: 22, height: 22 }}>
-                <defs>
-                  <clipPath id="ff-t1">
-                    <rect width="512" height="512" rx="112" />
-                  </clipPath>
-                </defs>
+                <defs><clipPath id="ff-t1"><rect width="512" height="512" rx="112" /></clipPath></defs>
                 <g clipPath="url(#ff-t1)">
                   <rect width="512" height="512" fill="#1f4733" />
                   <g transform="translate(106,121) scale(2.5)">
-                    <polyline
-                      points="6,100 34,8 60,100 86,8 114,100"
-                      fill="none"
-                      stroke="#e6b84d"
-                      strokeWidth="13.6"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                    {[
-                      [6, 100],
-                      [34, 8],
-                      [60, 100],
-                      [86, 8],
-                      [114, 100],
-                    ].map(([cx, cy], i) => (
-                      <circle
-                        key={i}
-                        cx={cx}
-                        cy={cy}
-                        r="9.6"
-                        fill="#c8922b"
-                      />
+                    <polyline points="6,100 34,8 60,100 86,8 114,100" fill="none" stroke="#e6b84d" strokeWidth="13.6" strokeLinecap="round" strokeLinejoin="round" />
+                    {[[6,100],[34,8],[60,100],[86,8],[114,100]].map(([cx,cy],i) => (
+                      <circle key={i} cx={cx} cy={cy} r="9.6" fill="#c8922b" />
                     ))}
                   </g>
                 </g>
               </svg>
             </div>
 
-            {/* Wordmark "mister" — testo stilizzato */}
-            <span
-              style={{
-                fontFamily: "var(--disp)",
-                fontWeight: 800,
-                fontSize: 18,
-                color: "var(--green)",
-                letterSpacing: "-.02em",
-              }}
-            >
+            <span style={{ fontFamily: "var(--disp)", fontWeight: 800, fontSize: 18, color: "var(--green)", letterSpacing: "-.02em" }}>
               mister
             </span>
 
-            {/* Icone destra */}
-            <div
-              style={{
-                marginLeft: "auto",
-                display: "flex",
-                gap: 14,
-                color: "var(--green)",
-              }}
-            >
+            <div style={{ marginLeft: "auto", display: "flex", gap: 14, color: "var(--green)" }}>
               <IcoSearch />
               <div style={{ position: "relative" }}>
                 <IcoBell />
-                <span
-                  style={{
-                    position: "absolute",
-                    top: -1,
-                    right: -1,
-                    width: 7,
-                    height: 7,
-                    borderRadius: "50%",
-                    background: "var(--live)",
-                  }}
-                />
+                <span style={{ position: "absolute", top: -1, right: -1, width: 7, height: 7, borderRadius: "50%", background: "var(--live)" }} />
               </div>
             </div>
           </div>
 
-          {/* Row 2: sottotitolo + data */}
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "baseline",
-              marginTop: 7,
-            }}
-          >
-            <span
-              style={{
-                fontFamily: "var(--disp)",
-                fontStyle: "italic",
-                fontWeight: 400,
-                fontSize: 12,
-                color: "var(--muted)",
-              }}
-            >
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginTop: 7 }}>
+            <span style={{ fontFamily: "var(--disp)", fontStyle: "italic", fontWeight: 400, fontSize: 12, color: "var(--muted)" }}>
               l'almanacco delle tue leghe
             </span>
-            <span
-              style={{
-                fontSize: 10,
-                color: "var(--muted)",
-                textTransform: "uppercase",
-                letterSpacing: ".1em",
-                fontFamily: "var(--mono)",
-              }}
-            >
+            <span style={{ fontSize: 10, color: "var(--muted)", textTransform: "uppercase", letterSpacing: ".1em", fontFamily: "var(--mono)" }}>
               {dataStr}
             </span>
           </div>
@@ -552,73 +383,32 @@ export default function FeedPage() {
           }}
         >
           {isLoading && (
-            <div
-              style={{
-                padding: "40px 0",
-                textAlign: "center",
-                color: "var(--muted)",
-                fontFamily: "var(--mono)",
-                fontSize: 12,
-              }}
-            >
+            <div style={{ padding: "40px 0", textAlign: "center", color: "var(--muted)", fontFamily: "var(--mono)", fontSize: 12 }}>
               Caricamento…
             </div>
           )}
 
           {isError && (
-            <div
-              style={{
-                padding: "24px 16px",
-                background: "var(--paper)",
-                border: "1px solid var(--line)",
-                borderRadius: 12,
-                color: "var(--muted)",
-                fontSize: 12,
-                fontFamily: "var(--mono)",
-              }}
-            >
+            <div style={{ padding: "24px 16px", background: "var(--paper)", border: "1px solid var(--line)", borderRadius: 12, color: "var(--muted)", fontSize: 12, fontFamily: "var(--mono)" }}>
               Errore nel caricamento del feed. Riprova.
             </div>
           )}
 
-          {!isLoading &&
-            !isError &&
-            data?.events.map((ev) => (
-              <CardEvento key={ev.id} event={ev} onTap={handleTap} />
-            ))}
+          {!isLoading && !isError && data?.events.map((ev) => (
+            <CardEvento key={ev.id} event={ev} onTap={handleTap} />
+          ))}
 
           {!isLoading && !isError && data?.events.length === 0 && (
-            <div
-              style={{
-                padding: "40px 0",
-                textAlign: "center",
-                color: "var(--muted)",
-                fontFamily: "var(--mono)",
-                fontSize: 12,
-              }}
-            >
+            <div style={{ padding: "40px 0", textAlign: "center", color: "var(--muted)", fontFamily: "var(--mono)", fontSize: 12 }}>
               Nessun evento disponibile.
               <br />
-              <span style={{ color: "var(--green-l)" }}>
-                Le prime giornate appariranno qui.
-              </span>
+              <span style={{ color: "var(--green-l)" }}>Le prime giornate appariranno qui.</span>
             </div>
           )}
 
           {data?.hasMore && (
             <div style={{ textAlign: "center", paddingTop: 4 }}>
-              <button
-                style={{
-                  background: "none",
-                  border: "1px solid var(--line)",
-                  borderRadius: 10,
-                  padding: "9px 18px",
-                  fontFamily: "var(--mono)",
-                  fontSize: 11.5,
-                  color: "var(--green-l)",
-                  cursor: "pointer",
-                }}
-              >
+              <button style={{ background: "none", border: "1px solid var(--line)", borderRadius: 10, padding: "9px 18px", fontFamily: "var(--mono)", fontSize: 11.5, color: "var(--green-l)", cursor: "pointer" }}>
                 Carica altri →
               </button>
             </div>
@@ -641,30 +431,13 @@ export default function FeedPage() {
           }}
         >
           {[
-            { icon: <IcoHome />, label: "Home", active: true },
-            { icon: <IcoLeghe />, label: "Leghe", active: false },
+            { icon: <IcoHome />,      label: "Home",      active: true },
+            { icon: <IcoLeghe />,     label: "Leghe",     active: false },
             { icon: <IcoNotifiche />, label: "Notifiche", active: false },
-            { icon: <IcoProfilo />, label: "Profilo", active: false },
+            { icon: <IcoProfilo />,   label: "Profilo",   active: false },
           ].map(({ icon, label, active }) => (
-            <div
-              key={label}
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                gap: 3,
-                fontSize: 9,
-                color: active ? "var(--green)" : "var(--muted)",
-                fontFamily: "var(--mono)",
-              }}
-            >
-              <span
-                style={{
-                  color: active ? "var(--gold)" : "currentColor",
-                }}
-              >
-                {icon}
-              </span>
+            <div key={label} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, fontSize: 9, color: active ? "var(--green)" : "var(--muted)", fontFamily: "var(--mono)" }}>
+              <span style={{ color: active ? "var(--gold)" : "currentColor" }}>{icon}</span>
               {label}
             </div>
           ))}

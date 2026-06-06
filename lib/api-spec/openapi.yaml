@@ -3217,7 +3217,7 @@ components:
 
     FeedMatchData:
       type: object
-      required: [giornata, homeTeam, awayTeam, homeScore, awayScore]
+      required: [giornata, homeTeam, awayTeam, homeGoals, awayGoals, outcome]
       properties:
         giornata:
           type: integer
@@ -3225,12 +3225,16 @@ components:
           $ref: "#/components/schemas/FeedTeamInfo"
         awayTeam:
           $ref: "#/components/schemas/FeedTeamInfo"
-        homeScore:
-          type: number
-          format: float
-        awayScore:
-          type: number
-          format: float
+        homeGoals:
+          type: integer
+          description: Gol classici ufficiali (scoreToGol con soglie federazione)
+        awayGoals:
+          type: integer
+          description: Gol classici ufficiali (scoreToGol con soglie federazione)
+        outcome:
+          type: string
+          enum: [home, away, draw]
+          description: Esito ufficiale determinato dai gol classici
 
     FeedEvent:
       type: object

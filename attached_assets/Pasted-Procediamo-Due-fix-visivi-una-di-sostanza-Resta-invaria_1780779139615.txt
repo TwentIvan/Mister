@@ -1,0 +1,32 @@
+Procediamo. Due fix visivi + una di sostanza. Resta invariato il resto (gerarchia,
+tipografia, palette, R-oro, voce d'almanacco).
+
+A) TITOLO = solo titolo editoriale. Niente punteggio, niente "2ª giornata" (è già nel kicker).
+   Telaio unico: [Vincitore] [verbo per margine] [perdente]. Il punteggio va nel SOTTOTITOLO.
+
+B) SCOREBOARD: stesso mark su entrambi i lati = disco-squadra TONDO (monogramma + team.color).
+   Niente crest quadrato (è il club reale del GIOCATORE, non la squadra fanta). Togli il nome
+   inline troncato ("Gran…"): bastano disco + risultato per lato.
+
+C) IL FEED NON CALCOLA NIENTE. Mostra il RISULTATO UFFICIALE della partita così come prodotto
+   dalle regole della competizione — non un punteggio generico, non una sua conversione fatta
+   nel route del feed.
+   - Il risultato (scoreline, vittoria/pareggio/sconfitta, punti) va risolto in UN SOLO posto,
+     dalla competizione, e letto in sola lettura da Feed E Classifica E Partita.
+   - Oggi Feed e Classifica divergono perché lo calcolano separatamente: il Feed confronta i
+     punti assoluti, la Classifica converte in gol. È questo il bug. Esempio reale a schermo:
+     83.71 vs 82.62 → in Classifica è 3–3 (pareggio), nel Feed risulta una vittoria. Sbagliato.
+   - Fix: se non esiste già, estrai la risoluzione del risultato in un'unica sorgente/funzione
+     (quella che la Classifica usa: formato calcistico + soglie di federazione) e fai leggere
+     QUELLA al Feed. Qualunque cosa risolva la competizione, il Feed la rispecchia: se è
+     pareggio, è pareggio.
+   - Sottotitolo/scoreboard = scoreline UFFICIALE (in gol). Il verbo del titolo si calibra sul
+     margine ufficiale (in gol), non sui decimali.
+   - I decimali assoluti NON sono il default: solo nel caso-soglia (pochi decimi che ribaltano
+     un gol, "vinta per un soffio").
+
+NB architettura: gol vs punti dipende dal FORMATO della competizione (calcistico vs classifica
+assoluta), che è proprietà della competizione. Per ora il Feed serve solo il campionato MVP
+(calcistico). Non implementare altri formati: workstream separato.
+
+Quando è pronto, screenshot.

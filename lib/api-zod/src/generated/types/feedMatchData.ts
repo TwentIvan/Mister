@@ -5,12 +5,17 @@
  * Mister — il fantacalcio manageriale
  * OpenAPI spec version: 0.1.0
  */
+import type { FeedMatchDataOutcome } from './feedMatchDataOutcome';
 import type { FeedTeamInfo } from './feedTeamInfo';
 
 export interface FeedMatchData {
   giornata: number;
   homeTeam: FeedTeamInfo;
   awayTeam: FeedTeamInfo;
-  homeScore: number;
-  awayScore: number;
+  /** Gol classici ufficiali (scoreToGol con soglie federazione) */
+  homeGoals: number;
+  /** Gol classici ufficiali (scoreToGol con soglie federazione) */
+  awayGoals: number;
+  /** Esito ufficiale determinato dai gol classici */
+  outcome: FeedMatchDataOutcome;
 }

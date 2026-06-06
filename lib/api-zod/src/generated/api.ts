@@ -46,8 +46,9 @@ export const GetFeedResponse = zod.object({
   "colorPrimary": zod.string(),
   "colorSecondary": zod.string()
 }),
-  "homeScore": zod.number(),
-  "awayScore": zod.number()
+  "homeGoals": zod.number().describe('Gol classici ufficiali (scoreToGol con soglie federazione)'),
+  "awayGoals": zod.number().describe('Gol classici ufficiali (scoreToGol con soglie federazione)'),
+  "outcome": zod.enum(['home', 'away', 'draw']).describe('Esito ufficiale determinato dai gol classici')
 }).optional()
 })),
   "nextCursor": zod.string().nullish(),
