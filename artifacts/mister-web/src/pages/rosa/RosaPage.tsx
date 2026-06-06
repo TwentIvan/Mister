@@ -145,7 +145,6 @@ function BadgeGiocatore({ player }: { player: FantaTeamRosaPlayer }) {
       }}
     >
       <Crest realTeam={player.realTeam} />
-      <Silhouette />
       <span
         style={{
           flex: 1,
@@ -160,7 +159,7 @@ function BadgeGiocatore({ player }: { player: FantaTeamRosaPlayer }) {
       >
         {player.name}
       </span>
-      {/* Quotazione in oro (R-oro: solo denaro/valore) */}
+      {/* Pagato (prezzo d'asta) in oro — R-oro: solo denaro */}
       <span
         style={{
           fontWeight: 700,
@@ -231,56 +230,18 @@ function GruppoReparto({
   role,
   players,
   slotMax,
+  isFirst,
 }: {
   role: string;
   players: FantaTeamRosaPlayer[];
   slotMax: number;
+  isFirst?: boolean;
 }) {
-  const rs = ROLE_STYLE[role]!;
   const vuoti = slotMax - players.length;
 
   return (
-    <div style={{ marginBottom: 4 }}>
-      {/* Etichetta reparto */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 8,
-          margin: "15px 2px 7px",
-        }}
-      >
-        <span
-          style={{
-            width: 9,
-            height: 9,
-            borderRadius: "50%",
-            background: rs.dot,
-            flexShrink: 0,
-          }}
-        />
-        <span
-          style={{
-            fontFamily: "var(--disp)",
-            fontWeight: 600,
-            fontSize: 13,
-            color: "var(--green)",
-          }}
-        >
-          {rs.label}
-        </span>
-        <span
-          style={{
-            fontSize: 10,
-            color: "var(--muted)",
-            fontFamily: "var(--mono)",
-          }}
-        >
-          {players.length}/{slotMax}
-        </span>
-      </div>
-
-      {/* Righe giocatori */}
+    <div style={{ marginTop: isFirst ? 8 : 14 }}>
+      {/* Righe giocatori — il colore di fondo marca il reparto */}
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         {players.map((p) => (
           <BadgeGiocatore key={p.id} player={p} />
@@ -618,12 +579,13 @@ export default function RosaPage() {
 
           {!isLoading && !isError && data && (
             <>
-              {roles.map((role) => (
+              {roles.map((role, i) => (
                 <GruppoReparto
                   key={role}
                   role={role}
                   players={playersByRole(role)}
                   slotMax={data.slotMax[role]}
+                  isFirst={i === 0}
                 />
               ))}
 
@@ -638,9 +600,9 @@ export default function RosaPage() {
                     lineHeight: 1.5,
                   }}
                 >
-                  Quotazione = valore Serie A classica all'acquisto.
+                  Pagato = prezzo versato all'asta FM.
                   <br />
-                  Prezzo d'asta FM non disponibile (dati di avviamento).
+                  Quotazione di listino non ancora disponibile (dati di avviamento).
                 </p>
               )}
             </>
