@@ -1,0 +1,99 @@
+<!DOCTYPE html><html lang="it"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,800;1,9..144,400&family=JetBrains+Mono:wght@400;500;700&display=swap');
+:root{--cream:#efe6d3;--cream2:#e7dcc4;--paper:#f7f1e4;--green:#1f4733;--green-d:#15301f;--green-l:#2e6047;--pitch:#173a27;--pitch2:#1a402b;--gold:#c8922b;--gold-l:#e6b84d;--live:#e2554e;--danger:#bf3b30;--muted:#8a8266;--line:#d8ccae;--rP:#7e5a26;--rD:#2b5740;--rC:#234c5e;--rA:#6b2c24;--ringP:#c79a4e;--ringD:#6aa07f;--ringC:#6aa6b8;--ringA:#cf8a6a;--letP:#c8922b;--letD:#2e6047;--letC:#3f7d92;--letA:#c06a52;--disp:'Fraunces', Georgia, serif;--mono:'JetBrains Mono', monospace;--phone-w:390px}
+*{box-sizing:border-box}body{margin:0;background:#cfc6ad;font-family:var(--mono);padding:24px 12px 48px;overflow-x:auto}
+.phone{width:390px;margin:0 auto;background:var(--cream);border:9px solid #2a2a2a;border-radius:36px;overflow:hidden;box-shadow:0 18px 50px rgba(0,0,0,.25)}
+.scr{display:flex;flex-direction:column;min-height:780px;position:relative}
+.bar{display:flex;align-items:center;gap:11px;padding:13px 15px 9px}
+.bar .ic{background:none;border:none;padding:0;color:var(--green);display:flex;cursor:pointer}.bar .ic svg{width:22px;height:22px}
+.bar .tt{min-width:0}.bar .tt .nm{font-family:var(--disp);font-weight:600;font-size:15px;line-height:1.05;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar .tt .fed{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em}
+.bar .sp{margin-left:auto}
+/* sub-nav pills */
+.subnav{display:flex;gap:7px;padding:4px 15px 12px;overflow-x:auto;scrollbar-width:none;-ms-overflow-style:none}.subnav::-webkit-scrollbar{display:none;height:0;width:0}
+.pill{flex:none;font-size:11px;border:1px solid var(--line);background:var(--paper);color:var(--green-l);border-radius:20px;padding:6px 13px;cursor:pointer}
+.pill.on{background:var(--green);color:var(--cream);border-color:var(--green)}
+.body{padding:2px 14px 80px;display:flex;flex-direction:column;gap:12px}
+/* your team */
+.you{display:flex;align-items:center;gap:11px;background:var(--green-d);color:var(--cream);border-radius:14px;padding:13px 15px}
+.tc{border-radius:8px;color:#fff;font-weight:700;display:flex;align-items:center;justify-content:center;flex:none;font-family:var(--mono)}
+.you .tc{width:40px;height:40px;font-size:12px;background:linear-gradient(135deg,#1f4e7c 0 49%,#0e2f52 51% 100%)}
+.you .yi{flex:1;min-width:0}.you .yi .nm{font-family:var(--disp);font-weight:600;font-size:16px}.you .yi .sub{font-size:9.5px;color:rgba(239,230,211,.65);text-transform:uppercase;letter-spacing:.06em;margin-top:1px}
+.you .stat{text-align:right}.you .stat .b{font-family:var(--mono);font-weight:700;font-size:17px;color:var(--gold-l)}.you .stat .l{font-size:8.5px;color:rgba(239,230,211,.6)}
+.you .pos{text-align:center;border-left:1px solid rgba(239,230,211,.18);padding-left:11px;margin-left:4px}.you .pos .b{font-family:var(--disp);font-weight:600;font-size:20px;color:var(--cream)}.you .pos .l{font-size:8.5px;color:rgba(239,230,211,.6)}
+/* now card */
+.now{background:var(--paper);border:1px solid var(--line);border-left:3px solid var(--green-l);border-radius:14px;padding:13px 15px}
+.kick{font-size:9px;text-transform:uppercase;letter-spacing:.09em;color:var(--green-l);font-weight:700;margin-bottom:5px}
+.now h2{font-family:var(--disp);font-weight:600;font-size:17px;margin:0}
+.now .sub{font-size:11px;color:var(--muted);margin-top:3px}
+.cta{display:inline-flex;align-items:center;gap:7px;margin-top:10px;background:var(--green);color:var(--cream);border:none;border-radius:10px;padding:10px 15px;font-family:var(--mono);font-weight:700;font-size:12.5px;cursor:pointer}
+.cta.ghost{background:transparent;color:var(--green);border:1px solid var(--line)}
+.sec{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:13px 15px}
+.shead{display:flex;align-items:baseline;margin-bottom:9px}.shead h3{font-family:var(--disp);font-weight:600;font-size:15px;margin:0}.shead .more{margin-left:auto;font-size:10px;color:var(--green-l)}
+/* classifica */
+.crow{display:flex;align-items:center;gap:9px;padding:6px 0;font-size:12px}
+.crow .p{width:16px;color:var(--muted);font-weight:700;text-align:center;flex:none}
+.crow .tc{width:22px;height:22px;border-radius:5px;font-size:8px}
+.crow .cn{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--green)}
+.crow .pt{font-family:var(--mono);font-weight:700;color:var(--green);font-size:12px}
+.crow.me{background:var(--cream2);border-radius:8px;padding:6px 8px;margin:2px -8px}
+/* mercato */
+.mkt .row{display:flex;align-items:center;justify-content:space-between;font-size:11px;color:var(--muted)}.mkt .row b{color:var(--green)}
+.tags{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}.tag{font-size:10px;background:var(--cream);border:1px solid var(--line);border-radius:6px;padding:3px 9px;color:var(--green-l)}
+.trat{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--green);margin-top:2px}.trat .dot{width:6px;height:6px;border-radius:50%;background:var(--gold);flex:none}
+.tabbar{position:absolute;bottom:0;left:0;right:0;display:flex;justify-content:space-around;align-items:center;background:var(--paper);border-top:1px solid var(--line);padding:9px 6px calc(11px + env(safe-area-inset-bottom))}
+.tab{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:9px;color:var(--muted)}.tab svg{width:21px;height:21px}.tab.on{color:var(--green)}.tab.on svg{color:var(--gold)}
+.note{font-size:9.5px;color:var(--muted);text-align:center;margin:14px 18px 0;line-height:1.5}
+</style></head><body>
+<div class="phone"><div class="scr">
+  <div class="bar">
+    <button class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+    <div class="tt"><div class="nm">Champions del Bar Roma</div><div class="fed">Federazione Bar Roma · Classic</div></div>
+    <button class="ic sp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1l2-1.6-2-3.4-2.4 1a7 7 0 0 0-1.7-1l-.4-2.5h-3.8l-.4 2.5a7 7 0 0 0-1.7 1l-2.4-1-2 3.4 2 1.6a7 7 0 0 0 0 2l-2 1.6 2 3.4 2.4-1a7 7 0 0 0 1.7 1l.4 2.5h3.8l.4-2.5a7 7 0 0 0 1.7-1l2.4 1 2-3.4-2-1.6a7 7 0 0 0 .1-1Z"/></svg></button>
+  </div>
+  <div class="subnav">
+    <span class="pill on">Panoramica</span><span class="pill">Rosa</span><span class="pill">Formazione</span><span class="pill">Mercato</span><span class="pill">Classifica</span><span class="pill">Società</span>
+  </div>
+
+  <div class="body">
+    <div class="you">
+      <span class="tc">BS</span>
+      <div class="yi"><div class="nm">Bar Sport United</div><div class="sub">la tua società · 24/25 in rosa</div></div>
+      <div class="stat"><div class="b">488</div><div class="l">FM</div></div>
+      <div class="pos"><div class="b">3°</div><div class="l">pos</div></div>
+    </div>
+
+    <div class="now">
+      <div class="kick">15ª giornata</div>
+      <h2>Schiera la formazione</h2>
+      <div class="sub">Chiude sabato alle 18:00 · 2 dubbi di formazione</div>
+      <button class="cta">Schiera →</button>
+    </div>
+
+    <div class="sec">
+      <div class="shead"><h3>Classifica</h3><span class="more">tutta →</span></div>
+      <div class="crow"><span class="p">1</span><span class="tc" style="background:#2b6b4f">DA</span><span class="cn">Dinamo Aperitivo</span><span class="pt">1043</span></div>
+      <div class="crow"><span class="p">2</span><span class="tc" style="background:#7c1f2b">TR</span><span class="cn">Trastevere CF</span><span class="pt">1040</span></div>
+      <div class="crow me"><span class="p">3</span><span class="tc" style="background:#1f4e7c">BS</span><span class="cn">Bar Sport United</span><span class="pt">1012</span></div>
+      <div class="crow"><span class="p">4</span><span class="tc" style="background:#5a2b6b">RT</span><span class="cn">Real Tavolino</span><span class="pt">998</span></div>
+    </div>
+
+    <div class="sec mkt">
+      <div class="shead"><h3>Mercato</h3><span class="more">finestre →</span></div>
+      <div class="row"><span>Finestra attuale: <b>chiusa</b></span><span>prossima: <b>Riparazione</b> · 4gg</span></div>
+      <div class="tags"><span class="tag">Asta</span><span class="tag">Scambi</span><span class="tag">Svincoli</span></div>
+      <div class="trat"><span class="dot"></span> 2 trattative aperte — si chiudono all'apertura</div>
+      <button class="cta ghost" style="margin-top:11px">Vai al mercato →</button>
+    </div>
+  </div>
+
+  <div class="tabbar">
+    <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg>Home</div>
+    <div class="tab on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 6h16M4 12h16M4 18h10"/></svg>Leghe</div>
+    <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10 21a2 2 0 0 0 4 0"/></svg>Notifiche</div>
+    <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>Profilo</div>
+  </div>
+</div></div>
+<p class="note">Dettaglio lega — la panoramica del workspace. In alto la tua società (budget, posizione, rosa), il prossimo impegno (formazione), la classifica in breve e lo stato del mercato con i tipi disponibili in QUESTA lega (asta/scambi/svincoli) e le trattative aperte. La sub-nav in alto porta alle sezioni (Rosa, Formazione, Mercato, Classifica, Società); le tab globali restano in basso. La federazione è citata come contesto, in alto.</p>
+</div></body></html>

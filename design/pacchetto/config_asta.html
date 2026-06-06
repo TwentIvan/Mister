@@ -1,0 +1,140 @@
+<!DOCTYPE html><html lang="it"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,600;0,9..144,800&family=JetBrains+Mono:wght@400;500;700&display=swap');
+:root{--cream:#efe6d3;--cream2:#e7dcc4;--paper:#f7f1e4;--green:#1f4733;--green-d:#15301f;--green-l:#2e6047;--pitch:#173a27;--pitch2:#1a402b;--gold:#c8922b;--gold-l:#e6b84d;--live:#e2554e;--danger:#bf3b30;--muted:#8a8266;--line:#d8ccae;--rP:#7e5a26;--rD:#2b5740;--rC:#234c5e;--rA:#6b2c24;--ringP:#c79a4e;--ringD:#6aa07f;--ringC:#6aa6b8;--ringA:#cf8a6a;--letP:#c8922b;--letD:#2e6047;--letC:#3f7d92;--letA:#c06a52;--disp:'Fraunces', Georgia, serif;--mono:'JetBrains Mono', monospace;--phone-w:390px;--slot:#cdbf9d;--line-soft:#e4dcc6}
+*{box-sizing:border-box}body{margin:0;background:var(--cream);color:var(--green);font-family:'JetBrains Mono',monospace;font-size:13px;line-height:1.5}
+.bar{display:flex;align-items:center;justify-content:space-between;padding:14px 28px;border-bottom:1px solid var(--line);background:var(--paper)}
+.crumb{font-size:11.5px;color:var(--muted)}.crumb b{color:var(--green);font-weight:500}.crumb .win{color:var(--gold);font-weight:500}
+.btn{font-family:inherit;font-size:12.5px;border:1px solid var(--green);background:var(--green);color:var(--cream);padding:8px 16px;border-radius:8px;cursor:pointer}
+.btn.ghost{background:transparent;color:var(--green)}
+.wrap{max-width:920px;margin:0 auto;padding:26px 28px 60px}
+.head{display:flex;align-items:center;gap:14px;margin-bottom:6px}.head .mk{width:34px;flex:none}
+h1{font-family:'Fraunces',serif;font-weight:800;font-feature-settings:"ss01";letter-spacing:-.03em;font-size:30px;margin:0}
+.lead{color:var(--muted);font-size:12.5px;margin:0 0 22px}
+.sec{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:20px 22px;margin-bottom:14px}
+.sec h2{font-family:'Fraunces',serif;font-weight:600;font-size:15px;margin:0 0 2px;letter-spacing:-.01em}
+.sec .hint{color:var(--muted);font-size:11px;margin:0 0 16px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px}
+.f label{display:block;font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:5px}
+.f input,.f select{width:100%;font-family:inherit;font-size:13px;color:var(--green);background:var(--cream);border:1px solid var(--line);border-radius:7px;padding:8px 10px}
+.gold-val input{color:var(--gold);font-weight:700}.unit{font-size:10.5px;color:var(--muted);margin-left:6px}
+.fmt{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.fmt .opt{border:1px solid var(--line);border-radius:10px;padding:14px;cursor:pointer;background:var(--cream)}
+.fmt .opt:hover{border-color:var(--green-l)}.fmt .opt.on{border-color:var(--green);background:var(--paper);box-shadow:inset 0 0 0 1px var(--green)}
+.fmt .opt .t{font-family:'Fraunces',serif;font-weight:600;font-size:14px}.fmt .opt .d{font-size:10.5px;color:var(--muted);margin-top:3px}
+.cond{margin-top:16px;padding-top:16px;border-top:1px dashed var(--line)}
+.note{background:var(--cream2);border-radius:8px;padding:9px 12px;font-size:11px;color:var(--green-d);margin-top:12px}.note b{color:var(--green)}
+.toggle{display:flex;align-items:center;gap:8px;font-size:12px;padding:6px 0}.toggle input{accent-color:var(--green);width:15px;height:15px}.toggle label{text-transform:none;letter-spacing:0;color:var(--green);margin:0}
+/* inherited (read-only) */
+.inh{display:flex;align-items:center;gap:24px;flex-wrap:wrap;background:var(--cream);border:1px dashed var(--line);border-radius:10px;padding:12px 16px}
+.inh .it{display:flex;flex-direction:column}.inh .it .k{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.inh .it .v{font-size:15px;font-weight:700}.inh .it .v.gold{color:var(--gold)}
+.inh a{margin-left:auto;font-size:11px;color:var(--green-l);text-decoration:underline;cursor:pointer}
+/* svolgimento radios */
+.radios{display:flex;flex-direction:column;gap:8px}
+.radios label{display:flex;gap:9px;align-items:flex-start;font-size:12px;color:var(--green);cursor:pointer}
+.radios input{accent-color:var(--green);margin-top:2px}.radios .d{color:var(--muted);font-size:10.5px}
+/* partecipanti */
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;margin-bottom:12px}
+.seg button{font-family:inherit;font-size:11.5px;border:none;background:var(--cream);color:var(--green);padding:7px 13px;cursor:pointer}
+.seg button.on{background:var(--green);color:var(--cream)}
+.row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line-soft)}.row:last-child{border:none}
+.row .grip{color:var(--muted);cursor:grab;font-size:14px}.row .ord{width:22px;height:22px;border-radius:50%;background:var(--green);color:var(--cream);font-size:11px;display:flex;align-items:center;justify-content:center}
+.row .nm{flex:1}.row input[type=checkbox]{accent-color:var(--green);width:16px;height:16px}
+.foot{display:flex;justify-content:flex-end;gap:10px;margin-top:18px}
+.hidden{display:none}
+</style></head><body>
+<div class="bar"><div class="crumb">Champions del Bar Roma <b>›</b> <span class="win">Finestra: Asta iniziale</span> <b>›</b> Asta</div>
+<div style="display:flex;gap:10px"><button class="btn ghost">Anteprima tabellone</button><button class="btn">Salva</button></div></div>
+<div class="wrap">
+  <div class="head"><div class="mk"><svg viewBox="-12 -12 144 132" xmlns="http://www.w3.org/2000/svg"><polyline points="6,100 34,8 60,100 86,8 114,100" fill="none" stroke="#1f4733" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/><circle cx="6" cy="100" r="9" fill="#c8922b"/><circle cx="34" cy="8" r="9" fill="#c8922b"/><circle cx="60" cy="100" r="9" fill="#c8922b"/><circle cx="86" cy="8" r="9" fill="#c8922b"/><circle cx="114" cy="100" r="9" fill="#c8922b"/></svg></div><h1>Configurazione asta</h1></div>
+  <p class="lead">Un mercato dentro la finestra iniziale. Rosa e budget sono ereditati dalle regole di lega; qui imposti solo ciò che è proprio dell'asta.</p>
+
+  <div class="sec">
+    <h2>Ereditato dalla lega</h2><p class="hint">L'asta li legge, non li ridefinisce.</p>
+    <div class="inh">
+      <div class="it"><span class="k">Budget</span><span class="v gold">500 <span style="font-size:10px;color:var(--muted)">cr/squadra</span></span></div>
+      <div class="it"><span class="k">Rosa</span><span class="v">3·8·8·6 <span style="font-size:10px;color:var(--muted)">= 25</span></span></div>
+      <div class="it"><span class="k">Modalità</span><span class="v" style="font-size:13px">Classic</span></div>
+      <a>modifica in Regole di lega →</a>
+    </div>
+  </div>
+
+  <div class="sec">
+    <h2>Formato</h2><p class="hint">Come si raccolgono le offerte e quando si va live.</p>
+    <div class="fmt">
+      <div class="opt on" data-fmt="live" onclick="pick(this)"><div class="t">A chiamata · rialzo</div><div class="d">Tutti presenti: si nomina e si rilancia, live sul tabellone.</div></div>
+      <div class="opt" data-fmt="busta" onclick="pick(this)"><div class="t">Busta chiusa</div><div class="d">Offerte segrete entro una scadenza. I pareggi vanno a spareggio.</div></div>
+    </div>
+    <div class="cond hidden" id="c-busta">
+      <div class="grid">
+        <div class="f"><label>Apertura offerte</label><input type="datetime-local" value="2026-08-20T18:00"></div>
+        <div class="f"><label>Chiusura offerte</label><input type="datetime-local" value="2026-08-22T23:59"></div>
+        <div class="f"><label>Regola pareggi</label><select><option>Spareggio live sul tabellone</option><option>Sorteggio</option><option>Al budget residuo</option></select></div>
+      </div>
+      <div class="note"><b>Ibrido:</b> con "spareggio live", all'apertura i giocatori contesi passano a una mini-asta live sul tabellone — solo i contesi, solo gli offerenti in parità.</div>
+    </div>
+  </div>
+
+  <div class="sec" id="c-live">
+    <h2>Svolgimento <span style="font-size:10.5px;color:var(--muted);font-weight:400;font-family:'JetBrains Mono'">· vale per la live (asta o spareggio)</span></h2>
+    <p class="hint">Come si nomina e si procede.</p>
+    <div class="radios">
+      <label><input type="radio" name="mecc" checked><span><b style="font-weight:600">A giro</b> — a turno, ogni manager nomina un giocatore (round-robin). <span class="d">Il più equo.</span></span></label>
+      <label><input type="radio" name="mecc"><span><b style="font-weight:600">Per ruolo</b> — si completa un ruolo alla volta (prima i portieri, poi i difensori…). <span class="d">Ordinato.</span></span></label>
+      <label><input type="radio" name="mecc"><span><b style="font-weight:600">Chiamata libera</b> — chiunque può proporre il prossimo giocatore. <span class="d">Caotico, veloce.</span></span></label>
+    </div>
+    <div class="toggle" style="margin-top:10px"><input type="checkbox" checked id="voce"><label for="voce">Offerte a voce in sala (oltre al rilancio da telefono)</label></div>
+  </div>
+
+  <div class="grid" style="grid-template-columns:1fr 1fr;gap:14px;align-items:start">
+    <div class="sec" style="margin:0">
+      <h2>Base e rilanci</h2><p class="hint">L'economia propria dell'asta.</p>
+      <div class="grid">
+        <div class="f"><label>Base d'asta</label><select><option>Libera (parte da 1)</option><option>Quotazione del giocatore</option></select></div>
+        <div class="f gold-val"><label>Rilancio minimo</label><input value="1"><span class="unit">cr</span></div>
+      </div>
+    </div>
+    <div class="sec" style="margin:0" id="c-tempi">
+      <h2>Tempi</h2><p class="hint">Solo per le fasi live.</p>
+      <div class="grid">
+        <div class="f"><label>Timer chiamata</label><input value="30"><span class="unit">sec</span></div>
+        <div class="f"><label>Timer rilancio</label><input value="10"><span class="unit">sec</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <h2>Partecipanti e ordine</h2><p class="hint">Tutte le società della lega. L'ordine vale come sequenza dei turni.</p>
+    <div class="seg"><button class="on" onclick="ordMode(this,0)">Manuale (trascina)</button><button onclick="ordMode(this,1)">Estrazione casuale</button></div>
+    <div id="ord-list">
+      <div class="row"><span class="grip">⠿</span><span class="ord">1</span><input type="checkbox" checked><span class="nm">Bar Sport United</span></div>
+      <div class="row"><span class="grip">⠿</span><span class="ord">2</span><input type="checkbox" checked><span class="nm">Dinamo Aperitivo</span></div>
+      <div class="row"><span class="grip">⠿</span><span class="ord">3</span><input type="checkbox" checked><span class="nm">Real Tavolino</span></div>
+      <div class="row"><span class="grip">⠿</span><span class="ord">4</span><input type="checkbox" checked><span class="nm">Atletico Spritz</span></div>
+      <div class="row"><span class="grip" style="opacity:.3">⠿</span><span class="ord" style="background:var(--muted)">—</span><input type="checkbox"><span class="nm" style="color:var(--muted)">Vecchia Guardia FC <span style="font-size:10px">(slot vuoto)</span></span></div>
+    </div>
+    <div class="note" id="ord-note" style="display:none">L'estrazione avviene <b>una volta</b> all'avvio e vale per tutta l'asta.</div>
+  </div>
+
+  <div class="sec">
+    <h2>Scena live</h2><p class="hint">Cosa mostra il tabellone. Stesso motore in ogni formato.</p>
+    <div class="grid"><div class="f"><label>Modalità</label><select><option>In presenza — tabellone proiettato + palette</option><option>Remota — ognuno col proprio schermo</option></select></div></div>
+    <div class="toggle"><input type="checkbox" checked><label>Mostra budget e rose di tutti</label></div>
+    <div class="toggle"><input type="checkbox" checked><label>Mostra storico dei colpi</label></div>
+    <div class="toggle"><input type="checkbox" checked><label>Mostra il prossimo di chiamata</label></div>
+  </div>
+
+  <div class="foot"><button class="btn ghost">Anteprima tabellone</button><button class="btn">Salva configurazione</button></div>
+</div>
+<script>
+function pick(el){document.querySelectorAll('.fmt .opt').forEach(o=>o.classList.remove('on'));el.classList.add('on');
+  var live=el.dataset.fmt==='live';
+  document.getElementById('c-busta').classList.toggle('hidden',live);
+  // svolgimento/tempi restano (valgono anche per lo spareggio della busta), ma evidenzio
+}
+function ordMode(b,casual){document.querySelectorAll('.seg button').forEach(x=>x.classList.remove('on'));b.classList.add('on');
+  document.getElementById('ord-note').style.display=casual?'block':'none';
+  document.querySelectorAll('#ord-list .grip').forEach(g=>g.style.visibility=casual?'hidden':'visible');}
+</script>
+</body></html>

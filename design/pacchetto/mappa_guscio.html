@@ -1,0 +1,107 @@
+<!DOCTYPE html><html lang="it"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,600;0,9..144,800;1,9..144,400&family=JetBrains+Mono:wght@400;500;700&display=swap');
+:root{--cream:#efe6d3;--cream2:#e7dcc4;--paper:#f7f1e4;--green:#1f4733;--green-d:#15301f;--green-l:#2e6047;--pitch:#173a27;--pitch2:#1a402b;--gold:#c8922b;--gold-l:#e6b84d;--live:#e2554e;--danger:#bf3b30;--muted:#8a8266;--line:#d8ccae;--rP:#7e5a26;--rD:#2b5740;--rC:#234c5e;--rA:#6b2c24;--ringP:#c79a4e;--ringD:#6aa07f;--ringC:#6aa6b8;--ringA:#cf8a6a;--letP:#c8922b;--letD:#2e6047;--letC:#3f7d92;--letA:#c06a52;--disp:'Fraunces', Georgia, serif;--mono:'JetBrains Mono', monospace;--phone-w:390px;--slot:#cdbf9d;--line-soft:#e4dcc6}
+*{box-sizing:border-box}body{margin:0;background:var(--cream);color:var(--green);font-family:'JetBrains Mono',monospace;font-size:13px;line-height:1.5;padding:28px 20px 60px}
+.wrap{max-width:1000px;margin:0 auto}
+.head{display:flex;align-items:center;gap:14px;margin-bottom:4px}.head .mk{width:34px;flex:none}
+h1{font-family:'Fraunces',serif;font-weight:800;font-feature-settings:"ss01";letter-spacing:-.03em;font-size:30px;margin:0}
+.lead{color:var(--muted);font-size:12.5px;margin:0 0 26px}
+.kick{font-size:10.5px;text-transform:uppercase;letter-spacing:.14em;color:var(--muted);margin:30px 0 12px}
+/* nested layers */
+.layer{border-radius:14px;padding:16px 16px 18px;position:relative;margin-top:14px}
+.lbl{font-size:10px;text-transform:uppercase;letter-spacing:.12em;font-weight:700;display:inline-block;margin-bottom:10px}
+.sub{font-family:'Fraunces',serif;font-weight:400;font-style:italic;text-transform:none;letter-spacing:0;color:var(--muted);font-size:11px;margin-left:8px}
+.tags{display:flex;flex-wrap:wrap;gap:7px}
+.tag{font-size:11px;background:var(--paper);border:1px solid var(--line);border-radius:7px;padding:4px 9px;color:var(--green)}
+.tag.gold{border-color:var(--gold);color:var(--gold)}
+.tag.live{border-color:var(--live);color:var(--live)}
+.L0{background:var(--cream2);border:1px dashed var(--line)} .L0 .lbl{color:var(--muted)}
+.L1{background:var(--paper);border:1px solid var(--line)} .L1 .lbl{color:var(--green)}
+.L2{background:#f1ead9;border:1px solid var(--gold-l)} .L2 .lbl{color:var(--gold)}
+.L3{background:var(--cream);border:1px solid var(--line)} .L3 .lbl{color:var(--green)}
+.L4{background:var(--green);border:1px solid var(--green-d);display:inline-block;margin-right:8px} .L4 .lbl{color:var(--gold-l)} .L4 .tag{background:var(--green-d);border-color:var(--green-l);color:var(--cream)}
+.badge{font-size:9.5px;color:var(--muted);font-style:italic;font-family:'Fraunces',serif;float:right;margin-top:2px}
+.aside{margin-top:12px;border-left:3px solid var(--gold);background:var(--paper);border-radius:0 8px 8px 0;padding:10px 14px;font-size:11px;color:var(--green)}
+.aside b{color:var(--gold)}
+/* nav */
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.card{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:16px}
+.card h3{font-family:'Fraunces',serif;font-weight:600;font-size:14px;margin:0 0 10px}
+.phone{border:2px solid var(--green);border-radius:18px;padding:10px;max-width:230px;margin:0 auto;background:var(--cream)}
+.screen{background:var(--paper);border:1px solid var(--line-soft);border-radius:10px;height:120px;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:10.5px;text-align:center;padding:8px}
+.tabbar{display:flex;justify-content:space-between;margin-top:8px;padding:7px 4px 2px;border-top:1px solid var(--line)}
+.tabbar span{font-size:9px;color:var(--green)}.tabbar .on{color:var(--gold);font-weight:700}
+.deskwin{border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.desktop-top{background:var(--green-d);color:var(--cream);font-size:10px;padding:6px 10px;display:flex;justify-content:space-between}
+.desktop-body{display:flex;height:130px}
+.desk-rail{width:34%;background:var(--green);color:var(--cream);font-size:9.5px;padding:8px}
+.desk-main{flex:1;background:var(--paper);font-size:9.5px;color:var(--muted);padding:8px}
+.note{font-size:10.5px;color:var(--muted);margin-top:9px;line-height:1.5}
+/* principi */
+.princ{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.princ .p{background:var(--paper);border:1px solid var(--line);border-radius:9px;padding:10px 12px;font-size:11px}
+.princ .p b{color:var(--green)}
+</style></head><body><div class="wrap">
+  <div class="head"><div class="mk"><svg viewBox="-12 -12 144 132" xmlns="http://www.w3.org/2000/svg"><polyline points="6,100 34,8 60,100 86,8 114,100" fill="none" stroke="#1f4733" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/><circle cx="6" cy="100" r="9" fill="#c8922b"/><circle cx="34" cy="8" r="9" fill="#c8922b"/><circle cx="60" cy="100" r="9" fill="#c8922b"/><circle cx="86" cy="8" r="9" fill="#c8922b"/><circle cx="114" cy="100" r="9" fill="#c8922b"/></svg></div><h1>Mappa del guscio</h1></div>
+  <p class="lead">Filosofia di layout: dove vive ogni cosa, e come ci si naviga. Una sola fonte di verità per ogni strato.</p>
+
+  <div class="kick">Gli strati — dove vive ogni cosa</div>
+
+  <div class="layer L0">
+    <span class="lbl">Globale · sistema <span class="sub">il dato reale, una copia sola</span></span>
+    <div class="tags"><span class="tag">Anagrafica giocatori</span><span class="tag">Giornate Serie A</span><span class="tag">Voti grezzi (fonte)</span></div>
+
+    <div class="layer L1">
+      <span class="lbl">Globale · tu <span class="sub">la tua casa, attraversa i tuoi mondi</span></span>
+      <div class="tags"><span class="tag gold">Feed / Gazzetta</span><span class="tag">Le tue leghe &amp; federazioni</span><span class="tag">Notifiche</span><span class="tag">Profilo</span></div>
+
+      <div class="layer L2">
+        <span class="badge">lean operativa · ricca d'identità</span>
+        <span class="lbl">Federazione · il tuo mondo <span class="sub">Mister è la piattaforma, questa è la tua</span></span>
+        <div class="tags"><span class="tag gold">Identità — nome &amp; stemma</span><span class="tag gold">Albo d'oro</span><span class="tag gold">Premiazioni</span><span class="tag">Regole (algoritmo + punteggio/ruoli)</span><span class="tag">Convalida</span></div>
+
+        <div class="layer L3">
+          <span class="lbl">Lega · il workspace <span class="sub">qui si fa tutto</span></span>
+          <div class="tags"><span class="tag">Partecipanti</span><span class="tag gold">Rosa</span><span class="tag gold">Budget</span><span class="tag gold">Quotazioni</span><span class="tag">Mercati (nelle finestre)</span><span class="tag">Classifica</span><span class="tag">Formazione</span></div>
+          <div style="margin-top:12px">
+            <div class="layer L4"><span class="lbl">Competizione</span><div class="tags"><span class="tag">Punteggi</span><span class="tag">Calendario</span><span class="tag">Classifica</span></div></div>
+            <div class="layer L4"><span class="lbl">Asta — modalità live</span><div class="tags"><span class="tag live">Tabellone (motore)</span><span class="tag">episodica · la lancia il feed</span></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="aside"><b>Modelli / template</b> — ricette di creazione: seminano i default <i>attraverso</i> gli strati (regole in federazione, rosa/budget/mercati in lega). Non sono una destinazione: vivono nel bivio di creazione ("crea nuove regole → nasce una federazione" / "aderisci a una esistente") e nel catalogo del superadmin.</div>
+
+  <div class="kick">Come ci si naviga</div>
+  <div class="cols">
+    <div class="card">
+      <h3>Mobile — il quotidiano</h3>
+      <div class="phone">
+        <div class="screen">Feed / Gazzetta<br>(la home)</div>
+        <div class="tabbar"><span class="on">Home</span><span>Leghe</span><span>Notifiche</span><span>Profilo</span></div>
+      </div>
+      <div class="note">Tab globali in basso. Entrando in una lega si apre la sua <b style="color:var(--green)">sub-nav</b> (Rosa · Formazione · Mercato · Classifica). L'<b style="color:var(--live)">Asta</b> prende il fullscreen quando è live (la paletta).</div>
+    </div>
+    <div class="card">
+      <h3>Desktop — config &amp; scena</h3>
+      <div class="deskwin">
+        <div class="desktop-top"><span>◣ Mondo › Lega</span><span>context-switcher</span></div>
+        <div class="desktop-body"><div class="desk-rail">sezioni di lega<br><br>· Rosa<br>· Formazione<br>· Mercato<br>· Classifica<br>· Admin</div><div class="desk-main">workspace / feed<br><br>qui vivono:<br>config mercati<br>+ tabellone live</div></div>
+      </div>
+      <div class="note">Hub/feed e workspace di lega; lo switch di contesto (mondo → lega) in alto. <b style="color:var(--green)">Config</b> e <b style="color:var(--green)">tabellone</b> stanno qui (la live = tabellone + paletta).</div>
+    </div>
+  </div>
+
+  <div class="kick">Principi</div>
+  <div class="princ">
+    <div class="p"><b>Il feed è casa e rampa</b> — narra la stagione e lancia gli eventi a tempo.</div>
+    <div class="p"><b>Mobile per il quotidiano, desktop per config &amp; tabellone</b> — la live disegnata in coppia (tabellone + paletta).</div>
+    <div class="p"><b>I mercati vivono nelle finestre</b> — le trattative sono sempre attive ma si concretizzano in finestra.</div>
+    <div class="p"><b>La federazione è l'istituzione</b> — convalida → premiazione → albo d'oro. Mister è la piattaforma, lei è il tuo mondo.</div>
+    <div class="p"><b>L'asta è episodica</b> — niente slot fisso in nav: la accende il feed quando è ora.</div>
+    <div class="p"><b>Una fonte di verità per strato</b> — il modello semina i default, poi ogni strato possiede il suo.</div>
+  </div>
+</div></body></html>

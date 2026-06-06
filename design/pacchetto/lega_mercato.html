@@ -1,0 +1,95 @@
+<!DOCTYPE html><html lang="it"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,800;1,9..144,400&family=JetBrains+Mono:wght@400;500;700&display=swap');
+:root{--cream:#efe6d3;--cream2:#e7dcc4;--paper:#f7f1e4;--green:#1f4733;--green-d:#15301f;--green-l:#2e6047;--pitch:#173a27;--pitch2:#1a402b;--gold:#c8922b;--gold-l:#e6b84d;--live:#e2554e;--danger:#bf3b30;--muted:#8a8266;--line:#d8ccae;--rP:#7e5a26;--rD:#2b5740;--rC:#234c5e;--rA:#6b2c24;--ringP:#c79a4e;--ringD:#6aa07f;--ringC:#6aa6b8;--ringA:#cf8a6a;--letP:#c8922b;--letD:#2e6047;--letC:#3f7d92;--letA:#c06a52;--disp:'Fraunces', Georgia, serif;--mono:'JetBrains Mono', monospace;--phone-w:390px}
+*{box-sizing:border-box}body{margin:0;background:#cfc6ad;font-family:var(--mono);padding:24px 12px 48px;overflow-x:auto}
+.phone{width:390px;margin:0 auto;background:var(--cream);border:9px solid #2a2a2a;border-radius:36px;overflow:hidden;box-shadow:0 18px 50px rgba(0,0,0,.25)}
+.scr{display:flex;flex-direction:column;min-height:780px;position:relative}
+.bar{display:flex;align-items:center;gap:11px;padding:13px 15px 9px}
+.bar .ic{background:none;border:none;padding:0;color:var(--green);display:flex;cursor:pointer}.bar .ic svg{width:22px;height:22px}
+.bar .tt{min-width:0}.bar .tt .nm{font-family:var(--disp);font-weight:600;font-size:15px}.bar .tt .fed{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em}
+.bar .sp{margin-left:auto}
+.subnav{display:flex;gap:7px;padding:4px 15px 10px;overflow-x:auto;scrollbar-width:none;-ms-overflow-style:none}.subnav::-webkit-scrollbar{display:none;height:0;width:0}
+.pill{flex:none;font-size:11px;border:1px solid var(--line);background:var(--paper);color:var(--green-l);border-radius:20px;padding:6px 13px;cursor:pointer}
+.pill.on{background:var(--green);color:var(--cream);border-color:var(--green)}
+.body{padding:2px 14px 80px;display:flex;flex-direction:column;gap:14px}
+/* rhythm timeline */
+.rhythm{padding:2px 2px 0}
+.rlab{font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:9px}
+.rail{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px}
+.win{flex:none;width:108px;border-radius:11px;border:1px solid var(--line);background:var(--paper);padding:9px 10px}
+.win .wt{font-size:8.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.win .wn{font-family:var(--disp);font-weight:600;font-size:12.5px;line-height:1.1;margin:2px 0 6px}
+.win .st{font-size:9px;font-weight:700;display:inline-flex;align-items:center;gap:4px;border-radius:20px;padding:2px 8px}
+.st.done{color:var(--green-l);background:var(--cream2)}.st.soon{color:#8a5a1f;background:#f3e6cf}.st.open{color:var(--cream);background:var(--green)}
+.win.open{border-color:var(--green);box-shadow:0 0 0 1px var(--green)}.win.soon{border-color:var(--gold)}
+/* next banner */
+.next{background:var(--green-d);color:var(--cream);border-radius:14px;padding:14px 16px;display:flex;align-items:center;gap:12px}
+.next .cd{text-align:center;flex:none}.next .cd .n{font-family:var(--disp);font-weight:600;font-size:26px;color:var(--gold-l);line-height:1}.next .cd .u{font-size:8.5px;text-transform:uppercase;letter-spacing:.08em;color:rgba(239,230,211,.6)}
+.next .ni{flex:1}.next .ni .k{font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:rgba(239,230,211,.6)}.next .ni .h{font-family:var(--disp);font-weight:600;font-size:17px;margin:1px 0 2px}.next .ni .s{font-size:10.5px;color:rgba(239,230,211,.75)}
+.sec{}
+.shead{display:flex;align-items:baseline;margin:0 2px 9px}.shead h3{font-family:var(--disp);font-weight:600;font-size:15px;margin:0}.shead .more{margin-left:auto;font-size:10px;color:var(--green-l)}
+/* trattative */
+.trat{background:var(--paper);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.tr{display:flex;align-items:center;gap:10px;padding:11px 14px;border-bottom:1px solid var(--line)}.tr:last-child{border:none}
+.tr .who{display:flex;align-items:center;gap:6px;flex:none}.tc{border-radius:5px;color:#fff;font-weight:700;font-size:8px;display:flex;align-items:center;justify-content:center;width:22px;height:22px}
+.tr .deal{flex:1;min-width:0}.tr .deal .d{font-size:11.5px;color:var(--green);line-height:1.25}.tr .deal .d b{font-weight:700}.tr .deal .w{font-size:9px;color:var(--muted);margin-top:1px}
+.tr .stt{font-size:9px;font-weight:700;border-radius:20px;padding:3px 8px;flex:none}
+.stt.wait{color:#8a5a1f;background:#f3e6cf}.stt.deal{color:var(--green-l);background:var(--cream2)}
+.tratfoot{padding:10px 14px;font-size:10px;color:var(--muted);display:flex;align-items:center;justify-content:space-between}
+.tratfoot .add{color:var(--green);font-weight:700}
+.note{font-size:9.5px;color:var(--muted);text-align:center;margin:14px 18px 0;line-height:1.5}
+.tabbar{position:absolute;bottom:0;left:0;right:0;display:flex;justify-content:space-around;align-items:center;background:var(--paper);border-top:1px solid var(--line);padding:9px 6px calc(11px + env(safe-area-inset-bottom))}
+.tab{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:9px;color:var(--muted)}.tab svg{width:21px;height:21px}.tab.on{color:var(--green)}.tab.on svg{color:var(--gold)}
+</style></head><body>
+<div class="phone"><div class="scr">
+  <div class="bar">
+    <button class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+    <div class="tt"><div class="nm">Mercato</div><div class="fed">Champions del Bar Roma</div></div>
+    <button class="ic sp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1l2-1.6-2-3.4-2.4 1a7 7 0 0 0-1.7-1l-.4-2.5h-3.8l-.4 2.5a7 7 0 0 0-1.7 1l-2.4-1-2 3.4 2 1.6a7 7 0 0 0 0 2l-2 1.6 2 3.4 2.4-1a7 7 0 0 0 1.7 1l.4 2.5h3.8l.4-2.5a7 7 0 0 0 1.7-1l2.4 1 2-3.4-2-1.6a7 7 0 0 0 .1-1Z"/></svg></button>
+  </div>
+  <div class="subnav"><span class="pill">Panoramica</span><span class="pill">Rosa</span><span class="pill">Formazione</span><span class="pill on">Mercato</span><span class="pill">Classifica</span><span class="pill">Società</span></div>
+
+  <div class="body">
+    <div class="rhythm">
+      <div class="rlab">Il ritmo della stagione</div>
+      <div class="rail">
+        <div class="win"><div class="wt">Ago · Asta</div><div class="wn">Asta iniziale</div><span class="st done">✓ conclusa</span></div>
+        <div class="win"><div class="wt">Ott · Scambi</div><div class="wn">Scambi autunno</div><span class="st done">✓ conclusa</span></div>
+        <div class="win soon"><div class="wt">Gen · Riparazione</div><div class="wn">Riparazione</div><span class="st soon">tra 4 giorni</span></div>
+        <div class="win"><div class="wt">Mag · Scambi</div><div class="wn">Scambi finale</div><span class="st done" style="color:var(--muted);background:var(--cream2)">programmata</span></div>
+      </div>
+    </div>
+
+    <div class="next">
+      <div class="cd"><div class="n">4</div><div class="u">giorni</div></div>
+      <div class="ni"><div class="k">prossima finestra</div><div class="h">Riparazione di gennaio</div><div class="s">Asta di riparazione · scambi · svincoli — apre lun 13 gen</div></div>
+    </div>
+
+    <div class="sec">
+      <div class="shead"><h3>Trattative aperte</h3><span class="more">storico →</span></div>
+      <div class="trat">
+        <div class="tr">
+          <div class="who"><span class="tc" style="background:#1f4e7c">BS</span></div>
+          <div class="deal"><div class="d">Offri <b>Vlahović</b> alla Dinamo per <b>Koopmeiners</b></div><div class="w">con Dinamo Aperitivo · da 2 giorni</div></div>
+          <span class="stt wait">in attesa</span>
+        </div>
+        <div class="tr">
+          <div class="who"><span class="tc" style="background:#7c1f2b">TR</span></div>
+          <div class="deal"><div class="d">Accordo: <b>Pellegrini</b> ⇄ <b>Barella + 8 FM</b></div><div class="w">con Trastevere CF · pronto</div></div>
+          <span class="stt deal">accordo</span>
+        </div>
+      </div>
+      <div class="tratfoot"><span>Si concretizzano all'apertura della finestra.</span><span class="add">+ Tratta</span></div>
+    </div>
+  </div>
+
+  <div class="tabbar">
+    <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg>Home</div>
+    <div class="tab on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 6h16M4 12h16M4 18h10"/></svg>Leghe</div>
+    <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10 21a2 2 0 0 0 4 0"/></svg>Notifiche</div>
+    <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>Profilo</div>
+  </div>
+</div></div>
+<p class="note">Mercato di lega — la filosofia resa concreta. In alto il ritmo della stagione: le finestre in scorrimento, col loro stato (conclusa, tra-giorni, programmata). Poi il countdown alla prossima finestra (Riparazione), coi tipi di mercato che vi si apriranno. In basso le trattative — sempre attive, ma che "si concretizzano all'apertura della finestra": fuori si tratta, dentro si esegue. L'asta si lancerà da qui quando la sua finestra è aperta.</p>
+</div></body></html>

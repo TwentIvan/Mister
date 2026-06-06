@@ -80,6 +80,28 @@
   --font-display: 'Fraunces', Georgia, serif;
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;
 
+  /* ── Token canonici design/pacchetto/tokens.css (aliases e aggiunte) ── */
+  --disp: 'Fraunces', Georgia, serif;
+  --mono: 'JetBrains Mono', monospace;
+  --muted: #8a8266;      /* alias di --muted-brand */
+  --pitch:  #173a27;     /* erba campo */
+  --pitch2: #1a402b;     /* riga alternata campo */
+  /* Ruolo — badge di riga su fondo scuro */
+  --rP: #7e5a26;
+  --rD: #2b5740;
+  --rC: #234c5e;
+  --rA: #6b2c24;
+  /* Ruolo — anello chip su erba */
+  --ringP: #c79a4e;
+  --ringD: #6aa07f;
+  --ringC: #6aa6b8;
+  --ringA: #cf8a6a;
+  /* Ruolo — lettera su carta */
+  --letP: #c8922b;
+  --letD: #2e6047;
+  --letC: #3f7d92;
+  --letA: #c06a52;
+
   --token-avatar-bg: #2d5848;
   --button-outline: rgba(0,0,0, .10);
   --badge-outline: rgba(0,0,0, .05);

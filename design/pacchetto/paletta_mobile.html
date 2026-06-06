@@ -1,0 +1,89 @@
+<!DOCTYPE html><html lang="it"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,800&family=JetBrains+Mono:wght@400;500;700&display=swap');
+:root{--cream:#efe6d3;--cream2:#e7dcc4;--paper:#f7f1e4;--green:#1f4733;--green-d:#15301f;--green-l:#2e6047;--pitch:#173a27;--pitch2:#1a402b;--gold:#c8922b;--gold-l:#e6b84d;--live:#e2554e;--danger:#bf3b30;--muted:#8a8266;--line:#d8ccae;--rP:#7e5a26;--rD:#2b5740;--rC:#234c5e;--rA:#6b2c24;--ringP:#c79a4e;--ringD:#6aa07f;--ringC:#6aa6b8;--ringA:#cf8a6a;--letP:#c8922b;--letD:#2e6047;--letC:#3f7d92;--letA:#c06a52;--disp:'Fraunces', Georgia, serif;--mono:'JetBrains Mono', monospace;--phone-w:390px}
+*{box-sizing:border-box}body{margin:0;background:#cfc6ad;font-family:var(--mono);display:flex;justify-content:center;padding:24px 12px 48px}
+.phone{width:390px;max-width:100%;background:var(--cream);border:9px solid #2a2a2a;border-radius:36px;overflow:hidden;box-shadow:0 18px 50px rgba(0,0,0,.25)}
+.scr{display:flex;flex-direction:column;min-height:760px}
+/* top bar */
+.top{display:flex;align-items:center;gap:8px;padding:14px 16px 10px}
+.top .mk{width:22px;flex:none}.top h1{font-family:var(--disp);font-weight:800;font-feature-settings:"ss01";font-size:15px;margin:0;letter-spacing:-.02em}
+.top .ctx{font-size:9.5px;color:var(--muted)}.top .live{margin-left:auto;display:flex;align-items:center;gap:5px;font-size:9.5px;color:var(--live);font-weight:700;text-transform:uppercase;letter-spacing:.08em}
+.top .live i{width:7px;height:7px;border-radius:50%;background:var(--live);box-shadow:0 0 0 3px rgba(226,85,78,.22)}
+/* lot card = role stamp */
+.lot{margin:4px 14px 0;background:var(--rA);border-radius:16px;padding:14px 16px;color:var(--cream);display:flex;align-items:center;gap:13px}
+.lot .face{width:54px;height:54px;border-radius:50%;flex:none;border:2.5px solid var(--gold-l);overflow:hidden;background:var(--cream2)}.lot .face svg{width:100%;height:100%}
+.lot .info{min-width:0;flex:1}
+.lot .role{font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:rgba(239,230,211,.72)}
+.lot .name{font-family:var(--disp);font-weight:600;font-size:25px;line-height:1.02;margin:1px 0 4px}
+.lot .meta{display:flex;align-items:center;gap:7px;font-size:11px;color:rgba(239,230,211,.9)}
+.lot .club{width:17px;height:19px;border-radius:3px;background:linear-gradient(135deg,#0a0f1a 0 49%,#0a63b0 51% 100%);display:flex;align-items:center;justify-content:center;box-shadow:inset 0 0 0 .5px rgba(0,0,0,.3)}.lot .club i{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.92)}
+.lot .base{font-size:10px;color:rgba(239,230,211,.7)}.lot .base b{color:var(--gold-l);font-weight:700}
+/* timer bar */
+.timer{margin:12px 16px 0}
+.timer .bar{height:7px;border-radius:5px;background:var(--cream2);overflow:hidden}
+.timer .fill{height:100%;width:58%;background:var(--green-l);border-radius:5px}
+.timer .row{display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-top:5px}.timer .row b{color:var(--green);font-weight:700}
+/* bid block */
+.bid{text-align:center;padding:12px 16px 6px}
+.bid .lab{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted)}
+.bid .amt{font-family:var(--disp);font-weight:600;font-size:42px;color:var(--gold);line-height:1}
+.bid .by{font-size:11px;color:var(--green);margin-top:2px}.bid .by b{font-weight:700}
+.state{display:inline-flex;align-items:center;gap:6px;margin-top:9px;font-size:11px;font-weight:700;color:var(--danger);background:#f3e0db;border-radius:20px;padding:5px 12px}
+/* raise zone */
+.raise{margin-top:auto;padding:14px 16px calc(14px + env(safe-area-inset-bottom));background:var(--paper);border-top:1px solid var(--line);border-radius:20px 20px 0 0}
+.quick{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:9px}
+.qbtn{border:1px solid var(--line);background:var(--cream);border-radius:11px;padding:9px 4px;text-align:center;cursor:pointer}
+.qbtn .d{font-family:var(--disp);font-weight:600;font-size:17px;color:var(--green)}.qbtn .s{font-size:9px;color:var(--muted)}.qbtn .s b{color:var(--gold);font-weight:700}
+.primary{display:block;width:100%;background:var(--green);color:var(--cream);border:none;border-radius:13px;padding:15px;font-family:var(--mono);font-weight:700;font-size:15px;cursor:pointer;margin-bottom:9px}
+.primary b{color:var(--gold-l)}
+.subrow{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:9px}
+.sbtn{border:1px solid var(--line);background:var(--cream);border-radius:11px;padding:11px;font-family:var(--mono);font-weight:700;font-size:12px;color:var(--green);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px}
+.sbtn.mic{background:var(--green-l);color:var(--cream);border-color:var(--green-l)}.sbtn.mic .dot{width:7px;height:7px;border-radius:50%;background:var(--live);box-shadow:0 0 0 3px rgba(226,85,78,.25)}
+.heard{font-size:10px;color:var(--green-l);background:var(--cream2);border-radius:9px;padding:7px 11px;margin-bottom:10px;line-height:1.4}.heard b{color:var(--green);font-weight:700}.heard .a{color:var(--gold);font-weight:700}
+.wallet{display:flex;align-items:center;justify-content:space-between;font-size:10.5px;color:var(--muted)}
+.wallet .b{font-family:var(--mono);font-weight:700;font-size:16px;color:var(--gold)}.wallet small{font-size:8.5px;color:var(--muted);font-weight:400}
+.wallet .need{text-align:right;line-height:1.35}.wallet .need b{color:var(--green)}
+.note{font-size:9.5px;color:var(--muted);text-align:center;margin:14px 18px 0;line-height:1.5}
+</style></head><body>
+<div class="phone"><div class="scr">
+  <div class="top"><div class="mk"><svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg"><defs><clipPath id="t1"><rect width="512" height="512" rx="112"/></clipPath></defs><g clip-path="url(#t1)"><rect width="512" height="512" fill="#1f4733"/><g transform="translate(106.0,121.0) scale(2.5000)"><polyline points="6,100 34,8 60,100 86,8 114,100" fill="none" stroke="#e6b84d" stroke-width="13.6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="6" cy="100" r="9.6" fill="#c8922b"/><circle cx="34" cy="8" r="9.6" fill="#c8922b"/><circle cx="60" cy="100" r="9.6" fill="#c8922b"/><circle cx="86" cy="8" r="9.6" fill="#c8922b"/><circle cx="114" cy="100" r="9.6" fill="#c8922b"/></g></g></svg></div><div><h1>Asta live</h1><div class="ctx">Champions del Bar Roma</div></div><div class="live"><i></i> live</div></div>
+
+  <div class="lot">
+    <div class="face"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="12" fill="#e7dcc4"/><path d="M12 12.6c2.2 0 3.6-1.8 3.6-4S14.2 5 12 5 8.4 6.6 8.4 8.6s1.4 4 3.6 4Zm0 1.3c-3.2 0-6.4 1.7-6.4 4.3V24h12.8v-5.8c0-2.6-3.2-4.3-6.4-4.3Z" fill="#9a9078"/></svg></div>
+    <div class="info">
+      <div class="role">in asta · attaccante</div>
+      <div class="name">Lautaro Martínez</div>
+      <div class="meta"><span class="club"><i></i></span> Inter <span class="base">· base <b>1 FM</b></span></div>
+    </div>
+  </div>
+
+  <div class="timer"><div class="bar"><div class="fill"></div></div><div class="row"><span>tempo rilancio</span><span><b>6s</b></span></div></div>
+
+  <div class="bid">
+    <div class="lab">Offerta attuale</div>
+    <div class="amt">118<span style="font-size:18px"> FM</span></div>
+    <div class="by">da <b>Trastevere CF</b></div>
+    <div class="state">● Sei stato superato — rilanci?</div>
+  </div>
+
+  <div class="raise">
+    <div class="quick">
+      <div class="qbtn"><div class="d">+1</div><div class="s">→ <b>119</b></div></div>
+      <div class="qbtn"><div class="d">+5</div><div class="s">→ <b>123</b></div></div>
+      <div class="qbtn"><div class="d">+10</div><div class="s">→ <b>128</b></div></div>
+    </div>
+    <button class="primary">Rilancia a <b>119 FM</b></button>
+    <div class="subrow">
+      <button class="sbtn">⚑ Offerta max</button>
+      <button class="sbtn mic"><span class="dot"></span> Parla</button>
+    </div>
+    <div class="heard">sentito: <b>«centoventicinque»</b> → rilancio <span class="a">125 FM</span></div>
+    <div class="wallet">
+      <div><span class="b">488 FM</span><br><small>il tuo budget</small></div>
+      <div class="need">ti restano <b>21</b> slot<br>servono 2P · 7D · 7C · 5A</div>
+    </div>
+  </div>
+</div></div>
+<p class="note">Paletta mobile — la coppia del tabellone. Stesso stato live, ma qui si rilancia: tap rapidi, offerta max (autobid), o voce col riscontro del parlato. In alto il giocatore in asta (badge taglia media), l'offerta e il timer; in basso, nel pollice, l'azione. Quando tocca a te chiamare, qui compare la ricerca fuzzy.</p>
+</body></html>

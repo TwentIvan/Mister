@@ -1,0 +1,85 @@
+/* ============================================================
+   MISTER — TOKEN CANONICI  (fonte unica di verità)
+   Ogni schermata importa SOLO questo file per colori/font/ruoli.
+   Cambi qui  →  si propaga ovunque.  Non ridefinire i valori altrove.
+   ============================================================ */
+
+:root{
+  /* --- Carta & superfici (cream/paper) --- */
+  --cream:   #efe6d3;   /* sfondo app                       */
+  --cream2:  #e7dcc4;   /* superfici alternate / evidenziato */
+  --paper:   #f7f1e4;   /* card, pannelli                   */
+
+  /* --- Verde (istituzione, brand scuro) --- */
+  --green:   #1f4733;   /* testo/marchio su carta           */
+  --green-d: #15301f;   /* fondi scuri, ticker              */
+  --green-l: #2e6047;   /* accenti, link, "sale"            */
+
+  /* --- Erba (solo campo) --- */
+  --pitch:   #173a27;
+  --pitch2:  #1a402b;   /* riga alternata del manto         */
+
+  /* --- ORO — SOLO denaro/FM/valore/prestigio/marchio --- */
+  --gold:    #c8922b;
+  --gold-l:  #e6b84d;
+
+  /* --- Stato --- */
+  --live:    #e2554e;   /* in diretta / "scende"            */
+  --danger:  #bf3b30;   /* errore/distruttivo               */
+
+  /* --- Neutri --- */
+  --muted:   #8a8266;   /* testo secondario                 */
+  --line:    #d8ccae;   /* bordi/divisori                   */
+
+  /* --- COLORI RUOLO (riga/badge su fondo scuro, testo crema) --- */
+  --rP: #7e5a26;        /* Portiere — ocra        */
+  --rD: #2b5740;        /* Difensore — verde      */
+  --rC: #234c5e;        /* Centrocampista — teal  */
+  --rA: #6b2c24;        /* Attaccante — mattone   */
+
+  /* --- COLORI RUOLO (anello del chip, varianti chiare su erba) --- */
+  --ringP: #c79a4e;
+  --ringD: #6aa07f;
+  --ringC: #6aa6b8;
+  --ringA: #cf8a6a;
+
+  /* --- COLORI RUOLO (lettera ruolo su carta, es. pagelle) --- */
+  --letP: #c8922b;
+  --letD: #2e6047;
+  --letC: #3f7d92;
+  --letA: #c06a52;
+
+  /* --- Tipografia --- */
+  --disp: 'Fraunces', Georgia, serif;        /* display: titoli, numeri-valore, cognomi */
+  --mono: 'JetBrains Mono', monospace;        /* corpo, dati, etichette                  */
+
+  /* --- Telefono (mockup mobile) --- */
+  --phone-w: 390px;     /* larghezza fissa: NON usare max-width:100% (schiaccia) */
+}
+
+/* Import font (se non già caricati a livello app):
+   @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,800;1,9..144,400&family=JetBrains+Mono:wght@400;500;700&display=swap');
+*/
+
+/* ============================================================
+   COLORI CLUB (bicolore, split diagonale)  —  SEGNAPOSTO IP
+   Colori reali OK; loghi reali NO (usare disco/roundel monogramma).
+   Mappa di riferimento (a,b) = (colore1, colore2):
+   ------------------------------------------------------------
+   Inter       #0a0f1a / #0a63b0
+   Milan       #c8102e / #0a0a0a
+   Juventus    #0a0a0a / #ededed
+   Napoli      #1278c8 / #0c2340
+   Roma        #7e1626 / #dca93a
+   Lazio       #5aa6d8 / #f2f2f2
+   Atalanta    #1a3a6b / #0c0c0c
+   Lecce       #e6b800 / #b81e2c
+   Cagliari    #9b1b30 / #16224a
+   Como        #1f5fae / #f2f2f2
+   Fiorentina  #5a2d82 / #f2f2f2
+   Torino      #6e1f2b / #3a0f16
+   Genoa       #b81e2c / #0a2342
+   ------------------------------------------------------------
+   Crest:  background:linear-gradient(135deg, a 0 49%, b 51% 100%)
+   Barra:  background:linear-gradient(90deg,  a 0 50%, b 50% 100%)
+   ============================================================ */

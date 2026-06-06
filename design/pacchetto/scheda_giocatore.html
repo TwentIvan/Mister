@@ -1,0 +1,131 @@
+<!DOCTYPE html><html lang="it"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,800;1,9..144,400&family=JetBrains+Mono:wght@400;500;700&display=swap');
+:root{--cream:#efe6d3;--cream2:#e7dcc4;--paper:#f7f1e4;--green:#1f4733;--green-d:#15301f;--green-l:#2e6047;--pitch:#173a27;--pitch2:#1a402b;--gold:#c8922b;--gold-l:#e6b84d;--live:#e2554e;--danger:#bf3b30;--muted:#8a8266;--line:#d8ccae;--rP:#7e5a26;--rD:#2b5740;--rC:#234c5e;--rA:#6b2c24;--ringP:#c79a4e;--ringD:#6aa07f;--ringC:#6aa6b8;--ringA:#cf8a6a;--letP:#c8922b;--letD:#2e6047;--letC:#3f7d92;--letA:#c06a52;--disp:'Fraunces', Georgia, serif;--mono:'JetBrains Mono', monospace;--phone-w:390px}
+*{box-sizing:border-box}
+body{margin:0;background:#cfc6ad;font-family:var(--mono);padding:24px 12px 48px;overflow-x:auto}
+.phone{width:390px;margin:0 auto;background:var(--cream);border:9px solid #2a2a2a;border-radius:36px;overflow:hidden;box-shadow:0 18px 50px rgba(0,0,0,.25)}
+.scr{display:flex;flex-direction:column;min-height:780px}
+.hero{background:var(--rC);color:var(--cream);padding:12px 16px 18px}
+.htop{display:flex;align-items:center;gap:10px;margin-bottom:10px}.htop .ic{background:none;border:none;padding:0;color:rgba(239,230,211,.85);display:flex;cursor:pointer}.htop .ic svg{width:22px;height:22px}.htop .t{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:rgba(239,230,211,.65)}.htop .sp{margin-left:auto}
+.hmain{display:flex;align-items:center;gap:14px}
+.hface{position:relative;width:66px;height:66px;flex:none}
+.hface .ph{width:66px;height:66px;border-radius:50%;border:2.5px solid var(--gold-l);overflow:hidden;background:var(--cream2)}.hface .ph svg{width:100%;height:100%}
+.hface .crest{position:absolute;right:-4px;bottom:-2px;width:26px;height:29px;border-radius:5px 5px 9px 9px;background:linear-gradient(135deg,#0a0f1a 0 49%,#0a63b0 51% 100%);box-shadow:0 1px 4px rgba(0,0,0,.4),inset 0 0 0 .6px rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center}.hface .crest i{width:10px;height:10px;border-radius:50%;background:rgba(255,255,255,.92)}
+.hinfo{min-width:0}.hrole{font-size:9.5px;text-transform:uppercase;letter-spacing:.1em;color:rgba(239,230,211,.72)}
+.hname{font-family:var(--disp);font-weight:600;font-size:28px;line-height:1.02;margin:1px 0 4px}
+.hclub{display:flex;align-items:center;gap:6px;font-size:12px;color:rgba(239,230,211,.92)}
+.hbio{font-size:10.5px;color:rgba(239,230,211,.65);margin-top:9px;letter-spacing:.2px}
+.body{padding:14px 14px 30px;display:flex;flex-direction:column;gap:15px}
+.fanta{display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px}
+.fcard{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:11px 12px;text-align:center}
+.fcard .n{font-family:var(--disp);font-weight:600;font-size:21px;color:var(--gold)}.fcard .l{font-size:8.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-top:2px}
+.fcard .own{display:flex;align-items:center;justify-content:center;gap:5px}.fcard .tc{width:20px;height:20px;border-radius:5px;background:linear-gradient(135deg,#1f4e7c 0 49%,#0e2f52 51% 100%);color:#fff;font-size:8px;font-weight:700;display:flex;align-items:center;justify-content:center}.fcard .own span{font-family:var(--disp);font-weight:600;font-size:12px;color:var(--green)}
+.sec h3{font-family:var(--disp);font-weight:600;font-size:15px;margin:0 2px 9px}.sec .src{font-size:8.5px;color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0}
+.rend{background:var(--paper);border:1px solid var(--line);border-radius:13px;padding:13px 15px}
+.rgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:7px}
+.rg{text-align:center}.rg .n{font-family:var(--disp);font-weight:600;font-size:18px;color:var(--green)}.rg .n.gold{color:var(--gold)}.rg .l{font-size:8px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+.pcap{font-size:9px;color:var(--muted);text-align:center;margin-bottom:11px}
+.spark{border-top:1px solid var(--line);padding-top:10px}.spark .sl{display:flex;justify-content:space-between;font-size:9px;color:var(--muted);margin-bottom:4px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.st{background:var(--paper);border:1px solid var(--line);border-radius:11px;padding:10px 6px;text-align:center}
+.st .n{font-family:var(--disp);font-weight:600;font-size:17px;color:var(--green)}.st .n small{font-size:10px;color:var(--muted)}.st .l{font-size:8.5px;color:var(--muted);margin-top:2px;text-transform:uppercase;letter-spacing:.03em}
+.seasons{background:var(--paper);border:1px solid var(--line);border-radius:13px;overflow:hidden}
+.srow{display:flex;align-items:center;gap:8px;padding:8px 13px;border-bottom:1px solid var(--line);font-size:11px}.srow:last-child{border:none}
+.srow.head{font-size:8px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);background:var(--cream2)}
+.srow .yr{width:38px;flex:none;font-weight:700;color:var(--green)}
+.srow .cl{flex:1;display:flex;align-items:center;gap:6px;color:var(--green);min-width:0}
+.srow .cl .cb{width:14px;height:16px;border-radius:3px;flex:none;box-shadow:inset 0 0 0 .5px rgba(0,0,0,.3)}
+.srow .v{width:28px;text-align:center;flex:none;color:var(--green);font-weight:700}.srow .v.gold{color:var(--gold)}
+.srow.head .v,.srow.head .yr,.srow.head .cl{font-weight:400}
+.cb.inter{background:linear-gradient(135deg,#0a0f1a 0 49%,#0a63b0 51% 100%)}
+.cb.cagliari{background:linear-gradient(135deg,#9b1b30 0 49%,#16224a 51% 100%)}
+.stor{background:var(--paper);border:1px solid var(--line);border-radius:13px;padding:6px 14px}
+.ev{display:flex;align-items:center;gap:10px;padding:9px 0;font-size:11.5px}.ev .dot{width:7px;height:7px;border-radius:50%;background:var(--gold);flex:none}.ev .x{flex:1;color:var(--green)}.ev .x b{font-weight:700}.ev .pr{font-family:var(--mono);font-weight:700;color:var(--gold)}
+.cta{display:block;width:100%;text-align:center;background:transparent;color:var(--green);border:1px solid var(--line);border-radius:12px;padding:13px;font-family:var(--mono);font-weight:700;font-size:13px;cursor:pointer}
+.note{font-size:9.5px;color:var(--muted);text-align:center;margin:14px auto 0;max-width:390px;line-height:1.5}
+</style></head><body>
+<div class="phone"><div class="scr">
+  <div class="hero">
+    <div class="htop"><button class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 6-6 6 6 6"/></svg></button><span class="t">Scheda giocatore</span>
+      <button class="ic sp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 11c0 5.5-7 10-7 10Z"/></svg></button></div>
+    <div class="hmain">
+      <div class="hface">
+        <div class="ph"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="12" fill="#e7dcc4"/><path d="M12 12.6c2.2 0 3.6-1.8 3.6-4S14.2 5 12 5 8.4 6.6 8.4 8.6s1.4 4 3.6 4Zm0 1.3c-3.2 0-6.4 1.7-6.4 4.3V24h12.8v-5.8c0-2.6-3.2-4.3-6.4-4.3Z" fill="#9a9078"/></svg></div>
+        <div class="crest"><i></i></div>
+      </div>
+      <div class="hinfo"><div class="hrole">Centrocampista</div><div class="hname">Nicolò Barella</div>
+        <div class="hclub">Inter · Serie A</div></div>
+    </div>
+    <div class="hbio">28 anni · Italia · 172 cm · piede destro</div>
+  </div>
+
+  <div class="body">
+    <div class="fanta">
+      <div class="fcard"><div class="n">41</div><div class="l">quotazione</div></div>
+      <div class="fcard"><div class="n">38</div><div class="l">pagato</div></div>
+      <div class="fcard"><div class="own"><span class="tc">BS</span><span>Bar Sport</span></div><div class="l" style="margin-top:6px">in rosa</div></div>
+    </div>
+
+    <div class="sec">
+      <h3>Rendimento <span class="src">· fantamedia da algoritmo lega</span></h3>
+      <div class="rend">
+        <div class="rgrid">
+          <div class="rg"><div class="n gold">7.4</div><div class="l">fantam.</div></div>
+          <div class="rg"><div class="n">6.3</div><div class="l">media voto</div></div>
+          <div class="rg"><div class="n">19</div><div class="l">presenze</div></div>
+          <div class="rg"><div class="n">1620</div><div class="l">minuti</div></div>
+        </div>
+        <div class="pcap">19 presenze · 18 da titolare · 1 da subentrato</div>
+        <div class="spark">
+          <div class="sl"><span>ultime 6 giornate (voto)</span><span>media 7.1</span></div>
+          <svg width="100%" height="36" viewBox="0 0 118 36" preserveAspectRatio="none">
+            <polyline points="4,18 26,4 48,27 70,13 92,23 114,18" fill="none" stroke="#1f4733" stroke-width="1.6" stroke-linejoin="round"/>
+            <circle cx="114" cy="18" r="3" fill="#c8922b"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <h3>Statistiche <span class="src">· stagione, via API-Sports · agg. 19ª</span></h3>
+      <div class="stats">
+        <div class="st"><div class="n">3</div><div class="l">gol</div></div>
+        <div class="st"><div class="n">5</div><div class="l">assist</div></div>
+        <div class="st"><div class="n">22 <small>/9</small></div><div class="l">tiri /in porta</div></div>
+        <div class="st"><div class="n">31</div><div class="l">pass. chiave</div></div>
+        <div class="st"><div class="n">88<small>%</small></div><div class="l">prec. passaggi</div></div>
+        <div class="st"><div class="n">41</div><div class="l">contrasti</div></div>
+        <div class="st"><div class="n">14<small>/22</small></div><div class="l">dribbling</div></div>
+        <div class="st"><div class="n">54<small>%</small></div><div class="l">duelli vinti</div></div>
+        <div class="st"><div class="n">28<small>/19</small></div><div class="l">falli f/s</div></div>
+        <div class="st"><div class="n">6</div><div class="l">ammonizioni</div></div>
+        <div class="st"><div class="n">0</div><div class="l">espulsioni</div></div>
+        <div class="st"><div class="n">0</div><div class="l">rigori</div></div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <h3>Storico stagioni <span class="src">· via API-Sports</span></h3>
+      <div class="seasons">
+        <div class="srow head"><span class="yr">Stag.</span><span class="cl">Club</span><span class="v">Pr</span><span class="v">G</span><span class="v">A</span><span class="v">FM</span></div>
+        <div class="srow"><span class="yr">24/25</span><span class="cl"><span class="cb inter"></span>Inter</span><span class="v">19</span><span class="v">3</span><span class="v">5</span><span class="v gold">7.4</span></div>
+        <div class="srow"><span class="yr">23/24</span><span class="cl"><span class="cb inter"></span>Inter</span><span class="v">35</span><span class="v">6</span><span class="v">7</span><span class="v gold">7.6</span></div>
+        <div class="srow"><span class="yr">22/23</span><span class="cl"><span class="cb inter"></span>Inter</span><span class="v">33</span><span class="v">2</span><span class="v">4</span><span class="v gold">6.9</span></div>
+        <div class="srow"><span class="yr">21/22</span><span class="cl"><span class="cb inter"></span>Inter</span><span class="v">34</span><span class="v">3</span><span class="v">9</span><span class="v gold">7.5</span></div>
+        <div class="srow"><span class="yr">20/21</span><span class="cl"><span class="cb cagliari"></span>Cagliari</span><span class="v">36</span><span class="v">2</span><span class="v">3</span><span class="v gold">6.7</span></div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <h3>Storico in lega</h3>
+      <div class="stor">
+        <div class="ev"><span class="dot"></span><span class="x">Acquistato all'<b>Asta iniziale</b> · 24/25</span><span class="pr">38 FM</span></div>
+      </div>
+    </div>
+
+    <button class="cta">Proponi uno scambio</button>
+  </div>
+</div></div>
+<p class="note">Scheda giocatore — hero col badge profilo e lo stemma del club di appartenenza a medaglione sul volto. Contesto-lega (quotazione, prezzo, proprietario), rendimento fanta (con presenze: titolare/subentrato e andamento voti), statistiche reali via API-Sports, e lo storico stagioni (presenze, gol, assist, fantamedia per annata, con lo stemma del club di quella stagione). Larghezza bloccata a 390px: se il pannello è stretto, scorre invece di schiacciarsi. Volto e logo club: segnaposto.</p>
+</body></html>
