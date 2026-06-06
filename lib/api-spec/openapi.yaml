@@ -10,6 +10,8 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: feed
+    description: Feed eventi della lega (gazzetta)
   - name: templates
     description: Template profili (Classico/Esploratore/Manageriale)
   - name: leagues
@@ -34,6 +36,39 @@ tags:
     description: Aste live
 
 paths:
+  # ─── FEED ─────────────────────────────────────────────────────────────────
+  /feed:
+    get:
+      operationId: getFeed
+      tags: [feed]
+      summary: Feed eventi della lega (risultati, colpi, ecc.)
+      parameters:
+        - in: query
+          name: leagueId
+          schema:
+            type: string
+          required: false
+          description: Filtra per lega specifica
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 20
+          required: false
+        - in: query
+          name: cursor
+          schema:
+            type: string
+          required: false
+          description: Cursore ISO timestamp per paginazione
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FeedResponse"
+
   /healthz:
     get:
       operationId: healthCheck
@@ -3161,4 +3196,84 @@ components:
           type: integer
         message:
           type: string
+
+    # ─── FEED ──────────────────────────────────────────────────────────────────
+
+    FeedTeamInfo:
+      type: object
+      required: [id, name, code, colorPrimary, colorSecondary]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        code:
+          type: string
+          description: Sigla 2 lettere per C-crest
+        colorPrimary:
+          type: string
+        colorSecondary:
+          type: string
+
+    FeedMatchData:
+      type: object
+      required: [giornata, homeTeam, awayTeam, homeScore, awayScore]
+      properties:
+        giornata:
+          type: integer
+        homeTeam:
+          $ref: "#/components/schemas/FeedTeamInfo"
+        awayTeam:
+          $ref: "#/components/schemas/FeedTeamInfo"
+        homeScore:
+          type: number
+          format: float
+        awayScore:
+          type: number
+          format: float
+
+    FeedEvent:
+      type: object
+      required: [id, type, timestamp, leagueId, leagueName, tag, headline]
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          enum: [risultato, colpo, finestra, albo, live, rumor]
+        timestamp:
+          type: string
+          format: date-time
+        leagueId:
+          type: string
+        leagueName:
+          type: string
+        competitionId:
+          type: string
+          nullable: true
+        tag:
+          type: string
+          description: Etichetta breve per il kick (es. "2ª giornata")
+        headline:
+          type: string
+          description: Titolo della card in voce d'almanacco
+        body:
+          type: string
+          nullable: true
+        matchData:
+          $ref: "#/components/schemas/FeedMatchData"
+
+    FeedResponse:
+      type: object
+      required: [events, hasMore]
+      properties:
+        events:
+          type: array
+          items:
+            $ref: "#/components/schemas/FeedEvent"
+        nextCursor:
+          type: string
+          nullable: true
+        hasMore:
+          type: boolean
 

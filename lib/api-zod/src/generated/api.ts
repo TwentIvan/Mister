@@ -9,6 +9,53 @@ import * as zod from 'zod';
 
 
 /**
+ * @summary Feed eventi della lega (risultati, colpi, ecc.)
+ */
+export const getFeedQueryLimitDefault = 20;
+
+export const GetFeedQueryParams = zod.object({
+  "leagueId": zod.coerce.string().optional().describe('Filtra per lega specifica'),
+  "limit": zod.coerce.number().default(getFeedQueryLimitDefault),
+  "cursor": zod.coerce.string().optional().describe('Cursore ISO timestamp per paginazione')
+})
+
+export const GetFeedResponse = zod.object({
+  "events": zod.array(zod.object({
+  "id": zod.string(),
+  "type": zod.enum(['risultato', 'colpo', 'finestra', 'albo', 'live', 'rumor']),
+  "timestamp": zod.coerce.date(),
+  "leagueId": zod.string(),
+  "leagueName": zod.string(),
+  "competitionId": zod.string().nullish(),
+  "tag": zod.string().describe('Etichetta breve per il kick (es. \"2ª giornata\")'),
+  "headline": zod.string().describe('Titolo della card in voce d\'almanacco'),
+  "body": zod.string().nullish(),
+  "matchData": zod.object({
+  "giornata": zod.number(),
+  "homeTeam": zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "code": zod.string().describe('Sigla 2 lettere per C-crest'),
+  "colorPrimary": zod.string(),
+  "colorSecondary": zod.string()
+}),
+  "awayTeam": zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "code": zod.string().describe('Sigla 2 lettere per C-crest'),
+  "colorPrimary": zod.string(),
+  "colorSecondary": zod.string()
+}),
+  "homeScore": zod.number(),
+  "awayScore": zod.number()
+}).optional()
+})),
+  "nextCursor": zod.string().nullish(),
+  "hasMore": zod.boolean()
+})
+
+
+/**
  * @summary Health check
  */
 export const HealthCheckResponse = zod.object({

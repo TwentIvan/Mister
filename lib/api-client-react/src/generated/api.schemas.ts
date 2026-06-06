@@ -1460,6 +1460,68 @@ export interface CallPlayerResponse {
   message?: string;
 }
 
+export interface FeedTeamInfo {
+  id: string;
+  name: string;
+  /** Sigla 2 lettere per C-crest */
+  code: string;
+  colorPrimary: string;
+  colorSecondary: string;
+}
+
+export interface FeedMatchData {
+  giornata: number;
+  homeTeam: FeedTeamInfo;
+  awayTeam: FeedTeamInfo;
+  homeScore: number;
+  awayScore: number;
+}
+
+export type FeedEventType = typeof FeedEventType[keyof typeof FeedEventType];
+
+
+export const FeedEventType = {
+  risultato: 'risultato',
+  colpo: 'colpo',
+  finestra: 'finestra',
+  albo: 'albo',
+  live: 'live',
+  rumor: 'rumor',
+} as const;
+
+export interface FeedEvent {
+  id: string;
+  type: FeedEventType;
+  timestamp: string;
+  leagueId: string;
+  leagueName: string;
+  competitionId?: string | null;
+  /** Etichetta breve per il kick (es. "2ª giornata") */
+  tag: string;
+  /** Titolo della card in voce d'almanacco */
+  headline: string;
+  body?: string | null;
+  matchData?: FeedMatchData;
+}
+
+export interface FeedResponse {
+  events: FeedEvent[];
+  nextCursor?: string | null;
+  hasMore: boolean;
+}
+
+export type GetFeedParams = {
+/**
+ * Filtra per lega specifica
+ */
+leagueId?: string;
+limit?: number;
+/**
+ * Cursore ISO timestamp per paginazione
+ */
+cursor?: string;
+};
+
 export type ListTemplatesParams = {
 active_only?: boolean;
 };

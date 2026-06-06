@@ -20,6 +20,7 @@ import AstaMobilePage from "@/pages/AstaMobilePage";
 import JoinLegaPage from "@/pages/JoinLegaPage";
 import BrandPage from "@/pages/brand";
 import ClassificaPage from "@/pages/classifica/ClassificaPage";
+import FeedPage from "@/pages/feed/FeedPage";
 import { Switch, Route, Router as WouterRouter } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -43,6 +44,10 @@ function Router() {
 
       {/* ── Classifica mobile (S-classifica, design spec) ────── */}
       <Route path="/classifica/:competitionId" component={ClassificaPage} />
+
+      {/* ── Feed mobile (S-feed, design spec) ────────────────── */}
+      <Route path="/feed/:leagueId" component={FeedPage} />
+      <Route path="/feed" component={FeedPage} />
 
       {/* ── Invito lega — accessibile senza autenticazione ──── */}
       <Route path="/join/:leagueId/:code" component={JoinLegaPage} />

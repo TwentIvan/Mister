@@ -15,6 +15,7 @@ import lineupsRouter from "./lineups";
 import matchesRouter from "./matches";
 import competitionMatchesRouter from "./competition-matches";
 import auctionsRouter from "./auctions";
+import feedRouter from "./feed";
 
 const router: IRouter = Router();
 
@@ -34,5 +35,6 @@ router.use(lineupsRouter);
 router.use(matchesRouter);
 router.use(competitionMatchesRouter);
 router.use(auctionsRouter);
+router.use(feedRouter);
 
 export default router;
