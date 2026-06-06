@@ -48,3 +48,9 @@ id = "OKnzmpAq5V-722-vrsaIo"
 uri = "file://toy-tuning-B.zip"
 type = "unspecified"
 title = "Combo B — instant_id=0.55, denoising=0.78 (1358, 1624, 6409, 30509, 35544)"
+
+[[outputs]]
+id = "VmSMb_MmUQefHR9Hr3Gnm"
+uri = "file://screenshots/feed-lg-mvp.jpg"
+type = "image"
+title = "S-feed · Lega MVP · /feed/lg-mvp"
