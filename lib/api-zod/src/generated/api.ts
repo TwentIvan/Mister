@@ -1771,10 +1771,11 @@ export const GetCompetitionStandingsResponse = zod.object({
   "wins": zod.number(),
   "draws": zod.number(),
   "losses": zod.number(),
-  "goalsFor": zod.number(),
-  "goalsAgainst": zod.number(),
-  "goalDifference": zod.number(),
-  "points": zod.number()
+  "gf": zod.number().describe('Gol fatti (classico, conversione per-partita con soglie federazione)'),
+  "gs": zod.number().describe('Gol subiti (classico, conversione per-partita con soglie federazione)'),
+  "gd": zod.number().describe('Differenza reti (gf - gs)'),
+  "points": zod.number(),
+  "pf": zod.number().describe('Punti fantacalcio cumulati (spareggio)')
 }))
 })
 

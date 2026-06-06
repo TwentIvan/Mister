@@ -1055,10 +1055,15 @@ export interface StandingsEntry {
   wins: number;
   draws: number;
   losses: number;
-  goalsFor: number;
-  goalsAgainst: number;
-  goalDifference: number;
+  /** Gol fatti (classico, conversione per-partita con soglie federazione) */
+  gf: number;
+  /** Gol subiti (classico, conversione per-partita con soglie federazione) */
+  gs: number;
+  /** Differenza reti (gf - gs) */
+  gd: number;
   points: number;
+  /** Punti fantacalcio cumulati (spareggio) */
+  pf: number;
 }
 
 export interface StandingsResponse {

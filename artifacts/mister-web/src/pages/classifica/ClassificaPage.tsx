@@ -485,7 +485,7 @@ export default function ClassificaPage() {
                       {s.wins}·{s.draws}·{s.losses}
                     </span>
 
-                    {/* GF — punteggio fanta cumulato arrotondato (classico gol: TODO) */}
+                    {/* GF — gol fatti classico (soglie federazione, per-partita) */}
                     <span
                       style={{
                         ...monoSm,
@@ -493,12 +493,12 @@ export default function ClassificaPage() {
                         fontWeight: 500,
                       }}
                     >
-                      {Math.round(s.goalsFor)}
+                      {s.gf}
                     </span>
 
-                    {/* GS */}
+                    {/* GS — gol subiti classico */}
                     <span style={{ ...monoSm, color: "var(--muted)" }}>
-                      {Math.round(s.goalsAgainst)}
+                      {s.gs}
                     </span>
 
                     {/* Pt — punti classifica (non FM → inchiostro, non oro) */}
@@ -513,7 +513,7 @@ export default function ClassificaPage() {
                       {s.points}
                     </span>
 
-                    {/* PF — punteggio fanta (spareggio) */}
+                    {/* PF — punti fantacalcio cumulati (spareggio) */}
                     <span
                       style={{
                         ...monoSm,
@@ -522,7 +522,7 @@ export default function ClassificaPage() {
                         letterSpacing: "-.02em",
                       }}
                     >
-                      {s.goalsFor.toFixed(1)}
+                      {s.pf.toFixed(1)}
                     </span>
                   </div>
                 );
@@ -542,10 +542,8 @@ export default function ClassificaPage() {
             }}
           >
             <b style={{ color: "var(--green)" }}>Pt</b> punti classifica ·{" "}
-            <b style={{ color: "var(--green)" }}>GF/GS</b> punteggio fanta ·{" "}
-            <b style={{ color: "var(--green)" }}>PF</b> spareggio
-            <br />
-            GF/GS in gol classico: conversione soglie in sviluppo
+            <b style={{ color: "var(--green)" }}>GF/GS</b> gol classico ·{" "}
+            <b style={{ color: "var(--green)" }}>PF</b> punti fanta (spareggio)
           </p>
 
           {/* ── Bottom tab bar ── */}

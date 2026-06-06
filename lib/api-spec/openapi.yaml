@@ -2606,7 +2606,7 @@ components:
 
     StandingsEntry:
       type: object
-      required: [position, fantaTeam, playedMatches, wins, draws, losses, goalsFor, goalsAgainst, goalDifference, points]
+      required: [position, fantaTeam, playedMatches, wins, draws, losses, gf, gs, gd, points, pf]
       properties:
         position:
           type: integer
@@ -2620,14 +2620,20 @@ components:
           type: integer
         losses:
           type: integer
-        goalsFor:
-          type: number
-        goalsAgainst:
-          type: number
-        goalDifference:
-          type: number
+        gf:
+          type: integer
+          description: Gol fatti (classico, conversione per-partita con soglie federazione)
+        gs:
+          type: integer
+          description: Gol subiti (classico, conversione per-partita con soglie federazione)
+        gd:
+          type: integer
+          description: Differenza reti (gf - gs)
         points:
           type: integer
+        pf:
+          type: number
+          description: Punti fantacalcio cumulati (spareggio)
 
     StandingsResponse:
       type: object

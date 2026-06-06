@@ -2,7 +2,7 @@ import { Router, type IRouter } from "express";
 import { eq, and, isNotNull } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { db } from "@workspace/db";
-import { competitionMatches, fantaTeams, societa, competitions } from "@workspace/db";
+import { competitionMatches, fantaTeams, societa, competitions, leagues, federations } from "@workspace/db";
 import type { JerseyConfig } from "@workspace/db";
 
 const router: IRouter = Router();
@@ -123,15 +123,37 @@ router.get("/competition/:competitionId/matches", async (req, res): Promise<void
 router.get("/competition/:competitionId/standings", async (req, res): Promise<void> => {
   const { competitionId } = req.params;
 
-  const comp = await db
-    .select({ id: competitions.id })
+  // Legge competition + federation per i parametri goalThresholds
+  const compWithFed = await db
+    .select({
+      id: competitions.id,
+      fedRules: federations.rules,
+    })
     .from(competitions)
+    .innerJoin(leagues, eq(leagues.id, competitions.leagueId))
+    .innerJoin(federations, eq(federations.id, leagues.federationId))
     .where(eq(competitions.id, competitionId))
     .limit(1);
 
-  if (comp.length === 0) {
+  if (compWithFed.length === 0) {
     res.status(404).json({ error: "Competizione non trovata" });
     return;
+  }
+
+  // goalThresholds della federazione (default classico se mancanti)
+  const thresholds = compWithFed[0]!.fedRules?.goalThresholds ?? { base: 66, step: 6, maxGoals: 8 };
+
+  /**
+   * Conversione punteggio giornata → gol classico.
+   * Formula: score < base → 0; altrimenti floor((score - (base - step)) / step), cappato a maxGoals.
+   * Esempio (base=66, step=6): 65→0, 66→1, 72→2, 78→3 …
+   */
+  function scoreToGol(score: number): number {
+    if (score < thresholds.base) return 0;
+    return Math.min(
+      thresholds.maxGoals,
+      Math.floor((score - (thresholds.base - thresholds.step)) / thresholds.step),
+    );
   }
 
   const playedRows = await db
@@ -167,15 +189,19 @@ router.get("/competition/:competitionId/standings", async (req, res): Promise<vo
     wins: number;
     draws: number;
     losses: number;
-    goalsFor: number;
-    goalsAgainst: number;
+    /** Gol fatti (classico, somma per-partita convertita con soglie). */
+    gf: number;
+    /** Gol subiti (classico, somma per-partita convertita con soglie). */
+    gs: number;
+    /** Punti fantacalcio cumulati (raw score sum, usato come spareggio). */
+    pf: number;
     points: number;
   };
   const table = new Map<string, TeamRow>();
 
   const ensureTeam = (id: string, name: string | null, logoUrl: string | null, jersey: JerseyConfig | null) => {
     if (!table.has(id)) {
-      table.set(id, { name, logoUrl, jersey, playedMatches: 0, wins: 0, draws: 0, losses: 0, goalsFor: 0, goalsAgainst: 0, points: 0 });
+      table.set(id, { name, logoUrl, jersey, playedMatches: 0, wins: 0, draws: 0, losses: 0, gf: 0, gs: 0, pf: 0, points: 0 });
     }
   };
 
@@ -184,6 +210,10 @@ router.get("/competition/:competitionId/standings", async (req, res): Promise<vo
     const hs = Math.round(parseFloat(row.homeScore) * 100) / 100;
     const as_ = Math.round(parseFloat(row.awayScore) * 100) / 100;
 
+    // Conversione per-partita: punteggio → gol classico
+    const homeGol = scoreToGol(hs);
+    const awayGol = scoreToGol(as_);
+
     ensureTeam(row.homeId, row.homeName ?? null, row.homeLogoUrl, row.homeJersey);
     ensureTeam(row.awayId, row.awayName ?? null, row.awayLogoUrl, row.awayJersey);
 
@@ -191,12 +221,14 @@ router.get("/competition/:competitionId/standings", async (req, res): Promise<vo
     const away = table.get(row.awayId)!;
 
     home.playedMatches++;
-    home.goalsFor = Math.round((home.goalsFor + hs) * 100) / 100;
-    home.goalsAgainst = Math.round((home.goalsAgainst + as_) * 100) / 100;
+    home.gf += homeGol;
+    home.gs += awayGol;
+    home.pf = Math.round((home.pf + hs) * 100) / 100;
 
     away.playedMatches++;
-    away.goalsFor = Math.round((away.goalsFor + as_) * 100) / 100;
-    away.goalsAgainst = Math.round((away.goalsAgainst + hs) * 100) / 100;
+    away.gf += awayGol;
+    away.gs += homeGol;
+    away.pf = Math.round((away.pf + as_) * 100) / 100;
 
     if (hs > as_) {
       home.wins++;
@@ -216,10 +248,14 @@ router.get("/competition/:competitionId/standings", async (req, res): Promise<vo
 
   const sorted = [...table.entries()].sort(([, a], [, b]) => {
     if (b.points !== a.points) return b.points - a.points;
-    const drA = Math.round((a.goalsFor - a.goalsAgainst) * 100) / 100;
-    const drB = Math.round((b.goalsFor - b.goalsAgainst) * 100) / 100;
-    if (drB !== drA) return drB - drA;
-    if (b.goalsFor !== a.goalsFor) return b.goalsFor - a.goalsFor;
+    // Spareggio 1: differenza reti classico
+    const gdA = a.gf - a.gs;
+    const gdB = b.gf - b.gs;
+    if (gdB !== gdA) return gdB - gdA;
+    // Spareggio 2: gol fatti
+    if (b.gf !== a.gf) return b.gf - a.gf;
+    // Spareggio 3: PF (punteggio fanta cumulato)
+    if (b.pf !== a.pf) return b.pf - a.pf;
     return (a.name ?? "").localeCompare(b.name ?? "");
   });
 
@@ -230,10 +266,11 @@ router.get("/competition/:competitionId/standings", async (req, res): Promise<vo
     wins: r.wins,
     draws: r.draws,
     losses: r.losses,
-    goalsFor: Math.round(r.goalsFor * 100) / 100,
-    goalsAgainst: Math.round(r.goalsAgainst * 100) / 100,
-    goalDifference: Math.round((r.goalsFor - r.goalsAgainst) * 100) / 100,
+    gf: r.gf,
+    gs: r.gs,
+    gd: r.gf - r.gs,
     points: r.points,
+    pf: Math.round(r.pf * 100) / 100,
   }));
 
   res.json({ standings });
