@@ -48,6 +48,7 @@ function Disco({
         fontWeight: 700,
         boxShadow: "inset 0 0 0 .5px rgba(0,0,0,.25)",
         letterSpacing: ".02em",
+        textShadow: "0 1px 3px rgba(0,0,0,.75), 0 0 6px rgba(0,0,0,.5)",
       }}
     >
       {team.code.slice(0, 2)}
@@ -197,23 +198,6 @@ function CardEvento({
       >
         {event.headline}
       </h2>
-
-      {/* Body — scoreline + giornata */}
-      {event.body && (
-        <p
-          style={{
-            fontSize: 10.5,
-            color: "var(--muted)",
-            margin: "4px 0 0",
-            lineHeight: 1.4,
-            fontFamily: "var(--mono)",
-            textTransform: "uppercase",
-            letterSpacing: ".05em",
-          }}
-        >
-          {event.body}
-        </p>
-      )}
 
       {/* Scoreboard tondo per risultato (fix B) */}
       {event.type === "risultato" && <ScoreboardRisultato event={event} />}
