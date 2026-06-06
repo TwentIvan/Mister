@@ -2,7 +2,7 @@ import { Router, type IRouter } from "express";
 import { eq, and, or, inArray, sql, isNull } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { db } from "@workspace/db";
-import { fantaTeams, societa, players, contracts, teamColors, serieAFixtures, coaches } from "@workspace/db";
+import { fantaTeams, societa, players, contracts, teamColors, serieAFixtures, coaches, leagues } from "@workspace/db";
 import { computeCoachVoto } from "@workspace/scoring";
 import {
   ListFantaTeamsParams,
@@ -345,6 +345,102 @@ router.get("/coach-voto", async (req, res): Promise<void> => {
   const coachVoto = Math.round(rawVoto * 100) / 100;
   const coachDelta = Math.round((rawVoto - 6.0) * 100) / 100;
   res.json({ coachName: coach.name, coachVoto, coachDelta, goalsFor, goalsAgainst });
+});
+
+// GET /fanta-teams/:fantaTeamId/rosa — vista rosa mobile (S-rosa)
+router.get("/fanta-teams/:fantaTeamId/rosa", async (req, res): Promise<void> => {
+  const { fantaTeamId } = req.params;
+
+  const teamRows = await db
+    .select({
+      id: fantaTeams.id,
+      creditsRemaining: fantaTeams.creditsRemaining,
+      leagueId: fantaTeams.leagueId,
+      teamName: societa.name,
+      jersey: societa.jersey,
+      leagueName: leagues.name,
+    })
+    .from(fantaTeams)
+    .leftJoin(societa, eq(fantaTeams.societaId, societa.id))
+    .leftJoin(leagues, eq(fantaTeams.leagueId, leagues.id))
+    .where(eq(fantaTeams.id, fantaTeamId))
+    .limit(1);
+
+  if (!teamRows[0]) {
+    res.status(404).json({ error: "Squadra non trovata" });
+    return;
+  }
+
+  const team = teamRows[0]!;
+
+  // Prendi la stagione più recente con contratti per questa squadra
+  const seasonRows = await db
+    .selectDistinct({ season: contracts.seasonStart })
+    .from(contracts)
+    .where(eq(contracts.fantaTeamId, fantaTeamId))
+    .orderBy(contracts.seasonStart)
+    .limit(1);
+
+  const season = seasonRows[0]?.season ?? 2024;
+
+  const ROLE_MAP: Record<string, string> = {
+    GK: "P", DEF: "D", MID: "C", ATT: "A",
+    P: "P", D: "D", C: "C", A: "A",
+  };
+
+  const playerRows = await db
+    .select({
+      id: players.id,
+      name: players.name,
+      roleClassic: players.roleClassic,
+      realTeam: players.realTeam,
+      quotazione: contracts.purchasePrice,
+      purchasePriceFm: contracts.purchasePriceFm,
+    })
+    .from(contracts)
+    .innerJoin(players, eq(players.id, contracts.playerId))
+    .where(and(eq(contracts.fantaTeamId, fantaTeamId), eq(contracts.seasonStart, season)));
+
+  const mappedPlayers = playerRows.map((p) => ({
+    id: p.id,
+    name: p.name,
+    roleClassic: ROLE_MAP[p.roleClassic ?? ""] ?? "C",
+    realTeam: p.realTeam ?? "",
+    quotazione: p.quotazione ?? null,
+    purchasePriceFm: p.purchasePriceFm ?? null,
+  }));
+
+  // Ordine ruolo canonico P→D→C→A
+  const ROLE_ORDER: Record<string, number> = { P: 0, D: 1, C: 2, A: 3 };
+  mappedPlayers.sort((a, b) =>
+    (ROLE_ORDER[a.roleClassic] ?? 9) - (ROLE_ORDER[b.roleClassic] ?? 9) ||
+    a.name.localeCompare(b.name),
+  );
+
+  const totals = { P: 0, D: 0, C: 0, A: 0 };
+  for (const p of mappedPlayers) {
+    if (p.roleClassic in totals) totals[p.roleClassic as keyof typeof totals]++;
+  }
+
+  const jerseyData = team.jersey as { primaryColor?: string; secondaryColor?: string; pattern?: string } | null;
+
+  res.json({
+    fantaTeamId: team.id,
+    teamName: team.teamName ?? fantaTeamId,
+    creditsRemaining: team.creditsRemaining ?? 0,
+    jersey: jerseyData
+      ? {
+          primaryColor: jerseyData.primaryColor ?? "#1f4733",
+          secondaryColor: jerseyData.secondaryColor ?? "#efe6d3",
+          pattern: jerseyData.pattern ?? "halved",
+        }
+      : null,
+    leagueId: team.leagueId ?? "",
+    leagueName: team.leagueName ?? "",
+    players: mappedPlayers,
+    totals,
+    slotMax: { P: 3, D: 8, C: 8, A: 6 },
+  });
 });
 
 export default router;

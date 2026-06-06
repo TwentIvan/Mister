@@ -44,6 +44,7 @@ import type {
   DashboardSummary,
   FantaTeam,
   FantaTeamInput,
+  FantaTeamRosa,
   FantaTeamUpdate,
   Federation,
   FederationUpdate,
@@ -3617,6 +3618,83 @@ export const usePutLineup = <TError = ErrorType<ValidationErrors | void>,
       > => {
       return useMutation(getPutLineupMutationOptions(options));
     }
+
+export const getGetFantaTeamRosaUrl = (fantaTeamId: string,) => {
+
+
+
+
+  return `/api/fanta-teams/${fantaTeamId}/rosa`
+}
+
+/**
+ * @summary Rosa della squadra fanta raggruppata per ruolo (P/D/C/A)
+ */
+export const getFantaTeamRosa = async (fantaTeamId: string, options?: RequestInit): Promise<FantaTeamRosa> => {
+
+  return customFetch<FantaTeamRosa>(getGetFantaTeamRosaUrl(fantaTeamId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetFantaTeamRosaQueryKey = (fantaTeamId: string,) => {
+    return [
+    `/api/fanta-teams/${fantaTeamId}/rosa`
+    ] as const;
+    }
+
+
+export const getGetFantaTeamRosaQueryOptions = <TData = Awaited<ReturnType<typeof getFantaTeamRosa>>, TError = ErrorType<void>>(fantaTeamId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getFantaTeamRosa>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetFantaTeamRosaQueryKey(fantaTeamId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getFantaTeamRosa>>> = ({ signal }) => getFantaTeamRosa(fantaTeamId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(fantaTeamId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getFantaTeamRosa>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetFantaTeamRosaQueryResult = NonNullable<Awaited<ReturnType<typeof getFantaTeamRosa>>>
+export type GetFantaTeamRosaQueryError = ErrorType<void>
+
+
+/**
+ * @summary Rosa della squadra fanta raggruppata per ruolo (P/D/C/A)
+ */
+
+export function useGetFantaTeamRosa<TData = Awaited<ReturnType<typeof getFantaTeamRosa>>, TError = ErrorType<void>>(
+ fantaTeamId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getFantaTeamRosa>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetFantaTeamRosaQueryOptions(fantaTeamId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 
 export const getGetRosterUrl = (params: GetRosterParams,) => {
   const normalizedParams = new URLSearchParams();

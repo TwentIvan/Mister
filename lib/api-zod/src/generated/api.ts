@@ -1732,6 +1732,47 @@ export const PutLineupResponse = zod.object({
 
 
 /**
+ * @summary Rosa della squadra fanta raggruppata per ruolo (P/D/C/A)
+ */
+export const GetFantaTeamRosaParams = zod.object({
+  "fantaTeamId": zod.coerce.string()
+})
+
+export const GetFantaTeamRosaResponse = zod.object({
+  "fantaTeamId": zod.string(),
+  "teamName": zod.string(),
+  "creditsRemaining": zod.number(),
+  "jersey": zod.object({
+  "primaryColor": zod.string(),
+  "secondaryColor": zod.string(),
+  "pattern": zod.string()
+}).nullish(),
+  "leagueId": zod.string(),
+  "leagueName": zod.string(),
+  "players": zod.array(zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "roleClassic": zod.enum(['P', 'D', 'C', 'A']),
+  "realTeam": zod.string(),
+  "quotazione": zod.number().nullish().describe('Quotazione Serie A classica al momento dell\'acquisto'),
+  "purchasePriceFm": zod.number().nullish().describe('Prezzo d\'asta FM (null se non ancora valorizzato)')
+})),
+  "totals": zod.object({
+  "P": zod.number(),
+  "D": zod.number(),
+  "C": zod.number(),
+  "A": zod.number()
+}),
+  "slotMax": zod.object({
+  "P": zod.number(),
+  "D": zod.number(),
+  "C": zod.number(),
+  "A": zod.number()
+})
+})
+
+
+/**
  * @summary Recupera la rosa di una squadra fanta con voti di giornata
  */
 export const GetRosterQueryParams = zod.object({

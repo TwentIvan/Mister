@@ -1469,6 +1469,52 @@ export interface FeedTeamInfo {
   colorSecondary: string;
 }
 
+export type FantaTeamRosaPlayerRoleClassic = typeof FantaTeamRosaPlayerRoleClassic[keyof typeof FantaTeamRosaPlayerRoleClassic];
+
+
+export const FantaTeamRosaPlayerRoleClassic = {
+  P: 'P',
+  D: 'D',
+  C: 'C',
+  A: 'A',
+} as const;
+
+export interface FantaTeamRosaPlayer {
+  id: number;
+  name: string;
+  roleClassic: FantaTeamRosaPlayerRoleClassic;
+  realTeam: string;
+  /** Quotazione Serie A classica al momento dell'acquisto */
+  quotazione?: number | null;
+  /** Prezzo d'asta FM (null se non ancora valorizzato) */
+  purchasePriceFm?: number | null;
+}
+
+export interface FantaTeamRosaJersey {
+  primaryColor: string;
+  secondaryColor: string;
+  pattern: string;
+}
+
+export interface FantaTeamRosaTotals {
+  P: number;
+  D: number;
+  C: number;
+  A: number;
+}
+
+export interface FantaTeamRosa {
+  fantaTeamId: string;
+  teamName: string;
+  creditsRemaining: number;
+  jersey?: FantaTeamRosaJersey | null;
+  leagueId: string;
+  leagueName: string;
+  players: FantaTeamRosaPlayer[];
+  totals: FantaTeamRosaTotals;
+  slotMax: FantaTeamRosaTotals;
+}
+
 /**
  * Esito ufficiale determinato dai gol classici
  */

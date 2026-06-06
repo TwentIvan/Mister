@@ -1,0 +1,35 @@
+Prossima schermata: S-rosa (lega_rosa.html), mobile, SOLA LETTURA.
+Bersaglio visivo: design/pacchetto/lega_rosa.html. Fonti: tokens.css e componenti.py.
+
+PRIMA di costruire, verifica cosa esiste davvero nel DB e dimmelo: per una squadra fanta,
+quanti giocatori ha in rosa? Hanno ruolo (P/D/C/A), club reale, quotazione e prezzo pagato?
+(So già che purchase_price_fm nel seed è a 0.) Niente dati inventati.
+
+LAYOUT (come da mockup): rosa di UNA squadra fanta, raggruppata per ruolo nell'ordine
+P · D · C · A. In testa l'identità della squadra (disco tondo team.color + nome + budget/FM).
+Sotto, le righe-giocatore per reparto, più un riepilogo di completezza.
+
+COMPONENTI:
+- C-badge (chip-ruolo da elenco rosa, vedi lega_rosa.html / libreria_componenti.html): il
+  ruolo P/D/C/A di ogni giocatore nel registro corretto, coi token ruolo (--letP/D/C/A,
+  --rP/D/C/A…). Non inventare colori: usa componenti.py.
+- C-crest = crest BICOLORE del CLUB REALE del giocatore (split 135°, dalla mappa CLUBS in
+  componenti.py). È la prima volta che si vede coi dati veri.
+  ATTENZIONE alla distinzione che vale ovunque: il crest del giocatore (club reale) NON è il
+  disco-squadra fanta. Il disco-squadra (tondo, team.color) è l'OWNER e va SOLO in testa; ogni
+  riga-giocatore mostra il crest del suo club reale. Se il club non è tra i 14 della mappa,
+  ripiega sul disco-monogramma (loghi reali vietati).
+
+REGOLE:
+- R-oro: oro SOLO su denaro/valore → quotazione, prezzo pagato, FM liberi/budget. Nomi, ruoli
+  e club NON sono oro.
+- R-rosa: struttura 25 = 3 P · 8 D · 8 C · 6 A. Il riepilogo mostra riempiti/totali per reparto
+  e gli slot liberi.
+- R-mobile-nosquish: 390px fisso + scroll, scrollbar sub-nav nascosta. Sub-nav con "Rosa" attiva.
+
+GESTIONE GAP (come nel Feed):
+- prezzo pagato non valorizzato → mostra "—" o solo la quotazione, e segnala in nota che il
+  prezzo d'asta non è ancora popolato. Non inventarlo.
+- rosa incompleta (< 25) → mostra ciò che c'è e segnala gli slot vuoti per reparto.
+
+Route in sola lettura + RosaPage standalone (come Classifica/Feed). Quando è pronto, screenshot.

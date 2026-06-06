@@ -991,6 +991,27 @@ paths:
         "403":
           description: Lineup bloccato — deadline passata
 
+  /fanta-teams/{fantaTeamId}/rosa:
+    get:
+      operationId: getFantaTeamRosa
+      tags: [fanta-teams]
+      summary: Rosa della squadra fanta raggruppata per ruolo (P/D/C/A)
+      parameters:
+        - in: path
+          name: fantaTeamId
+          schema:
+            type: string
+          required: true
+      responses:
+        "200":
+          description: Rosa della squadra con metadati di budget e struttura
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FantaTeamRosa"
+        "404":
+          description: Squadra non trovata
+
   /roster:
     get:
       operationId: getRoster
@@ -3214,6 +3235,78 @@ components:
           type: string
         colorSecondary:
           type: string
+
+    FantaTeamRosaPlayer:
+      type: object
+      required: [id, name, roleClassic, realTeam]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        roleClassic:
+          type: string
+          enum: [P, D, C, A]
+        realTeam:
+          type: string
+        quotazione:
+          type: integer
+          nullable: true
+          description: Quotazione Serie A classica al momento dell'acquisto
+        purchasePriceFm:
+          type: integer
+          nullable: true
+          description: Prezzo d'asta FM (null se non ancora valorizzato)
+
+    FantaTeamRosaJersey:
+      type: object
+      required: [primaryColor, secondaryColor, pattern]
+      properties:
+        primaryColor:
+          type: string
+        secondaryColor:
+          type: string
+        pattern:
+          type: string
+
+    FantaTeamRosaTotals:
+      type: object
+      required: [P, D, C, A]
+      properties:
+        P:
+          type: integer
+        D:
+          type: integer
+        C:
+          type: integer
+        A:
+          type: integer
+
+    FantaTeamRosa:
+      type: object
+      required: [fantaTeamId, teamName, creditsRemaining, leagueId, leagueName, players, totals, slotMax]
+      properties:
+        fantaTeamId:
+          type: string
+        teamName:
+          type: string
+        creditsRemaining:
+          type: integer
+        jersey:
+          $ref: "#/components/schemas/FantaTeamRosaJersey"
+          nullable: true
+        leagueId:
+          type: string
+        leagueName:
+          type: string
+        players:
+          type: array
+          items:
+            $ref: "#/components/schemas/FantaTeamRosaPlayer"
+        totals:
+          $ref: "#/components/schemas/FantaTeamRosaTotals"
+        slotMax:
+          $ref: "#/components/schemas/FantaTeamRosaTotals"
 
     FeedMatchData:
       type: object
