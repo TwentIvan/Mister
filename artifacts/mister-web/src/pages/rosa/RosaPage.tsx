@@ -350,6 +350,7 @@ export default function RosaPage() {
       <div
         style={{
           width: 390,
+          height: 780,
           maxWidth: "100%",
           background: "var(--cream)",
           border: "9px solid #2a2a2a",
@@ -357,6 +358,8 @@ export default function RosaPage() {
           overflow: "hidden",
           boxShadow: "0 18px 50px rgba(0,0,0,.25)",
           position: "relative",
+          display: "flex",
+          flexDirection: "column",
         }}
       >
         {/* ── Top bar ── */}
@@ -543,9 +546,9 @@ export default function RosaPage() {
         {/* ── Body — gruppi per reparto ── */}
         <div
           style={{
+            flex: 1,
             padding: "2px 14px 90px",
             overflowY: "auto",
-            maxHeight: "calc(780px - 200px)",
           }}
         >
           {isLoading && (
