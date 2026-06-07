@@ -1,33 +1,7 @@
 import { useParams, useSearch } from "wouter";
 import { useGetPlayerScheda } from "@workspace/api-client-react";
 import type { PlayerSchedaGiornata } from "@workspace/api-client-react";
-
-// ─── Mappa colori club bicolore (fonte unica: componenti.py) ──────────────────
-
-const CLUBS: Record<string, [string, string]> = {
-  "Inter":       ["#0a0f1a", "#0a63b0"],
-  "Milan":       ["#c8102e", "#0a0a0a"],
-  "Juventus":    ["#0a0a0a", "#ededed"],
-  "Napoli":      ["#1278c8", "#0c2340"],
-  "Roma":        ["#7e1626", "#dca93a"],
-  "Lazio":       ["#5aa6d8", "#f2f2f2"],
-  "Atalanta":    ["#1a3a6b", "#0c0c0c"],
-  "Lecce":       ["#e6b800", "#b81e2c"],
-  "Cagliari":    ["#9b1b30", "#16224a"],
-  "Como":        ["#1f5fae", "#f2f2f2"],
-  "Fiorentina":  ["#5a2d82", "#f2f2f2"],
-  "Torino":      ["#6e1f2b", "#3a0f16"],
-  "Genoa":       ["#b81e2c", "#0a2342"],
-  "Bologna":     ["#9b1b30", "#16224a"],
-};
-
-function normalizeClub(name: string): string {
-  return name.replace(/^AC\s+/i, "").replace(/^AS\s+/i, "").replace(/^FC\s+/i, "").trim();
-}
-
-function clubColors(realTeam: string): [string, string] {
-  return CLUBS[normalizeClub(realTeam)] ?? ["#6a6a6a", "#9a9a9a"];
-}
+import { CrestClub } from "../../components/CrestClub";
 
 // ─── Colori per ruolo ─────────────────────────────────────────────────────────
 
@@ -80,38 +54,6 @@ function Silhouette({ size }: { size: number }) {
   );
 }
 
-// ─── C-crest bicolore (hero, grande) ─────────────────────────────────────────
-
-function CrestHero({ realTeam }: { realTeam: string }) {
-  const normalized = normalizeClub(realTeam);
-  const known = normalized in CLUBS;
-  const [a, b] = clubColors(realTeam);
-  return (
-    <span
-      style={{
-        position: "absolute",
-        right: -4,
-        bottom: -2,
-        width: 26,
-        height: 29,
-        borderRadius: "5px 5px 9px 9px",
-        background: `linear-gradient(135deg, ${a} 0 49%, ${b} 51% 100%)`,
-        boxShadow: "0 1px 4px rgba(0,0,0,.4), inset 0 0 0 .6px rgba(255,255,255,.25)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-      }}
-    >
-      {known ? (
-        <span style={{ width: 10, height: 10, borderRadius: "50%", background: "rgba(255,255,255,.92)", display: "block" }} />
-      ) : (
-        <span style={{ fontSize: 6, fontFamily: "var(--mono)", fontWeight: 700, color: "#fff", lineHeight: 1 }}>
-          {normalized.slice(0, 2).toUpperCase()}
-        </span>
-      )}
-    </span>
-  );
-}
 
 // ─── Disco-squadra fanta (proprietario) ──────────────────────────────────────
 
@@ -363,7 +305,18 @@ export default function SchedaPage() {
                     <Silhouette size={66} />
                   </div>
                 </div>
-                <CrestHero realTeam={data.realTeam} />
+                <CrestClub
+                  realTeam={data.realTeam}
+                  size={26}
+                  borderRadius="50%"
+                  style={{
+                    position: "absolute",
+                    right: -4,
+                    bottom: -2,
+                    border: "2px solid rgba(255,255,255,0.75)",
+                    boxShadow: "0 1px 4px rgba(0,0,0,.35)",
+                  }}
+                />
               </div>
 
               {/* Nome e ruolo */}

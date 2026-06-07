@@ -1,40 +1,7 @@
 import { useParams } from "wouter";
 import { useGetFantaTeamRosa } from "@workspace/api-client-react";
 import type { FantaTeamRosaPlayer } from "@workspace/api-client-react";
-
-// ─── Mappa colori club bicolore (da componenti.py — fonte unica) ─────────────
-
-const CLUBS: Record<string, [string, string]> = {
-  "Inter":       ["#0a0f1a", "#0a63b0"],
-  "Milan":       ["#c8102e", "#0a0a0a"],
-  "Juventus":    ["#0a0a0a", "#ededed"],
-  "Napoli":      ["#1278c8", "#0c2340"],
-  "Roma":        ["#7e1626", "#dca93a"],
-  "Lazio":       ["#5aa6d8", "#f2f2f2"],
-  "Atalanta":    ["#1a3a6b", "#0c0c0c"],
-  "Lecce":       ["#e6b800", "#b81e2c"],
-  "Cagliari":    ["#9b1b30", "#16224a"],
-  "Como":        ["#1f5fae", "#f2f2f2"],
-  "Fiorentina":  ["#5a2d82", "#f2f2f2"],
-  "Torino":      ["#6e1f2b", "#3a0f16"],
-  "Genoa":       ["#b81e2c", "#0a2342"],
-  "Bologna":     ["#9b1b30", "#16224a"],
-};
-
-// Normalizzazione: "AC Milan" → "Milan", "AS Roma" → "Roma"
-function normalizeClub(name: string): string {
-  return name.replace(/^AC\s+/i, "").replace(/^AS\s+/i, "").replace(/^FC\s+/i, "").trim();
-}
-
-function clubColors(realTeam: string): [string, string] {
-  const normalized = normalizeClub(realTeam);
-  return CLUBS[normalized] ?? ["#6a6a6a", "#9a9a9a"];
-}
-
-function clubGrad(realTeam: string): string {
-  const [a, b] = clubColors(realTeam);
-  return `linear-gradient(135deg, ${a} 0 49%, ${b} 51% 100%)`;
-}
+import { CrestClub } from "../../components/CrestClub";
 
 // ─── Colori per ruolo ──────────────────────────────────────────────────────
 
@@ -46,57 +13,6 @@ const ROLE_STYLE: Record<string, { bg: string; dot: string; label: string }> = {
 };
 
 const SLOT_MAX: Record<string, number> = { P: 3, D: 8, C: 8, A: 6 };
-
-// ─── C-crest (crest bicolore del club reale) ─────────────────────────────────
-// DISTINTO dal disco-squadra fanta (che va solo in testa).
-
-function Crest({ realTeam }: { realTeam: string }) {
-  const normalized = normalizeClub(realTeam);
-  const known = normalized in CLUBS;
-  const [a, b] = clubColors(realTeam);
-
-  return (
-    <span
-      style={{
-        width: 17,
-        height: 19,
-        borderRadius: 3,
-        flexShrink: 0,
-        background: `linear-gradient(135deg, ${a} 0 49%, ${b} 51% 100%)`,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        boxShadow: "inset 0 0 0 .5px rgba(0,0,0,.3)",
-      }}
-    >
-      {!known && (
-        <span
-          style={{
-            fontSize: 6,
-            fontFamily: "var(--mono)",
-            fontWeight: 700,
-            color: "#fff",
-            textShadow: "0 1px 2px rgba(0,0,0,.8)",
-            lineHeight: 1,
-          }}
-        >
-          {normalized.slice(0, 2).toUpperCase()}
-        </span>
-      )}
-      {known && (
-        <span
-          style={{
-            width: 7,
-            height: 7,
-            borderRadius: "50%",
-            background: "rgba(255,255,255,.9)",
-            display: "block",
-          }}
-        />
-      )}
-    </span>
-  );
-}
 
 // ─── Silhouette volto (segnaposto — no avatar reali) ──────────────────────────
 
@@ -144,7 +60,7 @@ function BadgeGiocatore({ player }: { player: FantaTeamRosaPlayer }) {
         boxShadow: "inset 0 0 0 1px rgba(0,0,0,.08)",
       }}
     >
-      <Crest realTeam={player.realTeam} />
+      <CrestClub realTeam={player.realTeam} size={20} borderRadius={3} />
       <span
         style={{
           flex: 1,

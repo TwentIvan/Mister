@@ -42,7 +42,7 @@ Valori esatti in `tokens.css`. Qui significato e ID.
 - **T-live** `--live` — in diretta; "scende" in classifica; timer.
 - **T-neutri** `--muted/--line` — testo secondario, bordi.
 - **T-ruolo** — tre registri dello stesso ruolo P/D/C/A: riga su scuro `--rP/rD/rC/rA` (ocra·verde·teal·mattone) · anello chip su erba `--ringP..A` · lettera su carta `--letP..A`.
-- **T-club** — mappa colori club bicolore (coda di `tokens.css`). Colori reali OK, **loghi reali NO** → disco/roundel monogramma. Crest split 135°, barra split 90°.
+- **T-club** — mappa `realTeam → API-Football team ID` (20 club Serie A). **Loghi reali SÌ**: `https://media.api-sports.io/football/teams/{id}.png`, in contenitore neutro crema (`#f2ead8`, bordo `#d0c5ae`), dimensione uniforme. Fallback: monogramma su fondo crema quando l'immagine non è disponibile. **Non** più disco bicolore. Barra split 90° (feed/classifica) rimane per le squadre **fanta** (Disco-Squadra), non per i club reali.
 - **T-font** `--disp` Fraunces (titoli, cognomi, numeri-valore, cerimonie) · `--mono` JetBrains Mono (corpo, dati, etichette).
 - **T-phone** `--phone-w` (390px) + regola no-squish (vedi R-mobile-nosquish) — cornice telefono.
 
@@ -100,8 +100,8 @@ DNA: **anello colore-ruolo** + **volto toy** (immagine scaricata e "toyzzata", s
 *Regola pillola*: sta **fuori** dal cerchio del volto (l'avatar ha `overflow:hidden`); è figlia del chip, sovrapposta — mai figlia dell'avatar.
 Tier: Hero/scheda · Roster (riga) · Tabellone (compatto: colore-ruolo+crest+cognome+**prezzo oro**, senza volto) · Formazione (chip) · Partita (chip+voto) · Medaglione (scheda).
 
-### C-crest — Crest bicolore
-Disco split diagonale coi colori reali del club; monogramma per le squadre fanta. Logo reale = segnaposto.
+### C-crest — Crest club reale
+Logo reale del club (API-Football CDN: `https://media.api-sports.io/football/teams/{id}.png`), in contenitore neutro crema (`#f2ead8`, bordo `#d0c5ae`), dimensione uniforme per schermata. Dimensione piccola (20 px rosa-riga, 26 px scheda-hero), non invade la palette editoriale. Fallback: monogramma su fondo crema quando il logo non è disponibile o il club non è mappato. **Non** è il Disco-Squadra: il Disco-Squadra fanta (monogramma + team.color) rimane invariato per owner/competizione.
 
 ### C-area-tecnica — Area tecnica
 Rettangolo **tratteggiato** sul verde, interno trasparente, nel **margine erboso sinistro** ("campo per destinazione"), **appena fuori dalla linea laterale**, **in basso nella propria metà**. Contiene volto allenatore (**toy**) + nome (+ modulo nel desktop). Nella partita: due, una per metà.
