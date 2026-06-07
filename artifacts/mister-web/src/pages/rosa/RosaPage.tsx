@@ -60,7 +60,7 @@ function BadgeGiocatore({ player }: { player: FantaTeamRosaPlayer }) {
         boxShadow: "inset 0 0 0 1px rgba(0,0,0,.08)",
       }}
     >
-      <CrestClub realTeam={player.realTeam} size={20} borderRadius={3} />
+      <CrestClub realTeam={player.realTeam} size={20} borderRadius="50%" />
       <span
         style={{
           flex: 1,
