@@ -172,7 +172,7 @@ function Sparkline({ giornate }: { giornate: PlayerSchedaGiornata[] }) {
           strokeWidth={1.6}
           strokeLinejoin="round"
         />
-        <circle cx={lastX} cy={lastY} r={3} fill="#c8922b" />
+        <circle cx={lastX} cy={lastY} r={3} fill="var(--green)" />
       </svg>
     </div>
   );
@@ -502,12 +502,11 @@ export default function SchedaPage() {
                           style={{
                             fontFamily: "var(--disp)",
                             fontWeight: 600,
-                            fontSize: 11,
+                            fontSize: 10,
                             color: "var(--green)",
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                            whiteSpace: "nowrap",
-                            maxWidth: 60,
+                            lineHeight: 1.2,
+                            wordBreak: "break-word",
+                            textAlign: "left",
                           }}
                         >
                           {data.ligaContext.fantaTeamName}

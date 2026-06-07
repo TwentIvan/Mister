@@ -121,6 +121,7 @@ router.get("/players/:playerId/scheda", async (req, res): Promise<void> => {
         societaName: societa.name,
         jerseyPrimary: societa.jersey,
         leagueName: leaguesTable.name,
+        leagueId: leaguesTable.id,
       })
       .from(contractsTable)
       .innerJoin(fantaTeamsTable, eq(fantaTeamsTable.id, contractsTable.fantaTeamId))
@@ -136,6 +137,7 @@ router.get("/players/:playerId/scheda", async (req, res): Promise<void> => {
       ligaContext = {
         fantaTeamId: ctxRow.fantaTeamId,
         fantaTeamName: ctxRow.societaName ?? ctxRow.fantaTeamId,
+        leagueId: ctxRow.leagueId,
         leagueName: ctxRow.leagueName,
         jerseyPrimary: jersey?.primaryColor ?? null,
         jerseySecondary: jersey?.secondaryColor ?? null,
@@ -207,22 +209,31 @@ router.get("/players/:playerId/scheda", async (req, res): Promise<void> => {
     statsAggregate = { parate, golSubiti, gol, assist, gialli, rossi };
   }
 
-  // 4. Storico acquisti in lega (auction_assignments)
-  const storicoRows = await db
-    .select({
-      finalPriceFm: auctionAssignments.finalPriceFm,
-      assignedAt: auctionAssignments.assignedAt,
-      auctionId: auctionAssignments.auctionId,
-    })
-    .from(auctionAssignments)
-    .where(eq(auctionAssignments.playerId, playerId))
-    .orderBy(desc(auctionAssignments.assignedAt));
+  // 4. Storico acquisti in lega (scoped alla lega corrente via auction_assignments → auctions)
+  let storicoLega: Array<{ evento: string; prezzoFm: number | null; data: string }> = [];
+  if (ligaContext) {
+    const currentLeagueId = ligaContext.leagueId;
+    if (currentLeagueId) {
+      const storicoRows = await db
+        .select({
+          finalPriceFm: auctionAssignments.finalPriceFm,
+          assignedAt: auctionAssignments.assignedAt,
+        })
+        .from(auctionAssignments)
+        .innerJoin(auctions, eq(auctions.id, auctionAssignments.auctionId))
+        .where(and(
+          eq(auctionAssignments.playerId, playerId),
+          eq(auctions.leagueId, currentLeagueId),
+        ))
+        .orderBy(desc(auctionAssignments.assignedAt));
 
-  const storicoLega = storicoRows.map((r) => ({
-    evento: "Asta",
-    prezzoFm: r.finalPriceFm,
-    data: r.assignedAt.toISOString(),
-  }));
+      storicoLega = storicoRows.map((r) => ({
+        evento: "Asta",
+        prezzoFm: r.finalPriceFm,
+        data: r.assignedAt.toISOString(),
+      }));
+    }
+  }
 
   // 5. Note dataset
   const noteDataset =
