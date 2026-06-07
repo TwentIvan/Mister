@@ -1732,6 +1732,73 @@ export const PutLineupResponse = zod.object({
 
 
 /**
+ * @summary Scheda aggregata giocatore (anagrafica + contesto lega + rendimento + stats)
+ */
+export const GetPlayerSchedaParams = zod.object({
+  "playerId": zod.coerce.number()
+})
+
+export const GetPlayerSchedaQueryParams = zod.object({
+  "fantaTeamId": zod.coerce.string().optional()
+})
+
+export const GetPlayerSchedaResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "fullName": zod.string(),
+  "roleClassic": zod.string(),
+  "roleDisplay": zod.string(),
+  "realTeam": zod.string(),
+  "nationality": zod.string().nullish(),
+  "age": zod.number().nullish(),
+  "heightCm": zod.number().nullish(),
+  "weightKg": zod.number().nullish(),
+  "foot": zod.string().nullish(),
+  "injured": zod.boolean(),
+  "photoUrl": zod.string().nullish(),
+  "photoCartoonUrl": zod.string().nullish(),
+  "ligaContext": zod.object({
+  "fantaTeamId": zod.string(),
+  "fantaTeamName": zod.string(),
+  "leagueName": zod.string(),
+  "jerseyPrimary": zod.string().nullish(),
+  "jerseySecondary": zod.string().nullish(),
+  "purchasePrice": zod.number().nullish(),
+  "purchasePriceFm": zod.number().nullish(),
+  "currentValue": zod.number().nullish(),
+  "season": zod.number()
+}).nullish(),
+  "rendimento": zod.object({
+  "presenze": zod.number(),
+  "titolare": zod.number(),
+  "subentrato": zod.number(),
+  "fantamedia": zod.number().nullish(),
+  "mediaVoto": zod.number().nullish(),
+  "minuti": zod.number(),
+  "ultimeGiornate": zod.array(zod.object({
+  "round": zod.number(),
+  "votoMister": zod.number().nullish(),
+  "ratingApi": zod.number().nullish()
+}))
+}).nullish(),
+  "statsAggregate": zod.object({
+  "parate": zod.number().nullish(),
+  "golSubiti": zod.number().nullish(),
+  "gol": zod.number().nullish(),
+  "assist": zod.number().nullish(),
+  "gialli": zod.number().nullish(),
+  "rossi": zod.number().nullish()
+}).nullish(),
+  "storicoLega": zod.array(zod.object({
+  "evento": zod.string(),
+  "prezzoFm": zod.number().nullish(),
+  "data": zod.string()
+})),
+  "noteDataset": zod.string().nullish()
+})
+
+
+/**
  * @summary Rosa della squadra fanta raggruppata per ruolo (P/D/C/A)
  */
 export const GetFantaTeamRosaParams = zod.object({

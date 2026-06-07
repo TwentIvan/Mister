@@ -991,6 +991,32 @@ paths:
         "403":
           description: Lineup bloccato — deadline passata
 
+  /players/{playerId}/scheda:
+    get:
+      operationId: getPlayerScheda
+      tags: [players]
+      summary: Scheda aggregata giocatore (anagrafica + contesto lega + rendimento + stats)
+      parameters:
+        - in: path
+          name: playerId
+          required: true
+          schema:
+            type: integer
+        - in: query
+          name: fantaTeamId
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Scheda giocatore aggregata
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlayerScheda"
+        "404":
+          description: Giocatore non trovato
+
   /fanta-teams/{fantaTeamId}/rosa:
     get:
       operationId: getFantaTeamRosa
@@ -3373,4 +3399,158 @@ components:
           nullable: true
         hasMore:
           type: boolean
+
+    PlayerSchedaLigaContext:
+      type: object
+      required: [fantaTeamId, fantaTeamName, leagueName, season]
+      properties:
+        fantaTeamId:
+          type: string
+        fantaTeamName:
+          type: string
+        leagueName:
+          type: string
+        jerseyPrimary:
+          type: string
+          nullable: true
+        jerseySecondary:
+          type: string
+          nullable: true
+        purchasePrice:
+          type: integer
+          nullable: true
+        purchasePriceFm:
+          type: integer
+          nullable: true
+        currentValue:
+          type: number
+          nullable: true
+        season:
+          type: integer
+
+    PlayerSchedaGiornata:
+      type: object
+      required: [round]
+      properties:
+        round:
+          type: integer
+        votoMister:
+          type: number
+          nullable: true
+        ratingApi:
+          type: number
+          nullable: true
+
+    PlayerSchedaRendimento:
+      type: object
+      required: [presenze, titolare, subentrato, minuti, ultimeGiornate]
+      properties:
+        presenze:
+          type: integer
+        titolare:
+          type: integer
+        subentrato:
+          type: integer
+        fantamedia:
+          type: number
+          nullable: true
+        mediaVoto:
+          type: number
+          nullable: true
+        minuti:
+          type: integer
+        ultimeGiornate:
+          type: array
+          items:
+            $ref: "#/components/schemas/PlayerSchedaGiornata"
+
+    PlayerSchedaStats:
+      type: object
+      properties:
+        parate:
+          type: integer
+          nullable: true
+        golSubiti:
+          type: integer
+          nullable: true
+        gol:
+          type: integer
+          nullable: true
+        assist:
+          type: integer
+          nullable: true
+        gialli:
+          type: integer
+          nullable: true
+        rossi:
+          type: integer
+          nullable: true
+
+    PlayerSchedaStorico:
+      type: object
+      required: [evento, data]
+      properties:
+        evento:
+          type: string
+        prezzoFm:
+          type: integer
+          nullable: true
+        data:
+          type: string
+
+    PlayerScheda:
+      type: object
+      required: [id, name, fullName, roleClassic, roleDisplay, realTeam, injured, storicoLega]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        fullName:
+          type: string
+        roleClassic:
+          type: string
+        roleDisplay:
+          type: string
+        realTeam:
+          type: string
+        nationality:
+          type: string
+          nullable: true
+        age:
+          type: integer
+          nullable: true
+        heightCm:
+          type: integer
+          nullable: true
+        weightKg:
+          type: integer
+          nullable: true
+        foot:
+          type: string
+          nullable: true
+        injured:
+          type: boolean
+        photoUrl:
+          type: string
+          nullable: true
+        photoCartoonUrl:
+          type: string
+          nullable: true
+        ligaContext:
+          $ref: "#/components/schemas/PlayerSchedaLigaContext"
+          nullable: true
+        rendimento:
+          $ref: "#/components/schemas/PlayerSchedaRendimento"
+          nullable: true
+        statsAggregate:
+          $ref: "#/components/schemas/PlayerSchedaStats"
+          nullable: true
+        storicoLega:
+          type: array
+          items:
+            $ref: "#/components/schemas/PlayerSchedaStorico"
+        noteDataset:
+          type: string
+          nullable: true
 

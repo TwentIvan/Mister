@@ -22,6 +22,7 @@ import BrandPage from "@/pages/brand";
 import ClassificaPage from "@/pages/classifica/ClassificaPage";
 import FeedPage from "@/pages/feed/FeedPage";
 import RosaPage from "@/pages/rosa/RosaPage";
+import SchedaPage from "@/pages/scheda/SchedaPage";
 import { Switch, Route, Router as WouterRouter } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -52,6 +53,9 @@ function Router() {
 
       {/* ── Rosa mobile (S-rosa, design spec) ─────────────────── */}
       <Route path="/rosa/:fantaTeamId" component={RosaPage} />
+
+      {/* ── Scheda giocatore mobile (S-scheda, design spec) ───── */}
+      <Route path="/scheda/:playerId" component={SchedaPage} />
 
       {/* ── Invito lega — accessibile senza autenticazione ──── */}
       <Route path="/join/:leagueId/:code" component={JoinLegaPage} />

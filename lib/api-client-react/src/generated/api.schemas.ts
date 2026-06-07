@@ -1572,6 +1572,71 @@ export interface FeedResponse {
   hasMore: boolean;
 }
 
+export interface PlayerSchedaLigaContext {
+  fantaTeamId: string;
+  fantaTeamName: string;
+  leagueName: string;
+  jerseyPrimary?: string | null;
+  jerseySecondary?: string | null;
+  purchasePrice?: number | null;
+  purchasePriceFm?: number | null;
+  currentValue?: number | null;
+  season: number;
+}
+
+export interface PlayerSchedaGiornata {
+  round: number;
+  votoMister?: number | null;
+  ratingApi?: number | null;
+}
+
+export interface PlayerSchedaRendimento {
+  presenze: number;
+  titolare: number;
+  subentrato: number;
+  fantamedia?: number | null;
+  mediaVoto?: number | null;
+  minuti: number;
+  ultimeGiornate: PlayerSchedaGiornata[];
+}
+
+export interface PlayerSchedaStats {
+  parate?: number | null;
+  golSubiti?: number | null;
+  gol?: number | null;
+  assist?: number | null;
+  gialli?: number | null;
+  rossi?: number | null;
+}
+
+export interface PlayerSchedaStorico {
+  evento: string;
+  prezzoFm?: number | null;
+  data: string;
+}
+
+export interface PlayerScheda {
+  id: number;
+  name: string;
+  fullName: string;
+  roleClassic: string;
+  roleDisplay: string;
+  realTeam: string;
+  nationality?: string | null;
+  age?: number | null;
+  heightCm?: number | null;
+  weightKg?: number | null;
+  foot?: string | null;
+  injured: boolean;
+  photoUrl?: string | null;
+  photoCartoonUrl?: string | null;
+  ligaContext?: PlayerSchedaLigaContext | null;
+  rendimento?: PlayerSchedaRendimento | null;
+  statsAggregate?: PlayerSchedaStats | null;
+  storicoLega: PlayerSchedaStorico[];
+  noteDataset?: string | null;
+}
+
 export type GetFeedParams = {
 /**
  * Filtra per lega specifica
@@ -1637,6 +1702,10 @@ export type GetLineupsParams = {
 fantaTeamId: string;
 season: number;
 round: number;
+};
+
+export type GetPlayerSchedaParams = {
+fantaTeamId?: string;
 };
 
 export type GetRosterParams = {

@@ -1,0 +1,33 @@
+Prossima e ultima schermata di lettura: S-scheda (scheda_giocatore.html), mobile, SOLA LETTURA.
+Bersaglio visivo: design/pacchetto/scheda_giocatore.html. Fonti: tokens.css e componenti.py.
+
+PRIMA di costruire, verifica cosa esiste davvero per UN giocatore reale (es. uno della rosa di
+ft-mvp-1, tipo A. Meret) e dimmelo: anagrafica (nome, ruolo, club reale)? statistiche reali da
+API-Football (gol/assist/presenze…)? rendimento fanta (voti/fantavoti per giornata, fantamedia,
+presenze)? contesto di lega (quotazione = current_value, prezzo pagato = purchase_price,
+proprietario)? Sai già che current_value è NULL e che le stat API potrebbero non essere
+sincronizzate. Niente dati inventati: dove manca → "—" + nota.
+
+NATURA: è la schermata che AGGREGA gli strati. Non calcola e non duplica — LEGGE l'anagrafica e
+le statistiche dal sistema (API-Football) e il contesto dal livello lega (quotazione, pagato,
+proprietario). Ogni valore arriva dallo strato che lo possiede.
+
+LAYOUT (come da mockup):
+- In testa, identità del giocatore: badge grande (C-badge tier hero) con nome, ruolo (P/D/C/A nel
+  registro corretto) e C-crest del CLUB REALE (bicolore, o monogramma se fuori mappa). NON il
+  disco-squadra fanta.
+- Contesto-lega: proprietario (squadra fanta che lo possiede), quotazione, prezzo pagato.
+- Rendimento fanta: fantamedia, presenze, ultime giornate (voti/fantavoti).
+- Statistiche reali PER RUOLO: cambiano col ruolo (un P mostra cose diverse da un A).
+- Storico: stagioni / storico in lega, se disponibile.
+
+REGOLE:
+- R-oro: oro SOLO su denaro/valore → quotazione e prezzo pagato. Voti, fantamedia, presenze,
+  gol/assist NON sono oro (sono prestazione, non denaro).
+- R-mobile-nosquish: 390px fisso + scroll, e la pagina RIEMPIE l'altezza (niente box corti con
+  vuoto sotto, come abbiamo appena sistemato nella Rosa).
+
+GESTIONE GAP (come Rosa/Feed): dato mancante → "—" + nota; non inventare. Se le stat API non sono
+sincronizzate, mostra comunque la sezione con "—" e segnalalo, non nasconderla.
+
+Route in sola lettura + SchedaPage standalone (come le altre). Quando è pronto, screenshot.

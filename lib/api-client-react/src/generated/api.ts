@@ -55,6 +55,7 @@ import type {
   GetFeedParams,
   GetLineupsParams,
   GetMatchesParams,
+  GetPlayerSchedaParams,
   GetRosterParams,
   HealthStatus,
   JoinLeagueRequest,
@@ -84,6 +85,7 @@ import type {
   MatchInfo,
   Player,
   PlayerList,
+  PlayerScheda,
   RecalculateVotoMisterParams,
   RosterPlayer,
   StandingsResponse,
@@ -3618,6 +3620,95 @@ export const usePutLineup = <TError = ErrorType<ValidationErrors | void>,
       > => {
       return useMutation(getPutLineupMutationOptions(options));
     }
+
+export const getGetPlayerSchedaUrl = (playerId: number,
+    params?: GetPlayerSchedaParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/players/${playerId}/scheda?${stringifiedParams}` : `/api/players/${playerId}/scheda`
+}
+
+/**
+ * @summary Scheda aggregata giocatore (anagrafica + contesto lega + rendimento + stats)
+ */
+export const getPlayerScheda = async (playerId: number,
+    params?: GetPlayerSchedaParams, options?: RequestInit): Promise<PlayerScheda> => {
+
+  return customFetch<PlayerScheda>(getGetPlayerSchedaUrl(playerId,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetPlayerSchedaQueryKey = (playerId: number,
+    params?: GetPlayerSchedaParams,) => {
+    return [
+    `/api/players/${playerId}/scheda`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetPlayerSchedaQueryOptions = <TData = Awaited<ReturnType<typeof getPlayerScheda>>, TError = ErrorType<void>>(playerId: number,
+    params?: GetPlayerSchedaParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPlayerScheda>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPlayerSchedaQueryKey(playerId,params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPlayerScheda>>> = ({ signal }) => getPlayerScheda(playerId,params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(playerId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPlayerScheda>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetPlayerSchedaQueryResult = NonNullable<Awaited<ReturnType<typeof getPlayerScheda>>>
+export type GetPlayerSchedaQueryError = ErrorType<void>
+
+
+/**
+ * @summary Scheda aggregata giocatore (anagrafica + contesto lega + rendimento + stats)
+ */
+
+export function useGetPlayerScheda<TData = Awaited<ReturnType<typeof getPlayerScheda>>, TError = ErrorType<void>>(
+ playerId: number,
+    params?: GetPlayerSchedaParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPlayerScheda>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetPlayerSchedaQueryOptions(playerId,params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 
 export const getGetFantaTeamRosaUrl = (fantaTeamId: string,) => {
 
