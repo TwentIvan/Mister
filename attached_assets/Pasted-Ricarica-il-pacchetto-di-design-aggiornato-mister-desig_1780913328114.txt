@@ -1,0 +1,43 @@
+Ricarica il pacchetto di design aggiornato (mister_design_pacchetto.zip) e rileggi:
+§5 (competizione = sequenza di fasi), §7 (schermate nuove: S-hub, S-bracket-d/m, S-gironi,
+S-caduta, S-classifica-d, wizard), §8 (R-fasi, R-classifica-adattiva, R-icona-tipo) e il §12.
+
+Prossimo lavoro: TELAIO COMPETIZIONI — passo 1 (backend a fasi + hub). Procedi in due tempi
+e fermati allo screenshot finale.
+
+A) BACKEND — competizione come SEQUENZA DI FASI (R-fasi, §5). NON hardcodare i formati:
+   una competizione ha una lista ordinata di fasi; ogni fase è (misura × struttura) +
+   una qualificazione se non è l'ultima.
+   - Misura: scontro_diretto | punteggio_assoluto | posizione. Struttura: classifica
+     (param n_gironi) | tabellone (gambe, spareggio) | caduta (quanti_escono).
+   - Tieni il campionato esistente (= 1 fase: classifica · scontro_diretto vs uno).
+   - SEMINA una COPPA per la lega MVP, in stato "programmata" (i dati Serie A coprono solo
+     2 giornate → la coppa non è ancora giocata, NON inventare risultati):
+       Fase 1 = gironi: 2 gironi da 4 (le 8 società seed), struttura classifica n_gironi=2,
+                misura scontro_diretto vs tutti nel girone; qualificazione: prime 2 di ogni
+                girone (4 totali).
+       Fase 2 = tabellone: semifinali → finale, gambe=secca, spareggio=R-spareggio;
+                seeding incrociato 1°A-2°B, 1°B-2°A.
+   - Endpoint (read): lista competizioni della lega (con tipo dedotto dalla struttura, stato,
+     fase corrente); per competizione le sue fasi (tipo, stato, qualificazione). La classifica
+     del campionato già esiste (competition-result.ts, sorgente unica): riusala, non duplicare.
+   - Verifica con curl: lista competizioni della lega MVP = 2 (Campionato in_corso,
+     Coppa programmata) + le fasi della coppa con la qualificazione. Riporta l'output.
+
+B) HUB — S-hub (lega_hub.html), mobile, SOLA LETTURA. Bersaglio visivo: lega_hub.html.
+   - Identità lega (disco team.color + nome + n. squadre + stagione) e GIORNATA corrente
+     condivisa in alto. Una CARD PER COMPETIZIONE, in pila:
+       Campionato (in corso) → estratto classifica reale (capolista + la tua riga con punti
+         reali), prossima sfida, porta "Classifica completa →".
+       Coppa (programmata) → GUIDA A FASI (C-guida-fasi): nodi Gironi → Tabellone con la
+         regola sul connettore ("prime 2 di ogni girone → 4"); stato "programmata, non ancora
+         iniziata" (niente risultati). Porta "Vai al tabellone →" (per ora mostra lo stato
+         non-iniziato).
+   - Ogni card ha in alto il SUO tasto calendario. NIENTE funzioni di squadra, NIENTE
+     calendario globale.
+   - R-icona-tipo: l'icona della card si deduce dalla STRUTTURA (campionato=lista,
+     coppa=forcella). La coppa NON usa il trofeo oro: forcella VERDE (l'oro resta sul campione).
+   - R-mobile-nosquish, R-fonte-strato (l'hub legge, non ricalcola), R-oro (punti non sono oro).
+   - Stato non-giocato: dove una fase non è iniziata, dillo esplicitamente; non fabbricare dati.
+
+Quando l'hub è pronto, screenshot per la revisione (e l'output curl del punto A).
