@@ -424,10 +424,10 @@ function TabClassifica({ standings }: { standings: StandingsEntry[] }) {
                 <td style={{ ...COL_MONO, color: "var(--ink-mid)", paddingTop: 8, paddingBottom: 8 }}>{s.wins}</td>
                 <td style={{ ...COL_MONO, color: "var(--ink-mid)", paddingTop: 8, paddingBottom: 8 }}>{s.draws}</td>
                 <td style={{ ...COL_MONO, color: "var(--ink-mid)", paddingTop: 8, paddingBottom: 8 }}>{s.losses}</td>
-                <td style={{ ...COL_MONO, color: "var(--ink-mid)", paddingTop: 8, paddingBottom: 8 }}>{s.goalsFor.toFixed(2)}</td>
-                <td style={{ ...COL_MONO, color: "var(--ink-mid)", paddingTop: 8, paddingBottom: 8 }}>{s.goalsAgainst.toFixed(2)}</td>
-                <td style={{ ...COL_MONO, color: s.goalDifference >= 0 ? "var(--green-deep)" : "#b91c1c", paddingTop: 8, paddingBottom: 8 }}>
-                  {sign(s.goalDifference)}
+                <td style={{ ...COL_MONO, color: "var(--ink-mid)", paddingTop: 8, paddingBottom: 8 }}>{s.gf.toFixed(2)}</td>
+                <td style={{ ...COL_MONO, color: "var(--ink-mid)", paddingTop: 8, paddingBottom: 8 }}>{s.gs.toFixed(2)}</td>
+                <td style={{ ...COL_MONO, color: s.gd >= 0 ? "var(--green-deep)" : "#b91c1c", paddingTop: 8, paddingBottom: 8 }}>
+                  {sign(s.gd)}
                 </td>
                 <td style={{ ...COL_MONO, fontWeight: 700, fontSize: 14, color: "var(--ink)", paddingRight: 12, paddingTop: 8, paddingBottom: 8 }}>
                   {s.points}
