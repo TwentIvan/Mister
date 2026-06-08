@@ -1,10 +1,6 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { useCurrentUser } from "@/contexts/AuthContext";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Link } from "wouter";
 
 export default function LoginPage() {
@@ -30,57 +26,118 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-muted/30 flex items-center justify-center p-4">
-      <div className="w-full max-w-sm space-y-6">
-        <div className="text-center">
-          <h1 className="font-serif text-3xl font-bold text-primary tracking-tight">MISTER</h1>
-          <p className="text-sm text-muted-foreground mt-1">Fantacalcio manageriale</p>
+    <div style={{
+      minHeight: "100dvh",
+      background: "var(--cream)",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: 16,
+      fontFamily: "var(--font-sans)",
+    }}>
+      <div style={{ width: "100%", maxWidth: 360, display: "flex", flexDirection: "column", gap: 24 }}>
+
+        {/* Wordmark */}
+        <div style={{ textAlign: "center" }}>
+          <img
+            src="/brand/wordmark_mister.svg"
+            alt="Mister"
+            style={{ height: 48, display: "block", margin: "0 auto" }}
+          />
+          <p style={{ fontFamily: "var(--font-sans)", fontSize: 13, color: "var(--muted)", marginTop: 8, marginBottom: 0 }}>
+            Fantacalcio manageriale
+          </p>
         </div>
 
-        <Card>
-          <CardHeader className="pb-4">
-            <CardTitle className="font-serif text-xl">Accedi</CardTitle>
-            <CardDescription>Inserisci email e password del tuo account.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <Label className="text-xs text-muted-foreground mb-1.5 block">Email</Label>
-                <Input
-                  type="email"
-                  autoComplete="email"
-                  value={email}
-                  onChange={e => setEmail(e.target.value)}
-                  placeholder="nome@esempio.it"
-                  required
-                />
-              </div>
-              <div>
-                <Label className="text-xs text-muted-foreground mb-1.5 block">Password</Label>
-                <Input
-                  type="password"
-                  autoComplete="current-password"
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  required
-                />
-              </div>
+        {/* Card login */}
+        <div style={{
+          background: "var(--paper)",
+          border: "1px solid var(--line)",
+          borderRadius: 12,
+          padding: "24px 22px",
+        }}>
+          <div style={{ marginBottom: 18 }}>
+            <h2 style={{ fontFamily: "var(--font-serif)", fontWeight: 600, fontSize: 18, color: "var(--green)", margin: 0 }}>
+              Accedi
+            </h2>
+            <p style={{ fontSize: 13, color: "var(--muted)", margin: "4px 0 0" }}>
+              Inserisci email e password del tuo account.
+            </p>
+          </div>
 
-              {error && (
-                <p className="text-sm text-destructive">{error}</p>
-              )}
+          <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <div>
+              <label style={{ display: "block", fontSize: 11, color: "var(--muted)", marginBottom: 5, fontFamily: "var(--font-mono)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                Email
+              </label>
+              <input
+                type="email"
+                autoComplete="email"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                placeholder="nome@esempio.it"
+                required
+                style={{
+                  width: "100%", boxSizing: "border-box",
+                  padding: "9px 12px", borderRadius: 8,
+                  border: "1px solid var(--line)",
+                  background: "var(--cream)",
+                  color: "var(--green-d)",
+                  fontFamily: "var(--font-sans)", fontSize: 14,
+                  outline: "none",
+                }}
+              />
+            </div>
 
-              <Button type="submit" className="w-full" disabled={isPending}>
-                {isPending ? "Accesso in corso..." : "Accedi"}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
+            <div>
+              <label style={{ display: "block", fontSize: 11, color: "var(--muted)", marginBottom: 5, fontFamily: "var(--font-mono)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                Password
+              </label>
+              <input
+                type="password"
+                autoComplete="current-password"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                placeholder="••••••••"
+                required
+                style={{
+                  width: "100%", boxSizing: "border-box",
+                  padding: "9px 12px", borderRadius: 8,
+                  border: "1px solid var(--line)",
+                  background: "var(--cream)",
+                  color: "var(--green-d)",
+                  fontFamily: "var(--font-sans)", fontSize: 14,
+                  outline: "none",
+                }}
+              />
+            </div>
 
-        <p className="text-center text-sm text-muted-foreground">
+            {error && (
+              <p style={{ fontSize: 13, color: "var(--danger, #bf3b30)", margin: 0, fontFamily: "var(--font-sans)" }}>
+                {error}
+              </p>
+            )}
+
+            <button
+              type="submit"
+              disabled={isPending}
+              style={{
+                width: "100%", padding: "10px 0",
+                background: isPending ? "var(--green-l)" : "var(--green)",
+                color: "var(--cream)", border: "none",
+                borderRadius: 9, cursor: isPending ? "not-allowed" : "pointer",
+                fontFamily: "var(--font-mono)", fontWeight: 700, fontSize: 13,
+                letterSpacing: "0.03em", transition: "background 0.15s",
+              }}
+            >
+              {isPending ? "Accesso in corso…" : "Accedi"}
+            </button>
+          </form>
+        </div>
+
+        <p style={{ textAlign: "center", fontSize: 13, color: "var(--muted)", margin: 0 }}>
           Non hai un account?{" "}
-          <Link href="/register" className="text-primary hover:underline font-medium">
+          <Link href="/register" style={{ color: "var(--green)", fontWeight: 600 }}>
             Registrati
           </Link>
         </p>

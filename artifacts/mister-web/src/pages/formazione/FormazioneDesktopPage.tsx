@@ -6,6 +6,7 @@ import {
   useGetLineups,
   usePutLineup,
   getGetLineupsQueryKey,
+  useGetFantaTeamRosa,
   type RosterPlayer,
   type CompetitionMatch,
 } from "@workspace/api-client-react";
@@ -209,11 +210,8 @@ function DesktopChip({ player, role, isSelected, isCaptain, isDimmed, isLocked, 
         <div style={{
           position: "absolute", inset: 0, borderRadius: "50%",
           border: `${BORDER}px ${player ? "solid" : "dashed"} ${isSelected ? "rgba(255,255,255,0.95)" : ring}`,
-          boxShadow: isSelected
-            ? `0 0 0 2px rgba(255,255,255,0.14), 0 0 14px ${ring}aa`
-            : `0 0 6px ${ring}44`,
           pointerEvents: "none",
-          transition: "border-color 0.15s, box-shadow 0.15s",
+          transition: "border-color 0.15s",
         }} />
 
         {/* Remove */}
@@ -443,6 +441,9 @@ export default function FormazioneDesktopPage() {
   const opponent = myMatch ? (isHome ? myMatch.awayTeam : myMatch.homeTeam) : null;
 
   // ── Dati ─────────────────────────────────────────────────────────────────────
+  const { data: rosaData }   = useGetFantaTeamRosa(fantaTeamId ?? "");
+  const teamName             = rosaData?.teamName ?? fantaTeamId ?? "Formazione";
+
   const { data: rosterData } = useGetRoster({ fantaTeamId: fantaTeamId ?? "", season, round: activeRound });
   const { data: lineupData } = useGetLineups({ fantaTeamId: fantaTeamId ?? "", season, round: activeRound });
   const saveMutation = usePutLineup();
@@ -721,23 +722,23 @@ export default function FormazioneDesktopPage() {
   // ── Render ────────────────────────────────────────────────────────────────────
 
   return (
-    <div style={{ height: "100dvh", background: "#0d1f1a", color: "rgba(239,230,211,0.95)", fontFamily: "var(--font-sans)", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+    <div style={{ height: "100dvh", background: "var(--cream)", color: "var(--green-d)", fontFamily: "var(--font-sans)", display: "flex", flexDirection: "column", overflow: "hidden" }}>
 
       {/* ── TOP BAR ─────────────────────────────────────────────────────────── */}
-      <div style={{ display: "flex", alignItems: "center", gap: 14, padding: "13px 22px", borderBottom: "1px solid rgba(239,230,211,0.1)", flexShrink: 0 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 14, padding: "13px 22px", borderBottom: "1px solid var(--line)", flexShrink: 0 }}>
         <button
           onClick={() => window.history.back()}
-          style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(239,230,211,0.5)", padding: 4, borderRadius: 6, display: "flex" }}
+          style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted)", padding: 4, borderRadius: 6, display: "flex" }}
         >
           <ChevronLeft size={20} />
         </button>
 
         {/* Badge squadra */}
-        <div style={{ width: 30, height: 30, borderRadius: "50%", background: "#1f4733", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+        <div style={{ width: 30, height: 30, borderRadius: "50%", background: "var(--green)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
           <span style={{ fontFamily: "var(--font-serif)", fontWeight: 800, fontSize: 12, color: "#c8922b" }}>MS</span>
         </div>
-        <span style={{ fontFamily: "var(--font-serif)", fontWeight: 600, fontSize: 16, color: "rgba(239,230,211,0.95)" }}>
-          {fantaTeamId ?? "Formazione"}
+        <span style={{ fontFamily: "var(--font-serif)", fontWeight: 600, fontSize: 16, color: "var(--green)" }}>
+          {teamName}
         </span>
 
         {/* Tabs */}
@@ -745,9 +746,9 @@ export default function FormazioneDesktopPage() {
           {["Formazione", "Partita"].map(tab => (
             <span key={tab} style={{
               fontSize: 12, textTransform: "uppercase" as const, letterSpacing: "0.1em",
-              color: tab === "Formazione" ? "rgba(239,230,211,0.95)" : "rgba(239,230,211,0.35)",
+              color: tab === "Formazione" ? "var(--green)" : "var(--muted)",
               paddingBottom: 3, cursor: "pointer",
-              borderBottom: tab === "Formazione" ? "2px solid #c8922b" : "2px solid transparent",
+              borderBottom: tab === "Formazione" ? "2px solid var(--gold)" : "2px solid transparent",
             }}>
               {tab}
             </span>
@@ -757,9 +758,9 @@ export default function FormazioneDesktopPage() {
         {/* Azioni */}
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginLeft: 24 }}>
           {roundLocked ? (
-            <div style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 13px", borderRadius: 8, background: "rgba(239,230,211,0.06)", border: "1px solid rgba(239,230,211,0.13)" }}>
-              <Lock size={11} color="rgba(239,230,211,0.4)" />
-              <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, fontWeight: 600, color: "rgba(239,230,211,0.4)" }}>Sola lettura</span>
+            <div style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 13px", borderRadius: 8, background: "var(--paper)", border: "1px solid var(--line)" }}>
+              <Lock size={11} color="var(--muted)" />
+              <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, fontWeight: 600, color: "var(--muted)" }}>Sola lettura</span>
             </div>
           ) : (
             <>
@@ -767,9 +768,9 @@ export default function FormazioneDesktopPage() {
                 disabled={starterCount !== 11 || saveMutation.isPending}
                 onClick={handleSave}
                 style={{
-                  background: starterCount === 11 ? "#1f4733" : "rgba(239,230,211,0.06)",
-                  color: starterCount === 11 ? "rgba(239,230,211,0.95)" : "rgba(239,230,211,0.25)",
-                  border: starterCount === 11 ? "1px solid rgba(239,230,211,0.2)" : "1px solid rgba(239,230,211,0.07)",
+                  background: starterCount === 11 ? "var(--green)" : "var(--paper)",
+                  color: starterCount === 11 ? "var(--cream)" : "var(--muted)",
+                  border: starterCount === 11 ? "1px solid var(--green)" : "1px solid var(--line)",
                   borderRadius: 9, padding: "8px 18px",
                   fontFamily: "var(--font-mono)", fontWeight: 700, fontSize: 12,
                   cursor: starterCount === 11 && !saveMutation.isPending ? "pointer" : "not-allowed",
@@ -781,7 +782,7 @@ export default function FormazioneDesktopPage() {
               <button
                 onClick={() => { setFieldSlots({}); setRoster(allPlayers.map(p => p.id)); setSelection(null); setCaptainId(null); setSaveErrors([]); }}
                 title="Reset"
-                style={{ background: "transparent", border: "none", cursor: "pointer", color: "rgba(239,230,211,0.35)", padding: 6, borderRadius: 6, display: "flex" }}
+                style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--muted)", padding: 6, borderRadius: 6, display: "flex" }}
               >
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" width={18} height={18}>
                   <path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 4v4h4"/>
@@ -793,29 +794,28 @@ export default function FormazioneDesktopPage() {
       </div>
 
       {/* ── STRIP PARTITA ────────────────────────────────────────────────────── */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 7, padding: "7px 22px", borderBottom: "1px solid rgba(239,230,211,0.07)", flexShrink: 0 }}>
-        <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "rgba(239,230,211,0.38)", letterSpacing: "0.06em" }}>SERIE A</span>
-        <span style={{ color: "rgba(239,230,211,0.18)" }}>·</span>
-        <span style={{ fontFamily: "var(--font-mono)", fontWeight: 700, fontSize: 11, color: "rgba(239,230,211,0.78)" }}>GIORNATA {activeRound}</span>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 7, padding: "7px 22px", borderBottom: "1px solid var(--line)", flexShrink: 0 }}>
+        <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--muted)", letterSpacing: "0.06em" }}>SERIE A</span>
+        <span style={{ color: "var(--line)" }}>·</span>
+        <span style={{ fontFamily: "var(--font-mono)", fontWeight: 700, fontSize: 11, color: "var(--green-d)" }}>GIORNATA {activeRound}</span>
         {opponent && (
           <>
-            <span style={{ color: "rgba(239,230,211,0.18)" }}>·</span>
-            {isHome ? <HomeIcon size={10} color="rgba(239,230,211,0.38)" /> : <Plane size={10} color="rgba(239,230,211,0.38)" />}
-            <span style={{ fontFamily: "var(--font-mono)", fontWeight: 700, fontSize: 11, color: "rgba(239,230,211,0.82)" }}>
+            <span style={{ color: "var(--line)" }}>·</span>
+            {isHome ? <HomeIcon size={10} color="var(--muted)" /> : <Plane size={10} color="var(--muted)" />}
+            <span style={{ fontFamily: "var(--font-mono)", fontWeight: 700, fontSize: 11, color: "var(--green)" }}>
               {opponent.name.toUpperCase()}
             </span>
           </>
         )}
-        <span style={{ color: "rgba(239,230,211,0.18)" }}>·</span>
-        <span style={{ fontFamily: "var(--font-mono)", fontWeight: 600, fontSize: 10, color: roundLocked ? "rgba(239,230,211,0.3)" : "#6aa07f" }}>
+        <span style={{ color: "var(--line)" }}>·</span>
+        <span style={{ fontFamily: "var(--font-mono)", fontWeight: 600, fontSize: 10, color: roundLocked ? "var(--muted)" : "#6aa07f" }}>
           {roundLocked ? "Conclusa" : "Aperta"}
         </span>
       </div>
 
       {/* ── ROUND PICKER ─────────────────────────────────────────────────────── */}
       {rounds.length > 0 && (
-        <div style={{ display: "flex", alignItems: "center", gap: 5, padding: "7px 22px", borderBottom: "1px solid rgba(239,230,211,0.07)", flexShrink: 0, overflowX: "auto", scrollbarWidth: "none" }}>
-          <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, fontWeight: 600, color: "rgba(239,230,211,0.26)", letterSpacing: "0.1em", flexShrink: 0 }}>G</span>
+        <div style={{ display: "flex", alignItems: "center", gap: 5, padding: "7px 22px", borderBottom: "1px solid var(--line)", flexShrink: 0, overflowX: "auto", scrollbarWidth: "none" }}>
           {rounds.map(r => {
             const locked = isRoundLocked(r);
             const active = r === activeRound;
@@ -824,16 +824,16 @@ export default function FormazioneDesktopPage() {
                 key={r}
                 onClick={() => { setSelectedRound(r); setSelection(null); setSaveErrors([]); setSaveOk(false); }}
                 style={{
-                  padding: "2px 9px", borderRadius: 99, flexShrink: 0, cursor: "pointer",
-                  border: active ? "1px solid rgba(239,230,211,0.34)" : "1px solid rgba(239,230,211,0.09)",
-                  background: active ? "#1f4733" : "rgba(239,230,211,0.03)",
+                  padding: "2px 10px", borderRadius: 99, flexShrink: 0, cursor: "pointer",
+                  border: active ? "1px solid var(--green)" : "1px solid var(--line)",
+                  background: active ? "var(--green)" : "var(--paper)",
                   display: "flex", alignItems: "center", gap: 3,
                 }}
               >
-                <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, fontWeight: active ? 700 : 500, color: active ? "#efe6d3" : "rgba(239,230,211,0.35)" }}>
-                  {r}
+                <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, fontWeight: active ? 700 : 500, color: active ? "var(--cream)" : "var(--muted)" }}>
+                  G{r}
                 </span>
-                {locked && <Lock size={8} color={active ? "rgba(239,230,211,0.52)" : "rgba(239,230,211,0.22)"} />}
+                {locked && <Lock size={8} color={active ? "rgba(239,230,211,0.7)" : "var(--muted)"} />}
               </button>
             );
           })}
@@ -849,7 +849,7 @@ export default function FormazioneDesktopPage() {
             {saveErrors.length > 0 && (
               <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, fontWeight: 600, color: "#cf8a6a" }}>{saveErrors[0]}</span>
             )}
-            <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, fontWeight: 700, color: starterCount === 11 ? "#6aa07f" : "rgba(239,230,211,0.32)" }}>
+            <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, fontWeight: 700, color: starterCount === 11 ? "#6aa07f" : "var(--muted)" }}>
               XI {starterCount}/11
             </span>
           </div>
@@ -860,10 +860,10 @@ export default function FormazioneDesktopPage() {
       <div style={{ flex: 1, display: "grid", gridTemplateColumns: "312px 1fr", overflow: "hidden", maxWidth: 1180, width: "100%", margin: "0 auto" }}>
 
         {/* ── SIDEBAR ──────────────────────────────────────────────────────── */}
-        <div style={{ borderRight: "1px solid rgba(239,230,211,0.09)", padding: 14, overflowY: "auto", display: "flex", flexDirection: "column" }}>
+        <div style={{ borderRight: "1px solid var(--line)", padding: 14, overflowY: "auto", display: "flex", flexDirection: "column" }}>
 
           {/* Label */}
-          <div style={{ fontSize: 9, textTransform: "uppercase" as const, letterSpacing: "0.1em", color: "rgba(239,230,211,0.3)", marginBottom: 8 }}>
+          <div style={{ fontSize: 9, textTransform: "uppercase" as const, letterSpacing: "0.1em", color: "var(--muted)", marginBottom: 8 }}>
             Filtra la rosa — ruolo × club
           </div>
 
@@ -881,14 +881,14 @@ export default function FormazioneDesktopPage() {
                   })}
                   style={{
                     flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 4,
-                    fontSize: 11, border: `1px solid ${active ? ROLE_RING[role] : "rgba(239,230,211,0.13)"}`,
-                    background: active ? `${ROLE_RING[role]}28` : "rgba(239,230,211,0.03)",
+                    fontSize: 11, border: `1px solid ${active ? ROLE_RING[role] : "var(--line)"}`,
+                    background: active ? `${ROLE_RING[role]}22` : "var(--paper)",
                     borderRadius: 8, padding: "6px 4px", cursor: "pointer",
                   }}
                 >
                   <span style={{ width: 7, height: 7, borderRadius: "50%", background: ROLE_RING[role], flexShrink: 0 }} />
-                  <span style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: "rgba(239,230,211,0.85)", fontSize: 11 }}>{ROLE_LABEL[role]}</span>
-                  <span style={{ fontFamily: "var(--font-mono)", color: "rgba(239,230,211,0.4)", fontSize: 10 }}>{roleCounts[role]}</span>
+                  <span style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: "var(--green-d)", fontSize: 11 }}>{ROLE_LABEL[role]}</span>
+                  <span style={{ fontFamily: "var(--font-mono)", color: "var(--muted)", fontSize: 10 }}>{roleCounts[role]}</span>
                 </button>
               );
             })}
@@ -903,9 +903,9 @@ export default function FormazioneDesktopPage() {
                 title={team}
                 style={{
                   display: "flex", alignItems: "center", gap: 3,
-                  fontSize: 10, color: filterTeam === team ? "rgba(239,230,211,0.92)" : "rgba(239,230,211,0.45)",
+                  fontSize: 10, color: filterTeam === team ? "var(--green-d)" : "var(--muted)",
                   cursor: "pointer", background: "none", border: "none", padding: "1px 3px",
-                  outline: filterTeam === team ? "1px solid rgba(239,230,211,0.36)" : "none",
+                  outline: filterTeam === team ? "1px solid var(--line)" : "none",
                   borderRadius: 3,
                 }}
               >
@@ -925,14 +925,14 @@ export default function FormazioneDesktopPage() {
           {(filterRoles.size > 0 || filterTeam) && (
             <button
               onClick={() => { setFilterRoles(new Set()); setFilterTeam(null); }}
-              style={{ fontSize: 9, color: "rgba(239,230,211,0.32)", background: "none", border: "none", cursor: "pointer", fontFamily: "var(--font-serif)", fontStyle: "italic", marginBottom: 6, padding: 0, textAlign: "left" }}
+              style={{ fontSize: 9, color: "var(--muted)", background: "none", border: "none", cursor: "pointer", fontFamily: "var(--font-serif)", fontStyle: "italic", marginBottom: 6, padding: 0, textAlign: "left" }}
             >
               Rimuovi filtri
             </button>
           )}
 
           {/* Hint panchina automatica */}
-          <div style={{ fontSize: 9, color: "rgba(239,230,211,0.26)", fontFamily: "var(--font-serif)", fontStyle: "italic", marginBottom: 9, lineHeight: 1.5 }}>
+          <div style={{ fontSize: 9, color: "var(--muted)", fontFamily: "var(--font-serif)", fontStyle: "italic", marginBottom: 9, lineHeight: 1.5 }}>
             {selectedFieldRole !== null
               ? `↑ Seleziona un ${ROLE_LABEL[selectedFieldRole]} — panchina automatica`
               : "Clicca uno slot campo poi un giocatore — chi resta è in panca"}
@@ -1005,16 +1005,13 @@ export default function FormazioneDesktopPage() {
               </div>
             )}
 
-            {/* Area Tecnica (coach box) */}
+            {/* Coach box */}
             <div style={{
               position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)",
               width: 112, border: "1.7px dashed rgba(239,230,211,0.48)",
               borderRadius: 7, padding: "10px 9px", textAlign: "center",
               background: "rgba(21,48,31,0.32)", zIndex: 5,
             }}>
-              <div style={{ fontFamily: "var(--font-serif)", fontWeight: 700, fontSize: 10, color: "#c8922b", marginBottom: 7, letterSpacing: "0.05em" }}>
-                AREA TECNICA
-              </div>
               <div style={{ width: 54, height: 54, borderRadius: "50%", border: "2.5px solid #c8922b", margin: "0 auto 6px", background: "#1f4733", overflow: "hidden" }}>
                 <MisterToyAvatar />
               </div>

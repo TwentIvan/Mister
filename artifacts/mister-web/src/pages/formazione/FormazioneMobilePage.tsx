@@ -218,13 +218,9 @@ function FieldChip({ player, role, isSelected, isCaptain, isDimmed, isLocked, on
         {/* Ring */}
         <div style={{
           position: "absolute", inset: 0, borderRadius: "50%",
-          border: `${RING}px solid ${isSelected ? "rgba(255,255,255,0.95)" : ring}`,
-          boxShadow: isSelected
-            ? `0 0 0 2px rgba(255,255,255,0.18), 0 0 12px ${ring}99`
-            : `0 0 5px ${ring}44`,
+          border: `${RING}px ${!player ? "dashed" : "solid"} ${isSelected ? "rgba(255,255,255,0.95)" : ring}`,
           pointerEvents: "none",
-          transition: "border-color 0.15s, box-shadow 0.15s",
-          ...((!player) ? { borderStyle: "dashed" } : {}),
+          transition: "border-color 0.15s",
         }} />
         {/* Captain badge */}
         {isCaptain && (

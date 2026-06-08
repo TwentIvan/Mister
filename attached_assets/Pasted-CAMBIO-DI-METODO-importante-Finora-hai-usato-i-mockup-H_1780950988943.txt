@@ -1,0 +1,35 @@
+CAMBIO DI METODO (importante). Finora hai usato i mockup HTML come ispirazione e RI-DERIVATO
+il design in React: così le decisioni già risolte nei mockup tornano indietro ogni volta (tema
+scuro, label di troppo, loghi mancanti, wordmark sbagliato, ombre sui badge). D'ora in poi il
+MOCKUP È IL RIFERIMENTO DI IMPLEMENTAZIONE: porta la sua struttura DOM e il suo CSS (già sui
+token) dentro i componenti, mantenendo le sue scelte. Non reinterpretare. Dove è statico,
+replichi il markup e ci colleghi i dati. Prima di "migliorare" un layout, diffalo col mockup
+e tieni le sue scelte.
+
+DESKTOP formazione (bersaglio: lega_formazione.html):
+- È ANCORA SCURO → crema come il mobile e come il mockup (canvas --cream/--paper, verde solo
+  per accenti/attivi, campo --pitch/--pitch2).
+- LOGHI CLUB assenti → ogni giocatore porta il crest del suo club (C-crest, R-crest).
+- AREA TECNICA: TOGLI la scritta "AREA TECNICA" (la grafica lo dice già — "ogni informazione
+  una volta sola"). Contiene solo volto allenatore TOY + nome + modulo, posizionata come nel
+  mockup (nel margine erboso, non in mezzo al campo).
+- I numeri 1-7 nudi sono brutti e ambigui: sono le GIORNATE → rendili come il selettore del
+  mobile (etichettati, lucchetto sulle chiuse). E non devono MAI permettere di editare la
+  formazione di un'altra squadra: si gestisce solo la propria (ownership).
+
+TRASVERSALE (mobile + desktop):
+- BADGE: usa UN SOLO componente badge condiviso (lo stesso di Rosa/Partita), con UN SOLO anello.
+  Le "ombre di cerchio" doppie nascono perché la formazione si è fatta un chip suo → usa quello
+  canonico. È anche il debito C-badge che trascinavamo: chiudilo qui.
+- RUOLI ROTTI: il filtro mostra P1·D0·C0·A25 e quasi tutti i giocatori risultano "A". La rosa è
+  3P·8D·8C·6A (R-rosa) e la Rosa li mostra giusti → leggi il ruolo VERO per giocatore, non
+  default ad "A".
+- NOME SQUADRA reale al posto di "ft-mvp-1".
+
+LOGIN:
+- WORDMARK: stai usando un font generico tutto MAIUSCOLO. Usa l'ASSET del marchio
+  (wordmark_mister.svg dal brand), lettering "Mister" a caso misto — non testo maiuscolo in un
+  font qualsiasi.
+- Colore: riportalo sul sistema crema come il resto.
+
+Rimanda gli screenshot: mobile (campo + panchina), desktop, login.
