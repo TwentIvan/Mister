@@ -288,8 +288,8 @@ function CompCard({
             alignItems: "center",
             justifyContent: "center",
             flexShrink: 0,
-            background: isCampionato ? "#1f4733" : "rgba(200,146,43,.14)",
-            color: isCampionato ? "#efe6d3" : "#1f4733",
+            background: "#2e6047",
+            color: "#efe6d3",
           }}
         >
           {comp.tipo_struttura === "tabellone" ? <IconForcella /> : <IconLista />}
@@ -360,6 +360,19 @@ function CompCard({
               row={extract.top1}
               isMe={fantaTeamId !== null && extract.top1.fanta_team_id === fantaTeamId}
             />
+            {/* Stacco visivo se la riga utente non è adiacente al capolista */}
+            {extract.my_row && extract.my_row.fanta_team_id !== extract.top1.fanta_team_id && extract.my_row.pos > 2 && (
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  padding: "2px 0 2px 20px",
+                }}
+              >
+                <span style={{ fontSize: 11, color: "#b8ac94", letterSpacing: ".05em", lineHeight: 1 }}>· · ·</span>
+              </div>
+            )}
             {/* Riga utente (se diversa dal capolista) */}
             {extract.my_row && extract.my_row.fanta_team_id !== extract.top1.fanta_team_id && (
               <StandingsRow row={extract.my_row} isMe={true} />
