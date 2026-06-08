@@ -1,3 +1,4 @@
+import "./formazione-mobile.css";
 import { useState, useMemo, useEffect } from "react";
 import { useSearch } from "wouter";
 import {
@@ -182,94 +183,41 @@ interface FieldChipProps {
 }
 
 function FieldChip({ player, role, isSelected, isCaptain, isDimmed, isLocked, onClick }: FieldChipProps) {
-  const ring = ROLE_RING[role];
-  const AVATAR = 42;
-  const RING   = 2.5;
-  const OUTER  = AVATAR + RING * 2;
+  const roleLetter = ROLE_LABEL[role];
 
   return (
     <div
+      className={`chip ${roleLetter}${isSelected ? " sel" : ""}`}
       onClick={isLocked ? undefined : onClick}
-      style={{
-        display: "flex", flexDirection: "column", alignItems: "center", gap: 3,
-        width: 58, cursor: isLocked ? "default" : "pointer",
-        opacity: isDimmed ? 0.3 : 1, transition: "opacity 0.15s",
-        WebkitTapHighlightColor: "transparent",
-      }}
+      style={{ opacity: isDimmed ? 0.3 : 1, cursor: isLocked ? "default" : "pointer" }}
     >
-      <div style={{ position: "relative", width: OUTER, height: OUTER, flexShrink: 0 }}>
-        {/* Avatar */}
-        <div style={{ position: "absolute", inset: RING, borderRadius: "50%", overflow: "hidden", background: "#2d5848" }}>
-          {player && (player.cartoonUrl ?? player.photoUrl) && (
+      {/* .cap — fascia capitano (PRIMA di .av nel DOM del mockup) */}
+      {isCaptain && player && <span className="cap">C</span>}
+      {/* .av — anello ruolo + overflow:hidden */}
+      <div className="av" style={!player ? { borderStyle: "dashed" } : undefined}>
+        <div className="ph" style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          {player && (player.cartoonUrl ?? player.photoUrl) ? (
             <img
               src={player.cartoonUrl ?? player.photoUrl!} alt={player.name}
               style={{ width: "100%", height: "100%", objectFit: "cover", transform: "scale(1.08)", transformOrigin: "center" }}
               onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
             />
-          )}
-          {!player && (
-            <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <span style={{ fontFamily: "var(--font-mono)", fontSize: 14, fontWeight: 700, color: ring, opacity: 0.7 }}>
-                {ROLE_LABEL[role]}
-              </span>
-            </div>
-          )}
-        </div>
-        {/* Ring */}
-        <div style={{
-          position: "absolute", inset: 0, borderRadius: "50%",
-          border: `${RING}px ${!player ? "dashed" : "solid"} ${isSelected ? "rgba(255,255,255,0.95)" : ring}`,
-          pointerEvents: "none",
-          transition: "border-color 0.15s",
-        }} />
-        {/* Captain badge */}
-        {isCaptain && (
-          <div style={{
-            position: "absolute", bottom: -1, right: -1,
-            width: 15, height: 15, borderRadius: "50%", background: "#c8922b",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            boxShadow: "0 1px 3px rgba(0,0,0,0.5)",
-          }}>
-            <span style={{ fontFamily: "var(--font-mono)", fontSize: 7, fontWeight: 800, color: "#fff" }}>C</span>
-          </div>
-        )}
-      </div>
-
-      {/* Club pill bicolor */}
-      {player && (
-        <div style={{
-          width: 40, height: 11, borderRadius: 4, overflow: "hidden",
-          position: "relative", flexShrink: 0, boxShadow: "0 1px 3px rgba(0,0,0,0.5)",
-        }}>
-          <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: "50%", background: player.colors.primary }} />
-          <div style={{ position: "absolute", right: 0, top: 0, bottom: 0, width: "50%", background: player.colors.secondary }} />
-          {player.logoUrl ? (
-            <img
-              src={player.logoUrl} alt=""
-              style={{ position: "absolute", inset: 0, margin: "auto", width: 9, height: 9, objectFit: "contain", filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.8))" }}
-              onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
-            />
           ) : (
-            <span style={{
-              position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center",
-              fontFamily: "var(--font-mono)", fontSize: 6, fontWeight: 700, color: "#fff",
-              textShadow: "0 1px 2px rgba(0,0,0,0.8)",
-            }}>
-              {player.teamCode}
+            <span style={{ fontFamily: "var(--font-mono)", fontSize: 14, fontWeight: 700, color: `var(--ring${roleLetter})`, opacity: 0.7 }}>
+              {roleLetter}
             </span>
           )}
         </div>
+      </div>
+      {/* .bar — colori club */}
+      {player && (
+        <span
+          className="bar"
+          style={{ background: `linear-gradient(90deg, ${player.colors.primary} 50%, ${player.colors.secondary} 50%)` }}
+        />
       )}
-
-      {/* Cognome */}
-      <span style={{
-        fontSize: 9, fontWeight: 600, color: "rgba(239,230,211,0.9)",
-        fontFamily: "var(--font-sans)", textAlign: "center", lineHeight: 1.2,
-        maxWidth: 56, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-        textShadow: "0 1px 3px rgba(0,0,0,0.8)",
-      }}>
-        {player ? lastName(player.name) : "—"}
-      </span>
+      {/* .cn — cognome o ruolo se vuoto */}
+      <span className="cn">{player ? lastName(player.name) : roleLetter}</span>
     </div>
   );
 }
@@ -288,28 +236,23 @@ interface BenchRowProps {
 }
 
 function BenchRow({ player, priority, isSelected, isCompatible, isCaptain, isLocked, onTap, onCaptainToggle }: BenchRowProps) {
-  const dimmed = isCompatible === false;
+  const roleLetter = ROLE_LABEL[player.role];
   return (
     <div
+      className={`rr ${roleLetter}`}
       onClick={isLocked ? undefined : onTap}
       style={{
-        display: "flex", alignItems: "center", gap: 8,
-        borderRadius: 9, padding: "8px 11px",
-        background: isSelected ? "rgba(255,255,255,0.12)" : ROLE_BENCH_BG[player.role],
-        color: "var(--cream)",
+        opacity: isCompatible === false ? 0.28 : 1,
+        outline: isSelected ? "1.5px solid rgba(255,255,255,0.45)" : "none",
         cursor: isLocked ? "default" : "pointer",
-        opacity: dimmed ? 0.28 : 1,
-        border: isSelected ? "1.5px solid rgba(255,255,255,0.45)" : "1.5px solid transparent",
-        transition: "opacity 0.15s, border-color 0.15s",
-        WebkitTapHighlightColor: "transparent",
       }}
     >
       {/* Priorità */}
       <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, fontWeight: 700, color: "rgba(239,230,211,0.45)", width: 14, flexShrink: 0 }}>
         {priority}
       </span>
-      {/* Avatar */}
-      <div style={{ width: 30, height: 30, borderRadius: "50%", overflow: "hidden", border: `2px solid ${ROLE_RING[player.role]}`, flexShrink: 0, background: "#2d5848" }}>
+      {/* .face — avatar */}
+      <div className="face">
         {(player.cartoonUrl ?? player.photoUrl) && (
           <img
             src={player.cartoonUrl ?? player.photoUrl!} alt={player.name}
@@ -318,38 +261,30 @@ function BenchRow({ player, priority, isSelected, isCompatible, isCaptain, isLoc
           />
         )}
       </div>
-      {/* Role badge */}
-      <div style={{
-        width: 18, height: 18, borderRadius: 4, background: "rgba(0,0,0,0.28)",
-        display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-      }}>
-        <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, fontWeight: 800, color: ROLE_RING[player.role] }}>
-          {ROLE_LABEL[player.role]}
-        </span>
-      </div>
-      {/* Crest */}
+      {/* .rl — lettera ruolo */}
+      <span className="rl">{roleLetter}</span>
+      {/* .cr — crest club */}
       {player.logoUrl ? (
-        <img
-          src={player.logoUrl} alt=""
+        <img src={player.logoUrl} alt=""
           style={{ width: 16, height: 16, objectFit: "contain", flexShrink: 0 }}
           onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
         />
       ) : (
-        <span style={{ fontFamily: "var(--font-mono)", fontSize: 8, fontWeight: 700, color: "rgba(239,230,211,0.6)", width: 16, flexShrink: 0 }}>
-          {player.teamCode}
-        </span>
+        <div className="cr" style={{ background: player.colors.primary, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <span style={{ fontFamily: "var(--font-mono)", fontSize: 6, fontWeight: 700, color: "#fff" }}>
+            {player.teamCode?.slice(0, 3)}
+          </span>
+        </div>
       )}
-      {/* Cognome */}
-      <span style={{ flex: 1, fontFamily: "var(--font-sans)", fontSize: 13, fontWeight: 600, color: "rgba(239,230,211,0.95)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-        {lastName(player.name)}
-      </span>
-      {/* Captain toggle */}
+      {/* .rn — cognome */}
+      <span className="rn">{lastName(player.name)}</span>
+      {/* Capitano toggle / azione */}
       {!isLocked && (
         <button
           onClick={(e) => { e.stopPropagation(); onCaptainToggle(); }}
           style={{
             width: 22, height: 22, borderRadius: "50%", flexShrink: 0, padding: 0,
-            background: isCaptain ? "#c8922b" : "rgba(0,0,0,0.25)",
+            background: isCaptain ? "var(--gold)" : "rgba(0,0,0,0.25)",
             border: isCaptain ? "none" : "1px solid rgba(239,230,211,0.25)",
             display: "flex", alignItems: "center", justifyContent: "center",
             cursor: "pointer",
@@ -599,7 +534,7 @@ export default function FormazioneMobilePage() {
   // ── Render ───────────────────────────────────────────────────────────────────
 
   return (
-    <div style={{
+    <div className="fm-pg" style={{
       maxWidth: 390, margin: "0 auto", minHeight: "100dvh",
       background: "var(--cream)", color: "var(--green-d)",
       fontFamily: "var(--font-sans)", display: "flex", flexDirection: "column",

@@ -1,0 +1,34 @@
+/* formazione-mobile.css — estratto da formazione_mobile.html, scaffolding demo rimosso */
+/* Il :root è identico a index.css — lasciato per completezza */
+:root{--cream:#efe6d3;--cream2:#e7dcc4;--paper:#f7f1e4;--green:#1f4733;--green-d:#15301f;--green-l:#2e6047;--pitch:#173a27;--pitch2:#1a402b;--gold:#c8922b;--gold-l:#e6b84d;--live:#e2554e;--danger:#bf3b30;--muted:#8a8266;--line:#d8ccae;--rP:#7e5a26;--rD:#2b5740;--rC:#234c5e;--rA:#6b2c24;--ringP:#c79a4e;--ringD:#6aa07f;--ringC:#6aa6b8;--ringA:#cf8a6a;--letP:#c8922b;--letD:#2e6047;--letC:#3f7d92;--letA:#c06a52;--disp:'Fraunces',Georgia,serif;--mono:'JetBrains Mono',monospace}
+
+/* ── Chip campo (scoped su .fm-pg) ──────────────────────────────────────── */
+.fm-pg .chip{display:flex;flex-direction:column;align-items:center;gap:3px;width:66px;position:relative;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.fm-pg .chip .av{width:42px;height:42px;border-radius:50%;background:var(--cream2);overflow:hidden;border:3px solid var(--gold-l);transition:transform .12s}
+.fm-pg .chip.A .av{border-color:var(--ringA)}
+.fm-pg .chip.C .av{border-color:var(--ringC)}
+.fm-pg .chip.D .av{border-color:var(--ringD)}
+.fm-pg .chip.P .av{border-color:var(--ringP)}
+.fm-pg .chip .ph{width:100%;height:100%;object-fit:cover;display:block}
+.fm-pg .chip .bar{width:30px;height:5px;border-radius:3px;display:block;box-shadow:inset 0 0 0 .5px rgba(0,0,0,.3)}
+.fm-pg .chip .cn{font-size:10px;color:var(--cream);max-width:66px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center}
+.fm-pg .chip .cap{position:absolute;top:-3px;left:9px;width:15px;height:15px;border-radius:50%;background:var(--gold);color:#fff;font-size:8px;font-weight:700;display:flex;align-items:center;justify-content:center;border:1.5px solid var(--pitch);z-index:2}
+.fm-pg .chip.sel .av{border-color:var(--gold-l);border-style:dashed;transform:scale(1.12)}
+.fm-pg .chip.sel .cn{color:var(--gold-l);font-weight:700}
+
+/* flash animation */
+.fm-pg .chip.flash .av{animation:fl .7s ease}
+@keyframes fl{0%,100%{box-shadow:0 0 0 0 rgba(230,184,77,0)}40%{box-shadow:0 0 0 6px rgba(230,184,77,.5)}}
+
+/* ── Righe panchina (scoped su .fm-pg) ──────────────────────────────────── */
+.fm-pg .rr{display:flex;align-items:center;gap:9px;border-radius:9px;padding:8px 11px;color:var(--cream);cursor:pointer;transition:opacity .15s}
+.fm-pg .rr.P{background:var(--rP)}
+.fm-pg .rr.D{background:var(--rD)}
+.fm-pg .rr.C{background:var(--rC)}
+.fm-pg .rr.A{background:var(--rA)}
+.fm-pg .rr .cr{width:16px;height:18px;border-radius:3px;flex:none;box-shadow:inset 0 0 0 .5px rgba(0,0,0,.3)}
+.fm-pg .rr .face{width:24px;height:24px;border-radius:50%;overflow:hidden;flex:none;border:1.5px solid rgba(239,230,211,.5);background:var(--cream2)}
+.fm-pg .rr .face img{width:100%;height:100%;object-fit:cover}
+.fm-pg .rr .rl{font-size:9px;width:13px;text-align:center;color:rgba(239,230,211,.7);font-weight:700;flex:none}
+.fm-pg .rr .rn{flex:1;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fm-pg .rr .act{font-size:9px;color:rgba(239,230,211,.55);text-transform:uppercase;letter-spacing:.06em;flex-shrink:0}

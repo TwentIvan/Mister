@@ -1,0 +1,26 @@
+Allego i due CSS estratti VERBATIM dai miei mockup. Da qui in poi non si re-disegna: si usano questi.
+
+1) NON riscrivere stili per la Formazione. IMPORTA questi due file e usa le loro classi. Se il
+   tuo setup non importa CSS grezzo, traducili 1:1 SENZA cambiare un solo valore.
+2) Il :root in cima coincide con la tua tokens.css: non duplicarlo (o lascialo, è identico).
+   SCARTA solo lo scaffolding da demo: `body{background:#cfc6ad}` e il telaio `.phone` (bordo
+   nero + bezel). Lo schermo reale parte da `.scr` su --cream. Il fondo è CREMA, il verde è solo
+   accento; SOLO `.field` è verde (--pitch/--pitch2).
+3) Costruisci il DOM con ESATTAMENTE le classi dei mockup (apri formazione_mobile.html e
+   lega_formazione.html nel pacchetto). In particolare:
+   - DESKTOP: l'area allenatore è <div class="coach"> DENTRO .field e contiene SOLO
+     <div class="fm">{modulo}</div> + <img class="mister"> (volto toy) + <div class="cn">{nome}</div>.
+     NON esiste nessuna scritta "AREA TECNICA" né "Mister AI" → NON aggiungerle.
+   - Chip = .chip.P/.D/.C/.A con UN solo .av (anello-ruolo) + .bar (colori club) + .cn (cognome)
+     + .cap ("C"). Un anello solo: via le ombre di cerchio doppie.
+   - Niente numeri 1-7 nudi: il selettore giornata è quello del mockup (etichettato, lucchetto
+     sulle chiuse), e si gestisce SOLO la propria squadra (ownership).
+4) DATI (bug di binding, non di stile):
+   - RUOLI veri: il filtro deve dare 3P·8D·8C·6A (nel mio mockup desktop è P3 D8 C7 A6), NON
+     "A 25". Leggi il ruolo reale di ogni giocatore — la Rosa li ha già giusti.
+   - NOME squadra reale (non "ft-mvp-1").
+   - .bar/crest = colori/logo del club reale del giocatore.
+   - LOGIN: wordmark = asset del marchio (wordmark_mister.svg), "Mister" a caso misto, NON testo
+     tutto maiuscolo in un font generico; sfondo crema.
+5) VERIFICA OBBLIGATORIA prima di consegnare: apri la pagina e il mockup .html FIANCO A FIANCO.
+   Ogni differenza visiva è un bug, non una variante. Rimanda gli screenshot così affiancati.

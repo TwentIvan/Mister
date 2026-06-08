@@ -1,3 +1,4 @@
+import "./formazione-desktop.css";
 import { useState, useMemo, useEffect } from "react";
 import { useSearch } from "wouter";
 import {
@@ -169,27 +170,26 @@ interface DesktopChipProps {
 }
 
 function DesktopChip({ player, role, isSelected, isCaptain, isDimmed, isLocked, onClick, onRemove }: DesktopChipProps) {
-  const ring   = ROLE_RING[role];
-  const AV     = 46;
-  const BORDER = 3;
-  const OUTER  = AV + BORDER * 2;
+  const roleLetter = ROLE_LABEL[role];
 
   return (
     <div
+      className={`chip ${roleLetter}${isSelected ? " sel" : ""}`}
       onClick={isLocked ? undefined : onClick}
-      style={{
-        display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
-        width: 72, cursor: isLocked ? "default" : "pointer",
-        opacity: isDimmed ? 0.22 : 1, transition: "opacity 0.15s",
-        userSelect: "none",
-      }}
+      style={{ opacity: isDimmed ? 0.22 : 1, cursor: isLocked ? "default" : "pointer" }}
     >
-      <div style={{ position: "relative", width: OUTER, height: OUTER }}>
-        {/* Avatar */}
-        <div style={{
-          position: "absolute", inset: BORDER, borderRadius: "50%",
-          overflow: "hidden", background: "#2d5848",
-        }}>
+      {/* .av — anello ruolo (border via CSS) + overflow:hidden */}
+      <div className="av" style={!player ? { borderStyle: "dashed" } : undefined}>
+        {/* .rm — bottone rimozione (inside .av, visibile sull'orlo del cerchio) */}
+        {player && !isLocked && (
+          <button className="rm" onClick={(e) => { e.stopPropagation(); onRemove(); }}>
+            <X size={7} />
+          </button>
+        )}
+        {/* .cap — fascia capitano */}
+        {isCaptain && player && <div className="cap">C</div>}
+        {/* .ph — foto giocatore */}
+        <div className="ph" style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
           {player && (player.cartoonUrl ?? player.photoUrl) ? (
             <img
               src={player.cartoonUrl ?? player.photoUrl!}
@@ -198,88 +198,21 @@ function DesktopChip({ player, role, isSelected, isCaptain, isDimmed, isLocked, 
               onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
             />
           ) : (
-            <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <span style={{ fontFamily: "var(--font-mono)", fontSize: 17, fontWeight: 700, color: ring, opacity: 0.55 }}>
-                {ROLE_LABEL[role]}
-              </span>
-            </div>
+            <span style={{ fontFamily: "var(--font-mono)", fontSize: 17, fontWeight: 700, color: `var(--ring${roleLetter})`, opacity: 0.7 }}>
+              {roleLetter}
+            </span>
           )}
         </div>
-
-        {/* Ring */}
-        <div style={{
-          position: "absolute", inset: 0, borderRadius: "50%",
-          border: `${BORDER}px ${player ? "solid" : "dashed"} ${isSelected ? "rgba(255,255,255,0.95)" : ring}`,
-          pointerEvents: "none",
-          transition: "border-color 0.15s",
-        }} />
-
-        {/* Remove */}
-        {player && !isLocked && (
-          <button
-            onClick={(e) => { e.stopPropagation(); onRemove(); }}
-            style={{
-              position: "absolute", top: -4, right: -4,
-              width: 17, height: 17, borderRadius: "50%",
-              background: "#0d1f1a", color: "rgba(239,230,211,0.7)",
-              border: "1.5px solid rgba(239,230,211,0.3)",
-              fontSize: 11, cursor: "pointer",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              padding: 0, zIndex: 2,
-            }}
-          >
-            <X size={8} />
-          </button>
-        )}
-
-        {/* Captain */}
-        {isCaptain && player && (
-          <div style={{
-            position: "absolute", top: -3, left: -3,
-            width: 16, height: 16, borderRadius: "50%",
-            background: "#c8922b", border: "1.5px solid #0d1f1a",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            boxShadow: "0 1px 3px rgba(0,0,0,0.6)", zIndex: 2,
-          }}>
-            <span style={{ fontFamily: "var(--font-mono)", fontSize: 7, fontWeight: 800, color: "#fff" }}>C</span>
-          </div>
-        )}
       </div>
-
-      {/* Club bar */}
+      {/* .bar — colori club */}
       {player && (
-        <div style={{
-          width: 36, height: 7, borderRadius: 3, overflow: "hidden",
-          position: "relative", flexShrink: 0, boxShadow: "0 1px 3px rgba(0,0,0,0.5)",
-        }}>
-          <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: "50%", background: player.colors.primary }} />
-          <div style={{ position: "absolute", right: 0, top: 0, bottom: 0, width: "50%", background: player.colors.secondary }} />
-          {player.logoUrl ? (
-            <img
-              src={player.logoUrl} alt=""
-              style={{ position: "absolute", inset: 0, margin: "auto", width: 6, height: 6, objectFit: "contain", filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.9))" }}
-              onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
-            />
-          ) : (
-            <span style={{
-              position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center",
-              fontFamily: "var(--font-mono)", fontSize: 5, fontWeight: 700, color: "#fff",
-              textShadow: "0 1px 2px rgba(0,0,0,0.9)",
-            }}>{player.teamCode}</span>
-          )}
-        </div>
+        <span
+          className="bar"
+          style={{ background: `linear-gradient(90deg, ${player.colors.primary} 50%, ${player.colors.secondary} 50%)` }}
+        />
       )}
-
-      {/* Cognome */}
-      <span style={{
-        fontSize: 10, fontWeight: 600,
-        color: player ? "rgba(239,230,211,0.9)" : "rgba(239,230,211,0.2)",
-        fontFamily: "var(--font-sans)", textAlign: "center",
-        maxWidth: 70, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-        textShadow: "0 1px 3px rgba(0,0,0,0.8)", lineHeight: 1.2,
-      }}>
-        {player ? lastName(player.name) : "—"}
-      </span>
+      {/* .cn — cognome */}
+      <span className="cn">{player ? lastName(player.name) : ""}</span>
     </div>
   );
 }
@@ -298,48 +231,39 @@ interface SidebarRowProps {
 }
 
 function SidebarRow({ player, isInField, isSelected, isCompatible, isCaptain, isLocked, onTap, onCaptainToggle }: SidebarRowProps) {
-  const dimmed = isCompatible === false;
-  const ring   = ROLE_RING[player.role];
+  const roleLetter = ROLE_LABEL[player.role];
   return (
     <div
+      className={`rr ${roleLetter}${isInField ? " bench" : ""}`}
       onClick={isLocked ? undefined : onTap}
       style={{
-        display: "flex", alignItems: "center", gap: 7,
-        borderRadius: 8, padding: "5px 8px",
-        background: isSelected ? "rgba(255,255,255,0.12)" : ROLE_BG[player.role],
+        opacity: isCompatible === false ? 0.2 : 1,
+        outline: isSelected ? "1.5px solid rgba(255,255,255,0.42)" : "none",
         cursor: isLocked ? "default" : "pointer",
-        opacity: dimmed ? 0.2 : isInField ? 0.48 : 1,
-        border: isSelected ? "1.5px solid rgba(255,255,255,0.42)" : "1.5px solid transparent",
-        transition: "opacity 0.15s, border-color 0.15s",
         userSelect: "none",
       }}
     >
-      {/* Avatar */}
-      <div style={{ width: 26, height: 26, borderRadius: "50%", overflow: "hidden", border: `1.5px solid ${ring}`, flexShrink: 0, background: "#2d5848" }}>
-        {(player.cartoonUrl ?? player.photoUrl) && (
+      {/* .face.sm — avatar */}
+      <div className="face sm">
+        {(player.cartoonUrl ?? player.photoUrl) ? (
           <img
             src={player.cartoonUrl ?? player.photoUrl!} alt={player.name}
-            style={{ width: "100%", height: "100%", objectFit: "cover" }}
             onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
           />
-        )}
+        ) : null}
       </div>
-
-      {/* Role badge */}
+      {/* Ruolo badge */}
       <div style={{
-        width: 16, height: 16, borderRadius: 3,
-        background: "rgba(0,0,0,0.28)",
+        width: 16, height: 16, borderRadius: 3, background: "rgba(0,0,0,0.28)",
         display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
       }}>
-        <span style={{ fontFamily: "var(--font-mono)", fontSize: 8, fontWeight: 800, color: ring }}>
-          {ROLE_LABEL[player.role]}
+        <span style={{ fontFamily: "var(--font-mono)", fontSize: 8, fontWeight: 800, color: `var(--ring${roleLetter})` }}>
+          {roleLetter}
         </span>
       </div>
-
       {/* Crest */}
       {player.logoUrl ? (
-        <img
-          src={player.logoUrl} alt=""
+        <img src={player.logoUrl} alt=""
           style={{ width: 14, height: 14, objectFit: "contain", flexShrink: 0 }}
           onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
         />
@@ -348,23 +272,17 @@ function SidebarRow({ player, isInField, isSelected, isCompatible, isCaptain, is
           {player.teamCode}
         </span>
       )}
-
-      {/* Cognome */}
-      <span style={{ flex: 1, fontFamily: "var(--font-sans)", fontSize: 12, fontWeight: 600, color: "rgba(239,230,211,0.95)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-        {lastName(player.name)}
-      </span>
-
-      {/* XI badge / captain toggle */}
+      {/* .rn — nome */}
+      <span className="rn">{lastName(player.name)}</span>
+      {/* XI badge / capitano toggle */}
       {isInField ? (
-        <span style={{ fontFamily: "var(--font-mono)", fontSize: 8, fontWeight: 700, color: "rgba(106,160,127,0.65)", flexShrink: 0 }}>
-          XI
-        </span>
+        <span className="mk pl">XI</span>
       ) : !isLocked ? (
         <button
           onClick={(e) => { e.stopPropagation(); onCaptainToggle(); }}
           style={{
             width: 18, height: 18, borderRadius: "50%", flexShrink: 0, padding: 0,
-            background: isCaptain ? "#c8922b" : "rgba(0,0,0,0.25)",
+            background: isCaptain ? "var(--gold)" : "rgba(0,0,0,0.25)",
             border: isCaptain ? "none" : "1px solid rgba(239,230,211,0.2)",
             display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer",
           }}
@@ -722,7 +640,7 @@ export default function FormazioneDesktopPage() {
   // ── Render ────────────────────────────────────────────────────────────────────
 
   return (
-    <div style={{ height: "100dvh", background: "var(--cream)", color: "var(--green-d)", fontFamily: "var(--font-sans)", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+    <div className="fd" style={{ height: "100dvh", background: "var(--cream)", color: "var(--green-d)", fontFamily: "var(--font-sans)", display: "flex", flexDirection: "column", overflow: "hidden" }}>
 
       {/* ── TOP BAR ─────────────────────────────────────────────────────────── */}
       <div style={{ display: "flex", alignItems: "center", gap: 14, padding: "13px 22px", borderBottom: "1px solid var(--line)", flexShrink: 0 }}>
@@ -1005,40 +923,28 @@ export default function FormazioneDesktopPage() {
               </div>
             )}
 
-            {/* Coach box */}
-            <div style={{
-              position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)",
-              width: 112, border: "1.7px dashed rgba(239,230,211,0.48)",
-              borderRadius: 7, padding: "10px 9px", textAlign: "center",
-              background: "rgba(21,48,31,0.32)", zIndex: 5,
-            }}>
-              <div style={{ width: 54, height: 54, borderRadius: "50%", border: "2.5px solid #c8922b", margin: "0 auto 6px", background: "#1f4733", overflow: "hidden" }}>
-                <MisterToyAvatar />
+            {/* Area allenatore — .coach > .fm + .mister + .cn (ordine dal mockup) */}
+            <div className="coach">
+              <div className="fm">
+                {roundLocked ? modulo : (
+                  <select
+                    value={modulo}
+                    onChange={e => handleModuloChange(e.target.value)}
+                    style={{
+                      fontFamily: "var(--disp)", fontSize: 13, fontWeight: 700, color: "var(--gold-l)",
+                      background: "transparent", border: "none", outline: "none",
+                      cursor: "pointer", appearance: "none" as const, WebkitAppearance: "none" as const,
+                      textAlign: "center", width: "100%", letterSpacing: ".04em",
+                    }}
+                  >
+                    {MODULI.map(m => (
+                      <option key={m} value={m} style={{ background: "#0d1f1a", color: "var(--gold-l)" }}>{m}</option>
+                    ))}
+                  </select>
+                )}
               </div>
-              <div style={{ fontFamily: "var(--font-serif)", fontWeight: 600, fontSize: 12, color: "rgba(239,230,211,0.88)", marginBottom: 6 }}>
-                Mister AI
-              </div>
-              <div style={{ fontSize: 8, textTransform: "uppercase" as const, letterSpacing: "0.1em", color: "rgba(239,230,211,0.3)", marginBottom: 3 }}>
-                Modulo
-              </div>
-              {roundLocked ? (
-                <span style={{ fontFamily: "var(--font-mono)", fontSize: 17, fontWeight: 700, color: "#c8922b" }}>{modulo}</span>
-              ) : (
-                <select
-                  value={modulo}
-                  onChange={e => handleModuloChange(e.target.value)}
-                  style={{
-                    fontFamily: "var(--font-mono)", fontSize: 15, fontWeight: 700, color: "#c8922b",
-                    background: "transparent", border: "none", outline: "none",
-                    cursor: "pointer", appearance: "none", WebkitAppearance: "none",
-                    textAlign: "center", width: "100%",
-                  }}
-                >
-                  {MODULI.map(m => (
-                    <option key={m} value={m} style={{ background: "#0d1f1a", color: "#c8922b" }}>{m}</option>
-                  ))}
-                </select>
-              )}
+              <div className="mister"><MisterToyAvatar /></div>
+              <div className="cn">{teamName}</div>
             </div>
 
             {/* Righe giocatori: ATT in cima → GK in fondo */}
