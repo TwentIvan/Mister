@@ -20,6 +20,7 @@ import AstaMobilePage from "@/pages/AstaMobilePage";
 import JoinLegaPage from "@/pages/JoinLegaPage";
 import BrandPage from "@/pages/brand";
 import ClassificaPage from "@/pages/classifica/ClassificaPage";
+import HubPage from "@/pages/hub/HubPage";
 import FeedPage from "@/pages/feed/FeedPage";
 import RosaPage from "@/pages/rosa/RosaPage";
 import SchedaPage from "@/pages/scheda/SchedaPage";
@@ -46,6 +47,9 @@ function Router() {
 
       {/* ── Classifica mobile (S-classifica, design spec) ────── */}
       <Route path="/classifica/:competitionId" component={ClassificaPage} />
+
+      {/* ── Hub lega mobile (S-hub, design spec) ─────────────── */}
+      <Route path="/hub/:leagueId" component={HubPage} />
 
       {/* ── Feed mobile (S-feed, design spec) ────────────────── */}
       <Route path="/feed/:leagueId" component={FeedPage} />

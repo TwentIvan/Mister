@@ -243,3 +243,84 @@ export const competitions = pgTable("competitions", {
 
 export type Competition = typeof competitions.$inferSelect;
 export type NewCompetition = typeof competitions.$inferInsert;
+
+// ============================================================
+// COMPETITION PHASES — il modello a fasi (§5)
+// ============================================================
+
+export const phaseMisuraEnum = pgEnum("phase_misura", [
+  "scontro_diretto",
+  "punteggio_assoluto",
+  "posizione",
+]);
+export type PhaseMisura = (typeof phaseMisuraEnum.enumValues)[number];
+
+export const phaseStrutturaEnum = pgEnum("phase_struttura", [
+  "classifica",
+  "tabellone",
+  "caduta",
+]);
+export type PhaseStruttura = (typeof phaseStrutturaEnum.enumValues)[number];
+
+export const phaseStatusEnum = pgEnum("phase_status", [
+  "programmata",
+  "in_corso",
+  "conclusa",
+]);
+export type PhaseStatus = (typeof phaseStatusEnum.enumValues)[number];
+
+/**
+ * Parametri struttura-specifici di una fase.
+ * Solo i campi rilevanti per la struttura scelta sono popolati.
+ */
+export interface PhaseParams {
+  /** classifica: numero di gironi (default 1 = girone unico). */
+  n_gironi?: number;
+  /** tabellone: andata/ritorno o secca. */
+  gambe?: "secca" | "andata_ritorno";
+  /** tabellone: come risolvere i pareggi. */
+  spareggio?: "supplementari_rigori" | "away_goals";
+  /** caduta: quante squadre escono per giornata. */
+  quanti_escono?: number;
+}
+
+/**
+ * Chi passa alla fase successiva e con quale criterio.
+ * Presente su ogni fase non-finale.
+ */
+export interface PhaseQualification {
+  tipo: "top_k_per_girone" | "top_k_assoluti" | "vincitori_tabellone";
+  /** Top K per girone (solo per tipo=top_k_per_girone). */
+  k?: number;
+  /** Totale squadre che si qualificano. */
+  n_qualificati: number;
+  /**
+   * Etichetta leggibile per C-guida-fasi.
+   * Es. "prime 2 di ogni girone → 4"
+   */
+  label?: string;
+}
+
+export const competitionPhases = pgTable("competition_phases", {
+  id: text("id").primaryKey(),
+  competitionId: text("competition_id")
+    .notNull()
+    .references(() => competitions.id, { onDelete: "cascade" }),
+  /** Ordine nella sequenza (1-indexed). */
+  order: integer("order").notNull(),
+  name: text("name").notNull(),
+  misura: phaseMisuraEnum("misura").notNull(),
+  struttura: phaseStrutturaEnum("struttura").notNull(),
+  params: jsonb("params").$type<PhaseParams>().notNull().default({}),
+  /** Null sulla fase finale (non passa nessuno oltre). */
+  qualification: jsonb("qualification").$type<PhaseQualification>(),
+  status: phaseStatusEnum("status").notNull().default("programmata"),
+  startGiornata: integer("start_giornata"),
+  endGiornata: integer("end_giornata"),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+export type CompetitionPhase = typeof competitionPhases.$inferSelect;
+export type NewCompetitionPhase = typeof competitionPhases.$inferInsert;

@@ -1119,6 +1119,87 @@ export const DeleteCompetitionParams = zod.object({
 
 
 /**
+ * @summary Hub di lega — identità + giornata + card competizioni con fasi (S-hub)
+ */
+export const GetLeagueHubParams = zod.object({
+  "leagueId": zod.coerce.string()
+})
+
+export const GetLeagueHubQueryParams = zod.object({
+  "fantaTeamId": zod.coerce.string().optional().describe('ID squadra fanta dell\'utente per evidenziare posizione e prossima sfida')
+})
+
+export const GetLeagueHubResponse = zod.object({
+  "league_id": zod.string(),
+  "league_name": zod.string(),
+  "season": zod.number(),
+  "n_managers": zod.number(),
+  "giornata_corrente": zod.number(),
+  "competitions": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "tipo_struttura": zod.enum(['classifica', 'tabellone', 'caduta']).describe('Icona di tipo dedotta dalle fasi (R-icona-tipo)'),
+  "stato": zod.enum(['programmata', 'in_corso', 'conclusa']),
+  "n_phases": zod.number(),
+  "phases": zod.array(zod.object({
+  "id": zod.string(),
+  "order": zod.number(),
+  "name": zod.string(),
+  "misura": zod.enum(['scontro_diretto', 'punteggio_assoluto', 'posizione']),
+  "struttura": zod.enum(['classifica', 'tabellone', 'caduta']),
+  "status": zod.enum(['programmata', 'in_corso', 'conclusa']),
+  "qualification_label": zod.string().nullish(),
+  "params": zod.record(zod.string(), zod.unknown()).optional()
+})),
+  "standings_extract": zod.object({
+  "top1": zod.object({
+  "pos": zod.number(),
+  "fanta_team_id": zod.string(),
+  "team_name": zod.string(),
+  "color_primary": zod.string().nullish(),
+  "points": zod.number(),
+  "pf": zod.number()
+}),
+  "my_row": zod.object({
+  "pos": zod.number(),
+  "fanta_team_id": zod.string(),
+  "team_name": zod.string(),
+  "color_primary": zod.string().nullish(),
+  "points": zod.number(),
+  "pf": zod.number()
+}).nullish(),
+  "giornata_max": zod.number().describe('Ultima giornata giocata'),
+  "next_giornata": zod.number().nullish(),
+  "next_opponent": zod.string().nullish()
+}).nullish()
+}))
+})
+
+
+/**
+ * @summary Fasi di una competizione
+ */
+export const GetCompetitionPhasesParams = zod.object({
+  "competitionId": zod.coerce.string()
+})
+
+export const GetCompetitionPhasesResponseItem = zod.object({
+  "id": zod.string(),
+  "competition_id": zod.string(),
+  "order": zod.number(),
+  "name": zod.string(),
+  "misura": zod.enum(['scontro_diretto', 'punteggio_assoluto', 'posizione']),
+  "struttura": zod.enum(['classifica', 'tabellone', 'caduta']),
+  "status": zod.enum(['programmata', 'in_corso', 'conclusa']),
+  "qualification_label": zod.string().nullish(),
+  "params": zod.record(zod.string(), zod.unknown()),
+  "start_giornata": zod.number().nullish(),
+  "end_giornata": zod.number().nullish()
+})
+export const GetCompetitionPhasesResponse = zod.array(GetCompetitionPhasesResponseItem)
+
+
+/**
  * @summary Lista eventi di mercato
  */
 export const GetLeagueMarketsParams = zod.object({

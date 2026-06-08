@@ -512,6 +512,52 @@ paths:
         "204":
           description: Deleted
 
+  /leagues/{leagueId}/hub:
+    get:
+      operationId: getLeagueHub
+      tags: [competitions]
+      summary: Hub di lega — identità + giornata + card competizioni con fasi (S-hub)
+      parameters:
+        - $ref: "#/components/parameters/LeagueId"
+        - in: query
+          name: fantaTeamId
+          required: false
+          schema:
+            type: string
+          description: ID squadra fanta dell'utente per evidenziare posizione e prossima sfida
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LeagueHubResponse"
+        "404":
+          description: Lega non trovata
+
+  /competitions/{competitionId}/phases:
+    get:
+      operationId: getCompetitionPhases
+      tags: [competitions]
+      summary: Fasi di una competizione
+      parameters:
+        - in: path
+          name: competitionId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CompetitionPhase"
+        "404":
+          description: Competizione non trovata
+
   # ─── MARKETS ─────────────────────────────────────────────────
   /leagues/{leagueId}/markets:
     get:
@@ -2716,6 +2762,149 @@ components:
         pf:
           type: number
           description: Punti fantacalcio cumulati (spareggio)
+
+    LeagueHubResponse:
+      type: object
+      required: [league_id, league_name, season, n_managers, giornata_corrente, competitions]
+      properties:
+        league_id:
+          type: string
+        league_name:
+          type: string
+        season:
+          type: integer
+        n_managers:
+          type: integer
+        giornata_corrente:
+          type: integer
+        competitions:
+          type: array
+          items:
+            $ref: "#/components/schemas/HubCompetition"
+
+    HubCompetition:
+      type: object
+      required: [id, name, tipo_struttura, stato, n_phases, phases]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        tipo_struttura:
+          type: string
+          enum: [classifica, tabellone, caduta]
+          description: "Icona di tipo dedotta dalle fasi (R-icona-tipo)"
+        stato:
+          type: string
+          enum: [programmata, in_corso, conclusa]
+        n_phases:
+          type: integer
+        phases:
+          type: array
+          items:
+            $ref: "#/components/schemas/HubCompetitionPhase"
+        standings_extract:
+          nullable: true
+          allOf:
+            - $ref: "#/components/schemas/HubStandingsExtract"
+
+    HubCompetitionPhase:
+      type: object
+      required: [id, order, name, misura, struttura, status]
+      properties:
+        id:
+          type: string
+        order:
+          type: integer
+        name:
+          type: string
+        misura:
+          type: string
+          enum: [scontro_diretto, punteggio_assoluto, posizione]
+        struttura:
+          type: string
+          enum: [classifica, tabellone, caduta]
+        status:
+          type: string
+          enum: [programmata, in_corso, conclusa]
+        qualification_label:
+          type: string
+          nullable: true
+        params:
+          type: object
+          additionalProperties: true
+
+    HubStandingsExtract:
+      type: object
+      required: [top1, giornata_max]
+      properties:
+        top1:
+          $ref: "#/components/schemas/HubStandingsRow"
+        my_row:
+          nullable: true
+          allOf:
+            - $ref: "#/components/schemas/HubStandingsRow"
+        giornata_max:
+          type: integer
+          description: Ultima giornata giocata
+        next_giornata:
+          type: integer
+          nullable: true
+        next_opponent:
+          type: string
+          nullable: true
+
+    HubStandingsRow:
+      type: object
+      required: [pos, fanta_team_id, team_name, points, pf]
+      properties:
+        pos:
+          type: integer
+        fanta_team_id:
+          type: string
+        team_name:
+          type: string
+        color_primary:
+          type: string
+          nullable: true
+        points:
+          type: integer
+        pf:
+          type: number
+
+    CompetitionPhase:
+      type: object
+      required: [id, competition_id, order, name, misura, struttura, status, params]
+      properties:
+        id:
+          type: string
+        competition_id:
+          type: string
+        order:
+          type: integer
+        name:
+          type: string
+        misura:
+          type: string
+          enum: [scontro_diretto, punteggio_assoluto, posizione]
+        struttura:
+          type: string
+          enum: [classifica, tabellone, caduta]
+        status:
+          type: string
+          enum: [programmata, in_corso, conclusa]
+        qualification_label:
+          type: string
+          nullable: true
+        params:
+          type: object
+          additionalProperties: true
+        start_giornata:
+          type: integer
+          nullable: true
+        end_giornata:
+          type: integer
+          nullable: true
 
     StandingsResponse:
       type: object

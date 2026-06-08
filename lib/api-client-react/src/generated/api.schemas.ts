@@ -1066,6 +1066,148 @@ export interface StandingsEntry {
   pf: number;
 }
 
+/**
+ * Icona di tipo dedotta dalle fasi (R-icona-tipo)
+ */
+export type HubCompetitionTipoStruttura = typeof HubCompetitionTipoStruttura[keyof typeof HubCompetitionTipoStruttura];
+
+
+export const HubCompetitionTipoStruttura = {
+  classifica: 'classifica',
+  tabellone: 'tabellone',
+  caduta: 'caduta',
+} as const;
+
+export type HubCompetitionStato = typeof HubCompetitionStato[keyof typeof HubCompetitionStato];
+
+
+export const HubCompetitionStato = {
+  programmata: 'programmata',
+  in_corso: 'in_corso',
+  conclusa: 'conclusa',
+} as const;
+
+export type HubCompetitionPhaseMisura = typeof HubCompetitionPhaseMisura[keyof typeof HubCompetitionPhaseMisura];
+
+
+export const HubCompetitionPhaseMisura = {
+  scontro_diretto: 'scontro_diretto',
+  punteggio_assoluto: 'punteggio_assoluto',
+  posizione: 'posizione',
+} as const;
+
+export type HubCompetitionPhaseStruttura = typeof HubCompetitionPhaseStruttura[keyof typeof HubCompetitionPhaseStruttura];
+
+
+export const HubCompetitionPhaseStruttura = {
+  classifica: 'classifica',
+  tabellone: 'tabellone',
+  caduta: 'caduta',
+} as const;
+
+export type HubCompetitionPhaseStatus = typeof HubCompetitionPhaseStatus[keyof typeof HubCompetitionPhaseStatus];
+
+
+export const HubCompetitionPhaseStatus = {
+  programmata: 'programmata',
+  in_corso: 'in_corso',
+  conclusa: 'conclusa',
+} as const;
+
+export type HubCompetitionPhaseParams = { [key: string]: unknown };
+
+export interface HubCompetitionPhase {
+  id: string;
+  order: number;
+  name: string;
+  misura: HubCompetitionPhaseMisura;
+  struttura: HubCompetitionPhaseStruttura;
+  status: HubCompetitionPhaseStatus;
+  qualification_label?: string | null;
+  params?: HubCompetitionPhaseParams;
+}
+
+export interface HubStandingsRow {
+  pos: number;
+  fanta_team_id: string;
+  team_name: string;
+  color_primary?: string | null;
+  points: number;
+  pf: number;
+}
+
+export interface HubStandingsExtract {
+  top1: HubStandingsRow;
+  my_row?: HubStandingsRow | null;
+  /** Ultima giornata giocata */
+  giornata_max: number;
+  next_giornata?: number | null;
+  next_opponent?: string | null;
+}
+
+export interface HubCompetition {
+  id: string;
+  name: string;
+  /** Icona di tipo dedotta dalle fasi (R-icona-tipo) */
+  tipo_struttura: HubCompetitionTipoStruttura;
+  stato: HubCompetitionStato;
+  n_phases: number;
+  phases: HubCompetitionPhase[];
+  standings_extract?: HubStandingsExtract | null;
+}
+
+export interface LeagueHubResponse {
+  league_id: string;
+  league_name: string;
+  season: number;
+  n_managers: number;
+  giornata_corrente: number;
+  competitions: HubCompetition[];
+}
+
+export type CompetitionPhaseMisura = typeof CompetitionPhaseMisura[keyof typeof CompetitionPhaseMisura];
+
+
+export const CompetitionPhaseMisura = {
+  scontro_diretto: 'scontro_diretto',
+  punteggio_assoluto: 'punteggio_assoluto',
+  posizione: 'posizione',
+} as const;
+
+export type CompetitionPhaseStruttura = typeof CompetitionPhaseStruttura[keyof typeof CompetitionPhaseStruttura];
+
+
+export const CompetitionPhaseStruttura = {
+  classifica: 'classifica',
+  tabellone: 'tabellone',
+  caduta: 'caduta',
+} as const;
+
+export type CompetitionPhaseStatus = typeof CompetitionPhaseStatus[keyof typeof CompetitionPhaseStatus];
+
+
+export const CompetitionPhaseStatus = {
+  programmata: 'programmata',
+  in_corso: 'in_corso',
+  conclusa: 'conclusa',
+} as const;
+
+export type CompetitionPhaseParams = { [key: string]: unknown };
+
+export interface CompetitionPhase {
+  id: string;
+  competition_id: string;
+  order: number;
+  name: string;
+  misura: CompetitionPhaseMisura;
+  struttura: CompetitionPhaseStruttura;
+  status: CompetitionPhaseStatus;
+  qualification_label?: string | null;
+  params: CompetitionPhaseParams;
+  start_giornata?: number | null;
+  end_giornata?: number | null;
+}
+
 export interface StandingsResponse {
   standings: StandingsEntry[];
 }
@@ -1662,6 +1804,13 @@ owner_user_id?: string;
 
 export type ListLeaguesParams = {
 admin_user_id?: string;
+};
+
+export type GetLeagueHubParams = {
+/**
+ * ID squadra fanta dell'utente per evidenziare posizione e prossima sfida
+ */
+fantaTeamId?: string;
 };
 
 export type ListPlayersParams = {

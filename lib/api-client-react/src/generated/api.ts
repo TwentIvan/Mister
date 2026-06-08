@@ -33,6 +33,7 @@ import type {
   CompetitionInput,
   CompetitionMatch,
   CompetitionMatchesResponse,
+  CompetitionPhase,
   CompetitionUpdate,
   Contract,
   ContractInput,
@@ -53,6 +54,7 @@ import type {
   GetCompetitionMatchesParams,
   GetDashboardParams,
   GetFeedParams,
+  GetLeagueHubParams,
   GetLineupsParams,
   GetMatchesParams,
   GetPlayerSchedaParams,
@@ -61,6 +63,7 @@ import type {
   JoinLeagueRequest,
   JoinLeagueResponse,
   League,
+  LeagueHubResponse,
   LeagueInput,
   LeagueInviteInfo,
   LeagueStats,
@@ -1928,6 +1931,172 @@ export const useDeleteCompetition = <TError = ErrorType<unknown>,
       > => {
       return useMutation(getDeleteCompetitionMutationOptions(options));
     }
+
+export const getGetLeagueHubUrl = (leagueId: string,
+    params?: GetLeagueHubParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/leagues/${leagueId}/hub?${stringifiedParams}` : `/api/leagues/${leagueId}/hub`
+}
+
+/**
+ * @summary Hub di lega — identità + giornata + card competizioni con fasi (S-hub)
+ */
+export const getLeagueHub = async (leagueId: string,
+    params?: GetLeagueHubParams, options?: RequestInit): Promise<LeagueHubResponse> => {
+
+  return customFetch<LeagueHubResponse>(getGetLeagueHubUrl(leagueId,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetLeagueHubQueryKey = (leagueId: string,
+    params?: GetLeagueHubParams,) => {
+    return [
+    `/api/leagues/${leagueId}/hub`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetLeagueHubQueryOptions = <TData = Awaited<ReturnType<typeof getLeagueHub>>, TError = ErrorType<void>>(leagueId: string,
+    params?: GetLeagueHubParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getLeagueHub>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetLeagueHubQueryKey(leagueId,params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getLeagueHub>>> = ({ signal }) => getLeagueHub(leagueId,params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(leagueId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getLeagueHub>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetLeagueHubQueryResult = NonNullable<Awaited<ReturnType<typeof getLeagueHub>>>
+export type GetLeagueHubQueryError = ErrorType<void>
+
+
+/**
+ * @summary Hub di lega — identità + giornata + card competizioni con fasi (S-hub)
+ */
+
+export function useGetLeagueHub<TData = Awaited<ReturnType<typeof getLeagueHub>>, TError = ErrorType<void>>(
+ leagueId: string,
+    params?: GetLeagueHubParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getLeagueHub>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetLeagueHubQueryOptions(leagueId,params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetCompetitionPhasesUrl = (competitionId: string,) => {
+
+
+
+
+  return `/api/competitions/${competitionId}/phases`
+}
+
+/**
+ * @summary Fasi di una competizione
+ */
+export const getCompetitionPhases = async (competitionId: string, options?: RequestInit): Promise<CompetitionPhase[]> => {
+
+  return customFetch<CompetitionPhase[]>(getGetCompetitionPhasesUrl(competitionId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetCompetitionPhasesQueryKey = (competitionId: string,) => {
+    return [
+    `/api/competitions/${competitionId}/phases`
+    ] as const;
+    }
+
+
+export const getGetCompetitionPhasesQueryOptions = <TData = Awaited<ReturnType<typeof getCompetitionPhases>>, TError = ErrorType<void>>(competitionId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCompetitionPhases>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetCompetitionPhasesQueryKey(competitionId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getCompetitionPhases>>> = ({ signal }) => getCompetitionPhases(competitionId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(competitionId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getCompetitionPhases>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetCompetitionPhasesQueryResult = NonNullable<Awaited<ReturnType<typeof getCompetitionPhases>>>
+export type GetCompetitionPhasesQueryError = ErrorType<void>
+
+
+/**
+ * @summary Fasi di una competizione
+ */
+
+export function useGetCompetitionPhases<TData = Awaited<ReturnType<typeof getCompetitionPhases>>, TError = ErrorType<void>>(
+ competitionId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCompetitionPhases>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetCompetitionPhasesQueryOptions(competitionId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 
 export const getGetLeagueMarketsUrl = (leagueId: string,) => {
 
