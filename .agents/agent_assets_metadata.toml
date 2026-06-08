@@ -72,3 +72,15 @@ id = "eIiU6fHMvGFNzICoz49fK"
 uri = "file://screenshots/formazione-panchina-g3.jpg"
 type = "image"
 title = "Panchina — G3 aperta"
+
+[[outputs]]
+id = "lGPBPePFO10PaHOHGRjvr"
+uri = "file://screenshots/formazione-desktop-g3.jpg"
+type = "image"
+title = "Desktop — G3 aperta (layout completo)"
+
+[[outputs]]
+id = "gEBRDow5UQk2NUHj25vA6"
+uri = "file://screenshots/formazione-desktop-g1-bloccata.jpg"
+type = "image"
+title = "Desktop — G1 bloccata (sola lettura, Playwright confermato)"

@@ -26,6 +26,7 @@ import FeedPage from "@/pages/feed/FeedPage";
 import RosaPage from "@/pages/rosa/RosaPage";
 import SchedaPage from "@/pages/scheda/SchedaPage";
 import FormazioneMobilePage from "@/pages/formazione/FormazioneMobilePage";
+import FormazioneDesktopPage from "@/pages/formazione/FormazioneDesktopPage";
 import { Switch, Route, Router as WouterRouter } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -65,6 +66,9 @@ function Router() {
 
       {/* ── Formazione mobile (S-formazione-m, design spec) ──── */}
       <Route path="/formazione/:competitionId/:fantaTeamId" component={FormazioneMobilePage} />
+
+      {/* ── Formazione desktop (S-formazione-d, design spec) ─── */}
+      <Route path="/formazione-d/:competitionId/:fantaTeamId" component={FormazioneDesktopPage} />
 
       {/* ── Scheda giocatore mobile (S-scheda, design spec) ───── */}
       <Route path="/scheda/:playerId" component={SchedaPage} />
