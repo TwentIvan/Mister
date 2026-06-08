@@ -11,6 +11,7 @@ import {
   PutLineupBody,
   PutLineupResponse,
 } from "@workspace/api-zod";
+import { requireAuth } from "../lib/auth";
 
 const router: IRouter = Router();
 
@@ -87,7 +88,7 @@ router.get("/lineups", async (req, res): Promise<void> => {
 
 // ── PUT /lineups ───────────────────────────────────────────────────────────
 
-router.put("/lineups", async (req, res): Promise<void> => {
+router.put("/lineups", requireAuth, async (req, res): Promise<void> => {
   const parsed = PutLineupBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ errors: [parsed.error.message] });
@@ -96,6 +97,22 @@ router.put("/lineups", async (req, res): Promise<void> => {
 
   const body = parsed.data;
   const errors: string[] = [];
+
+  // ── Ownership: l'utente autenticato deve possedere questo fantaTeam ─────────
+  const [teamOwner] = await db
+    .select({ managerUserId: fantaTeams.managerUserId })
+    .from(fantaTeams)
+    .where(eq(fantaTeams.id, body.fantaTeamId))
+    .limit(1);
+
+  if (!teamOwner) {
+    res.status(404).json({ errors: ["Squadra non trovata"] });
+    return;
+  }
+  if (teamOwner.managerUserId !== req.user!.sub) {
+    res.status(403).json({ errors: ["Non autorizzato: questa squadra non è tua"] });
+    return;
+  }
 
   // ── Regola 1: esattamente 11 titolari ─────────────────────────────────────
   const starters = body.players.filter(p => p.isStarter);

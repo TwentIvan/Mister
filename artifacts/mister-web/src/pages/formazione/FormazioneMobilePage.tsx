@@ -40,11 +40,12 @@ interface LocalPlayer {
 
 const MODULI = ["4-3-3", "4-4-2", "3-5-2", "3-4-3", "5-3-2", "4-2-3-1", "4-3-1-2"];
 
+// Esattamente i token --rP/--rD/--rC/--rA di tokens.css (stessi di RosaPage .bg)
 const ROLE_RING: Record<Role, string> = {
-  GK:  "#c79a4e",
-  DEF: "#6aa07f",
-  MID: "#6aa6b8",
-  ATT: "#cf8a6a",
+  GK:  "#7e5a26",   // --rP
+  DEF: "#2b5740",   // --rD
+  MID: "#234c5e",   // --rC
+  ATT: "#6b2c24",   // --rA
 };
 
 const ROLE_BENCH_BG: Record<Role, string> = {
@@ -222,19 +223,6 @@ function FieldChip({ player, role, isSelected, isCaptain, isDimmed, isLocked, on
           transition: "border-color 0.15s, box-shadow 0.15s",
           ...((!player) ? { borderStyle: "dashed" } : {}),
         }} />
-        {/* Voto badge */}
-        <div style={{
-          position: "absolute", top: -1, right: -1,
-          width: 18, height: 18, borderRadius: "50%",
-          background: player?.voto != null ? "#1f4733" : "rgba(0,0,0,0.45)",
-          border: player?.voto != null ? "none" : "1px solid rgba(239,230,211,0.2)",
-          display: "flex", alignItems: "center", justifyContent: "center",
-          boxShadow: "0 1px 3px rgba(0,0,0,0.5)",
-        }}>
-          <span style={{ fontFamily: "var(--font-mono)", fontSize: 7, fontWeight: 700, color: "#fff", lineHeight: 1 }}>
-            {player?.voto != null ? player.voto.toFixed(1) : "—"}
-          </span>
-        </div>
         {/* Captain badge */}
         {isCaptain && (
           <div style={{
@@ -355,10 +343,6 @@ function BenchRow({ player, priority, isSelected, isCompatible, isCaptain, isLoc
       {/* Cognome */}
       <span style={{ flex: 1, fontFamily: "var(--font-sans)", fontSize: 13, fontWeight: 600, color: "rgba(239,230,211,0.95)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
         {lastName(player.name)}
-      </span>
-      {/* Voto */}
-      <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, fontWeight: 700, color: "rgba(239,230,211,0.55)", flexShrink: 0 }}>
-        {player.voto != null ? player.voto.toFixed(1) : "—"}
       </span>
       {/* Captain toggle */}
       {!isLocked && (
