@@ -54,3 +54,21 @@ id = "VmSMb_MmUQefHR9Hr3Gnm"
 uri = "file://screenshots/feed-lg-mvp.jpg"
 type = "image"
 title = "S-feed · Lega MVP · /feed/lg-mvp"
+
+[[outputs]]
+id = "HCry5Yywp-Tl82puD1o-D"
+uri = "file://screenshots/formazione-campo-g3-aperta.jpg"
+type = "image"
+title = "Campo — G3 aperta"
+
+[[outputs]]
+id = "-gzMFfbdJmqV33KyaU9gK"
+uri = "file://screenshots/formazione-campo-g1-bloccata.jpg"
+type = "image"
+title = "Campo — G1 bloccata (sola lettura)"
+
+[[outputs]]
+id = "eIiU6fHMvGFNzICoz49fK"
+uri = "file://screenshots/formazione-panchina-g3.jpg"
+type = "image"
+title = "Panchina — G3 aperta"
