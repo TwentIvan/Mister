@@ -1,7 +1,10 @@
 import { Router, type IRouter } from "express";
-import { eq, and, inArray } from "drizzle-orm";
+import { eq, and, inArray, isNotNull } from "drizzle-orm";
 import { db } from "@workspace/db";
-import { lineups, lineupPlayers, contracts, players as playersTable } from "@workspace/db";
+import {
+  lineups, lineupPlayers, contracts, players as playersTable,
+  fantaTeams, competitions, competitionMatches,
+} from "@workspace/db";
 import {
   GetLineupsQueryParams,
   GetLineupsResponse,
@@ -165,8 +168,6 @@ router.put("/lineups", async (req, res): Promise<void> => {
   }
 
   // ── Regola 5: tutti i playerId in rosa (contratti attivi) ─────────────────
-  // Nota: se la rosa non ha contratti attivi (es. squadra MVP senza asta),
-  // la validazione viene saltata per non bloccare lo sviluppo.
   const activeContracts = await db
     .select({ playerId: contracts.playerId })
     .from(contracts)
@@ -179,6 +180,41 @@ router.put("/lineups", async (req, res): Promise<void> => {
     const notInRoster = body.players.filter(p => !rosterIds.has(p.playerId));
     if (notInRoster.length > 0) {
       errors.push(`Giocatori non in rosa: ${notInRoster.map(p => p.playerId).join(", ")}`);
+    }
+  }
+
+  // ── Regola 8: scadenza giornata — controlla competition_matches ───────────
+  // Cerca il campionato della lega della squadra e verifica se la giornata è già giocata.
+  const [teamRow] = await db
+    .select({ leagueId: fantaTeams.leagueId })
+    .from(fantaTeams)
+    .where(eq(fantaTeams.id, body.fantaTeamId))
+    .limit(1);
+
+  if (teamRow) {
+    const [campionato] = await db
+      .select({ id: competitions.id })
+      .from(competitions)
+      .where(and(
+        eq(competitions.leagueId, teamRow.leagueId),
+        eq(competitions.type, "campionato"),
+      ))
+      .limit(1);
+
+    if (campionato) {
+      const playedMatches = await db
+        .select({ playedAt: competitionMatches.playedAt })
+        .from(competitionMatches)
+        .where(and(
+          eq(competitionMatches.competitionId, campionato.id),
+          eq(competitionMatches.giornata, body.round),
+          isNotNull(competitionMatches.playedAt),
+        ))
+        .limit(1);
+
+      if (playedMatches.length > 0) {
+        errors.push(`Giornata ${body.round} già conclusa — formazione bloccata`);
+      }
     }
   }
 

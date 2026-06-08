@@ -1,0 +1,33 @@
+Telaio gioco — passo 1: FORMAZIONE (mobile). Bersaglio visivo: formazione_mobile.html.
+Spec: S-formazione-m (§7), regole R-rosa, R-server, R-mister-toy, R-crest, R-mobile-nosquish.
+È il PRIMO schermo che scrive: R-server è la regola madre.
+
+A) BACKEND — entità formazione per (fantaTeam, competizione, giornata):
+   - modulo, XI (11 con ruolo/slot), panchina ordinata (14), capitano.
+   - GET formazione: per una giornata; se non esiste, stato vuoto da compilare.
+   - SAVE formazione (PUT): il SERVER valida e RIFIUTA se non torna. Validazioni obbligatorie
+     (NON solo lato client):
+       · ogni giocatore schierato/in panca appartiene alla rosa 25 di quella squadra;
+       · XI coerente col MODULO scelto (es. 4-3-3 = 1P·4D·3C·3A); panca = 14 (resto della rosa);
+       · nessun doppione; capitano presente nell'XI;
+       · giornata ANCORA APERTA (scadenza non passata) — vedi sotto.
+     Errori chiari e per-campo, così il client li mostra.
+   - SCADENZA: la formazione è editabile fino alla scadenza della giornata (usa l'inizio
+     giornata come lock). Giornate passate (G1, G2) = LOCKED, sola lettura. Prossima giornata
+     editabile (G3) per poter testare il salvataggio.
+
+B) MOBILE UI — S-formazione-m (formazione_mobile.html):
+   - tab Campo / Panchina; campo col modulo (badge-chip C-badge: anello ruolo + volto toy +
+     logo club + cognome); striscia modulo + allenatore (badge toy, R-mister-toy).
+   - SOSTITUZIONE A TOCCO: tocchi un titolare → tocchi un entrante dalla panca → si scambiano.
+     CHIUDI IL VINCOLO DI RUOLO che era rimasto permissivo: si scambia solo tra ruoli compatibili
+     con lo slot (un D entra al posto di un D, ecc.); il cambio di MODULO è un'azione separata.
+     Il client guida (mostra solo gli entranti validi), MA il server rivalida comunque (R-server).
+   - capitano impostabile; scadenza visibile; bottone Salva → manda al server → mostra esito
+     (salvato / errori di validazione). Su giornata locked: tutto read-only, niente Salva.
+   - R-mobile-nosquish (390px fisso), R-crest (loghi club sui badge).
+
+Testa e manda screenshot: (1) G3 editabile con una sostituzione fatta e SALVATA con successo;
+(2) un caso di RIFIUTO del server (es. forzando un XI incompleto via API) per vedere l'errore;
+(3) una giornata passata in sola lettura.
+Il desktop (S-formazione-d) lo facciamo dopo, sullo stesso backend.
