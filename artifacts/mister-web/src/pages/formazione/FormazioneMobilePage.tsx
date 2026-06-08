@@ -4,6 +4,7 @@ import {
   useGetCompetitionMatches,
   useGetRoster,
   useGetLineups,
+  useGetFantaTeamRosa,
   usePutLineup,
   getGetLineupsQueryKey,
   type RosterPlayer,
@@ -19,8 +20,9 @@ import { TEAM_CODE } from "./team-constants";
 type Role = "GK" | "DEF" | "MID" | "ATT";
 type Tab  = "campo" | "panchina";
 type Sel  =
-  | { kind: "field"; slotId: string; playerId: number }
-  | { kind: "bench"; rosterIdx: number; playerId: number }
+  | { kind: "field";       slotId: string; playerId: number }
+  | { kind: "field-empty"; slotId: string }
+  | { kind: "bench";       rosterIdx: number; playerId: number }
   | null;
 
 interface LocalPlayer {
@@ -40,14 +42,15 @@ interface LocalPlayer {
 
 const MODULI = ["4-3-3", "4-4-2", "3-5-2", "3-4-3", "5-3-2", "4-2-3-1", "4-3-1-2"];
 
-// Esattamente i token --rP/--rD/--rC/--rA di tokens.css (stessi di RosaPage .bg)
+// Anello chip sul campo (--ringP/D/C/A): colori chiari, leggibili sull'erba verde
 const ROLE_RING: Record<Role, string> = {
-  GK:  "#7e5a26",   // --rP
-  DEF: "#2b5740",   // --rD
-  MID: "#234c5e",   // --rC
-  ATT: "#6b2c24",   // --rA
+  GK:  "#c79a4e",   // --ringP
+  DEF: "#6aa07f",   // --ringD
+  MID: "#6aa6b8",   // --ringC
+  ATT: "#cf8a6a",   // --ringA
 };
 
+// Sfondo riga panchina (--rP/D/C/A): stessa palette scura
 const ROLE_BENCH_BG: Record<Role, string> = {
   GK:  "#7e5a26",
   DEF: "#2b5740",
@@ -206,7 +209,7 @@ function FieldChip({ player, role, isSelected, isCaptain, isDimmed, isLocked, on
           )}
           {!player && (
             <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <span style={{ fontFamily: "var(--font-mono)", fontSize: 14, fontWeight: 700, color: ring, opacity: 0.5 }}>
+              <span style={{ fontFamily: "var(--font-mono)", fontSize: 14, fontWeight: 700, color: ring, opacity: 0.7 }}>
                 {ROLE_LABEL[role]}
               </span>
             </div>
@@ -227,11 +230,11 @@ function FieldChip({ player, role, isSelected, isCaptain, isDimmed, isLocked, on
         {isCaptain && (
           <div style={{
             position: "absolute", bottom: -1, right: -1,
-            width: 15, height: 15, borderRadius: "50%", background: "#F4C430",
+            width: 15, height: 15, borderRadius: "50%", background: "#c8922b",
             display: "flex", alignItems: "center", justifyContent: "center",
             boxShadow: "0 1px 3px rgba(0,0,0,0.5)",
           }}>
-            <span style={{ fontFamily: "var(--font-mono)", fontSize: 7, fontWeight: 800, color: "#333" }}>C</span>
+            <span style={{ fontFamily: "var(--font-mono)", fontSize: 7, fontWeight: 800, color: "#fff" }}>C</span>
           </div>
         )}
       </div>
@@ -350,13 +353,13 @@ function BenchRow({ player, priority, isSelected, isCompatible, isCaptain, isLoc
           onClick={(e) => { e.stopPropagation(); onCaptainToggle(); }}
           style={{
             width: 22, height: 22, borderRadius: "50%", flexShrink: 0, padding: 0,
-            background: isCaptain ? "#F4C430" : "rgba(0,0,0,0.25)",
+            background: isCaptain ? "#c8922b" : "rgba(0,0,0,0.25)",
             border: isCaptain ? "none" : "1px solid rgba(239,230,211,0.25)",
             display: "flex", alignItems: "center", justifyContent: "center",
             cursor: "pointer",
           }}
         >
-          <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, fontWeight: 800, color: isCaptain ? "#333" : "rgba(239,230,211,0.55)" }}>C</span>
+          <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, fontWeight: 800, color: isCaptain ? "#fff" : "rgba(239,230,211,0.55)" }}>C</span>
         </button>
       )}
     </div>
@@ -372,6 +375,10 @@ export default function FormazioneMobilePage() {
   const season = parseInt(new URLSearchParams(search).get("season") ?? "2025", 10);
 
   const queryClient = useQueryClient();
+
+  // ── Team name ────────────────────────────────────────────────────────────────
+  const { data: rosaData } = useGetFantaTeamRosa(fantaTeamId ?? "");
+  const teamName = rosaData?.teamName ?? fantaTeamId ?? "Formazione";
 
   // ── Matches + rounds ────────────────────────────────────────────────────────
   const { data: matchesData } = useGetCompetitionMatches(competitionId ?? "");
@@ -478,8 +485,10 @@ export default function FormazioneMobilePage() {
   const formation    = useMemo(() => parseFormation(modulo), [modulo]);
   const starterCount = Object.keys(fieldSlots).length;
 
-  const selectedFieldRole: Role | null = selection?.kind === "field"
-    ? getSlotRole(selection.slotId, formation) : null;
+  const selectedFieldRole: Role | null =
+    (selection?.kind === "field" || selection?.kind === "field-empty")
+      ? getSlotRole(selection.slotId, formation)
+      : null;
 
   // ── Handlers ────────────────────────────────────────────────────────────────
 
@@ -493,15 +502,24 @@ export default function FormazioneMobilePage() {
 
   function handleFieldChipTap(slotId: string) {
     if (roundLocked) return;
-    if (selection?.kind === "field" && selection.slotId === slotId) { setSelection(null); return; }
     const pid = fieldSlots[slotId];
-    if (pid !== undefined) { setSelection({ kind: "field", slotId, playerId: pid }); setActiveTab("panchina"); }
+    if (pid !== undefined) {
+      // Slot occupato
+      if (selection?.kind === "field" && selection.slotId === slotId) { setSelection(null); return; }
+      setSelection({ kind: "field", slotId, playerId: pid });
+      setActiveTab("panchina");
+    } else {
+      // Slot vuoto — seleziona per riempirlo dalla panchina
+      if (selection?.kind === "field-empty" && selection.slotId === slotId) { setSelection(null); return; }
+      setSelection({ kind: "field-empty", slotId });
+      setActiveTab("panchina");
+    }
   }
 
   function handleBenchRowTap(pid: number, idx: number) {
     if (roundLocked) return;
 
-    if (selection?.kind === "field") {
+    if (selection?.kind === "field" || selection?.kind === "field-empty") {
       const reqRole = getSlotRole(selection.slotId, formation);
       const player  = playerById.get(pid);
       if (!player || player.role !== reqRole) {
@@ -509,8 +527,8 @@ export default function FormazioneMobilePage() {
         setTimeout(() => setRoleError(null), 2200);
         return;
       }
-      const outgoing = fieldSlots[selection.slotId];
       const slotId   = selection.slotId;
+      const outgoing = selection.kind === "field" ? fieldSlots[slotId] : undefined;
       setFieldSlots(prev => ({ ...prev, [slotId]: pid }));
       setRoster(prev => {
         const next = prev.filter(id => id !== pid);
@@ -585,23 +603,38 @@ export default function FormazioneMobilePage() {
   // ── Render ───────────────────────────────────────────────────────────────────
 
   return (
-    <div style={{ maxWidth: 390, margin: "0 auto", minHeight: "100dvh", background: "#0d1f1a", color: "var(--cream)", fontFamily: "var(--font-sans)", display: "flex", flexDirection: "column" }}>
+    <div style={{
+      maxWidth: 390, margin: "0 auto", minHeight: "100dvh",
+      background: "var(--cream)", color: "var(--green-d)",
+      fontFamily: "var(--font-sans)", display: "flex", flexDirection: "column",
+    }}>
 
       {/* Top bar */}
       <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "14px 16px 10px", flexShrink: 0 }}>
-        <button onClick={() => window.history.back()} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--cream)", padding: 4, borderRadius: 6, display: "flex" }}>
+        <button
+          onClick={() => window.history.back()}
+          style={{ background: "none", border: "none", cursor: "pointer", color: "var(--green)", padding: 4, borderRadius: 6, display: "flex" }}
+        >
           <ChevronLeft size={22} />
         </button>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontFamily: "var(--font-mono)", fontSize: 14, fontWeight: 700, color: "var(--cream)", letterSpacing: "0.04em", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-            {fantaTeamId ?? "Formazione"}
+          <div style={{
+            fontFamily: "var(--font-serif)", fontSize: 15, fontWeight: 600, color: "var(--green-d)",
+            lineHeight: 1.05, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+          }}>
+            {teamName}
           </div>
-          <div style={{ fontSize: 11, color: "rgba(239,230,211,0.45)", marginTop: 1 }}>Gestione formazione</div>
+          <div style={{ fontSize: 9, color: "var(--muted)", marginTop: 1, textTransform: "uppercase", letterSpacing: "0.07em" }}>
+            Gestione formazione
+          </div>
         </div>
         {roundLocked && (
-          <div style={{ display: "flex", alignItems: "center", gap: 4, padding: "3px 9px", borderRadius: 99, background: "rgba(239,230,211,0.07)", border: "1px solid rgba(239,230,211,0.16)" }}>
-            <Lock size={11} color="rgba(239,230,211,0.5)" />
-            <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, fontWeight: 600, color: "rgba(239,230,211,0.55)" }}>Bloccata</span>
+          <div style={{
+            display: "flex", alignItems: "center", gap: 4, padding: "3px 9px",
+            borderRadius: 99, background: "rgba(31,71,51,0.06)", border: "1px solid rgba(31,71,51,0.14)",
+          }}>
+            <Lock size={11} color="var(--muted)" />
+            <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, fontWeight: 600, color: "var(--muted)" }}>Bloccata</span>
           </div>
         )}
       </div>
@@ -612,9 +645,9 @@ export default function FormazioneMobilePage() {
           <div key={label} style={{
             padding: "4px 13px", borderRadius: 99, whiteSpace: "nowrap", flexShrink: 0,
             fontFamily: "var(--font-mono)", fontSize: 11, fontWeight: 600, letterSpacing: "0.05em",
-            background: label === "Formazione" ? "#1f4733" : "rgba(239,230,211,0.07)",
-            color: label === "Formazione" ? "#efe6d3" : "rgba(239,230,211,0.4)",
-            border: label === "Formazione" ? "1px solid rgba(239,230,211,0.18)" : "1px solid transparent",
+            background: label === "Formazione" ? "var(--green)" : "var(--paper)",
+            color: label === "Formazione" ? "var(--cream)" : "var(--muted)",
+            border: label === "Formazione" ? "1px solid rgba(239,230,211,0.18)" : "1px solid var(--line)",
           }}>
             {label}
           </div>
@@ -624,7 +657,7 @@ export default function FormazioneMobilePage() {
       {/* Round picker */}
       {rounds.length > 0 && (
         <div style={{ display: "flex", gap: 5, padding: "0 16px 8px", overflowX: "auto", scrollbarWidth: "none", flexShrink: 0, alignItems: "center" }}>
-          <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, fontWeight: 600, color: "rgba(239,230,211,0.35)", letterSpacing: "0.08em", flexShrink: 0, textTransform: "uppercase" }}>G</span>
+          <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, fontWeight: 600, color: "var(--muted)", letterSpacing: "0.08em", flexShrink: 0, textTransform: "uppercase" }}>G</span>
           {rounds.map(r => {
             const locked = isRoundLocked(r);
             const active = r === activeRound;
@@ -634,16 +667,16 @@ export default function FormazioneMobilePage() {
                 onClick={() => { setSelectedRound(r); setSelection(null); setActiveTab("campo"); setSaveErrors([]); setSaveOk(false); }}
                 style={{
                   padding: "3px 10px", borderRadius: 99, flexShrink: 0, cursor: "pointer",
-                  border: active ? "1px solid rgba(239,230,211,0.38)" : "1px solid rgba(239,230,211,0.1)",
-                  background: active ? "#1f4733" : "rgba(239,230,211,0.05)",
+                  border: active ? "1px solid rgba(31,71,51,0.22)" : "1px solid var(--line)",
+                  background: active ? "var(--green)" : "transparent",
                   display: "flex", alignItems: "center", gap: 3,
                   WebkitTapHighlightColor: "transparent",
                 }}
               >
-                <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, fontWeight: active ? 700 : 500, color: active ? "#efe6d3" : "rgba(239,230,211,0.4)" }}>
+                <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, fontWeight: active ? 700 : 500, color: active ? "var(--cream)" : "var(--muted)" }}>
                   {r}
                 </span>
-                {locked && <Lock size={9} color={active ? "rgba(239,230,211,0.6)" : "rgba(239,230,211,0.28)"} />}
+                {locked && <Lock size={9} color={active ? "rgba(239,230,211,0.6)" : "var(--line)"} />}
               </button>
             );
           })}
@@ -653,17 +686,17 @@ export default function FormazioneMobilePage() {
       {/* Context row */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "2px 16px 10px", flexShrink: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <Trophy size={12} color="#6aa07f" />
-          <span style={{ fontFamily: "var(--font-mono)", fontSize: 12, fontWeight: 700, color: "var(--cream)", letterSpacing: "0.04em" }}>
+          <Trophy size={12} color="var(--green-l)" />
+          <span style={{ fontFamily: "var(--font-serif)", fontSize: 13, fontWeight: 600, color: "var(--green)", letterSpacing: "0.01em" }}>
             Giornata {activeRound}
           </span>
           {opponent && (
             <>
-              <span style={{ color: "rgba(239,230,211,0.3)", fontSize: 12 }}>·</span>
+              <span style={{ color: "var(--line)", fontSize: 12 }}>·</span>
               {isHome
-                ? <HomeIcon size={10} color="rgba(239,230,211,0.5)" />
-                : <Plane size={10} color="rgba(239,230,211,0.5)" />}
-              <span style={{ fontFamily: "var(--font-sans)", fontSize: 11, color: "rgba(239,230,211,0.6)", fontWeight: 600 }}>
+                ? <HomeIcon size={10} color="var(--muted)" />
+                : <Plane size={10} color="var(--muted)" />}
+              <span style={{ fontFamily: "var(--font-sans)", fontSize: 11, color: "var(--green-l)", fontWeight: 600 }}>
                 {opponent.name}
               </span>
             </>
@@ -671,7 +704,7 @@ export default function FormazioneMobilePage() {
         </div>
         <span style={{
           fontFamily: "var(--font-mono)", fontSize: 10, fontWeight: 600,
-          color: roundLocked ? "rgba(239,230,211,0.35)" : "#6aa07f",
+          color: roundLocked ? "var(--muted)" : "var(--green-l)",
           letterSpacing: "0.05em",
         }}>
           {roundLocked ? "Conclusa" : "Aperta"}
@@ -679,16 +712,16 @@ export default function FormazioneMobilePage() {
       </div>
 
       {/* Segment tabs */}
-      <div style={{ display: "flex", gap: 2, margin: "0 16px 12px", background: "rgba(239,230,211,0.07)", borderRadius: 10, padding: 3, flexShrink: 0 }}>
+      <div style={{ display: "flex", gap: 2, margin: "0 16px 12px", background: "rgba(31,71,51,0.06)", borderRadius: 10, padding: 3, flexShrink: 0 }}>
         {(["campo", "panchina"] as Tab[]).map(tab => (
           <button
             key={tab}
             onClick={() => { setActiveTab(tab); if (tab === "campo") setSelection(null); }}
             style={{
               flex: 1, padding: "7px 0", borderRadius: 8, border: "none", cursor: "pointer",
-              background: activeTab === tab ? "#1f4733" : "transparent",
+              background: activeTab === tab ? "var(--green)" : "transparent",
               fontFamily: "var(--font-mono)", fontSize: 12, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase",
-              color: activeTab === tab ? "#efe6d3" : "rgba(239,230,211,0.38)",
+              color: activeTab === tab ? "var(--cream)" : "var(--muted)",
               transition: "background 0.15s, color 0.15s",
               WebkitTapHighlightColor: "transparent",
             }}
@@ -702,9 +735,13 @@ export default function FormazioneMobilePage() {
       {activeTab === "campo" && (
         <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: "0 12px" }}>
           {roundLocked && (
-            <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 12px", borderRadius: 8, marginBottom: 10, background: "rgba(239,230,211,0.05)", border: "1px solid rgba(239,230,211,0.12)" }}>
-              <Lock size={12} color="rgba(239,230,211,0.45)" />
-              <span style={{ fontSize: 12, color: "rgba(239,230,211,0.5)", fontFamily: "var(--font-sans)" }}>Giornata conclusa — sola lettura</span>
+            <div style={{
+              display: "flex", alignItems: "center", gap: 6, padding: "8px 12px",
+              borderRadius: 8, marginBottom: 10,
+              background: "var(--paper)", border: "1px solid var(--line)",
+            }}>
+              <Lock size={12} color="var(--muted)" />
+              <span style={{ fontSize: 12, color: "var(--muted)", fontFamily: "var(--font-sans)" }}>Giornata conclusa — sola lettura</span>
             </div>
           )}
 
@@ -744,7 +781,8 @@ export default function FormazioneMobilePage() {
                     const pid    = fieldSlots[slotId];
                     const player = pid !== undefined ? (playerById.get(pid) ?? null) : null;
                     const role   = getSlotRole(slotId, formation);
-                    const isSel  = selection?.kind === "field" && selection.slotId === slotId;
+                    const isSel  = (selection?.kind === "field" && selection.slotId === slotId) ||
+                                   (selection?.kind === "field-empty" && selection.slotId === slotId);
                     const isDimmed = selection !== null && !isSel && !(
                       selection.kind === "bench" && role === playerById.get(selection.playerId)?.role
                     );
@@ -770,22 +808,27 @@ export default function FormazioneMobilePage() {
           {/* Modulo strip + contatore */}
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 4px 6px", flexShrink: 0 }}>
             <div>
-              <div style={{ fontFamily: "var(--font-mono)", fontSize: 9, fontWeight: 600, color: "rgba(239,230,211,0.35)", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 1 }}>Modulo</div>
+              <div style={{ fontFamily: "var(--font-mono)", fontSize: 9, fontWeight: 600, color: "var(--muted)", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 1 }}>Modulo</div>
               {roundLocked ? (
-                <span style={{ fontFamily: "var(--font-mono)", fontSize: 22, fontWeight: 700, color: "#F4C430" }}>{modulo}</span>
+                <span style={{ fontFamily: "var(--font-mono)", fontSize: 22, fontWeight: 700, color: "var(--green)" }}>{modulo}</span>
               ) : (
                 <select
                   value={modulo}
                   onChange={e => handleModuloChange(e.target.value)}
-                  style={{ fontFamily: "var(--font-mono)", fontSize: 20, fontWeight: 700, color: "#F4C430", background: "transparent", border: "none", outline: "none", cursor: "pointer", appearance: "none", WebkitAppearance: "none", padding: 0 }}
+                  style={{
+                    fontFamily: "var(--font-mono)", fontSize: 20, fontWeight: 700,
+                    color: "var(--green)", background: "transparent",
+                    border: "none", outline: "none", cursor: "pointer",
+                    appearance: "none", WebkitAppearance: "none", padding: 0,
+                  }}
                 >
                   {MODULI.map(m => <option key={m} value={m}>{m}</option>)}
                 </select>
               )}
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, fontWeight: 600, color: "rgba(239,230,211,0.3)", letterSpacing: "0.08em", textTransform: "uppercase" }}>XI</span>
-              <span style={{ fontFamily: "var(--font-mono)", fontSize: 18, fontWeight: 700, color: starterCount === 11 ? "#6aa07f" : "rgba(239,230,211,0.4)" }}>
+              <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, fontWeight: 600, color: "var(--muted)", letterSpacing: "0.08em", textTransform: "uppercase" }}>XI</span>
+              <span style={{ fontFamily: "var(--font-mono)", fontSize: 18, fontWeight: 700, color: starterCount === 11 ? "var(--green-l)" : "var(--muted)" }}>
                 {starterCount}/11
               </span>
             </div>
@@ -800,9 +843,9 @@ export default function FormazioneMobilePage() {
                   onClick={handleSave}
                   style={{
                     flex: 1, padding: "12px 0", borderRadius: 10,
-                    background: starterCount === 11 ? "#1f4733" : "rgba(239,230,211,0.07)",
-                    border: starterCount === 11 ? "1px solid rgba(239,230,211,0.22)" : "1px solid rgba(239,230,211,0.08)",
-                    color: starterCount === 11 ? "#efe6d3" : "rgba(239,230,211,0.28)",
+                    background: starterCount === 11 ? "var(--green)" : "var(--paper)",
+                    border: starterCount === 11 ? "1px solid rgba(239,230,211,0.22)" : "1px solid var(--line)",
+                    color: starterCount === 11 ? "var(--cream)" : "var(--muted)",
                     fontFamily: "var(--font-mono)", fontSize: 13, fontWeight: 700, letterSpacing: "0.08em",
                     cursor: starterCount === 11 && !saveMutation.isPending ? "pointer" : "not-allowed",
                     transition: "all 0.2s", WebkitTapHighlightColor: "transparent",
@@ -812,13 +855,19 @@ export default function FormazioneMobilePage() {
                 </button>
                 <button
                   onClick={() => { setFieldSlots({}); setRoster(allPlayers.map(p => p.id)); setSelection(null); setCaptainId(null); setSaveErrors([]); }}
-                  style={{ padding: "12px 16px", borderRadius: 10, background: "transparent", border: "1px solid rgba(239,230,211,0.13)", color: "rgba(239,230,211,0.45)", fontFamily: "var(--font-mono)", fontSize: 12, fontWeight: 600, cursor: "pointer", WebkitTapHighlightColor: "transparent" }}
+                  style={{
+                    padding: "12px 16px", borderRadius: 10,
+                    background: "transparent", border: "1px solid var(--line)",
+                    color: "var(--muted)",
+                    fontFamily: "var(--font-mono)", fontSize: 12, fontWeight: 600,
+                    cursor: "pointer", WebkitTapHighlightColor: "transparent",
+                  }}
                 >
                   Reset
                 </button>
               </div>
               {saveOk && (
-                <div style={{ padding: "8px 12px", borderRadius: 8, background: "rgba(106,160,127,0.14)", border: "1px solid rgba(106,160,127,0.32)", fontSize: 12, color: "#6aa07f", fontFamily: "var(--font-sans)" }}>
+                <div style={{ padding: "8px 12px", borderRadius: 8, background: "rgba(46,96,71,0.09)", border: "1px solid rgba(46,96,71,0.22)", fontSize: 12, color: "var(--green-l)", fontFamily: "var(--font-sans)" }}>
                   Formazione salvata
                 </div>
               )}
@@ -840,8 +889,8 @@ export default function FormazioneMobilePage() {
           {/* Hint bar */}
           <div style={{
             display: "flex", alignItems: "center", gap: 8, padding: "9px 13px", borderRadius: 9, marginBottom: 10, flexShrink: 0,
-            background: selection?.kind === "field" ? "rgba(31,71,51,0.55)" : "rgba(239,230,211,0.05)",
-            border: selection?.kind === "field" ? "1px solid rgba(106,160,127,0.38)" : "1px solid rgba(239,230,211,0.1)",
+            background: (selection?.kind === "field" || selection?.kind === "field-empty") ? "var(--green-d)" : "var(--paper)",
+            border: (selection?.kind === "field" || selection?.kind === "field-empty") ? "1px solid rgba(106,160,127,0.38)" : "1px solid var(--line)",
           }}>
             {selection?.kind === "field" ? (
               <>
@@ -857,10 +906,22 @@ export default function FormazioneMobilePage() {
                 </span>
                 <button onClick={() => { setSelection(null); setActiveTab("campo"); }} style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(239,230,211,0.5)", padding: 4, fontSize: 14 }}>✕</button>
               </>
+            ) : selection?.kind === "field-empty" ? (
+              <>
+                <div style={{ width: 7, height: 7, borderRadius: "50%", background: "#6aa07f", flexShrink: 0 }} />
+                <span style={{ fontSize: 12, color: "rgba(239,230,211,0.85)", fontFamily: "var(--font-sans)", flex: 1 }}>
+                  Slot{" "}
+                  <span style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: selectedFieldRole ? ROLE_RING[selectedFieldRole] : "#fff" }}>
+                    {selectedFieldRole ? ROLE_LABEL[selectedFieldRole] : "—"}
+                  </span>
+                  {" "}vuoto — scegli chi entra
+                </span>
+                <button onClick={() => { setSelection(null); setActiveTab("campo"); }} style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(239,230,211,0.5)", padding: 4, fontSize: 14 }}>✕</button>
+              </>
             ) : roundLocked ? (
-              <span style={{ fontSize: 12, color: "rgba(239,230,211,0.38)", fontFamily: "var(--font-sans)" }}>Panchina in sola lettura</span>
+              <span style={{ fontSize: 12, color: "var(--muted)", fontFamily: "var(--font-sans)" }}>Panchina in sola lettura</span>
             ) : (
-              <span style={{ fontSize: 12, color: "rgba(239,230,211,0.38)", fontFamily: "var(--font-sans)" }}>Tocca un titolare in campo, poi scegli chi entra</span>
+              <span style={{ fontSize: 12, color: "var(--muted)", fontFamily: "var(--font-sans)" }}>Tocca un titolare in campo, poi scegli chi entra</span>
             )}
           </div>
 
@@ -875,7 +936,7 @@ export default function FormazioneMobilePage() {
               const player = playerById.get(pid);
               if (!player) return null;
               const isSel   = selection?.kind === "bench" && selection.playerId === pid;
-              const compat  = selection?.kind === "field"
+              const compat  = (selection?.kind === "field" || selection?.kind === "field-empty")
                 ? (player.role === selectedFieldRole)
                 : null;
               return (
@@ -893,7 +954,7 @@ export default function FormazioneMobilePage() {
               );
             })}
             {roster.length === 0 && (
-              <div style={{ textAlign: "center", padding: "32px 0", fontSize: 13, color: "rgba(239,230,211,0.28)" }}>
+              <div style={{ textAlign: "center", padding: "32px 0", fontSize: 13, color: "var(--muted)" }}>
                 Tutti i giocatori sono in campo
               </div>
             )}

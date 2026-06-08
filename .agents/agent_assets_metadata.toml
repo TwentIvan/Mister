@@ -84,3 +84,9 @@ id = "gEBRDow5UQk2NUHj25vA6"
 uri = "file://screenshots/formazione-desktop-g1-bloccata.jpg"
 type = "image"
 title = "Desktop — G1 bloccata (sola lettura, Playwright confermato)"
+
+[[outputs]]
+id = "Yv4rj-gWvYZqn1z_UXnpW"
+uri = "file://screenshots/formazione-m-g3-campo.jpg"
+type = "image"
+title = "G3 aperta — campo crema (XI 0/11)"
