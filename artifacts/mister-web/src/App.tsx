@@ -21,6 +21,7 @@ import JoinLegaPage from "@/pages/JoinLegaPage";
 import BrandPage from "@/pages/brand";
 import ClassificaPage from "@/pages/classifica/ClassificaPage";
 import HubPage from "@/pages/hub/HubPage";
+import CoppaPage from "@/pages/coppa/CoppaPage";
 import FeedPage from "@/pages/feed/FeedPage";
 import RosaPage from "@/pages/rosa/RosaPage";
 import SchedaPage from "@/pages/scheda/SchedaPage";
@@ -50,6 +51,9 @@ function Router() {
 
       {/* ── Hub lega mobile (S-hub, design spec) ─────────────── */}
       <Route path="/hub/:leagueId" component={HubPage} />
+
+      {/* ── Coppa (S-gironi + S-tabellone, design spec) ───────── */}
+      <Route path="/coppa/:competitionId" component={CoppaPage} />
 
       {/* ── Feed mobile (S-feed, design spec) ────────────────── */}
       <Route path="/feed/:leagueId" component={FeedPage} />

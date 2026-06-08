@@ -558,6 +558,27 @@ paths:
         "404":
           description: Competizione non trovata
 
+  /competitions/{competitionId}/coppa:
+    get:
+      operationId: getCompetitionCoppa
+      tags: [competitions]
+      summary: Vista completa coppa (gironi + tabellone)
+      parameters:
+        - in: path
+          name: competitionId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CoppaResponse"
+        "404":
+          description: Competizione non trovata
+
   # ─── MARKETS ─────────────────────────────────────────────────
   /leagues/{leagueId}/markets:
     get:
@@ -2871,6 +2892,153 @@ components:
           type: integer
         pf:
           type: number
+
+    CoppaSlot:
+      type: object
+      required: [provenienza]
+      properties:
+        provenienza:
+          type: string
+        fanta_team_id:
+          type: string
+          nullable: true
+        team_name:
+          type: string
+          nullable: true
+        color_primary:
+          type: string
+          nullable: true
+        score:
+          type: number
+          nullable: true
+        winner:
+          type: boolean
+          nullable: true
+
+    CoppaMatch:
+      type: object
+      required: [home, away]
+      properties:
+        home:
+          $ref: "#/components/schemas/CoppaSlot"
+        away:
+          $ref: "#/components/schemas/CoppaSlot"
+        spareggio_note:
+          type: string
+          nullable: true
+
+    CoppaRound:
+      type: object
+      required: [name, matches]
+      properties:
+        name:
+          type: string
+        matches:
+          type: array
+          items:
+            $ref: "#/components/schemas/CoppaMatch"
+
+    CoppaGroupRow:
+      type: object
+      required: [fanta_team_id, team_name, color_primary, points, giocate, wins, draws, losses, qualified]
+      properties:
+        fanta_team_id:
+          type: string
+        team_name:
+          type: string
+        color_primary:
+          type: string
+        points:
+          type: integer
+        giocate:
+          type: integer
+        wins:
+          type: integer
+        draws:
+          type: integer
+        losses:
+          type: integer
+        qualified:
+          type: boolean
+
+    CoppaGroup:
+      type: object
+      required: [name, teams, started]
+      properties:
+        name:
+          type: string
+        teams:
+          type: array
+          items:
+            $ref: "#/components/schemas/CoppaGroupRow"
+        started:
+          type: boolean
+
+    CoppaGironiPhase:
+      type: object
+      required: [phase_id, status, n_passanti, qualification_label, sorteggio_done]
+      properties:
+        phase_id:
+          type: string
+        status:
+          type: string
+        n_passanti:
+          type: integer
+        qualification_label:
+          type: string
+        sorteggio_done:
+          type: boolean
+        groups:
+          type: array
+          nullable: true
+          items:
+            $ref: "#/components/schemas/CoppaGroup"
+
+    CoppaTabellonePhase:
+      type: object
+      required: [phase_id, status, rounds]
+      properties:
+        phase_id:
+          type: string
+        status:
+          type: string
+        rounds:
+          type: array
+          items:
+            $ref: "#/components/schemas/CoppaRound"
+        champion:
+          nullable: true
+          type: object
+          properties:
+            fanta_team_id:
+              type: string
+            team_name:
+              type: string
+            color_primary:
+              type: string
+
+    CoppaResponse:
+      type: object
+      required: [id, name, stato, league_name, n_teams]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        stato:
+          type: string
+        league_name:
+          type: string
+        n_teams:
+          type: integer
+        gironi:
+          nullable: true
+          allOf:
+            - $ref: "#/components/schemas/CoppaGironiPhase"
+        tabellone:
+          nullable: true
+          allOf:
+            - $ref: "#/components/schemas/CoppaTabellonePhase"
 
     CompetitionPhase:
       type: object

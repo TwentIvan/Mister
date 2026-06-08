@@ -1,0 +1,29 @@
+Telaio competizioni — passo 2: GIRONI e TABELLONE della Coppa (programmata).
+Bersagli visivi: coppa_gironi_tbd.html e bracket_coppa_mobile_tbd.html (stato "in attesa"),
+e per lo stato pieno coppa_gironi.html / bracket_coppa_desktop.html / bracket_coppa_mobile_paged.html.
+
+PRINCIPIO STATO "IN ATTESA" (TBD): un posto non assegnato mostra la sua PROVENIENZA, non un
+vuoto. La provenienza È la regola di qualificazione resa visibile (derivata dalle fasi, non
+hardcodata). Stesso componente, due stati per slot: provenienza (TBD) → squadra (risolto).
+
+A) S-gironi (coppa_gironi.html / _tbd) — mobile, sola lettura. Switch fase Gironi/Tabellone.
+   - Gruppi REALI (sorteggio dai dati della coppa): le 8 società nei 2 gironi. Finché 0 partite
+     giocate: 0 punti, niente posizione/Q, fascia "non ancora iniziata · parte alla G<n>".
+     (Se nel seed il sorteggio NON è fatto, mostra "in attesa del sorteggio": solo slot-fonte.)
+   - Versamento: accoppiamenti incrociati 1°A-2°B / 1°B-2°A. Finché i gironi non finiscono,
+     slot con la PROVENIENZA ("prima del Girone A"...), disco tratteggiato, corsivo muted.
+   - Quando i gironi producono risultati (R-classico-gol, sorgente unica), i gruppi si ordinano,
+     compaiono i tag Q sulle prime 2, e gli slot-provenienza si risolvono in squadre.
+
+B) S-bracket-d / S-bracket-m — tabellone della coppa (qui: Semifinali → Finale, 4 squadre).
+   - Desktop = albero ramificato; mobile = paginato (tab + scroll-snap, un turno/schermata,
+     rami che escono/entrano alla stessa altezza). Stessa grammatica del tabellone già approvato.
+   - Stato TBD (coppa programmata): slot = PROVENIENZA (1°A, 2°B, "vincente Semifinale 1"...),
+     card e rami TRATTEGGIATI e spenti, trofeo grigio "da assegnare". NIENTE oro finché non
+     c'è un campione (R-oro).
+   - Risultati in GOL (R-classico-gol, stesso resolveMatchResult della Classifica), spareggio
+     R-spareggio. Man mano che si gioca, gli slot si riempiono e il turno successivo eredita
+     i vincenti; il campione accende il trofeo oro.
+   - R-mobile-nosquish sul mobile; R-fonte-strato (legge il risultato ufficiale, non ricalcola).
+
+Procedi prima coi GIRONI (è la fase attiva), screenshot; poi il tabellone, screenshot.

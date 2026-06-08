@@ -1200,6 +1200,75 @@ export const GetCompetitionPhasesResponse = zod.array(GetCompetitionPhasesRespon
 
 
 /**
+ * @summary Vista completa coppa (gironi + tabellone)
+ */
+export const GetCompetitionCoppaParams = zod.object({
+  "competitionId": zod.coerce.string()
+})
+
+export const GetCompetitionCoppaResponse = zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "stato": zod.string(),
+  "league_name": zod.string(),
+  "n_teams": zod.number(),
+  "gironi": zod.object({
+  "phase_id": zod.string(),
+  "status": zod.string(),
+  "n_passanti": zod.number(),
+  "qualification_label": zod.string(),
+  "sorteggio_done": zod.boolean(),
+  "groups": zod.array(zod.object({
+  "name": zod.string(),
+  "teams": zod.array(zod.object({
+  "fanta_team_id": zod.string(),
+  "team_name": zod.string(),
+  "color_primary": zod.string(),
+  "points": zod.number(),
+  "giocate": zod.number(),
+  "wins": zod.number(),
+  "draws": zod.number(),
+  "losses": zod.number(),
+  "qualified": zod.boolean()
+})),
+  "started": zod.boolean()
+})).nullish()
+}).nullish(),
+  "tabellone": zod.object({
+  "phase_id": zod.string(),
+  "status": zod.string(),
+  "rounds": zod.array(zod.object({
+  "name": zod.string(),
+  "matches": zod.array(zod.object({
+  "home": zod.object({
+  "provenienza": zod.string(),
+  "fanta_team_id": zod.string().nullish(),
+  "team_name": zod.string().nullish(),
+  "color_primary": zod.string().nullish(),
+  "score": zod.number().nullish(),
+  "winner": zod.boolean().nullish()
+}),
+  "away": zod.object({
+  "provenienza": zod.string(),
+  "fanta_team_id": zod.string().nullish(),
+  "team_name": zod.string().nullish(),
+  "color_primary": zod.string().nullish(),
+  "score": zod.number().nullish(),
+  "winner": zod.boolean().nullish()
+}),
+  "spareggio_note": zod.string().nullish()
+}))
+})),
+  "champion": zod.object({
+  "fanta_team_id": zod.string().optional(),
+  "team_name": zod.string().optional(),
+  "color_primary": zod.string().optional()
+}).nullish()
+}).nullish()
+})
+
+
+/**
  * @summary Lista eventi di mercato
  */
 export const GetLeagueMarketsParams = zod.object({

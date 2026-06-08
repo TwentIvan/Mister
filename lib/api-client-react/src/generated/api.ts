@@ -38,6 +38,7 @@ import type {
   Contract,
   ContractInput,
   ContractUpdate,
+  CoppaResponse,
   CreateAuctionBidBody,
   CreateAuctionBidResponse,
   CreateAuctionBody,
@@ -2086,6 +2087,83 @@ export function useGetCompetitionPhases<TData = Awaited<ReturnType<typeof getCom
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetCompetitionPhasesQueryOptions(competitionId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetCompetitionCoppaUrl = (competitionId: string,) => {
+
+
+
+
+  return `/api/competitions/${competitionId}/coppa`
+}
+
+/**
+ * @summary Vista completa coppa (gironi + tabellone)
+ */
+export const getCompetitionCoppa = async (competitionId: string, options?: RequestInit): Promise<CoppaResponse> => {
+
+  return customFetch<CoppaResponse>(getGetCompetitionCoppaUrl(competitionId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetCompetitionCoppaQueryKey = (competitionId: string,) => {
+    return [
+    `/api/competitions/${competitionId}/coppa`
+    ] as const;
+    }
+
+
+export const getGetCompetitionCoppaQueryOptions = <TData = Awaited<ReturnType<typeof getCompetitionCoppa>>, TError = ErrorType<void>>(competitionId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCompetitionCoppa>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetCompetitionCoppaQueryKey(competitionId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getCompetitionCoppa>>> = ({ signal }) => getCompetitionCoppa(competitionId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(competitionId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getCompetitionCoppa>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetCompetitionCoppaQueryResult = NonNullable<Awaited<ReturnType<typeof getCompetitionCoppa>>>
+export type GetCompetitionCoppaQueryError = ErrorType<void>
+
+
+/**
+ * @summary Vista completa coppa (gironi + tabellone)
+ */
+
+export function useGetCompetitionCoppa<TData = Awaited<ReturnType<typeof getCompetitionCoppa>>, TError = ErrorType<void>>(
+ competitionId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCompetitionCoppa>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetCompetitionCoppaQueryOptions(competitionId,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

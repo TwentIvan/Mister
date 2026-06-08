@@ -191,6 +191,160 @@ router.get("/competitions/:competitionId/phases", async (req, res): Promise<void
   );
 });
 
+// ─── GET /competitions/:competitionId/coppa ───────────────────────────────────
+
+router.get("/competitions/:competitionId/coppa", async (req, res): Promise<void> => {
+  const { competitionId } = req.params;
+  if (!competitionId) { res.status(400).json({ error: "competitionId richiesto" }); return; }
+
+  // 1. Competition + league
+  const [comp] = await db
+    .select({ id: competitions.id, name: competitions.name, leagueId: competitions.leagueId, completed: competitions.completed })
+    .from(competitions).where(eq(competitions.id, competitionId)).limit(1);
+  if (!comp) { res.status(404).json({ error: "Competizione non trovata" }); return; }
+
+  const [league] = await db
+    .select({ name: leagues.name })
+    .from(leagues).where(eq(leagues.id, comp.leagueId)).limit(1);
+
+  // 2. Phases
+  const phases = await db.select().from(competitionPhases)
+    .where(eq(competitionPhases.competitionId, competitionId))
+    .orderBy(competitionPhases.order);
+
+  const gironiPhase = phases.find((p) => p.struttura === "classifica") ?? null;
+  const tabellonePhase = phases.find((p) => p.struttura === "tabellone") ?? null;
+
+  // 3. Teams in this league
+  const teamRows = await db
+    .select({ id: fantaTeams.id, name: societa.name, jersey: societa.jersey })
+    .from(fantaTeams)
+    .leftJoin(societa, eq(fantaTeams.societaId, societa.id))
+    .where(eq(fantaTeams.leagueId, comp.leagueId));
+
+  const teamMap = new Map(
+    teamRows.map((t) => [
+      t.id,
+      { name: t.name ?? t.id, color: (t.jersey as JerseyConfig | null)?.primaryColor ?? "#1f4733" },
+    ])
+  );
+
+  // 4. Matches giocati (per standings gironi)
+  const playedMatches = await db
+    .select({
+      homeId: competitionMatches.homeFantaTeamId,
+      awayId: competitionMatches.awayFantaTeamId,
+      homeScore: competitionMatches.homeScore,
+      awayScore: competitionMatches.awayScore,
+    })
+    .from(competitionMatches)
+    .where(and(eq(competitionMatches.competitionId, competitionId), isNotNull(competitionMatches.playedAt)));
+
+  // 5. Build gironi
+  let gironiData = null;
+  if (gironiPhase) {
+    type GironiParams = { n_gironi: number; n_passanti: number; gironi?: Record<string, string[]> };
+    const gp = gironiPhase.params as GironiParams;
+    const assignment = gp.gironi ?? null;
+    const nPassanti = gp.n_passanti ?? 2;
+
+    type StatsRow = { fanta_team_id: string; team_name: string; color_primary: string; points: number; giocate: number; wins: number; draws: number; losses: number; gf: number; gs: number; qualified: boolean };
+
+    const groups = assignment
+      ? Object.entries(assignment).map(([gName, teamIds]) => {
+          // Standings init
+          const stats = new Map<string, StatsRow>(
+            teamIds.map((tid) => [tid, { fanta_team_id: tid, team_name: teamMap.get(tid)?.name ?? tid, color_primary: teamMap.get(tid)?.color ?? "#1f4733", points: 0, giocate: 0, wins: 0, draws: 0, losses: 0, gf: 0, gs: 0, qualified: false }])
+          );
+          const groupSet = new Set(teamIds);
+          // Filter matches within this group
+          for (const m of playedMatches) {
+            if (!groupSet.has(m.homeId) || !groupSet.has(m.awayId)) continue;
+            if (m.homeScore === null || m.awayScore === null) continue;
+            const hs = Number(m.homeScore); const as_ = Number(m.awayScore);
+            const home = stats.get(m.homeId)!; const away = stats.get(m.awayId)!;
+            home.giocate++; away.giocate++;
+            home.gf += hs; home.gs += as_; away.gf += as_; away.gs += hs;
+            if (hs > as_) { home.wins++; home.points += 3; away.losses++; }
+            else if (hs < as_) { away.wins++; away.points += 3; home.losses++; }
+            else { home.draws++; home.points += 1; away.draws++; away.points += 1; }
+          }
+          // Sort: points desc, then gf-gs desc, then gf desc
+          const sorted = [...stats.values()].sort((a, b) =>
+            b.points !== a.points ? b.points - a.points : (b.gf - b.gs) !== (a.gf - a.gs) ? (b.gf - b.gs) - (a.gf - a.gs) : b.gf - a.gf
+          );
+          const started = sorted.some((r) => r.giocate > 0);
+          // Mark qualified (top nPassanti when started, none if not started)
+          return {
+            name: gName,
+            started,
+            teams: sorted.map((r, i) => ({ ...r, qualified: started && i < nPassanti, gf: undefined, gs: undefined })),
+          };
+        })
+      : null;
+
+    gironiData = {
+      phase_id: gironiPhase.id,
+      status: gironiPhase.status,
+      n_passanti: nPassanti,
+      qualification_label: `passano le prime ${nPassanti} di ogni girone`,
+      sorteggio_done: assignment !== null,
+      groups,
+    };
+  }
+
+  // 6. Build tabellone
+  let tabelloneData = null;
+  if (tabellonePhase && gironiPhase) {
+    type GironiParams = { n_gironi: number; n_passanti: number; gironi?: Record<string, string[]> };
+    const gp = gironiPhase.params as GironiParams;
+    const groupNames = gp.gironi ? Object.keys(gp.gironi) : ["A", "B"];
+    const nPassanti = gp.n_passanti ?? 2;
+    const totalQ = groupNames.length * nPassanti; // 4
+
+    const makeSlot = (prov: string) => ({ provenienza: prov, fanta_team_id: null, team_name: null, color_primary: null, score: null, winner: null });
+    const rounds = [];
+
+    if (totalQ === 4 && groupNames.length === 2) {
+      const [gA, gB] = groupNames;
+      rounds.push({
+        name: "Semifinali",
+        matches: [
+          { home: makeSlot(`1° Girone ${gA}`), away: makeSlot(`2° Girone ${gB}`), spareggio_note: null },
+          { home: makeSlot(`1° Girone ${gB}`), away: makeSlot(`2° Girone ${gA}`), spareggio_note: null },
+        ],
+      });
+      rounds.push({
+        name: "Finale",
+        matches: [{ home: makeSlot("vincente Semifinale 1"), away: makeSlot("vincente Semifinale 2"), spareggio_note: null }],
+      });
+    }
+
+    tabelloneData = {
+      phase_id: tabellonePhase.id,
+      status: tabellonePhase.status,
+      rounds,
+      champion: null,
+    };
+  }
+
+  const stato = comp.completed
+    ? "conclusa"
+    : phases.some((p) => p.status === "in_corso")
+      ? "in_corso"
+      : "programmata";
+
+  res.json({
+    id: comp.id,
+    name: comp.name,
+    stato,
+    league_name: league?.name ?? comp.leagueId,
+    n_teams: teamRows.length,
+    gironi: gironiData,
+    tabellone: tabelloneData,
+  });
+});
+
 // ─── GET /leagues/:leagueId/hub ───────────────────────────────────────────────
 
 const hubHomeTeam = alias(fantaTeams, "hub_home_team");

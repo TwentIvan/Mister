@@ -1165,6 +1165,76 @@ export interface LeagueHubResponse {
   competitions: HubCompetition[];
 }
 
+export interface CoppaSlot {
+  provenienza: string;
+  fanta_team_id?: string | null;
+  team_name?: string | null;
+  color_primary?: string | null;
+  score?: number | null;
+  winner?: boolean | null;
+}
+
+export interface CoppaMatch {
+  home: CoppaSlot;
+  away: CoppaSlot;
+  spareggio_note?: string | null;
+}
+
+export interface CoppaRound {
+  name: string;
+  matches: CoppaMatch[];
+}
+
+export interface CoppaGroupRow {
+  fanta_team_id: string;
+  team_name: string;
+  color_primary: string;
+  points: number;
+  giocate: number;
+  wins: number;
+  draws: number;
+  losses: number;
+  qualified: boolean;
+}
+
+export interface CoppaGroup {
+  name: string;
+  teams: CoppaGroupRow[];
+  started: boolean;
+}
+
+export interface CoppaGironiPhase {
+  phase_id: string;
+  status: string;
+  n_passanti: number;
+  qualification_label: string;
+  sorteggio_done: boolean;
+  groups?: CoppaGroup[] | null;
+}
+
+export type CoppaTabellonePhaseChampion = {
+  fanta_team_id?: string;
+  team_name?: string;
+  color_primary?: string;
+} | null;
+
+export interface CoppaTabellonePhase {
+  phase_id: string;
+  status: string;
+  rounds: CoppaRound[];
+  champion?: CoppaTabellonePhaseChampion;
+}
+
+export interface CoppaResponse {
+  id: string;
+  name: string;
+  stato: string;
+  league_name: string;
+  n_teams: number;
+  gironi?: CoppaGironiPhase | null;
+  tabellone?: CoppaTabellonePhase | null;
+}
+
 export type CompetitionPhaseMisura = typeof CompetitionPhaseMisura[keyof typeof CompetitionPhaseMisura];
 
 

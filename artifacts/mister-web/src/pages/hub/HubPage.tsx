@@ -428,6 +428,8 @@ function CompCard({
         onClick={() => {
           if (isCampionato) {
             onNavigate(`/classifica/${comp.id}`);
+          } else {
+            onNavigate(`/coppa/${comp.id}`);
           }
         }}
       >
