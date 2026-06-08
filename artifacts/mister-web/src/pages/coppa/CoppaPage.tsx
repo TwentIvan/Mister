@@ -1,4 +1,4 @@
-import { useParams, useSearch, useLocation } from "wouter";
+import { useParams, useSearch } from "wouter";
 import { useRef, useState, useEffect } from "react";
 import {
   useGetCompetitionCoppa,
@@ -476,9 +476,14 @@ function RoundPage({ round, tbd, roundIndex, totalRounds }: { round: CoppaRound;
 
 // ─── CoppaPage ────────────────────────────────────────────────────────────────
 export default function CoppaPage() {
-  const { competitionId } = useParams<{ competitionId: string }>();
+  const rawParams = useParams<{ competitionId: string }>();
+  // Wouter v3 con component-prop può restituire il template (":competitionId")
+  // come stringa truthy durante la navigazione SPA — va filtrato
+  const competitionId = rawParams.competitionId?.startsWith(":")
+    ? undefined
+    : rawParams.competitionId;
+
   const search = useSearch();
-  const [, navigate] = useLocation();
   const params = new URLSearchParams(search);
   const initTab = params.get("tab") === "tabellone" ? "tabellone" : "gironi";
   const [tab, setTab] = useState<"gironi" | "tabellone">(initTab);
@@ -494,7 +499,7 @@ export default function CoppaPage() {
 
           {/* Top bar */}
           <div style={{ display: "flex", alignItems: "center", gap: 11, padding: "14px 16px 8px" }}>
-            <button onClick={() => navigate(-1 as unknown as string)} style={{ background: "none", border: "none", padding: 0, color: "#1f4733", display: "flex", cursor: "pointer" }}>
+            <button onClick={() => window.history.back()} style={{ background: "none", border: "none", padding: 0, color: "#1f4733", display: "flex", cursor: "pointer" }}>
               <IconBack />
             </button>
             <span style={{ fontFamily: "var(--disp)", fontWeight: 600, fontSize: 18, color: "#1f4733" }}>
