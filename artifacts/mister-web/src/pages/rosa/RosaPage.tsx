@@ -1,4 +1,4 @@
-import { useParams } from "wouter";
+import { useRouteId, RouteIdLoading } from "@/hooks/useRouteId";
 import { useGetFantaTeamRosa } from "@workspace/api-client-react";
 import type { FantaTeamRosaPlayer } from "@workspace/api-client-react";
 import { CrestClub } from "../../components/CrestClub";
@@ -232,10 +232,11 @@ const IcoProfilo = () => (
 // ─── RosaPage ─────────────────────────────────────────────────────────────────
 
 export default function RosaPage() {
-  const params = useParams<{ fantaTeamId?: string }>();
-  const fantaTeamId = params.fantaTeamId ?? "ft-mvp-1";
+  const fantaTeamId = useRouteId("fantaTeamId");
 
-  const { data, isLoading, isError } = useGetFantaTeamRosa(fantaTeamId);
+  const { data, isLoading, isError } = useGetFantaTeamRosa(fantaTeamId ?? "");
+
+  if (!fantaTeamId) return <RouteIdLoading />;
 
   const primary  = data?.jersey?.primaryColor  ?? "#1f4733";
   const secondary = data?.jersey?.secondaryColor ?? "#efe6d3";

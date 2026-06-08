@@ -1,4 +1,5 @@
-import { useParams, useSearch } from "wouter";
+import { useSearch } from "wouter";
+import { useRouteId, RouteIdLoading } from "@/hooks/useRouteId";
 import { useGetPlayerScheda } from "@workspace/api-client-react";
 import type { PlayerSchedaGiornata } from "@workspace/api-client-react";
 import { CrestClub } from "../../components/CrestClub";
@@ -170,17 +171,19 @@ function StatCard({
 // ─── SchedaPage ───────────────────────────────────────────────────────────────
 
 export default function SchedaPage() {
-  const params = useParams<{ playerId?: string }>();
+  const playerIdStr = useRouteId("playerId");
   const search = useSearch();
   const searchParams = new URLSearchParams(search);
   const fantaTeamId = searchParams.get("fantaTeamId") ?? undefined;
 
-  const playerId = parseInt(params.playerId ?? "312", 10);
+  const playerId = playerIdStr ? parseInt(playerIdStr, 10) : 0;
 
   const { data, isLoading, isError } = useGetPlayerScheda(
     playerId,
     fantaTeamId ? { fantaTeamId } : undefined,
   );
+
+  if (!playerIdStr) return <RouteIdLoading />;
 
   const roleBg = data ? (ROLE_BG[data.roleClassic] ?? "#234c5e") : "#234c5e";
   const roleRing = data ? (ROLE_RING[data.roleClassic] ?? "#6aa6b8") : "#6aa6b8";

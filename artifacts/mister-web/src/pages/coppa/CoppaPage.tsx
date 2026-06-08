@@ -1,4 +1,5 @@
-import { useParams, useSearch } from "wouter";
+import { useSearch } from "wouter";
+import { useRouteId, RouteIdLoading } from "@/hooks/useRouteId";
 import { useRef, useState, useEffect } from "react";
 import {
   useGetCompetitionCoppa,
@@ -476,13 +477,7 @@ function RoundPage({ round, tbd, roundIndex, totalRounds }: { round: CoppaRound;
 
 // ─── CoppaPage ────────────────────────────────────────────────────────────────
 export default function CoppaPage() {
-  const rawParams = useParams<{ competitionId: string }>();
-  // Wouter v3 con component-prop può restituire il template (":competitionId")
-  // come stringa truthy durante la navigazione SPA — va filtrato
-  const competitionId = rawParams.competitionId?.startsWith(":")
-    ? undefined
-    : rawParams.competitionId;
-
+  const competitionId = useRouteId("competitionId");
   const search = useSearch();
   const params = new URLSearchParams(search);
   const initTab = params.get("tab") === "tabellone" ? "tabellone" : "gironi";
@@ -490,7 +485,7 @@ export default function CoppaPage() {
 
   const { data, isLoading, isError } = useGetCompetitionCoppa(competitionId ?? "");
 
-  if (!competitionId) return null;
+  if (!competitionId) return <RouteIdLoading />;
 
   return (
     <div style={{ minHeight: "100dvh", background: "#cfc6ad", fontFamily: "var(--mono)", padding: "24px 12px 48px", overflowX: "auto" }}>

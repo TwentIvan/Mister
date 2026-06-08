@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
-import { useParams, useLocation } from "wouter";
+import { useLocation } from "wouter";
+import { useRouteId, RouteIdLoading } from "@/hooks/useRouteId";
 import {
   useGetCompetitionStandings,
   type StandingsEntry,
@@ -89,14 +90,15 @@ const monoSm: React.CSSProperties = {
 // ─── ClassificaPage ───────────────────────────────────────────────────────────
 
 export default function ClassificaPage() {
-  const params = useParams<{ competitionId: string }>();
-  const competitionId = params.competitionId ?? "comp-mvp-campionato-2024";
+  const competitionId = useRouteId("competitionId");
   const [, navigate] = useLocation();
 
   const navRef = useRef<HTMLDivElement>(null);
 
-  const { data, isLoading } = useGetCompetitionStandings(competitionId);
+  const { data, isLoading } = useGetCompetitionStandings(competitionId ?? "");
   const standings = data?.standings ?? [];
+
+  if (!competitionId) return <RouteIdLoading />;
 
   const maxGiornata =
     standings.length > 0 ? Math.max(...standings.map((s) => s.playedMatches)) : 0;
@@ -158,7 +160,7 @@ export default function ClassificaPage() {
             }}
           >
             <button
-              onClick={() => navigate(-1 as unknown as string)}
+              onClick={() => window.history.back()}
               style={{
                 background: "none",
                 border: "none",

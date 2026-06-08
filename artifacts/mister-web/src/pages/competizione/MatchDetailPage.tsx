@@ -1,4 +1,5 @@
-import { useParams, useLocation } from "wouter";
+import { useLocation } from "wouter";
+import { useRouteId, RouteIdLoading } from "@/hooks/useRouteId";
 import { useGetMatch } from "@workspace/api-client-react";
 import { MatchView } from "@/pages/formazione/MatchView";
 
@@ -6,11 +7,13 @@ const DEFAULT_COMPETITION_ID = "comp-mvp-campionato-2024";
 const SEASON = 2024;
 
 export default function MatchDetailPage() {
-  const params = useParams<{ matchId: string }>();
-  const matchId = parseInt(params.matchId ?? "0", 10);
+  const matchIdStr = useRouteId("matchId");
+  const matchId = matchIdStr ? parseInt(matchIdStr, 10) : 0;
   const [, navigate] = useLocation();
 
   const { data: match, isLoading, isError } = useGetMatch(matchId);
+
+  if (!matchIdStr) return <RouteIdLoading />;
 
   if (isLoading) {
     return (

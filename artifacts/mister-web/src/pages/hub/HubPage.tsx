@@ -1,4 +1,5 @@
-import { useParams, useSearch, useLocation } from "wouter";
+import { useSearch, useLocation } from "wouter";
+import { useRouteId, RouteIdLoading } from "@/hooks/useRouteId";
 import {
   useGetLeagueHub,
   type HubCompetition,
@@ -583,7 +584,7 @@ function BottomTabs() {
 // ─── HubPage ──────────────────────────────────────────────────────────────────
 
 export default function HubPage() {
-  const { leagueId } = useParams<{ leagueId: string }>();
+  const leagueId = useRouteId("leagueId");
   const search = useSearch();
   const [, navigate] = useLocation();
 
@@ -594,7 +595,7 @@ export default function HubPage() {
     fantaTeamId: fantaTeamId ?? undefined,
   });
 
-  if (!leagueId) return null;
+  if (!leagueId) return <RouteIdLoading />;
 
   return (
     <div
@@ -622,7 +623,7 @@ export default function HubPage() {
           {/* ── Top bar ────────────────────────────────────────── */}
           <div style={{ display: "flex", alignItems: "center", padding: "14px 16px 4px" }}>
             <button
-              onClick={() => navigate(-1 as unknown as string)}
+              onClick={() => window.history.back()}
               style={{
                 background: "none",
                 border: "none",
