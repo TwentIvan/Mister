@@ -578,7 +578,7 @@ export default function FormazioneDesktopPage() {
       <div style={{ flex: 1, display: "grid", gridTemplateColumns: "312px 1fr", overflow: "hidden", maxWidth: 1180, width: "100%", margin: "0 auto" }}>
 
         {/* ── SIDEBAR ──────────────────────────────────────────────────────── */}
-        <div style={{ borderRight: "1px solid var(--line)", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+        <div style={{ borderRight: "1px solid var(--line)", display: "flex", flexDirection: "column" }}>
 
           {/* ── Header sticky: filtri fermi, non scrolla ─────────────────── */}
           <div style={{ flexShrink: 0, padding: "14px 14px 0", borderBottom: "1px solid var(--line)" }}>
@@ -634,8 +634,8 @@ export default function FormazioneDesktopPage() {
                 <span style={{
                   width: 16, height: 16, borderRadius: "50%", flexShrink: 0, display: "inline-flex",
                   alignItems: "center", justifyContent: "center",
-                  overflow: "hidden", background: "var(--cream2)",
-                  boxShadow: "inset 0 0 0 0.5px rgba(0,0,0,0.18)",
+                  overflow: "hidden", background: "var(--green-d)",
+                  boxShadow: "inset 0 0 0 0.5px rgba(239,230,211,0.3)",
                 }}>
                   {logoUrl
                     ? <img src={logoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
@@ -666,7 +666,7 @@ export default function FormazioneDesktopPage() {
           </div>{/* /header sticky */}
 
           {/* Lista giocatori — unica parte che scrolla */}
-          <div style={{ flex: 1, overflowY: "auto", padding: "10px 14px 14px", display: "flex", flexDirection: "column", gap: 4 }}>
+          <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "10px 14px 14px", display: "flex", flexDirection: "column", gap: 3 }}>
             {filteredPlayers.map(p => {
               const inField  = fieldIds.has(p.id);
               const isSel    = selection?.kind === "bench" && selection.playerId === p.id;
