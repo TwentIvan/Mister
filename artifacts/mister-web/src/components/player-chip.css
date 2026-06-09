@@ -1,0 +1,66 @@
+/* player-chip.css — UNICA sorgente CSS per .chip e .rr
+   Importata solo da player-chip.tsx.
+   Le schermate dichiarano varianti di dimensione/layout via custom property
+   sul proprio contenitore (es. .fd, .fm-pg): mai ri-dichiarano classi chip. */
+
+/* ── Default contratto chip v3 ─────────────────────────────────────────── */
+:root{
+  --chip-w:    66px;        /* larghezza chip campo */
+  --chip-av:   44px;        /* diametro avatar chip campo */
+  --chip-cr:   20px;        /* crest tondo nel chip campo */
+  --cap-left:  7px;         /* left badge capitano */
+  --sel-border:var(--gold-l);   /* bordo stato sel */
+  --sel-scale: 1.12;            /* scale stato sel */
+  --rr-gap:    9px;         /* gap colonne bench row */
+  --rr-pad:    8px 11px;    /* padding bench row */
+  --rr-cr:     18px;        /* crest tondo in bench row */
+  --rr-cr-bg:  var(--green-d);  /* sfondo crest bench row */
+  --rr-flex:   0 0 auto;    /* flex bench row */
+  --rr-min-h:  auto;        /* min-height bench row */
+  --rr-max-h:  none;        /* max-height bench row */
+  --face-size: 24px;        /* avatar normale bench row */
+  --face-sm-size: 17px;     /* avatar piccolo (.face.sm) */
+}
+
+/* ── Chip campo ─────────────────────────────────────────────────────────── */
+.chip{display:flex;flex-direction:column;align-items:center;gap:4px;width:var(--chip-w);position:relative;cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent}
+.chip .av{position:relative;width:var(--chip-av);height:var(--chip-av);border-radius:50%;background:var(--cream2);overflow:hidden;border:3px solid var(--gold-l);transition:border-color .15s,transform .12s}
+.chip.P .av{border-color:var(--ringP)}
+.chip.D .av{border-color:var(--ringD)}
+.chip.C .av{border-color:var(--ringC)}
+.chip.A .av{border-color:var(--ringA)}
+.chip .ph{width:100%;height:100%;object-fit:cover;display:block}
+.chip .cr{width:var(--chip-cr);height:var(--chip-cr);border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;background:var(--green-d);box-shadow:inset 0 0 0 .5px rgba(239,230,211,.3)}
+.chip .cr img{width:100%;height:100%;object-fit:contain;display:block}
+.chip .cn{font-size:10px;color:var(--cream);max-width:var(--chip-w);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center;letter-spacing:.2px}
+.chip .cap{position:absolute;top:-3px;left:var(--cap-left);width:15px;height:15px;border-radius:50%;background:var(--gold);color:#fff;font-size:8px;font-weight:700;display:flex;align-items:center;justify-content:center;border:1.5px solid var(--pitch);z-index:2}
+.chip .vt{position:absolute;top:-4px;right:4px;min-width:15px;height:15px;padding:0 3px;border-radius:8px;background:var(--green-d);color:var(--cream);font-family:var(--mono);font-size:8px;font-weight:700;display:flex;align-items:center;justify-content:center;z-index:2;pointer-events:none}
+.chip .rm{position:absolute;top:-4px;right:4px;width:17px;height:17px;border-radius:50%;background:var(--green-d);color:var(--cream);border:1.5px solid var(--cream2);font-size:11px;line-height:1;cursor:pointer;z-index:3;display:none;align-items:center;justify-content:center;padding:0}
+.chip:hover .rm{display:flex}
+.chip:hover .vt{display:none}
+.chip.empty .av{border-style:dashed;background:rgba(231,220,196,.14)}
+.chip.empty .slotlab{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:rgba(239,230,211,.45);pointer-events:none}
+.chip.sel .av{border-color:var(--sel-border);border-style:dashed;transform:scale(var(--sel-scale))}
+.chip.sel .cn{color:var(--gold-l);font-weight:700}
+@keyframes fl{0%,100%{box-shadow:0 0 0 0 rgba(230,184,77,0)}40%{box-shadow:0 0 0 6px rgba(230,184,77,.5)}}
+.chip.flash .av{animation:fl .7s ease}
+
+/* ── Riga panchina (.rr) ────────────────────────────────────────────────── */
+.rr{display:flex;align-items:center;gap:var(--rr-gap);border-radius:9px;padding:var(--rr-pad);color:var(--cream);cursor:pointer;transition:opacity .15s;user-select:none;flex:var(--rr-flex);min-height:var(--rr-min-h);max-height:var(--rr-max-h)}
+.rr.P{background:var(--rP)}.rr.D{background:var(--rD)}.rr.C{background:var(--rC)}.rr.A{background:var(--rA)}
+.rr.bench{opacity:.62}
+.rr .cr{width:var(--rr-cr);height:var(--rr-cr);border-radius:50%;flex:none;overflow:hidden;display:flex;align-items:center;justify-content:center;background:var(--rr-cr-bg);box-shadow:inset 0 0 0 .5px rgba(239,230,211,.3)}
+.rr .cr img{width:100%;height:100%;object-fit:contain;display:block}
+.rr .face{width:var(--face-size);height:var(--face-size);border-radius:50%;overflow:hidden;flex:none;border:1.5px solid rgba(239,230,211,.5);background:var(--cream2);position:relative}
+.rr .face.sm{width:var(--face-sm-size);height:var(--face-sm-size)}
+.rr .face img{width:100%;height:100%;object-fit:cover;display:block}
+.rr .rl{font-size:9px;width:13px;text-align:center;color:rgba(239,230,211,.7);font-weight:700;flex:none}
+.rr .rn{flex:1;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rr .act{font-size:9px;color:rgba(239,230,211,.55);text-transform:uppercase;letter-spacing:.06em;flex-shrink:0}
+.rr .rv{font-family:var(--mono);font-size:11px;font-weight:700;flex:none}
+.rr .vsep{width:1px;height:11px;background:rgba(239,230,211,.22);flex:none}
+.rr .rpr{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--gold-l);flex:none}
+.rr .mk.pl{font-size:8px;text-transform:uppercase;letter-spacing:.05em;color:var(--gold-l);font-weight:700;flex-shrink:0}
+
+/* ── Utility condivisa ──────────────────────────────────────────────────── */
+.miss{width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:rgba(191,59,48,.18);color:var(--danger);font-weight:700;font-size:10px;line-height:1}
