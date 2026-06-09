@@ -516,24 +516,31 @@ export default function FormazioneMobilePage() {
 
           {/* Field — sfondo separato dal layer chip per evitare overflow:hidden sui cognomi */}
           <div style={{ position: "relative", width: "100%", aspectRatio: "10/14" }}>
-            {/* Layer visivo: overflow:hidden ritaglia strisce e tracciati nel rettangolo arrotondato */}
+            {/* Layer visivo: overflow:hidden ritaglia sfondo e tracciati campo nel rettangolo arrotondato */}
             <div style={{
               position: "absolute", inset: 0,
               background: "repeating-linear-gradient(0deg, #2d5a34 0px 36px, #295231 36px 72px)",
               borderRadius: 13, overflow: "hidden",
               border: "1px solid rgba(239,230,211,0.12)",
             }}>
-              <svg style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none", opacity: 0.16 }} viewBox="0 0 100 140" preserveAspectRatio="none">
-                <rect x="10" y="4" width="80" height="132" fill="none" stroke="#fff" strokeWidth="0.8" />
-                <line x1="10" y1="70" x2="90" y2="70" stroke="#fff" strokeWidth="0.6" />
-                <circle cx="50" cy="70" r="10" fill="none" stroke="#fff" strokeWidth="0.6" />
-                <circle cx="50" cy="70" r="1.2" fill="#fff" />
-                <rect x="30" y="4" width="40" height="16" fill="none" stroke="#fff" strokeWidth="0.6" />
-                <rect x="38" y="4" width="24" height="8" fill="none" stroke="#fff" strokeWidth="0.6" />
-                <rect x="30" y="120" width="40" height="16" fill="none" stroke="#fff" strokeWidth="0.6" />
-                <rect x="38" y="128" width="24" height="8" fill="none" stroke="#fff" strokeWidth="0.6" />
-                <circle cx="50" cy="26" r="6" fill="none" stroke="#fff" strokeWidth="0.5" />
-                <circle cx="50" cy="114" r="6" fill="none" stroke="#fff" strokeWidth="0.5" />
+              {/* pitch_mobile.svg VERBATIM — lunette area + calci d'angolo */}
+              <svg viewBox="0 0 300 460" preserveAspectRatio="none" fill="none" stroke="#efe6d3" strokeOpacity="0.15" strokeWidth="1.3" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none" }}>
+                <rect x="6" y="6" width="288" height="448" rx="6"/>
+                <line x1="6" y1="230" x2="294" y2="230"/>
+                <circle cx="150" cy="230" r="44"/>
+                <circle cx="150" cy="230" r="2" fill="#efe6d3" fillOpacity="0.4" stroke="none"/>
+                <rect x="70" y="6" width="160" height="80"/>
+                <rect x="110" y="6" width="80" height="34"/>
+                <circle cx="150" cy="62" r="2" fill="#efe6d3" fillOpacity="0.4" stroke="none"/>
+                <path d="M116 86 Q150 116 184 86"/>
+                <rect x="70" y="374" width="160" height="80"/>
+                <rect x="110" y="420" width="80" height="34"/>
+                <circle cx="150" cy="398" r="2" fill="#efe6d3" fillOpacity="0.4" stroke="none"/>
+                <path d="M116 374 Q150 344 184 374"/>
+                <path d="M15,6 A9,9 0 0 1 6,15"/>
+                <path d="M294,15 A9,9 0 0 1 285,6"/>
+                <path d="M6,445 A9,9 0 0 1 15,454"/>
+                <path d="M285,454 A9,9 0 0 1 294,445"/>
               </svg>
             </div>
 

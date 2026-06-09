@@ -578,7 +578,10 @@ export default function FormazioneDesktopPage() {
       <div style={{ flex: 1, display: "grid", gridTemplateColumns: "312px 1fr", overflow: "hidden", maxWidth: 1180, width: "100%", margin: "0 auto" }}>
 
         {/* ── SIDEBAR ──────────────────────────────────────────────────────── */}
-        <div style={{ borderRight: "1px solid var(--line)", padding: 14, overflowY: "auto", display: "flex", flexDirection: "column" }}>
+        <div style={{ borderRight: "1px solid var(--line)", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+
+          {/* ── Header sticky: filtri fermi, non scrolla ─────────────────── */}
+          <div style={{ flexShrink: 0, padding: "14px 14px 0", borderBottom: "1px solid var(--line)" }}>
 
           {/* Label */}
           <div style={{ fontSize: 9, textTransform: "uppercase" as const, letterSpacing: "0.1em", color: "var(--muted)", marginBottom: 8 }}>
@@ -654,14 +657,16 @@ export default function FormazioneDesktopPage() {
           )}
 
           {/* Hint panchina automatica */}
-          <div style={{ fontSize: 9, color: "var(--muted)", fontFamily: "var(--font-serif)", fontStyle: "italic", marginBottom: 9, lineHeight: 1.5 }}>
+          <div style={{ fontSize: 9, color: "var(--muted)", fontFamily: "var(--font-serif)", fontStyle: "italic", marginBottom: 10, lineHeight: 1.5 }}>
             {selectedFieldRole !== null
               ? `↑ Seleziona un ${ROLE_LABEL[selectedFieldRole]} — panchina automatica`
               : "Clicca uno slot campo poi un giocatore — chi resta è in panca"}
           </div>
 
-          {/* Lista giocatori */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 4, flex: 1 }}>
+          </div>{/* /header sticky */}
+
+          {/* Lista giocatori — unica parte che scrolla */}
+          <div style={{ flex: 1, overflowY: "auto", padding: "10px 14px 14px", display: "flex", flexDirection: "column", gap: 4 }}>
             {filteredPlayers.map(p => {
               const inField  = fieldIds.has(p.id);
               const isSel    = selection?.kind === "bench" && selection.playerId === p.id;
@@ -697,19 +702,24 @@ export default function FormazioneDesktopPage() {
             overflow: "hidden",
           }}>
 
-            {/* Righe campo (SVG) */}
-            <svg
-              style={{ position: "absolute", left: 134, top: 0, bottom: 0, width: "calc(100% - 160px)", height: "100%", pointerEvents: "none", opacity: 0.13 }}
-              viewBox="0 0 100 160" preserveAspectRatio="none"
-            >
-              <rect x="5" y="3" width="90" height="154" fill="none" stroke="#fff" strokeWidth="0.8" />
-              <line x1="5" y1="80" x2="95" y2="80" stroke="#fff" strokeWidth="0.6" />
-              <circle cx="50" cy="80" r="10" fill="none" stroke="#fff" strokeWidth="0.6" />
-              <circle cx="50" cy="80" r="1.2" fill="#fff" />
-              <rect x="28" y="3" width="44" height="18" fill="none" stroke="#fff" strokeWidth="0.6" />
-              <rect x="38" y="3" width="24" height="8" fill="none" stroke="#fff" strokeWidth="0.5" />
-              <rect x="28" y="139" width="44" height="18" fill="none" stroke="#fff" strokeWidth="0.6" />
-              <rect x="38" y="149" width="24" height="8" fill="none" stroke="#fff" strokeWidth="0.5" />
+            {/* pitch_desktop.svg VERBATIM — lunette area + calci d'angolo */}
+            <svg viewBox="0 0 440 640" preserveAspectRatio="none" fill="none" stroke="#efe6d3" strokeOpacity="0.14" strokeWidth="1.4" style={{ position: "absolute", left: 134, top: 0, bottom: 0, width: "calc(100% - 160px)", height: "100%", pointerEvents: "none" }}>
+              <rect x="8" y="8" width="424" height="624" rx="6"/>
+              <line x1="8" y1="320" x2="432" y2="320"/>
+              <circle cx="220" cy="320" r="54"/>
+              <circle cx="220" cy="320" r="2.4" fill="#efe6d3" fillOpacity="0.4" stroke="none"/>
+              <rect x="120" y="532" width="200" height="100"/>
+              <rect x="170" y="590" width="100" height="42"/>
+              <circle cx="220" cy="566" r="2.4" fill="#efe6d3" fillOpacity="0.4" stroke="none"/>
+              <path d="M176 532 Q220 502 264 532"/>
+              <rect x="120" y="8" width="200" height="100"/>
+              <rect x="170" y="8" width="100" height="42"/>
+              <circle cx="220" cy="74" r="2.4" fill="#efe6d3" fillOpacity="0.4" stroke="none"/>
+              <path d="M176 108 Q220 138 264 108"/>
+              <path d="M19,8 A11,11 0 0 1 8,19"/>
+              <path d="M432,19 A11,11 0 0 1 421,8"/>
+              <path d="M8,621 A11,11 0 0 1 19,632"/>
+              <path d="M421,632 A11,11 0 0 1 432,621"/>
             </svg>
 
             {/* Banner sola lettura */}

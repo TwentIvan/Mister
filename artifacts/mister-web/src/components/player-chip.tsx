@@ -96,7 +96,7 @@ export function PlayerFieldChip({
 
         {player ? (
           /* .ph — volto toy (o faccina neutra se assente dall'anagrafica) */
-          <div className="ph" style={{ position: "absolute", inset: 0 }}>
+          <div className="ph">
             <NeutralFace />
             {faceUrl && (
               <img
