@@ -738,11 +738,11 @@ export default function FormazioneDesktopPage() {
             </button>
           )}
 
-          {/* Hint panchina automatica */}
+          {/* Hint contesto */}
           <div style={{ fontSize: 9, color: "var(--muted)", fontFamily: "var(--font-serif)", fontStyle: "italic", marginBottom: 10, lineHeight: 1.5 }}>
             {selectedFieldRole !== null
-              ? `↑ Seleziona un ${ROLE_LABEL[selectedFieldRole]} — panchina automatica`
-              : "Clicca uno slot campo poi un giocatore — chi resta è in panca"}
+              ? `Slot ${ROLE_LABEL[selectedFieldRole]} attivo — evidenziati i compatibili`
+              : "Clicca uno slot campo, poi scegli il giocatore dalla panca"}
           </div>
 
           </div>{/* /header sticky */}
@@ -797,8 +797,8 @@ export default function FormazioneDesktopPage() {
                   <div style={{ fontSize: 8, textTransform: "uppercase" as const, letterSpacing: "0.12em", color: "var(--muted)", padding: "8px 3px 4px", flexShrink: 0 }}>
                     Panchina — trascina per priorità sostituzione
                   </div>
-                  {/* flex:1 + flex-direction:column → le .rr (flex:1 1 0) crescono fino a maxHeight:42px */}
-                  <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 2 }}>
+                  {/* righe a altezza naturale; il container esterno (overflowY:auto) scrolla */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
                     {benchList.map(p => {
                       const isSel     = selection?.kind === "bench" && selection.playerId === p.id;
                       const isComp    = selectedFieldRole !== null ? p.role === selectedFieldRole : null;
@@ -813,11 +813,7 @@ export default function FormazioneDesktopPage() {
                           onDrop={() => handleBenchDrop(p.id)}
                           onDragEnd={handleBenchDragEnd}
                           style={{
-                            flex: "1 1 0",
-                            minHeight: "var(--rr-min-h, 24px)",
-                            maxHeight: "var(--rr-max-h, 42px)",
-                            display: "flex",        /* .rr figlio ha flex:1 1 0 → cresce a riempire */
-                            flexDirection: "column",
+                            flexShrink: 0,
                             opacity: isDragging ? 0.35 : 1,
                             outline: isDragOver ? "1px dashed rgba(106,160,127,0.7)" : "none",
                             borderRadius: 9,
