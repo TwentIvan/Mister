@@ -63,12 +63,13 @@ export interface PlayerFieldChipProps {
   isCaptain?: boolean;
   isDimmed?: boolean;
   isLocked?: boolean;
+  avgScore?: number | null;
   onClick?: () => void;
   onRemove?: () => void;
 }
 
 export function PlayerFieldChip({
-  player, role, isSelected, isCaptain, isDimmed, isLocked, onClick, onRemove,
+  player, role, isSelected, isCaptain, isDimmed, isLocked, avgScore, onClick, onRemove,
 }: PlayerFieldChipProps) {
   const rl = CHIP_ROLE_LETTER[role];
   const faceUrl = player?.cartoonUrl ?? player?.photoUrl ?? null;
@@ -81,6 +82,11 @@ export function PlayerFieldChip({
     >
       {/* .cap — fascia capitano, prima di .av nel DOM */}
       {isCaptain && player && <span className="cap">C</span>}
+
+      {/* .vt — pin voto: SEMPRE presente su .chip (MAI dentro .av che ha overflow:hidden) */}
+      {player && (
+        <span className="vt">{avgScore != null ? avgScore.toFixed(1) : "—"}</span>
+      )}
 
       {/* .av — cerchio colorato per ruolo + overflow:hidden */}
       <div className="av" style={!player ? { borderStyle: "dashed" } : undefined}>

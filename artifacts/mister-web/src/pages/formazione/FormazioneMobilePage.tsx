@@ -239,6 +239,11 @@ export default function FormazioneMobilePage() {
   const [captainId, setCaptainId]   = useState<number | null>(null);
   const [loadedKey, setLoadedKey]   = useState("");
 
+  // Snapshot dell'ultimo stato salvato (per Reset)
+  const [savedSnapshot, setSavedSnapshot] = useState<{
+    field: Record<string, number>; roster: number[]; captain: number | null;
+  }>({ field: {}, roster: [], captain: null });
+
   const roundKey = `${activeRound}-${fantaTeamId}-${season}`;
 
   useEffect(() => { setLoadedKey(""); }, [activeRound, fantaTeamId, season]);
@@ -266,10 +271,12 @@ export default function FormazioneMobilePage() {
       });
       setFieldSlots(newField);
       setRoster(newRoster);
+      setSavedSnapshot({ field: newField, roster: newRoster, captain: lineupData.captainPlayerId ?? null });
     } else {
       setFieldSlots({});
       setRoster(allPlayers.map(p => p.id));
       setCaptainId(null);
+      setSavedSnapshot({ field: {}, roster: allPlayers.map(p => p.id), captain: null });
     }
   }, [roundKey, loadedKey, allPlayers, lineupData]);
 
@@ -289,6 +296,22 @@ export default function FormazioneMobilePage() {
       : null;
 
   // ── Handlers ────────────────────────────────────────────────────────────────
+
+  function handleClear() {
+    setFieldSlots({});
+    setRoster(allPlayers.map(p => p.id));
+    setSelection(null);
+    setCaptainId(null);
+    setSaveErrors([]);
+  }
+
+  function handleReset() {
+    setFieldSlots(savedSnapshot.field);
+    setRoster(savedSnapshot.roster);
+    setCaptainId(savedSnapshot.captain);
+    setSelection(null);
+    setSaveErrors([]);
+  }
 
   function handleModuloChange(newMod: string) {
     const result = migrateLineup(fieldSlots, roster, formation, parseFormation(newMod));
@@ -576,6 +599,7 @@ export default function FormazioneMobilePage() {
                           isCaptain={pid !== undefined && pid === captainId}
                           isDimmed={!!isDimmed}
                           isLocked={roundLocked}
+                          avgScore={player?.voto ?? null}
                           onClick={() => handleFieldChipTap(slotId)}
                         />
                       );
@@ -654,9 +678,21 @@ export default function FormazioneMobilePage() {
                   {saveMutation.isPending ? "Salvataggio…" : "Salva"}
                 </button>
                 <button
-                  onClick={() => { setFieldSlots({}); setRoster(allPlayers.map(p => p.id)); setSelection(null); setCaptainId(null); setSaveErrors([]); }}
+                  onClick={handleClear}
                   style={{
-                    padding: "12px 16px", borderRadius: 10,
+                    padding: "12px 14px", borderRadius: 10,
+                    background: "transparent", border: "1px solid var(--line)",
+                    color: "var(--muted)",
+                    fontFamily: "var(--font-mono)", fontSize: 12, fontWeight: 600,
+                    cursor: "pointer", WebkitTapHighlightColor: "transparent",
+                  }}
+                >
+                  Svuota
+                </button>
+                <button
+                  onClick={handleReset}
+                  style={{
+                    padding: "12px 14px", borderRadius: 10,
                     background: "transparent", border: "1px solid var(--line)",
                     color: "var(--muted)",
                     fontFamily: "var(--font-mono)", fontSize: 12, fontWeight: 600,

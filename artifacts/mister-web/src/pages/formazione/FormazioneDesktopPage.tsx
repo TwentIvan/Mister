@@ -33,6 +33,7 @@ interface LocalPlayer {
   role: Role;
   photoUrl: string | null;
   cartoonUrl: string | null;
+  votoMister: number | null;
   colors: { primary: string; secondary: string };
   teamCode: string;
   logoUrl: string | null;
@@ -97,6 +98,7 @@ function adaptPlayer(p: RosterPlayer): LocalPlayer {
     role: p.roleClassic as Role,
     photoUrl: p.photoUrl ?? null,
     cartoonUrl: p.photoCartoonUrl ?? null,
+    votoMister: p.votoMister ?? null,
     colors: {
       primary:   p.realTeamColorPrimary  ?? "#444",
       secondary: p.realTeamColorSecondary ?? "#888",
@@ -222,6 +224,11 @@ export default function FormazioneDesktopPage() {
   const [captainId, setCaptainId]   = useState<number | null>(null);
   const [loadedKey, setLoadedKey]   = useState("");
 
+  // Snapshot dell'ultimo stato salvato (per Reset)
+  const [savedSnapshot, setSavedSnapshot] = useState<{
+    field: Record<string, number>; roster: number[]; captain: number | null;
+  }>({ field: {}, roster: [], captain: null });
+
   const roundKey = `${activeRound}-${fantaTeamId}-${season}`;
   useEffect(() => { setLoadedKey(""); }, [activeRound, fantaTeamId, season]);
 
@@ -248,10 +255,12 @@ export default function FormazioneDesktopPage() {
       });
       setFieldSlots(newField);
       setRoster(newRoster);
+      setSavedSnapshot({ field: newField, roster: newRoster, captain: lineupData.captainPlayerId ?? null });
     } else {
       setFieldSlots({});
       setRoster(allPlayers.map(p => p.id));
       setCaptainId(null);
+      setSavedSnapshot({ field: {}, roster: allPlayers.map(p => p.id), captain: null });
     }
   }, [roundKey, loadedKey, allPlayers, lineupData]);
 
@@ -298,6 +307,23 @@ export default function FormazioneDesktopPage() {
     if (filterTeam)           list = list.filter(p => p.realTeam === filterTeam);
     return list;
   }, [allPlayers, filterRoles, filterTeam]);
+
+  // ── Handlers Svuota / Reset ───────────────────────────────────────────────────
+  function handleClear() {
+    setFieldSlots({});
+    setRoster(allPlayers.map(p => p.id));
+    setSelection(null);
+    setCaptainId(null);
+    setSaveErrors([]);
+  }
+
+  function handleReset() {
+    setFieldSlots(savedSnapshot.field);
+    setRoster(savedSnapshot.roster);
+    setCaptainId(savedSnapshot.captain);
+    setSelection(null);
+    setSaveErrors([]);
+  }
 
   // ── Handler modulo ────────────────────────────────────────────────────────────
   function handleModuloChange(newMod: string) {
@@ -541,9 +567,22 @@ export default function FormazioneDesktopPage() {
                 {saveMutation.isPending ? "Salvataggio…" : "Salva"}
               </button>
               <button
-                onClick={() => { setFieldSlots({}); setRoster(allPlayers.map(p => p.id)); setSelection(null); setCaptainId(null); setSaveErrors([]); }}
-                title="Reset"
-                style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--muted)", padding: 6, borderRadius: 6, display: "flex" }}
+                onClick={handleClear}
+                style={{
+                  background: "transparent", border: "1px solid var(--line)", borderRadius: 9,
+                  padding: "8px 14px", cursor: "pointer", color: "var(--muted)",
+                  fontFamily: "var(--font-mono)", fontWeight: 600, fontSize: 11,
+                }}
+              >
+                Svuota
+              </button>
+              <button
+                onClick={handleReset}
+                style={{
+                  background: "transparent", border: "none", cursor: "pointer", color: "var(--muted)",
+                  padding: 6, borderRadius: 6, display: "flex",
+                }}
+                title="Reset all'ultimo salvato"
               >
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" width={18} height={18}>
                   <path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 4v4h4"/>
@@ -790,6 +829,7 @@ export default function FormazioneDesktopPage() {
                           isCaptain={pid !== undefined && pid === captainId}
                           isDimmed={!!isDimmed}
                           isLocked={roundLocked}
+                          avgScore={player?.votoMister ?? null}
                           onClick={() => handleFieldChipClick(slotId)}
                           onRemove={() => handleRemoveFromField(slotId)}
                         />

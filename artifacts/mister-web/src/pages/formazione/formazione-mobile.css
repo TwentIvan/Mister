@@ -17,6 +17,7 @@
 .fm-pg .miss{width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:rgba(191,59,48,.18);color:var(--danger);font-weight:700;font-size:10px;line-height:1}
 .fm-pg .chip .cn{font-size:10px;color:var(--cream);max-width:66px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center}
 .fm-pg .chip .cap{position:absolute;top:-3px;left:9px;width:15px;height:15px;border-radius:50%;background:var(--gold);color:#fff;font-size:8px;font-weight:700;display:flex;align-items:center;justify-content:center;border:1.5px solid var(--pitch);z-index:2}
+.fm-pg .chip .vt{position:absolute;top:-4px;right:4px;min-width:15px;height:15px;padding:0 3px;border-radius:8px;background:var(--green-d);color:var(--cream);font-family:var(--mono);font-size:8px;font-weight:700;display:flex;align-items:center;justify-content:center;z-index:2;pointer-events:none}
 .fm-pg .chip.sel .av{border-color:var(--gold-l);border-style:dashed;transform:scale(1.12)}
 .fm-pg .chip.sel .cn{color:var(--gold-l);font-weight:700}
 

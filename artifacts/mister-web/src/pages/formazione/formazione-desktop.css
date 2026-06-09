@@ -13,6 +13,7 @@
 .fd .chip .ph{width:100%;height:100%;object-fit:cover;display:block}
 .fd .chip .rm{position:absolute;top:-4px;right:-4px;width:17px;height:17px;border-radius:50%;background:var(--green-d);color:var(--cream);border:1.5px solid var(--cream2);font-size:11px;line-height:1;cursor:pointer;z-index:2;display:flex;align-items:center;justify-content:center;padding:0}
 .fd .chip .cap{position:absolute;top:-3px;left:-3px;width:16px;height:16px;border-radius:50%;background:var(--gold);color:#fff;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;border:1.5px solid var(--pitch);z-index:2}
+.fd .chip .vt{position:absolute;top:-4px;right:4px;min-width:15px;height:15px;padding:0 3px;border-radius:8px;background:var(--green-d);color:var(--cream);font-family:var(--mono);font-size:8px;font-weight:700;display:flex;align-items:center;justify-content:center;z-index:2;pointer-events:none}
 /* .bar rimossa — sostituita da .cr (crest club) */
 .fd .chip .cr{width:20px;height:20px;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;background:var(--green-d);box-shadow:inset 0 0 0 .5px rgba(239,230,211,.3)}
 .fd .chip .cr img{width:100%;height:100%;object-fit:contain;display:block}
@@ -23,7 +24,7 @@
 .fd .chip .cn{font-size:10px;color:var(--cream);max-width:72px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center;letter-spacing:.2px}
 
 /* ── Righe sidebar (scoped su .fd) ──────────────────────────────────────── */
-.fd .rr{display:flex;align-items:center;gap:7px;border-radius:8px;padding:3px 9px;color:var(--cream);font-size:11px;cursor:pointer;transition:opacity .15s}
+.fd .rr{display:flex;align-items:center;gap:7px;border-radius:8px;padding:3px 9px;color:var(--cream);font-size:11px;cursor:pointer;transition:opacity .15s;flex:1 1 0;min-height:24px;max-height:42px}
 .fd .rr.P{background:var(--rP)}
 .fd .rr.D{background:var(--rD)}
 .fd .rr.C{background:var(--rC)}
