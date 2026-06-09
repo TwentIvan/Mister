@@ -13,8 +13,9 @@ import {
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouteId } from "@/hooks/useRouteId";
-import { ChevronLeft, Lock, Home as HomeIcon, Plane, X } from "lucide-react";
+import { ChevronLeft, Lock, Home as HomeIcon, Plane } from "lucide-react";
 import { TEAM_CODE } from "./team-constants";
+import { PlayerFieldChip, PlayerBenchRow } from "@/components/player-chip";
 
 // ── Tipi ──────────────────────────────────────────────────────────────────────
 
@@ -48,12 +49,6 @@ const ROLE_RING: Record<Role, string> = {
   ATT: "#6b2c24",
 };
 
-const ROLE_BG: Record<Role, string> = {
-  GK:  "#7e5a26",
-  DEF: "#2b5740",
-  MID: "#234c5e",
-  ATT: "#6b2c24",
-};
 
 const ROLE_LABEL: Record<Role, string> = {
   GK: "P", DEF: "D", MID: "C", ATT: "A",
@@ -155,144 +150,7 @@ function migrateLineup(
   return { fieldSlots: slots, roster: [...oldRoster, ...surplus] };
 }
 
-// ── DesktopChip ───────────────────────────────────────────────────────────────
-
-interface DesktopChipProps {
-  player: LocalPlayer | null;
-  slotId: string;
-  role: Role;
-  isSelected: boolean;
-  isCaptain: boolean;
-  isDimmed: boolean;
-  isLocked: boolean;
-  onClick: () => void;
-  onRemove: () => void;
-}
-
-function DesktopChip({ player, role, isSelected, isCaptain, isDimmed, isLocked, onClick, onRemove }: DesktopChipProps) {
-  const roleLetter = ROLE_LABEL[role];
-
-  return (
-    <div
-      className={`chip ${roleLetter}${isSelected ? " sel" : ""}`}
-      onClick={isLocked ? undefined : onClick}
-      style={{ opacity: isDimmed ? 0.22 : 1, cursor: isLocked ? "default" : "pointer" }}
-    >
-      {/* .av — anello ruolo (border via CSS) + overflow:hidden */}
-      <div className="av" style={!player ? { borderStyle: "dashed" } : undefined}>
-        {/* .rm — bottone rimozione (inside .av, visibile sull'orlo del cerchio) */}
-        {player && !isLocked && (
-          <button className="rm" onClick={(e) => { e.stopPropagation(); onRemove(); }}>
-            <X size={7} />
-          </button>
-        )}
-        {/* .cap — fascia capitano */}
-        {isCaptain && player && <div className="cap">C</div>}
-        {/* .ph — foto giocatore */}
-        <div className="ph" style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          {player && (player.cartoonUrl ?? player.photoUrl) ? (
-            <img
-              src={player.cartoonUrl ?? player.photoUrl!}
-              alt={player.name}
-              style={{ width: "100%", height: "100%", objectFit: "cover", transform: "scale(1.08)", transformOrigin: "center" }}
-              onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
-            />
-          ) : (
-            <span style={{ fontFamily: "var(--font-mono)", fontSize: 17, fontWeight: 700, color: `var(--ring${roleLetter})`, opacity: 0.7 }}>
-              {roleLetter}
-            </span>
-          )}
-        </div>
-      </div>
-      {/* .bar — colori club */}
-      {player && (
-        <span
-          className="bar"
-          style={{ background: `linear-gradient(90deg, ${player.colors.primary} 50%, ${player.colors.secondary} 50%)` }}
-        />
-      )}
-      {/* .cn — cognome */}
-      <span className="cn">{player ? lastName(player.name) : ""}</span>
-    </div>
-  );
-}
-
-// ── SidebarRow ────────────────────────────────────────────────────────────────
-
-interface SidebarRowProps {
-  player: LocalPlayer;
-  isInField: boolean;
-  isSelected: boolean;
-  isCompatible: boolean | null;
-  isCaptain: boolean;
-  isLocked: boolean;
-  onTap: () => void;
-  onCaptainToggle: () => void;
-}
-
-function SidebarRow({ player, isInField, isSelected, isCompatible, isCaptain, isLocked, onTap, onCaptainToggle }: SidebarRowProps) {
-  const roleLetter = ROLE_LABEL[player.role];
-  return (
-    <div
-      className={`rr ${roleLetter}${isInField ? " bench" : ""}`}
-      onClick={isLocked ? undefined : onTap}
-      style={{
-        opacity: isCompatible === false ? 0.2 : 1,
-        outline: isSelected ? "1.5px solid rgba(255,255,255,0.42)" : "none",
-        cursor: isLocked ? "default" : "pointer",
-        userSelect: "none",
-      }}
-    >
-      {/* .face.sm — avatar */}
-      <div className="face sm">
-        {(player.cartoonUrl ?? player.photoUrl) ? (
-          <img
-            src={player.cartoonUrl ?? player.photoUrl!} alt={player.name}
-            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
-          />
-        ) : null}
-      </div>
-      {/* Ruolo badge */}
-      <div style={{
-        width: 16, height: 16, borderRadius: 3, background: "rgba(0,0,0,0.28)",
-        display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-      }}>
-        <span style={{ fontFamily: "var(--font-mono)", fontSize: 8, fontWeight: 800, color: `var(--ring${roleLetter})` }}>
-          {roleLetter}
-        </span>
-      </div>
-      {/* Crest */}
-      {player.logoUrl ? (
-        <img src={player.logoUrl} alt=""
-          style={{ width: 14, height: 14, objectFit: "contain", flexShrink: 0 }}
-          onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
-        />
-      ) : (
-        <span style={{ fontFamily: "var(--font-mono)", fontSize: 7, fontWeight: 700, color: "rgba(239,230,211,0.55)", width: 14, flexShrink: 0 }}>
-          {player.teamCode}
-        </span>
-      )}
-      {/* .rn — nome */}
-      <span className="rn">{lastName(player.name)}</span>
-      {/* XI badge / capitano toggle */}
-      {isInField ? (
-        <span className="mk pl">XI</span>
-      ) : !isLocked ? (
-        <button
-          onClick={(e) => { e.stopPropagation(); onCaptainToggle(); }}
-          style={{
-            width: 18, height: 18, borderRadius: "50%", flexShrink: 0, padding: 0,
-            background: isCaptain ? "var(--gold)" : "rgba(0,0,0,0.25)",
-            border: isCaptain ? "none" : "1px solid rgba(239,230,211,0.2)",
-            display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer",
-          }}
-        >
-          <span style={{ fontFamily: "var(--font-mono)", fontSize: 8, fontWeight: 800, color: isCaptain ? "#fff" : "rgba(239,230,211,0.4)" }}>C</span>
-        </button>
-      ) : null}
-    </div>
-  );
-}
+// ── (DesktopChip e SidebarRow rimossi: usa PlayerFieldChip / PlayerBenchRow da @/components/player-chip) ──
 
 // ── Mister AI toy avatar SVG ──────────────────────────────────────────────────
 
@@ -342,12 +200,7 @@ export default function FormazioneDesktopPage() {
     return rounds.find(r => !isRoundLocked(r)) ?? rounds[rounds.length - 1];
   }, [matchesData, rounds]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const [selectedRound, setSelectedRound] = useState<number | null>(null);
-  useEffect(() => {
-    if (selectedRound === null && defaultRound !== null) setSelectedRound(defaultRound);
-  }, [defaultRound, selectedRound]);
-
-  const activeRound = selectedRound ?? defaultRound ?? 1;
+  const activeRound = defaultRound ?? 1;
   const roundLocked = isRoundLocked(activeRound);
 
   const myMatch = useMemo((): CompetitionMatch | null => {
@@ -739,49 +592,6 @@ export default function FormazioneDesktopPage() {
         </span>
       </div>
 
-      {/* ── ROUND PICKER ─────────────────────────────────────────────────────── */}
-      {rounds.length > 0 && (
-        <div style={{ display: "flex", alignItems: "center", gap: 5, padding: "7px 22px", borderBottom: "1px solid var(--line)", flexShrink: 0, overflowX: "auto", scrollbarWidth: "none" }}>
-          {rounds.map(r => {
-            const locked = isRoundLocked(r);
-            const active = r === activeRound;
-            return (
-              <button
-                key={r}
-                onClick={() => { setSelectedRound(r); setSelection(null); setSaveErrors([]); setSaveOk(false); }}
-                style={{
-                  padding: "2px 10px", borderRadius: 99, flexShrink: 0, cursor: "pointer",
-                  border: active ? "1px solid var(--green)" : "1px solid var(--line)",
-                  background: active ? "var(--green)" : "var(--paper)",
-                  display: "flex", alignItems: "center", gap: 3,
-                }}
-              >
-                <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, fontWeight: active ? 700 : 500, color: active ? "var(--cream)" : "var(--muted)" }}>
-                  G{r}
-                </span>
-                {locked && <Lock size={8} color={active ? "rgba(239,230,211,0.7)" : "var(--muted)"} />}
-              </button>
-            );
-          })}
-
-          {/* XI counter + errori inline */}
-          <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 14, flexShrink: 0 }}>
-            {roleError && (
-              <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, fontWeight: 600, color: "#cf8a6a" }}>{roleError}</span>
-            )}
-            {saveOk && (
-              <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, fontWeight: 600, color: "#6aa07f" }}>Salvata ✓</span>
-            )}
-            {saveErrors.length > 0 && (
-              <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, fontWeight: 600, color: "#cf8a6a" }}>{saveErrors[0]}</span>
-            )}
-            <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, fontWeight: 700, color: starterCount === 11 ? "#6aa07f" : "var(--muted)" }}>
-              XI {starterCount}/11
-            </span>
-          </div>
-        </div>
-      )}
-
       {/* ── GRIGLIA PRINCIPALE ───────────────────────────────────────────────── */}
       <div style={{ flex: 1, display: "grid", gridTemplateColumns: "312px 1fr", overflow: "hidden", maxWidth: 1180, width: "100%", margin: "0 auto" }}>
 
@@ -871,7 +681,7 @@ export default function FormazioneDesktopPage() {
               const isSel    = selection?.kind === "bench" && selection.playerId === p.id;
               const isComp   = selectedFieldRole !== null ? (p.role === selectedFieldRole ? true : false) : null;
               return (
-                <SidebarRow
+                <PlayerBenchRow
                   key={p.id}
                   player={p}
                   isInField={inField}
@@ -879,6 +689,7 @@ export default function FormazioneDesktopPage() {
                   isCompatible={isComp}
                   isCaptain={p.id === captainId}
                   isLocked={roundLocked}
+                  faceSmall
                   onTap={() => handleSidebarClick(p.id)}
                   onCaptainToggle={() => setCaptainId(prev => prev === p.id ? null : p.id)}
                 />
@@ -975,10 +786,9 @@ export default function FormazioneDesktopPage() {
                       const isDimmed = selection !== null && !isSel &&
                         !(selection.kind === "bench" && role === playerById.get(selection.playerId)?.role);
                       return (
-                        <DesktopChip
+                        <PlayerFieldChip
                           key={slotId}
                           player={player}
-                          slotId={slotId}
                           role={role}
                           isSelected={isSel}
                           isCaptain={pid !== undefined && pid === captainId}

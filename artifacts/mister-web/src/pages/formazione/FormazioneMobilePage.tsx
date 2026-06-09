@@ -15,6 +15,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useRouteId } from "@/hooks/useRouteId";
 import { ChevronLeft, Lock, Home as HomeIcon, Plane, Trophy } from "lucide-react";
 import { TEAM_CODE } from "./team-constants";
+import { PlayerFieldChip, PlayerBenchRow } from "@/components/player-chip";
 
 // ── Tipi ──────────────────────────────────────────────────────────────────────
 
@@ -51,13 +52,6 @@ const ROLE_RING: Record<Role, string> = {
   ATT: "#cf8a6a",   // --ringA
 };
 
-// Sfondo riga panchina (--rP/D/C/A): stessa palette scura
-const ROLE_BENCH_BG: Record<Role, string> = {
-  GK:  "#7e5a26",
-  DEF: "#2b5740",
-  MID: "#234c5e",
-  ATT: "#6b2c24",
-};
 
 const ROLE_LABEL: Record<Role, string> = {
   GK: "P", DEF: "D", MID: "C", ATT: "A",
@@ -169,133 +163,7 @@ function migrateLineup(
   return { fieldSlots: newSlots, roster: [...oldRoster, ...surplus] };
 }
 
-// ── FieldChip ─────────────────────────────────────────────────────────────────
-
-interface FieldChipProps {
-  player: LocalPlayer | null;
-  slotId: string;
-  role: Role;
-  isSelected: boolean;
-  isCaptain: boolean;
-  isDimmed: boolean;
-  isLocked: boolean;
-  onClick: () => void;
-}
-
-function FieldChip({ player, role, isSelected, isCaptain, isDimmed, isLocked, onClick }: FieldChipProps) {
-  const roleLetter = ROLE_LABEL[role];
-
-  return (
-    <div
-      className={`chip ${roleLetter}${isSelected ? " sel" : ""}`}
-      onClick={isLocked ? undefined : onClick}
-      style={{ opacity: isDimmed ? 0.3 : 1, cursor: isLocked ? "default" : "pointer" }}
-    >
-      {/* .cap — fascia capitano (PRIMA di .av nel DOM del mockup) */}
-      {isCaptain && player && <span className="cap">C</span>}
-      {/* .av — anello ruolo + overflow:hidden */}
-      <div className="av" style={!player ? { borderStyle: "dashed" } : undefined}>
-        <div className="ph" style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          {player && (player.cartoonUrl ?? player.photoUrl) ? (
-            <img
-              src={player.cartoonUrl ?? player.photoUrl!} alt={player.name}
-              style={{ width: "100%", height: "100%", objectFit: "cover", transform: "scale(1.08)", transformOrigin: "center" }}
-              onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
-            />
-          ) : (
-            <span style={{ fontFamily: "var(--font-mono)", fontSize: 14, fontWeight: 700, color: `var(--ring${roleLetter})`, opacity: 0.7 }}>
-              {roleLetter}
-            </span>
-          )}
-        </div>
-      </div>
-      {/* .bar — colori club */}
-      {player && (
-        <span
-          className="bar"
-          style={{ background: `linear-gradient(90deg, ${player.colors.primary} 50%, ${player.colors.secondary} 50%)` }}
-        />
-      )}
-      {/* .cn — cognome o ruolo se vuoto */}
-      <span className="cn">{player ? lastName(player.name) : roleLetter}</span>
-    </div>
-  );
-}
-
-// ── BenchRow ──────────────────────────────────────────────────────────────────
-
-interface BenchRowProps {
-  player: LocalPlayer;
-  priority: number;
-  isSelected: boolean;
-  isCompatible: boolean | null;
-  isCaptain: boolean;
-  isLocked: boolean;
-  onTap: () => void;
-  onCaptainToggle: () => void;
-}
-
-function BenchRow({ player, priority, isSelected, isCompatible, isCaptain, isLocked, onTap, onCaptainToggle }: BenchRowProps) {
-  const roleLetter = ROLE_LABEL[player.role];
-  return (
-    <div
-      className={`rr ${roleLetter}`}
-      onClick={isLocked ? undefined : onTap}
-      style={{
-        opacity: isCompatible === false ? 0.28 : 1,
-        outline: isSelected ? "1.5px solid rgba(255,255,255,0.45)" : "none",
-        cursor: isLocked ? "default" : "pointer",
-      }}
-    >
-      {/* Priorità */}
-      <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, fontWeight: 700, color: "rgba(239,230,211,0.45)", width: 14, flexShrink: 0 }}>
-        {priority}
-      </span>
-      {/* .face — avatar */}
-      <div className="face">
-        {(player.cartoonUrl ?? player.photoUrl) && (
-          <img
-            src={player.cartoonUrl ?? player.photoUrl!} alt={player.name}
-            style={{ width: "100%", height: "100%", objectFit: "cover", transform: "scale(1.06)", transformOrigin: "center" }}
-            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
-          />
-        )}
-      </div>
-      {/* .rl — lettera ruolo */}
-      <span className="rl">{roleLetter}</span>
-      {/* .cr — crest club */}
-      {player.logoUrl ? (
-        <img src={player.logoUrl} alt=""
-          style={{ width: 16, height: 16, objectFit: "contain", flexShrink: 0 }}
-          onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
-        />
-      ) : (
-        <div className="cr" style={{ background: player.colors.primary, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <span style={{ fontFamily: "var(--font-mono)", fontSize: 6, fontWeight: 700, color: "#fff" }}>
-            {player.teamCode?.slice(0, 3)}
-          </span>
-        </div>
-      )}
-      {/* .rn — cognome */}
-      <span className="rn">{lastName(player.name)}</span>
-      {/* Capitano toggle / azione */}
-      {!isLocked && (
-        <button
-          onClick={(e) => { e.stopPropagation(); onCaptainToggle(); }}
-          style={{
-            width: 22, height: 22, borderRadius: "50%", flexShrink: 0, padding: 0,
-            background: isCaptain ? "var(--gold)" : "rgba(0,0,0,0.25)",
-            border: isCaptain ? "none" : "1px solid rgba(239,230,211,0.25)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            cursor: "pointer",
-          }}
-        >
-          <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, fontWeight: 800, color: isCaptain ? "#fff" : "rgba(239,230,211,0.55)" }}>C</span>
-        </button>
-      )}
-    </div>
-  );
-}
+// ── (FieldChip e BenchRow rimossi: usa PlayerFieldChip / PlayerBenchRow da @/components/player-chip) ──
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 
@@ -330,12 +198,7 @@ export default function FormazioneMobilePage() {
     return rounds.find(r => !isRoundLocked(r)) ?? rounds[rounds.length - 1];
   }, [matchesData, rounds]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const [selectedRound, setSelectedRound] = useState<number | null>(null);
-  useEffect(() => {
-    if (selectedRound === null && defaultRound !== null) setSelectedRound(defaultRound);
-  }, [defaultRound, selectedRound]);
-
-  const activeRound = selectedRound ?? defaultRound ?? 1;
+  const activeRound = defaultRound ?? 1;
   const roundLocked = isRoundLocked(activeRound);
 
   const myMatch = useMemo((): CompetitionMatch | null => {
@@ -589,35 +452,6 @@ export default function FormazioneMobilePage() {
         ))}
       </div>
 
-      {/* Round picker */}
-      {rounds.length > 0 && (
-        <div style={{ display: "flex", gap: 5, padding: "0 16px 8px", overflowX: "auto", scrollbarWidth: "none", flexShrink: 0, alignItems: "center" }}>
-          <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, fontWeight: 600, color: "var(--muted)", letterSpacing: "0.08em", flexShrink: 0, textTransform: "uppercase" }}>G</span>
-          {rounds.map(r => {
-            const locked = isRoundLocked(r);
-            const active = r === activeRound;
-            return (
-              <button
-                key={r}
-                onClick={() => { setSelectedRound(r); setSelection(null); setActiveTab("campo"); setSaveErrors([]); setSaveOk(false); }}
-                style={{
-                  padding: "3px 10px", borderRadius: 99, flexShrink: 0, cursor: "pointer",
-                  border: active ? "1px solid rgba(31,71,51,0.22)" : "1px solid var(--line)",
-                  background: active ? "var(--green)" : "transparent",
-                  display: "flex", alignItems: "center", gap: 3,
-                  WebkitTapHighlightColor: "transparent",
-                }}
-              >
-                <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, fontWeight: active ? 700 : 500, color: active ? "var(--cream)" : "var(--muted)" }}>
-                  {r}
-                </span>
-                {locked && <Lock size={9} color={active ? "rgba(239,230,211,0.6)" : "var(--line)"} />}
-              </button>
-            );
-          })}
-        </div>
-      )}
-
       {/* Context row */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "2px 16px 10px", flexShrink: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
@@ -722,10 +556,9 @@ export default function FormazioneMobilePage() {
                       selection.kind === "bench" && role === playerById.get(selection.playerId)?.role
                     );
                     return (
-                      <FieldChip
+                      <PlayerFieldChip
                         key={slotId}
                         player={player}
-                        slotId={slotId}
                         role={role}
                         isSelected={isSel}
                         isCaptain={pid !== undefined && pid === captainId}
@@ -875,7 +708,7 @@ export default function FormazioneMobilePage() {
                 ? (player.role === selectedFieldRole)
                 : null;
               return (
-                <BenchRow
+                <PlayerBenchRow
                   key={pid}
                   player={player}
                   priority={idx + 1}
@@ -883,6 +716,7 @@ export default function FormazioneMobilePage() {
                   isCompatible={compat}
                   isCaptain={pid === captainId}
                   isLocked={roundLocked}
+                  showRoleLabel
                   onTap={() => handleBenchRowTap(pid, idx)}
                   onCaptainToggle={() => setCaptainId(prev => prev === pid ? null : pid)}
                 />

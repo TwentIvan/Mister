@@ -4,13 +4,17 @@
 
 /* ── Chip campo (scoped su .fm-pg) ──────────────────────────────────────── */
 .fm-pg .chip{display:flex;flex-direction:column;align-items:center;gap:3px;width:66px;position:relative;cursor:pointer;-webkit-tap-highlight-color:transparent}
-.fm-pg .chip .av{width:42px;height:42px;border-radius:50%;background:var(--cream2);overflow:hidden;border:3px solid var(--gold-l);transition:transform .12s}
+.fm-pg .chip .av{position:relative;width:42px;height:42px;border-radius:50%;background:var(--cream2);overflow:hidden;border:3px solid var(--gold-l);transition:transform .12s}
 .fm-pg .chip.A .av{border-color:var(--ringA)}
 .fm-pg .chip.C .av{border-color:var(--ringC)}
 .fm-pg .chip.D .av{border-color:var(--ringD)}
 .fm-pg .chip.P .av{border-color:var(--ringP)}
 .fm-pg .chip .ph{width:100%;height:100%;object-fit:cover;display:block}
-.fm-pg .chip .bar{width:30px;height:5px;border-radius:3px;display:block;box-shadow:inset 0 0 0 .5px rgba(0,0,0,.3)}
+/* .bar rimossa — sostituita da .cr (crest club) */
+.fm-pg .chip .cr{width:18px;height:20px;border-radius:4px;overflow:hidden;display:flex;align-items:center;justify-content:center;background:var(--cream2);box-shadow:inset 0 0 0 .5px rgba(0,0,0,.25)}
+.fm-pg .chip .cr img{width:100%;height:100%;object-fit:contain;display:block}
+.fm-pg .chip.empty .slotlab{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:rgba(239,230,211,.45);pointer-events:none}
+.fm-pg .miss{width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:rgba(191,59,48,.18);color:var(--danger);font-weight:700;font-size:10px;line-height:1}
 .fm-pg .chip .cn{font-size:10px;color:var(--cream);max-width:66px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center}
 .fm-pg .chip .cap{position:absolute;top:-3px;left:9px;width:15px;height:15px;border-radius:50%;background:var(--gold);color:#fff;font-size:8px;font-weight:700;display:flex;align-items:center;justify-content:center;border:1.5px solid var(--pitch);z-index:2}
 .fm-pg .chip.sel .av{border-color:var(--gold-l);border-style:dashed;transform:scale(1.12)}
@@ -26,7 +30,8 @@
 .fm-pg .rr.D{background:var(--rD)}
 .fm-pg .rr.C{background:var(--rC)}
 .fm-pg .rr.A{background:var(--rA)}
-.fm-pg .rr .cr{width:16px;height:18px;border-radius:3px;flex:none;box-shadow:inset 0 0 0 .5px rgba(0,0,0,.3)}
+.fm-pg .rr .cr{width:16px;height:18px;border-radius:3px;flex:none;overflow:hidden;display:flex;align-items:center;justify-content:center;background:var(--cream2);box-shadow:inset 0 0 0 .5px rgba(0,0,0,.25)}
+.fm-pg .rr .cr img{width:100%;height:100%;object-fit:contain;display:block}
 .fm-pg .rr .face{width:24px;height:24px;border-radius:50%;overflow:hidden;flex:none;border:1.5px solid rgba(239,230,211,.5);background:var(--cream2)}
 .fm-pg .rr .face img{width:100%;height:100%;object-fit:cover}
 .fm-pg .rr .rl{font-size:9px;width:13px;text-align:center;color:rgba(239,230,211,.7);font-weight:700;flex:none}
