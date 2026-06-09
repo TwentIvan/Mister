@@ -760,99 +760,104 @@ export default function FormazioneDesktopPage() {
 
           </div>{/* /header sticky */}
 
-          {/* Lista — flex:1, due sezioni: in campo (dimmed) + panchina (draggable) */}
-          <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "8px 10px 12px", display: "flex", flexDirection: "column" }}>
+          {/* ── LISTA PIATTA: labels flex:none, righe flex:1 1 0 — si spartiscono l'altezza ─── */}
+          {/* rosa grande → verso min-height + scroll; rosa piccola → crescono fino in fondo */}
+          {(() => {
+            const inCampoList = filteredPlayers.filter(p => fieldIds.has(p.id));
+            const benchList = roster
+              .map(id => playerById.get(id))
+              .filter((p): p is LocalPlayer => {
+                if (!p) return false;
+                if (filterRoles.size > 0 && !filterRoles.has(p.role)) return false;
+                if (filterTeam && p.realTeam !== filterTeam) return false;
+                return true;
+              });
+            const ROW: React.CSSProperties = {
+              flex: "1 1 0",
+              minHeight: 26,
+              maxHeight: 40,
+              display: "flex",
+              flexDirection: "column",
+            };
+            const LABEL: React.CSSProperties = {
+              flexShrink: 0,
+              fontSize: 8,
+              textTransform: "uppercase",
+              letterSpacing: "0.12em",
+              color: "var(--muted)",
+              padding: "4px 3px",
+            };
+            return (
+              <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "6px 10px 10px", display: "flex", flexDirection: "column", gap: 2 }}>
 
-            {/* ── IN CAMPO (dimmed, non interattivi) ─────────────────────── */}
-            {(() => {
-              const inCampoList = filteredPlayers.filter(p => fieldIds.has(p.id));
-              if (inCampoList.length === 0) return null;
-              return (
-                <>
-                  <div style={{ fontSize: 8, textTransform: "uppercase" as const, letterSpacing: "0.12em", color: "var(--muted)", padding: "4px 3px 4px", flexShrink: 0 }}>
-                    In campo
+                {inCampoList.length > 0 && (
+                  <div style={{ ...LABEL, paddingTop: 2 }}>In campo</div>
+                )}
+                {inCampoList.map(p => (
+                  <div key={p.id} style={{ ...ROW, opacity: 0.42, pointerEvents: "none" }}>
+                    <PlayerBenchRow
+                      player={p}
+                      isInField
+                      isCompatible={selectedFieldRole !== null ? p.role === selectedFieldRole : null}
+                      isCaptain={p.id === captainId}
+                      isLocked
+                      faceSmall
+                    />
                   </div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 2, flexShrink: 0 }}>
-                    {inCampoList.map(p => (
-                      <div key={p.id} style={{ opacity: 0.42, pointerEvents: "none" }}>
-                        <PlayerBenchRow
-                          player={p}
-                          isInField
-                          isCompatible={selectedFieldRole !== null ? p.role === selectedFieldRole : null}
-                          isCaptain={p.id === captainId}
-                          isLocked
-                          faceSmall
-                        />
+                ))}
+
+                {benchList.length === 0
+                  ? (
+                    <div style={{ flex: "1 1 0", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, color: "var(--muted)", fontFamily: "var(--font-serif)", fontStyle: "italic" }}>
+                      Tutti i giocatori sono in campo
+                    </div>
+                  ) : (
+                    <>
+                      <div style={{ ...LABEL, paddingTop: inCampoList.length > 0 ? 6 : 2 }}>
+                        Panchina — trascina per priorità
                       </div>
-                    ))}
-                  </div>
-                </>
-              );
-            })()}
+                      {benchList.map(p => {
+                        const isSel      = selection?.kind === "bench" && selection.playerId === p.id;
+                        const isComp     = selectedFieldRole !== null ? p.role === selectedFieldRole : null;
+                        const isDragging = dragId === p.id;
+                        const isDragOver = dragOverId === p.id && dragId !== null && dragId !== p.id;
+                        return (
+                          <div
+                            key={p.id}
+                            draggable={!roundLocked}
+                            onDragStart={() => handleBenchDragStart(p.id)}
+                            onDragOver={(e) => handleBenchDragOver(e, p.id)}
+                            onDrop={() => handleBenchDrop(p.id)}
+                            onDragEnd={handleBenchDragEnd}
+                            style={{
+                              ...ROW,
+                              opacity: isDragging ? 0.35 : 1,
+                              outline: isDragOver ? "1px dashed rgba(106,160,127,0.7)" : "none",
+                              borderRadius: 9,
+                              transition: "opacity 0.1s",
+                            }}
+                          >
+                            <PlayerBenchRow
+                              player={p}
+                              isSelected={isSel}
+                              isCompatible={isComp}
+                              isCaptain={p.id === captainId}
+                              isLocked={roundLocked}
+                              faceSmall
+                              showGrip={!roundLocked}
+                              onTap={() => handleSidebarClick(p.id)}
+                              onCaptainToggle={() => setCaptainId(prev => prev === p.id ? null : p.id)}
+                            />
+                          </div>
+                        );
+                      })}
+                    </>
+                  )
+                }
 
-            {/* ── PANCHINA (priorità sostituzione, draggable) ─────────────── */}
-            {(() => {
-              const benchList = roster
-                .map(id => playerById.get(id))
-                .filter((p): p is LocalPlayer => {
-                  if (!p) return false;
-                  if (filterRoles.size > 0 && !filterRoles.has(p.role)) return false;
-                  if (filterTeam && p.realTeam !== filterTeam) return false;
-                  return true;
-                });
-              if (benchList.length === 0) return (
-                <div style={{ fontSize: 11, color: "var(--muted)", textAlign: "center", padding: "18px 0", fontFamily: "var(--font-serif)", fontStyle: "italic" }}>
-                  Tutti i giocatori sono in campo
-                </div>
-              );
-              return (
-                <>
-                  <div style={{ fontSize: 8, textTransform: "uppercase" as const, letterSpacing: "0.12em", color: "var(--muted)", padding: "8px 3px 4px", flexShrink: 0 }}>
-                    Panchina — trascina per priorità sostituzione
-                  </div>
-                  {/* righe a altezza naturale; il container esterno (overflowY:auto) scrolla */}
-                  <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                    {benchList.map(p => {
-                      const isSel     = selection?.kind === "bench" && selection.playerId === p.id;
-                      const isComp    = selectedFieldRole !== null ? p.role === selectedFieldRole : null;
-                      const isDragging = dragId === p.id;
-                      const isDragOver = dragOverId === p.id && dragId !== null && dragId !== p.id;
-                      return (
-                        <div
-                          key={p.id}
-                          draggable={!roundLocked}
-                          onDragStart={() => handleBenchDragStart(p.id)}
-                          onDragOver={(e) => handleBenchDragOver(e, p.id)}
-                          onDrop={() => handleBenchDrop(p.id)}
-                          onDragEnd={handleBenchDragEnd}
-                          style={{
-                            flexShrink: 0,
-                            opacity: isDragging ? 0.35 : 1,
-                            outline: isDragOver ? "1px dashed rgba(106,160,127,0.7)" : "none",
-                            borderRadius: 9,
-                            transition: "opacity 0.1s",
-                          }}
-                        >
-                          <PlayerBenchRow
-                            player={p}
-                            isSelected={isSel}
-                            isCompatible={isComp}
-                            isCaptain={p.id === captainId}
-                            isLocked={roundLocked}
-                            faceSmall
-                            showGrip={!roundLocked}
-                            onTap={() => handleSidebarClick(p.id)}
-                            onCaptainToggle={() => setCaptainId(prev => prev === p.id ? null : p.id)}
-                          />
-                        </div>
-                      );
-                    })}
-                  </div>
-                </>
-              );
-            })()}
-
-          </div>
+              </div>
+            );
+          })()}
         </div>
 
         {/* ── CAMPO ────────────────────────────────────────────────────────── */}
