@@ -142,14 +142,13 @@ export interface PlayerBenchRowProps {
   isCaptain?: boolean;
   isLocked?: boolean;
   faceSmall?: boolean;
-  showRoleLabel?: boolean;
   onTap?: () => void;
   onCaptainToggle?: () => void;
 }
 
 export function PlayerBenchRow({
   player, priority, isInField, isSelected, isCompatible, isCaptain, isLocked,
-  faceSmall, showRoleLabel, onTap, onCaptainToggle,
+  faceSmall, onTap, onCaptainToggle,
 }: PlayerBenchRowProps) {
   const rl = CHIP_ROLE_LETTER[player.role];
   const faceUrl = player.cartoonUrl ?? player.photoUrl ?? null;
@@ -217,9 +216,6 @@ export function PlayerBenchRow({
           />
         )}
       </div>
-
-      {/* .rl — lettera ruolo (solo panchina mobile) */}
-      {showRoleLabel && <span className="rl">{rl}</span>}
 
       {/* .rn — cognome */}
       <span className="rn">{chipLastName(player.name)}</span>

@@ -716,7 +716,6 @@ export default function FormazioneMobilePage() {
                   isCompatible={compat}
                   isCaptain={pid === captainId}
                   isLocked={roundLocked}
-                  showRoleLabel
                   onTap={() => handleBenchRowTap(pid, idx)}
                   onCaptainToggle={() => setCaptainId(prev => prev === pid ? null : pid)}
                 />
