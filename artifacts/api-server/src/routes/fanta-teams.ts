@@ -2,7 +2,7 @@ import { Router, type IRouter } from "express";
 import { eq, and, or, inArray, sql, isNull } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { db } from "@workspace/db";
-import { fantaTeams, societa, players, contracts, teamColors, serieAFixtures, coaches, leagues } from "@workspace/db";
+import { fantaTeams, societa, players, contracts, teamColors, serieAFixtures, coaches, leagues, users } from "@workspace/db";
 import { computeCoachVoto } from "@workspace/scoring";
 import {
   ListFantaTeamsParams,
@@ -359,10 +359,12 @@ router.get("/fanta-teams/:fantaTeamId/rosa", async (req, res): Promise<void> => 
       teamName: societa.name,
       jersey: societa.jersey,
       leagueName: leagues.name,
+      managerName: users.displayName,
     })
     .from(fantaTeams)
     .leftJoin(societa, eq(fantaTeams.societaId, societa.id))
     .leftJoin(leagues, eq(fantaTeams.leagueId, leagues.id))
+    .leftJoin(users, eq(fantaTeams.managerUserId, users.id))
     .where(eq(fantaTeams.id, fantaTeamId))
     .limit(1);
 
@@ -427,6 +429,7 @@ router.get("/fanta-teams/:fantaTeamId/rosa", async (req, res): Promise<void> => 
   res.json({
     fantaTeamId: team.id,
     teamName: team.teamName ?? fantaTeamId,
+    managerName: team.managerName ?? null,
     creditsRemaining: team.creditsRemaining ?? 0,
     jersey: jerseyData
       ? {

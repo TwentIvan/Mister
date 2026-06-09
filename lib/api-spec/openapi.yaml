@@ -3676,6 +3676,9 @@ components:
           type: string
         teamName:
           type: string
+        managerName:
+          type: string
+          nullable: true
         creditsRemaining:
           type: integer
         jersey:

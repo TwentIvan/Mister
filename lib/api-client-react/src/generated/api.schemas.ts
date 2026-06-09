@@ -1720,6 +1720,7 @@ export interface FantaTeamRosaTotals {
 export interface FantaTeamRosa {
   fantaTeamId: string;
   teamName: string;
+  managerName?: string | null;
   creditsRemaining: number;
   jersey?: FantaTeamRosaJersey | null;
   leagueId: string;

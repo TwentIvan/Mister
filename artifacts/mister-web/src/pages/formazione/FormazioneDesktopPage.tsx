@@ -15,7 +15,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useRouteId } from "@/hooks/useRouteId";
 import { ChevronLeft, Lock, Home as HomeIcon, Plane } from "lucide-react";
 import { TEAM_CODE } from "./team-constants";
-import { PlayerFieldChip, PlayerBenchRow } from "@/components/player-chip";
+import { PlayerFieldChip, PlayerBenchRow, MisterToyAvatar } from "@/components/player-chip";
 
 // ── Tipi ──────────────────────────────────────────────────────────────────────
 
@@ -152,24 +152,6 @@ function migrateLineup(
 
 // ── (DesktopChip e SidebarRow rimossi: usa PlayerFieldChip / PlayerBenchRow da @/components/player-chip) ──
 
-// ── Mister AI toy avatar SVG ──────────────────────────────────────────────────
-
-function MisterToyAvatar() {
-  return (
-    <svg viewBox="0 0 54 54" width="54" height="54" style={{ display: "block" }}>
-      <ellipse cx="27" cy="41" rx="14" ry="11" fill="#2b5740" />
-      <rect x="21" y="31" width="12" height="6" rx="2" fill="#1f4733" />
-      <circle cx="27" cy="22" r="10" fill="#efe6d3" />
-      <ellipse cx="27" cy="13.5" rx="9.5" ry="5" fill="#2d2420" />
-      <ellipse cx="23" cy="22" rx="1.5" ry="1.8" fill="#3a2a1e" />
-      <ellipse cx="31" cy="22" rx="1.5" ry="1.8" fill="#3a2a1e" />
-      <path d="M23.5 27 Q27 29.5 30.5 27" stroke="#b08060" strokeWidth="1" fill="none" strokeLinecap="round" />
-      <circle cx="27" cy="38" r="5" fill="#c8922b" />
-      <text x="27" y="41.5" textAnchor="middle" fontFamily="Georgia,serif" fontWeight="800" fontSize="7" fill="#fff">M</text>
-    </svg>
-  );
-}
-
 // ── Pagina principale ─────────────────────────────────────────────────────────
 
 export default function FormazioneDesktopPage() {
@@ -293,14 +275,14 @@ export default function FormazioneDesktopPage() {
 
   // Club in rosa
   const clubs = useMemo(() => {
-    const m = new Map<string, { count: number; colors: { primary: string; secondary: string } }>();
+    const m = new Map<string, { count: number; colors: { primary: string; secondary: string }; logoUrl: string | null }>();
     allPlayers.forEach(p => {
       const e = m.get(p.realTeam);
       if (e) e.count++;
-      else m.set(p.realTeam, { count: 1, colors: p.colors });
+      else m.set(p.realTeam, { count: 1, colors: p.colors, logoUrl: p.logoUrl });
     });
     return Array.from(m.entries())
-      .map(([team, { count, colors }]) => ({ team, count, colors }))
+      .map(([team, { count, colors, logoUrl }]) => ({ team, count, colors, logoUrl }))
       .sort((a, b) => b.count - a.count);
   }, [allPlayers]);
 
@@ -632,7 +614,7 @@ export default function FormazioneDesktopPage() {
 
           {/* Filtri club */}
           <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 6 }}>
-            {clubs.map(({ team, count, colors }) => (
+            {clubs.map(({ team, count, logoUrl }) => (
               <button
                 key={team}
                 onClick={() => setFilterTeam(prev => prev === team ? null : team)}
@@ -645,13 +627,17 @@ export default function FormazioneDesktopPage() {
                   borderRadius: 3,
                 }}
               >
+                {/* Crest tondo: logo reale o .miss */}
                 <span style={{
-                  width: 17, height: 19, borderRadius: 3, flexShrink: 0, display: "inline-flex",
+                  width: 16, height: 16, borderRadius: "50%", flexShrink: 0, display: "inline-flex",
                   alignItems: "center", justifyContent: "center",
-                  background: `linear-gradient(135deg, ${colors.primary} 0 49%, ${colors.secondary} 51% 100%)`,
-                  boxShadow: "inset 0 0 0 0.5px rgba(0,0,0,0.3)",
+                  overflow: "hidden", background: "var(--cream2)",
+                  boxShadow: "inset 0 0 0 0.5px rgba(0,0,0,0.18)",
                 }}>
-                  <span style={{ width: 4, height: 4, borderRadius: "50%", background: "rgba(255,255,255,0.85)" }} />
+                  {logoUrl
+                    ? <img src={logoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+                    : <span style={{ fontSize: 8, fontWeight: 700, color: "var(--danger)", lineHeight: 1 }}>?</span>
+                  }
                 </span>
                 <span style={{ fontFamily: "var(--font-mono)", fontWeight: 700 }}>{count}</span>
               </button>
@@ -763,7 +749,7 @@ export default function FormazioneDesktopPage() {
                 )}
               </div>
               <div className="mister"><MisterToyAvatar /></div>
-              <div className="cn">{teamName}</div>
+              <div className="cn">{rosaData?.managerName ?? teamName}</div>
             </div>
 
             {/* Righe giocatori: ATT in cima → GK in fondo */}

@@ -1958,6 +1958,7 @@ export const GetFantaTeamRosaParams = zod.object({
 export const GetFantaTeamRosaResponse = zod.object({
   "fantaTeamId": zod.string(),
   "teamName": zod.string(),
+  "managerName": zod.string().nullish(),
   "creditsRemaining": zod.number(),
   "jersey": zod.object({
   "primaryColor": zod.string(),

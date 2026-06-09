@@ -15,7 +15,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useRouteId } from "@/hooks/useRouteId";
 import { ChevronLeft, Lock, Home as HomeIcon, Plane, Trophy } from "lucide-react";
 import { TEAM_CODE } from "./team-constants";
-import { PlayerFieldChip, PlayerBenchRow } from "@/components/player-chip";
+import { PlayerFieldChip, PlayerBenchRow, MisterToyAvatar } from "@/components/player-chip";
 
 // ── Tipi ──────────────────────────────────────────────────────────────────────
 
@@ -514,71 +514,78 @@ export default function FormazioneMobilePage() {
             </div>
           )}
 
-          {/* Field */}
-          <div style={{
-            position: "relative", width: "100%", aspectRatio: "10/14",
-            background: "repeating-linear-gradient(0deg, #2d5a34 0px 36px, #295231 36px 72px)",
-            borderRadius: 13, overflow: "hidden",
-            border: "1px solid rgba(239,230,211,0.12)",
-            display: "flex", flexDirection: "column", justifyContent: "space-evenly",
-            padding: "14px 4px",
-          }}>
-            {/* Field markings */}
-            <svg style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none", opacity: 0.16 }} viewBox="0 0 100 140" preserveAspectRatio="none">
-              <rect x="10" y="4" width="80" height="132" fill="none" stroke="#fff" strokeWidth="0.8" />
-              <line x1="10" y1="70" x2="90" y2="70" stroke="#fff" strokeWidth="0.6" />
-              <circle cx="50" cy="70" r="10" fill="none" stroke="#fff" strokeWidth="0.6" />
-              <circle cx="50" cy="70" r="1.2" fill="#fff" />
-              <rect x="30" y="4" width="40" height="16" fill="none" stroke="#fff" strokeWidth="0.6" />
-              <rect x="38" y="4" width="24" height="8" fill="none" stroke="#fff" strokeWidth="0.6" />
-              <rect x="30" y="120" width="40" height="16" fill="none" stroke="#fff" strokeWidth="0.6" />
-              <rect x="38" y="128" width="24" height="8" fill="none" stroke="#fff" strokeWidth="0.6" />
-              <circle cx="50" cy="26" r="6" fill="none" stroke="#fff" strokeWidth="0.5" />
-              <circle cx="50" cy="114" r="6" fill="none" stroke="#fff" strokeWidth="0.5" />
-            </svg>
+          {/* Field — sfondo separato dal layer chip per evitare overflow:hidden sui cognomi */}
+          <div style={{ position: "relative", width: "100%", aspectRatio: "10/14" }}>
+            {/* Layer visivo: overflow:hidden ritaglia strisce e tracciati nel rettangolo arrotondato */}
+            <div style={{
+              position: "absolute", inset: 0,
+              background: "repeating-linear-gradient(0deg, #2d5a34 0px 36px, #295231 36px 72px)",
+              borderRadius: 13, overflow: "hidden",
+              border: "1px solid rgba(239,230,211,0.12)",
+            }}>
+              <svg style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none", opacity: 0.16 }} viewBox="0 0 100 140" preserveAspectRatio="none">
+                <rect x="10" y="4" width="80" height="132" fill="none" stroke="#fff" strokeWidth="0.8" />
+                <line x1="10" y1="70" x2="90" y2="70" stroke="#fff" strokeWidth="0.6" />
+                <circle cx="50" cy="70" r="10" fill="none" stroke="#fff" strokeWidth="0.6" />
+                <circle cx="50" cy="70" r="1.2" fill="#fff" />
+                <rect x="30" y="4" width="40" height="16" fill="none" stroke="#fff" strokeWidth="0.6" />
+                <rect x="38" y="4" width="24" height="8" fill="none" stroke="#fff" strokeWidth="0.6" />
+                <rect x="30" y="120" width="40" height="16" fill="none" stroke="#fff" strokeWidth="0.6" />
+                <rect x="38" y="128" width="24" height="8" fill="none" stroke="#fff" strokeWidth="0.6" />
+                <circle cx="50" cy="26" r="6" fill="none" stroke="#fff" strokeWidth="0.5" />
+                <circle cx="50" cy="114" r="6" fill="none" stroke="#fff" strokeWidth="0.5" />
+              </svg>
+            </div>
 
-            {/* Rows: ATT in alto, GK in basso */}
-            {[...formation].reverse().map((count, revIdx) => {
-              const rowIdx = formation.length - 1 - revIdx;
-              return (
-                <div
-                  key={rowIdx}
-                  style={{ display: "flex", justifyContent: "space-evenly", alignItems: "center", width: "100%", position: "relative", zIndex: 1 }}
-                >
-                  {Array.from({ length: count }, (_, si) => {
-                    const slotId = `${rowIdx}-${si}`;
-                    const pid    = fieldSlots[slotId];
-                    const player = pid !== undefined ? (playerById.get(pid) ?? null) : null;
-                    const role   = getSlotRole(slotId, formation);
-                    const isSel  = (selection?.kind === "field" && selection.slotId === slotId) ||
-                                   (selection?.kind === "field-empty" && selection.slotId === slotId);
-                    const isDimmed = selection !== null && !isSel && !(
-                      selection.kind === "bench" && role === playerById.get(selection.playerId)?.role
-                    );
-                    return (
-                      <PlayerFieldChip
-                        key={slotId}
-                        player={player}
-                        role={role}
-                        isSelected={isSel}
-                        isCaptain={pid !== undefined && pid === captainId}
-                        isDimmed={!!isDimmed}
-                        isLocked={roundLocked}
-                        onClick={() => handleFieldChipTap(slotId)}
-                      />
-                    );
-                  })}
-                </div>
-              );
-            })}
+            {/* Layer chip: nessun overflow:hidden — .cr e .cn visibili anche oltre il bordo riga */}
+            <div style={{
+              position: "absolute", inset: 0,
+              display: "flex", flexDirection: "column", justifyContent: "space-evenly",
+              padding: "14px 4px",
+            }}>
+              {[...formation].reverse().map((count, revIdx) => {
+                const rowIdx = formation.length - 1 - revIdx;
+                return (
+                  <div
+                    key={rowIdx}
+                    style={{ display: "flex", justifyContent: "space-evenly", alignItems: "center", width: "100%", position: "relative", zIndex: 1 }}
+                  >
+                    {Array.from({ length: count }, (_, si) => {
+                      const slotId = `${rowIdx}-${si}`;
+                      const pid    = fieldSlots[slotId];
+                      const player = pid !== undefined ? (playerById.get(pid) ?? null) : null;
+                      const role   = getSlotRole(slotId, formation);
+                      const isSel  = (selection?.kind === "field" && selection.slotId === slotId) ||
+                                     (selection?.kind === "field-empty" && selection.slotId === slotId);
+                      const isDimmed = selection !== null && !isSel && !(
+                        selection.kind === "bench" && role === playerById.get(selection.playerId)?.role
+                      );
+                      return (
+                        <PlayerFieldChip
+                          key={slotId}
+                          player={player}
+                          role={role}
+                          isSelected={isSel}
+                          isCaptain={pid !== undefined && pid === captainId}
+                          isDimmed={!!isDimmed}
+                          isLocked={roundLocked}
+                          onClick={() => handleFieldChipTap(slotId)}
+                        />
+                      );
+                    })}
+                  </div>
+                );
+              })}
+            </div>
           </div>
 
-          {/* Modulo strip + contatore */}
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 4px 6px", flexShrink: 0 }}>
-            <div>
+          {/* .cstrip — Modulo + Allenatore (volto toy + nome) + XI */}
+          <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 4px 6px", flexShrink: 0 }}>
+            {/* Modulo */}
+            <div style={{ flexShrink: 0 }}>
               <div style={{ fontFamily: "var(--font-mono)", fontSize: 9, fontWeight: 600, color: "var(--muted)", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 1 }}>Modulo</div>
               {roundLocked ? (
-                <span style={{ fontFamily: "var(--font-mono)", fontSize: 22, fontWeight: 700, color: "var(--green)" }}>{modulo}</span>
+                <span style={{ fontFamily: "var(--font-mono)", fontSize: 20, fontWeight: 700, color: "var(--green)" }}>{modulo}</span>
               ) : (
                 <select
                   value={modulo}
@@ -594,8 +601,26 @@ export default function FormazioneMobilePage() {
                 </select>
               )}
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, fontWeight: 600, color: "var(--muted)", letterSpacing: "0.08em", textTransform: "uppercase" }}>XI</span>
+
+            {/* Separatore */}
+            <div style={{ width: 1, alignSelf: "stretch", background: "var(--line)", flexShrink: 0 }} />
+
+            {/* Allenatore: volto toy + nome manager */}
+            <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 7, minWidth: 0 }}>
+              <div style={{ width: 34, height: 34, borderRadius: "50%", border: "2px solid var(--gold-l)", flexShrink: 0, overflow: "hidden", background: "var(--cream2)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <MisterToyAvatar size={30} />
+              </div>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontFamily: "var(--font-mono)", fontSize: 9, fontWeight: 600, color: "var(--muted)", letterSpacing: "0.08em", textTransform: "uppercase" }}>Allenatore</div>
+                <div style={{ fontFamily: "var(--font-serif)", fontSize: 13, fontWeight: 600, color: "var(--green)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                  {rosaData?.managerName ?? teamName}
+                </div>
+              </div>
+            </div>
+
+            {/* XI contatore */}
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", flexShrink: 0 }}>
+              <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, fontWeight: 600, color: "var(--muted)", letterSpacing: "0.08em", textTransform: "uppercase" }}>XI</span>
               <span style={{ fontFamily: "var(--font-mono)", fontSize: 18, fontWeight: 700, color: starterCount === 11 ? "var(--green-l)" : "var(--muted)" }}>
                 {starterCount}/11
               </span>

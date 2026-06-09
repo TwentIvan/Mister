@@ -25,12 +25,30 @@ export function chipLastName(name: string, maxLen = 9): string {
 
 // ── Faccina placeholder neutra (lecita — niente danger sul volto) ─────────────
 
-function NeutralFace() {
+export function NeutralFace() {
   return (
     <svg viewBox="0 0 44 44" style={{ width: "100%", height: "100%", display: "block" }}>
       <circle cx="22" cy="22" r="22" fill="#e7dcc4" />
       <circle cx="22" cy="18" r="7" fill="#b8ad92" />
       <path d="M9 40c0-7 6-11 13-11s13 4 13 11z" fill="#b8ad92" />
+    </svg>
+  );
+}
+
+// ── Avatar toy del mister (anello oro = R-mister-toy) ─────────────────────────
+
+export function MisterToyAvatar({ size = 48 }: { size?: number }) {
+  return (
+    <svg viewBox="0 0 48 48" width={size} height={size} style={{ display: "block" }}>
+      <ellipse cx="24" cy="38" rx="13" ry="10" fill="#2b5740" />
+      <rect x="19" y="29" width="10" height="5" rx="2" fill="#1f4733" />
+      <circle cx="24" cy="21" r="9" fill="#efe6d3" />
+      <ellipse cx="24" cy="13" rx="8.5" ry="4.5" fill="#2d2420" />
+      <ellipse cx="20.5" cy="21" rx="1.4" ry="1.6" fill="#3a2a1e" />
+      <ellipse cx="27.5" cy="21" rx="1.4" ry="1.6" fill="#3a2a1e" />
+      <path d="M21 26 Q24 28.5 27 26" stroke="#b08060" strokeWidth="1" fill="none" strokeLinecap="round" />
+      <circle cx="24" cy="35" r="5" fill="#c8922b" />
+      <text x="24" y="38.5" textAnchor="middle" fontFamily="Georgia,serif" fontWeight="800" fontSize="7" fill="#fff">M</text>
     </svg>
   );
 }
