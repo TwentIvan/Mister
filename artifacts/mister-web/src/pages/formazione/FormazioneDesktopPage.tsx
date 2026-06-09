@@ -14,6 +14,7 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouteId } from "@/hooks/useRouteId";
 import { ChevronLeft, Lock, Home as HomeIcon, Plane } from "lucide-react";
+import type { DragEvent } from "react";
 import { TEAM_CODE } from "./team-constants";
 import { PlayerFieldChip, PlayerBenchRow, MisterToyAvatar } from "@/components/player-chip";
 import { useFormazioneRosa } from "./useFormazioneRosa";
@@ -273,6 +274,10 @@ export default function FormazioneDesktopPage() {
   const [saveOk, setSaveOk]           = useState(false);
   const [roleError, setRoleError]     = useState<string | null>(null);
 
+  // ── Stato drag & drop panchina ────────────────────────────────────────────────
+  const [dragId,     setDragId]     = useState<number | null>(null);
+  const [dragOverId, setDragOverId] = useState<number | null>(null);
+
   const formation    = useMemo(() => parseFormation(modulo), [modulo]);
   const starterCount = Object.keys(fieldSlots).length;
 
@@ -461,6 +466,39 @@ export default function FormazioneDesktopPage() {
     setSelection({ kind: "bench", playerId: pid });
   }
 
+  // ── Handler drag & drop panchina ─────────────────────────────────────────────
+  function handleBenchDragStart(pid: number) {
+    if (roundLocked) return;
+    setDragId(pid);
+    setSelection(null);
+  }
+
+  function handleBenchDragOver(e: DragEvent, pid: number) {
+    e.preventDefault();
+    if (dragId === null || dragId === pid) return;
+    setDragOverId(pid);
+  }
+
+  function handleBenchDrop(pid: number) {
+    if (dragId === null || dragId === pid) { setDragId(null); setDragOverId(null); return; }
+    const a = roster.indexOf(dragId);
+    const b = roster.indexOf(pid);
+    if (a === -1 || b === -1) { setDragId(null); setDragOverId(null); return; }
+    setRoster(prev => {
+      const n = [...prev];
+      n.splice(a, 1);
+      n.splice(b, 0, dragId);
+      return n;
+    });
+    setDragId(null);
+    setDragOverId(null);
+  }
+
+  function handleBenchDragEnd() {
+    setDragId(null);
+    setDragOverId(null);
+  }
+
   // ── Salva ─────────────────────────────────────────────────────────────────────
   function handleSave() {
     if (!fantaTeamId) return;
@@ -617,10 +655,12 @@ export default function FormazioneDesktopPage() {
       </div>
 
       {/* ── GRIGLIA PRINCIPALE ───────────────────────────────────────────────── */}
-      <div style={{ flex: 1, display: "grid", gridTemplateColumns: "312px 1fr", overflow: "hidden", maxWidth: 1180, width: "100%", margin: "0 auto" }}>
+      {/* gridTemplateRows:1fr → la riga occupa l'intera altezza flex-1; align-items:stretch (default) aggancia la sidebar all'altezza del campo */}
+      <div style={{ flex: 1, display: "grid", gridTemplateColumns: "312px 1fr", gridTemplateRows: "1fr", overflow: "hidden", maxWidth: 1180, width: "100%", margin: "0 auto" }}>
 
         {/* ── SIDEBAR ──────────────────────────────────────────────────────── */}
-        <div style={{ borderRight: "1px solid var(--line)", display: "flex", flexDirection: "column" }}>
+        {/* height:100% → prende l'altezza della riga grid (= altezza campo) */}
+        <div style={{ borderRight: "1px solid var(--line)", display: "flex", flexDirection: "column", height: "100%" }}>
 
           {/* ── Header sticky: filtri fermi, non scrolla ─────────────────── */}
           <div style={{ flexShrink: 0, padding: "14px 14px 0", borderBottom: "1px solid var(--line)" }}>
@@ -707,32 +747,102 @@ export default function FormazioneDesktopPage() {
 
           </div>{/* /header sticky */}
 
-          {/* Lista giocatori — unica parte che scrolla */}
-          <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "10px 14px 14px", display: "flex", flexDirection: "column", gap: 3 }}>
-            {filteredPlayers.map(p => {
-              const inField = fieldIds.has(p.id);
-              const isSel   = selection?.kind === "bench" && selection.playerId === p.id;
-              const isComp  = selectedFieldRole !== null ? p.role === selectedFieldRole : null;
+          {/* Lista — flex:1, due sezioni: in campo (dimmed) + panchina (draggable) */}
+          <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "8px 10px 12px", display: "flex", flexDirection: "column" }}>
+
+            {/* ── IN CAMPO (dimmed, non interattivi) ─────────────────────── */}
+            {(() => {
+              const inCampoList = filteredPlayers.filter(p => fieldIds.has(p.id));
+              if (inCampoList.length === 0) return null;
               return (
-                /* Giocatore già in campo: opacità ridotta + click disabilitato (come mobile) */
-                <div
-                  key={p.id}
-                  style={inField ? { opacity: 0.45, pointerEvents: "none" } : undefined}
-                >
-                  <PlayerBenchRow
-                    player={p}
-                    isInField={inField}
-                    isSelected={isSel}
-                    isCompatible={isComp}
-                    isCaptain={p.id === captainId}
-                    isLocked={roundLocked}
-                    faceSmall
-                    onTap={() => handleSidebarClick(p.id)}
-                    onCaptainToggle={() => setCaptainId(prev => prev === p.id ? null : p.id)}
-                  />
+                <>
+                  <div style={{ fontSize: 8, textTransform: "uppercase" as const, letterSpacing: "0.12em", color: "var(--muted)", padding: "4px 3px 4px", flexShrink: 0 }}>
+                    In campo
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 2, flexShrink: 0 }}>
+                    {inCampoList.map(p => (
+                      <div key={p.id} style={{ opacity: 0.42, pointerEvents: "none" }}>
+                        <PlayerBenchRow
+                          player={p}
+                          isInField
+                          isCompatible={selectedFieldRole !== null ? p.role === selectedFieldRole : null}
+                          isCaptain={p.id === captainId}
+                          isLocked
+                          faceSmall
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </>
+              );
+            })()}
+
+            {/* ── PANCHINA (priorità sostituzione, draggable) ─────────────── */}
+            {(() => {
+              const benchList = roster
+                .map(id => playerById.get(id))
+                .filter((p): p is LocalPlayer => {
+                  if (!p) return false;
+                  if (filterRoles.size > 0 && !filterRoles.has(p.role)) return false;
+                  if (filterTeam && p.realTeam !== filterTeam) return false;
+                  return true;
+                });
+              if (benchList.length === 0) return (
+                <div style={{ fontSize: 11, color: "var(--muted)", textAlign: "center", padding: "18px 0", fontFamily: "var(--font-serif)", fontStyle: "italic" }}>
+                  Tutti i giocatori sono in campo
                 </div>
               );
-            })}
+              return (
+                <>
+                  <div style={{ fontSize: 8, textTransform: "uppercase" as const, letterSpacing: "0.12em", color: "var(--muted)", padding: "8px 3px 4px", flexShrink: 0 }}>
+                    Panchina — trascina per priorità sostituzione
+                  </div>
+                  {/* flex:1 + flex-direction:column → le .rr (flex:1 1 0) crescono fino a maxHeight:42px */}
+                  <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 2 }}>
+                    {benchList.map(p => {
+                      const isSel     = selection?.kind === "bench" && selection.playerId === p.id;
+                      const isComp    = selectedFieldRole !== null ? p.role === selectedFieldRole : null;
+                      const isDragging = dragId === p.id;
+                      const isDragOver = dragOverId === p.id && dragId !== null && dragId !== p.id;
+                      return (
+                        <div
+                          key={p.id}
+                          draggable={!roundLocked}
+                          onDragStart={() => handleBenchDragStart(p.id)}
+                          onDragOver={(e) => handleBenchDragOver(e, p.id)}
+                          onDrop={() => handleBenchDrop(p.id)}
+                          onDragEnd={handleBenchDragEnd}
+                          style={{
+                            flex: "1 1 0",
+                            minHeight: "var(--rr-min-h, 24px)",
+                            maxHeight: "var(--rr-max-h, 42px)",
+                            display: "flex",        /* .rr figlio ha flex:1 1 0 → cresce a riempire */
+                            flexDirection: "column",
+                            opacity: isDragging ? 0.35 : 1,
+                            outline: isDragOver ? "1px dashed rgba(106,160,127,0.7)" : "none",
+                            borderRadius: 9,
+                            transition: "opacity 0.1s",
+                          }}
+                        >
+                          <PlayerBenchRow
+                            player={p}
+                            isSelected={isSel}
+                            isCompatible={isComp}
+                            isCaptain={p.id === captainId}
+                            isLocked={roundLocked}
+                            faceSmall
+                            showGrip={!roundLocked}
+                            onTap={() => handleSidebarClick(p.id)}
+                            onCaptainToggle={() => setCaptainId(prev => prev === p.id ? null : p.id)}
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              );
+            })()}
+
           </div>
         </div>
 

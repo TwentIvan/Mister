@@ -85,5 +85,9 @@
 .rr .rpr{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--gold-l);flex:none}
 .rr .mk.pl{font-size:8px;text-transform:uppercase;letter-spacing:.05em;color:var(--gold-l);font-weight:700;flex-shrink:0}
 
+/* ── Maniglia drag (grip) ───────────────────────────────────────────────── */
+.rr .grip{flex:none;display:flex;align-items:center;color:rgba(239,230,211,.28);cursor:grab;touch-action:none}
+.rr .grip:active{cursor:grabbing}
+
 /* ── Utility condivisa ──────────────────────────────────────────────────── */
 .miss{width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:rgba(191,59,48,.18);color:var(--danger);font-weight:700;font-size:10px;line-height:1}

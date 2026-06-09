@@ -1,4 +1,4 @@
-import { X } from "lucide-react";
+import { X, GripVertical } from "lucide-react";
 import "./player-chip.css";
 
 // ── Tipi ──────────────────────────────────────────────────────────────────────
@@ -167,6 +167,7 @@ export interface PlayerBenchRowProps {
   isCaptain?: boolean;
   isLocked?: boolean;
   faceSmall?: boolean;
+  showGrip?: boolean;
   voto?: number | null;
   onTap?: () => void;
   onCaptainToggle?: () => void;
@@ -174,7 +175,7 @@ export interface PlayerBenchRowProps {
 
 export function PlayerBenchRow({
   player, priority, isInField, isSelected, isCompatible, isCaptain, isLocked,
-  faceSmall, voto, onTap, onCaptainToggle,
+  faceSmall, showGrip, voto, onTap, onCaptainToggle,
 }: PlayerBenchRowProps) {
   const rl = CHIP_ROLE_LETTER[player.role];
   const faceUrl = player.cartoonUrl ?? player.photoUrl ?? null;
@@ -191,6 +192,13 @@ export function PlayerBenchRow({
         userSelect: "none",
       }}
     >
+      {/* Maniglia drag — visibile solo quando showGrip=true (desktop panchina) */}
+      {showGrip && (
+        <span className="grip">
+          <GripVertical size={13} />
+        </span>
+      )}
+
       {/* Priorità ordine panchina (mobile) */}
       {priority !== undefined && (
         <span style={{
