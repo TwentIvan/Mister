@@ -4,18 +4,19 @@
 
 /* ── Varianti dimensione desktop ────────────────────────────────────────── */
 .fd{
+  /* dimensione */
   --chip-w:    72px;
   --chip-av:   46px;
+  /* layout */
   --cap-left:  -3px;
-  --sel-border:rgba(255,255,255,.92);
-  --sel-scale: 1;
   --rr-gap:    7px;
   --rr-pad:    3px 9px;
-  --rr-cr-bg:  var(--cream2);
   --face-size: 17px;
   --rr-flex:   1 1 0;
   --rr-min-h:  24px;
   --rr-max-h:  42px;
+  /* feedback interazione — desktop non scala al sel */
+  --sel-scale: 1;
 }
 
 /* ── Area allenatore (scoped su .fd) ─────────────────────────────────────── */
