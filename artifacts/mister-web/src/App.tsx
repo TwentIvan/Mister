@@ -77,9 +77,6 @@ function Router() {
       {/* ── Invito lega — accessibile senza autenticazione ──── */}
       <Route path="/join/:leagueId/:code" component={JoinLegaPage} />
 
-      {/* ── Indice dev — utility di verifica, grezza ─────────── */}
-      <Route path="/dev" component={DevPage} />
-
       {/* ── Tutte le altre pagine con sidebar ───────────────── */}
       <Route>
         {() => (
@@ -103,6 +100,7 @@ function Router() {
               <Route path="/superadmin/templates" component={TemplatesManager} />
               <Route path="/superadmin/algoritmo-voto" component={VotoAlgorithm} />
               <Route path="/brand" component={BrandPage} />
+              <Route path="/dev" component={DevPage} />
               <Route component={NotFound} />
             </Switch>
           </AppLayout>
