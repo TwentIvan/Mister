@@ -318,12 +318,15 @@ export default function FormazioneDesktopPage() {
   const competitionId = useRouteId("competitionId");
   const fantaTeamId   = useRouteId("fantaTeamId");
   const search = useSearch();
-  const season = parseInt(new URLSearchParams(search).get("season") ?? "2025", 10);
+  const seasonOverride = parseInt(new URLSearchParams(search).get("season") ?? "0", 10);
 
   const queryClient = useQueryClient();
 
   // ── Partite + rounds ─────────────────────────────────────────────────────────
   const { data: matchesData } = useGetCompetitionMatches(competitionId ?? "");
+
+  // season viene dalla competizione, non da un default hardcoded
+  const season = seasonOverride > 0 ? seasonOverride : (matchesData?.season ?? 0);
 
   const rounds = useMemo((): number[] => {
     if (!matchesData) return [];
@@ -362,8 +365,12 @@ export default function FormazioneDesktopPage() {
   const { data: rosaData }   = useGetFantaTeamRosa(fantaTeamId ?? "");
   const teamName             = rosaData?.teamName ?? fantaTeamId ?? "Formazione";
 
-  const { data: rosterData } = useGetRoster({ fantaTeamId: fantaTeamId ?? "", season, round: activeRound });
-  const { data: lineupData } = useGetLineups({ fantaTeamId: fantaTeamId ?? "", season, round: activeRound });
+  const { data: rosterData } = useGetRoster(
+    { fantaTeamId: fantaTeamId ?? "", season, round: activeRound },
+  );
+  const { data: lineupData } = useGetLineups(
+    { fantaTeamId: fantaTeamId ?? "", season, round: activeRound },
+  );
   const saveMutation = usePutLineup();
 
   const allPlayers = useMemo((): LocalPlayer[] => (rosterData ?? []).map(adaptPlayer), [rosterData]);
@@ -386,6 +393,7 @@ export default function FormazioneDesktopPage() {
   useEffect(() => {
     if (loadedKey === roundKey) return;
     if (allPlayers.length === 0) return;
+    if (lineupData === undefined) return; // attendi che la query sia risolta
     setLoadedKey(roundKey);
 
     if (lineupData && lineupData.players.length > 0) {

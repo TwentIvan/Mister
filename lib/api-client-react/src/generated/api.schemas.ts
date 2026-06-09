@@ -1045,6 +1045,8 @@ export interface CompetitionMatch {
 }
 
 export interface CompetitionMatchesResponse {
+  /** Anno di stagione della competizione (es. 2024 per la stagione 2024-25) */
+  season: number;
   matches: CompetitionMatch[];
 }
 

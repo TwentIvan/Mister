@@ -2746,8 +2746,11 @@ components:
 
     CompetitionMatchesResponse:
       type: object
-      required: [matches]
+      required: [season, matches]
       properties:
+        season:
+          type: integer
+          description: Anno di stagione della competizione (es. 2024 per la stagione 2024-25)
         matches:
           type: array
           items:

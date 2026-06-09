@@ -75,7 +75,7 @@ router.get("/competition/:competitionId/matches", async (req, res): Promise<void
   const round = roundParam !== undefined ? parseInt(roundParam as string, 10) : undefined;
 
   const comp = await db
-    .select({ id: competitions.id })
+    .select({ id: competitions.id, season: competitions.season })
     .from(competitions)
     .where(eq(competitions.id, competitionId))
     .limit(1);
@@ -116,7 +116,7 @@ router.get("/competition/:competitionId/matches", async (req, res): Promise<void
     )
     .orderBy(competitionMatches.giornata, competitionMatches.id);
 
-  res.json({ matches: rows.map(toCompetitionMatch) });
+  res.json({ season: comp[0]!.season, matches: rows.map(toCompetitionMatch) });
 });
 
 // ─── GET /competition/:competitionId/standings ────────────────────────────────

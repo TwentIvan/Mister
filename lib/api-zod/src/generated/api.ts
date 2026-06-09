@@ -2028,6 +2028,7 @@ export const GetCompetitionMatchesQueryParams = zod.object({
 })
 
 export const GetCompetitionMatchesResponse = zod.object({
+  "season": zod.number().describe('Anno di stagione della competizione (es. 2024 per la stagione 2024-25)'),
   "matches": zod.array(zod.object({
   "id": zod.number(),
   "round": zod.number(),
