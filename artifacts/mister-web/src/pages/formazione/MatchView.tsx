@@ -1,11 +1,11 @@
-import { Home, Plane } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useGetLineups, useGetRoster, type RosterPlayer as ApiRosterPlayer } from "@workspace/api-client-react";
 import { computeFantaTeamScore, type SlotPosition } from "@workspace/scoring";
+import { PlayerFieldChip, PlayerBenchRow, type ChipRole } from "@/components/player-chip";
+import "./match-view.css";
 import {
   ATLETICO_CAFFEINA_COACH,
   COACH_MARIO,
-  MY_TEAM_INFO,
   TEAM_COLORS,
   TEAM_CODE,
   TEAM_LOGO_URL,
@@ -108,21 +108,23 @@ function useCoachVoto(fantaTeamId: string, season: number, round: number) {
   });
 }
 
-const AFFINITY_GREEN = "#4ade80";
-
-const ROLE_ROW_BG: Record<string, string> = {
-  GK:  "#7a5012",
-  DEF: "#1a3d2b",
-  MID: "#19305c",
-  ATT: "#6b1f1f",
-};
-
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function lastName(name: string): string {
   const parts = name.trim().split(/\s+/);
   const last = parts[parts.length - 1] ?? name;
   return last.length > 10 ? last.slice(0, 9) + "." : last;
+}
+
+function toChipPlayer(p: MatchPlayer) {
+  return {
+    id: p.id,
+    name: p.name,
+    cartoonUrl: p.photoCartoonUrl,
+    photoUrl: p.photoUrl,
+    logoUrl: p.logoUrl,
+    role: p.roleClassic as ChipRole,
+  };
 }
 
 type StarterRows = { GK: MatchPlayer[]; DEF: MatchPlayer[]; MID: MatchPlayer[]; ATT: MatchPlayer[] };
@@ -163,75 +165,6 @@ function xPositions(n: number): number[] {
   return Array.from({ length: n }, (_, i) => L + ((i + 1) / (n + 1)) * (R - L));
 }
 
-function photoSrc(player: MatchPlayer): string {
-  return (player.photoCartoonUrl ?? player.photoUrl) ?? "";
-}
-
-function photoOnError(player: MatchPlayer) {
-  return (e: React.SyntheticEvent<HTMLImageElement>) => {
-    const img = e.currentTarget;
-    if (player.photoCartoonUrl && player.photoUrl && img.src !== player.photoUrl) {
-      img.src = player.photoUrl;
-    } else {
-      img.style.display = "none";
-    }
-  };
-}
-
-// ─── MatchPlayerToken ─────────────────────────────────────────────────────────
-
-function MatchPlayerToken({ player, isCaptain = false }: { player: MatchPlayer; isCaptain?: boolean }) {
-  const PHOTO = 54, RING = 2, OUTER = PHOTO + RING * 2, PILL_W = 46, PILL_H = 10, VBADGE = 20;
-  const affinityColor = "rgba(74,222,128,0.9)";
-  const colors  = player.colors;
-  const code    = player.teamCode;
-  const hasVoto = player.votoMister !== null;
-  const logoUrl = player.logoUrl;
-  const src     = photoSrc(player);
-
-  return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, transform: "translate(-50%, -50%)", pointerEvents: "none" }}>
-      <div style={{ position: "relative", width: OUTER, height: OUTER, flexShrink: 0 }}>
-        <div style={{ position: "absolute", inset: RING, borderRadius: "50%", overflow: "hidden", background: "var(--token-avatar-bg, #2d5848)" }}>
-          {src && <img src={src} alt={player.name} style={{ width: "100%", height: "100%", objectFit: "cover", transform: "scale(1.08)", transformOrigin: "center" }} onError={photoOnError(player)} />}
-        </div>
-        <div style={{ position: "absolute", inset: 0, borderRadius: "50%", border: `${RING}px solid ${affinityColor}`, boxShadow: `0 0 5px ${affinityColor}55`, pointerEvents: "none" }} />
-        <div style={{ position: "absolute", top: -2, right: -2, width: VBADGE, height: VBADGE, borderRadius: "50%", background: hasVoto ? "#1f4733" : "rgba(0,0,0,0.45)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: hasVoto ? "0 0 0 1.5px rgba(244,196,48,0.75), 0 1px 3px rgba(0,0,0,0.6)" : "0 0 0 1px rgba(239,230,211,0.3), 0 1px 3px rgba(0,0,0,0.5)" }}>
-          <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, fontWeight: 700, color: "#fff", lineHeight: 1 }}>
-            {hasVoto ? player.votoMister!.toFixed(1) : "—"}
-          </span>
-        </div>
-        {player.opponentCode && (
-          <div style={{ position: "absolute", top: -2, left: -2, display: "flex", alignItems: "center", gap: 2, padding: "2px 4px", borderRadius: 8, background: "rgba(0,0,0,0.68)", boxShadow: "0 0 0 1px rgba(239,230,211,0.22), 0 1px 3px rgba(0,0,0,0.6)", zIndex: 2 }}>
-            {player.opponentIsHome
-              ? <Home  size={7} color="rgba(239,230,211,0.75)" />
-              : <Plane size={7} color="rgba(239,230,211,0.75)" />}
-            <span style={{ fontFamily: "var(--font-mono)", fontSize: 7, fontWeight: 600, color: "rgba(239,230,211,0.9)", lineHeight: 1, letterSpacing: "0.04em" }}>
-              {player.opponentCode}
-            </span>
-          </div>
-        )}
-        {isCaptain && (
-          <div style={{ position: "absolute", bottom: -2, right: -2, width: 14, height: 14, borderRadius: "50%", background: "#F4C430", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 1px 3px rgba(0,0,0,0.5)" }}>
-            <span style={{ fontFamily: "var(--font-mono)", fontSize: 7, fontWeight: 800, color: "#333" }}>C</span>
-          </div>
-        )}
-      </div>
-      <div style={{ width: PILL_W, height: PILL_H, borderRadius: 4, overflow: "hidden", position: "relative", flexShrink: 0, boxShadow: "0 1px 3px rgba(0,0,0,0.5)" }}>
-        <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: "50%", background: colors.primary }} />
-        <div style={{ position: "absolute", right: 0, top: 0, bottom: 0, width: "50%", background: colors.secondary }} />
-        {logoUrl ? (
-          <img src={logoUrl} alt={code} style={{ position: "absolute", inset: 0, margin: "auto", width: 9, height: 9, objectFit: "contain", filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.8))" }} onError={e => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
-        ) : (
-          <span style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "var(--font-mono)", fontSize: 7, fontWeight: 700, color: "#fff", letterSpacing: "0.04em" }}>{code}</span>
-        )}
-      </div>
-      <span style={{ fontSize: 12, fontWeight: 600, color: "rgba(239,230,211,0.92)", fontFamily: "var(--font-sans)", textAlign: "center", lineHeight: 1.2, maxWidth: Math.max(OUTER, PILL_W) + 6, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textShadow: "0 1px 3px rgba(0,0,0,0.7)" }}>
-        {lastName(player.name)}
-      </span>
-    </div>
-  );
-}
 
 // ─── MatchMiniCoachToken ──────────────────────────────────────────────────────
 
@@ -288,58 +221,21 @@ function PitchHalf({ rows, captainId, rowY }: { rows: StarterRows; captainId: nu
         if (players.length === 0) return null;
         const y = rowY[role], xs = xPositions(players.length);
         return players.map((player, i) => (
-          <div key={player.id} style={{ position: "absolute", left: `${xs[i]}%`, top: `${y}%`, zIndex: 2 }}>
-            <MatchPlayerToken player={player} isCaptain={player.id === captainId} />
+          <div
+            key={player.id}
+            style={{ position: "absolute", left: `${xs[i]}%`, top: `${y}%`, zIndex: 2, transform: "translate(-50%,-50%)", pointerEvents: "none" }}
+          >
+            <PlayerFieldChip
+              player={toChipPlayer(player)}
+              role={player.roleClassic as ChipRole}
+              isCaptain={player.id === captainId}
+              avgScore={player.votoMister}
+              isLocked
+            />
           </div>
         ));
       })}
     </>
-  );
-}
-
-// ─── BenchRow ─────────────────────────────────────────────────────────────────
-
-function BenchRow({ player }: { player: MatchPlayer }) {
-  const bg      = ROLE_ROW_BG[player.roleClassic] ?? "#1a3d2b";
-  const colors  = player.colors;
-  const code    = player.teamCode;
-  const logoUrl = player.logoUrl;
-  const src     = photoSrc(player);
-
-  return (
-    <div style={{ display: "flex", alignItems: "stretch", borderRadius: 6, border: "1.5px solid transparent", background: bg, overflow: "hidden", flexShrink: 0 }}>
-      <div style={{ width: 17, flexShrink: 0, position: "relative", overflow: "hidden" }}>
-        <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "50%", background: colors.primary }} />
-        <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: "50%", background: colors.secondary }} />
-        {logoUrl ? (
-          <img src={logoUrl} alt={code} style={{ position: "absolute", inset: 0, margin: "auto", width: 12, height: 12, objectFit: "contain", filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.85))" }} onError={e => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
-        ) : (
-          <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", writingMode: "vertical-rl", transform: "rotate(180deg)", fontFamily: "var(--font-mono)", fontSize: 5, fontWeight: 800, color: "rgba(255,255,255,0.92)", letterSpacing: "0.14em" }}>
-            {code}
-          </div>
-        )}
-      </div>
-      <div style={{ display: "flex", alignItems: "center", gap: 5, padding: "3px 6px 3px 5px", flex: 1, minWidth: 0 }}>
-        <div style={{ position: "relative", width: 26, height: 26, flexShrink: 0 }}>
-          <div style={{ position: "absolute", inset: 1, borderRadius: "50%", overflow: "hidden", background: "var(--token-avatar-bg, #2d5848)" }}>
-            {src ? (
-              <img src={src} alt={player.name} style={{ width: "100%", height: "100%", objectFit: "cover", transform: "scale(1.08)", transformOrigin: "center" }} onError={photoOnError(player)} />
-            ) : (
-              <span style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", fontSize: 9, color: "rgba(255,255,255,0.7)", fontFamily: "var(--font-mono)" }}>
-                {player.name[0]}
-              </span>
-            )}
-          </div>
-          <div style={{ position: "absolute", inset: 0, borderRadius: "50%", border: `1.5px solid ${AFFINITY_GREEN}`, pointerEvents: "none" }} />
-        </div>
-        <div style={{ flex: 1, minWidth: 0, fontSize: 10, fontWeight: 500, color: "#fff", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", lineHeight: 1 }}>
-          {lastName(player.name)}
-        </div>
-        <span style={{ flexShrink: 0, fontFamily: "var(--font-mono)", fontSize: 10, fontWeight: 700, color: player.votoMister !== null ? "#4ade80" : "rgba(255,255,255,0.28)" }}>
-          {player.votoMister !== null ? player.votoMister.toFixed(1) : "—"}
-        </span>
-      </div>
-    </div>
   );
 }
 
@@ -353,8 +249,15 @@ function DugoutPanel({ sigla, bgColor, fgColor, players }: { sigla: string; bgCo
           <span style={{ fontFamily: "var(--font-mono)", fontSize: 4.5, fontWeight: 800, color: fgColor, lineHeight: 1 }}>{sigla}</span>
         </div>
       </div>
-      <div style={{ flex: 1, overflowY: "auto", padding: "3px", display: "flex", flexDirection: "column", gap: 2 }}>
-        {players.map(p => <BenchRow key={p.id} player={p} />)}
+      <div style={{ flex: 1, overflowY: "auto", padding: "4px", display: "flex", flexDirection: "column", gap: 3 }}>
+        {players.map(p => (
+          <PlayerBenchRow
+            key={p.id}
+            player={toChipPlayer(p)}
+            voto={p.votoMister}
+            isLocked
+          />
+        ))}
         {players.length === 0 && (
           <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--ink-faint)", padding: "6px 4px" }}>Nessun panchinaro</span>
         )}
@@ -620,7 +523,7 @@ export function MatchView({
   const awayBenchById = buildBenchById(awayLineup, awayPlayerById);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+    <div className="mv" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
 
       {/* ── Header match ── */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 14px", background: "var(--surface)", borderRadius: "var(--r-md)", border: "1px solid var(--border)" }}>

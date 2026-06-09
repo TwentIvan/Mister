@@ -1,0 +1,127 @@
+<!DOCTYPE html><html lang="it"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Contratto componente Giocatore — Mister (v3)</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,800&family=JetBrains+Mono:wght@400;500;700&display=swap');
+:root{--cream:#efe6d3;--cream2:#e7dcc4;--paper:#f7f1e4;--green:#1f4733;--green-d:#15301f;--green-l:#2e6047;--pitch:#173a27;--pitch2:#1a402b;--gold:#c8922b;--gold-l:#e6b84d;--live:#e2554e;--danger:#bf3b30;--muted:#8a8266;--line:#d8ccae;--rP:#7e5a26;--rD:#2b5740;--rC:#234c5e;--rA:#6b2c24;--ringP:#c79a4e;--ringD:#6aa07f;--ringC:#6aa6b8;--ringA:#cf8a6a;--letP:#c8922b;--letD:#2e6047;--letC:#3f7d92;--letA:#c06a52;--disp:'Fraunces',Georgia,serif;--mono:'JetBrains Mono',monospace}
+*{box-sizing:border-box}
+body{margin:0;background:var(--cream);color:var(--green);font-family:var(--mono);font-size:13px;padding:26px 20px 60px;max-width:920px;margin:0 auto}
+h1{font-family:var(--disp);font-weight:800;font-size:23px;margin:0 0 4px}
+.sub{color:var(--muted);font-size:12px;margin-bottom:24px}
+h2{font-family:var(--disp);font-weight:600;font-size:17px;margin:30px 0 10px;border-bottom:1px solid var(--line);padding-bottom:6px}
+.rules{background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:14px 18px}.rules li{margin:6px 0;line-height:1.5}.rules b{color:var(--danger)}
+.demo{display:flex;flex-wrap:wrap;gap:22px;align-items:flex-end;padding:18px;border-radius:12px;margin:10px 0}
+.demo.pitch{background:repeating-linear-gradient(0deg,var(--pitch) 0 44px,var(--pitch2) 44px 88px);border:1px solid var(--green-d)}
+.demo.cream{background:var(--paper);border:1px solid var(--line);flex-direction:column;align-items:stretch;gap:8px}
+.lbl{font-size:10px;color:var(--cream);opacity:.8;text-align:center;width:66px;margin-top:-2px}
+.note{font-size:11px;color:var(--muted);margin:4px 0 0;line-height:1.5}
+pre{background:#15301f;color:#e7dcc4;border-radius:9px;padding:13px 15px;overflow-x:auto;font-size:11.5px;line-height:1.55}
+pre .k{color:#e6b84d}.tbl{width:100%;border-collapse:collapse;font-size:12px;margin-top:6px}.tbl th,.tbl td{text-align:left;padding:6px 9px;border-bottom:1px solid var(--line)}.tbl th{color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.06em}
+.sw{display:inline-block;width:11px;height:11px;border-radius:50%;vertical-align:middle;margin-right:5px}
+
+.chip{display:flex;flex-direction:column;align-items:center;gap:4px;width:66px;position:relative}
+.chip .av{position:relative;width:44px;height:44px;border-radius:50%;background:var(--cream2);overflow:hidden;border:3px solid var(--gold-l)}
+.chip.P .av{border-color:var(--ringP)}.chip.D .av{border-color:var(--ringD)}.chip.C .av{border-color:var(--ringC)}.chip.A .av{border-color:var(--ringA)}
+.chip .ph{width:100%;height:100%}.chip .ph img{width:100%;height:100%;object-fit:cover;display:block}
+.chip .cr{width:20px;height:20px;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;background:var(--green-d);box-shadow:inset 0 0 0 .5px rgba(239,230,211,.3)}
+.chip .cr img{width:100%;height:100%;object-fit:contain}
+.chip .cn{font-size:10px;color:var(--cream);max-width:66px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center}
+.chip .cap{position:absolute;top:-3px;left:7px;width:15px;height:15px;border-radius:50%;background:var(--gold);color:#fff;font-size:8px;font-weight:700;display:flex;align-items:center;justify-content:center;border:1.5px solid var(--pitch);z-index:2}.vt{position:absolute;top:-4px;right:4px;min-width:15px;height:15px;padding:0 3px;border-radius:8px;background:var(--green-d);color:var(--cream);font-family:var(--mono);font-size:8px;font-weight:700;display:flex;align-items:center;justify-content:center;border:1.5px solid var(--pitch);z-index:2}
+.miss{width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:rgba(191,59,48,.18);color:var(--danger);font-weight:700;font-size:13px;letter-spacing:0}
+.chip .cr .miss{font-size:11px}
+.chip.empty .av{border-style:dashed;background:rgba(231,220,196,.14)}
+.chip.empty .slotlab{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:rgba(239,230,211,.5)}
+
+.rr{display:flex;align-items:center;gap:9px;border-radius:9px;padding:8px 11px;color:var(--cream)}
+.rr.P{background:var(--rP)}.rr.D{background:var(--rD)}.rr.C{background:var(--rC)}.rr.A{background:var(--rA)}
+.rr .cr{width:18px;height:18px;border-radius:50%;flex:none;overflow:hidden;display:flex;align-items:center;justify-content:center;background:var(--green-d);box-shadow:inset 0 0 0 .5px rgba(239,230,211,.3)}.rr .cr img{width:100%;height:100%;object-fit:contain}
+.rr .cr .miss{font-size:10px}
+.rr .face{width:24px;height:24px;border-radius:50%;overflow:hidden;flex:none;border:1.5px solid rgba(239,230,211,.5);background:var(--cream2)}.rr .face img{width:100%;height:100%;object-fit:cover}
+.rr .rn{flex:1;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rr .act{font-size:9px;color:rgba(239,230,211,.55);text-transform:uppercase;letter-spacing:.06em}
+.rr .rv{font-family:var(--mono);font-size:11px;color:rgba(239,230,211,.82);flex:none}
+.rr .vsep{width:1px;height:11px;background:rgba(239,230,211,.22);flex:none}
+.rr .rpr{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--gold-l);flex:none}
+
+.coachwrap{position:relative;background:repeating-linear-gradient(0deg,var(--pitch) 0 44px,var(--pitch2) 44px 88px);border:1px solid var(--green-d);border-radius:12px;height:150px}
+.coach{position:absolute;left:14px;top:16px;width:120px;border:1.7px dashed rgba(239,230,211,.62);border-radius:7px;padding:10px 9px;text-align:center;background:rgba(21,48,31,.32)}
+.coach .fm{font-family:var(--disp);font-weight:700;font-size:13px;color:var(--green-l);margin-bottom:7px}
+.coach .mister{width:48px;height:48px;border-radius:50%;border:2px solid var(--gold-l);margin:0 auto;display:block;background:var(--cream2)}
+.coach .cn{font-family:var(--disp);font-weight:600;font-size:13px;color:var(--cream);margin-top:6px}
+</style></head>
+<body>
+<h1>Contratto — componente Giocatore · v3 (propagazione)</h1>
+<div class="sub">Sorgente unica: Rosa · Formazione · Partita · Tabellone. Loghi club REALI: logo o &quot;mancante&quot; visibile. Volto: toy da anagrafica o faccina. Fanta: monogramma lecito.</div>
+
+<h2>Regole (non negoziabili)</h2>
+<ul class="rules">
+  <li>1. <b>Loghi club REALI: no fallback.</b> Logo o cella <b>&quot;MANCANTE&quot;</b> visibile (danger). MAI barra-colori che nasconda il buco.</li>
+  <li>2. <b>Avatar = volto toy dall'anagrafica</b> (<code>.ph</code> con <code>&lt;img&gt;</code>) se presente; altrimenti <b>faccina placeholder neutra</b> (ammessa). Niente danger sul volto.</li>
+  <li>3. <b>Club (reale) = crest/logo TONDO</b> (<code>.cr</code>, cerchio &mdash; R-crest) su <b>coin SCURO</b> (--green-d): i loghi sono bianchi, su fondo chiaro sparirebbero. Manca &rarr; <code>.miss</code> danger. La <b>squadra fanta</b> (elemento identità, NON sul chip) = logo, o <b>monogramma</b> se il logo non c'&egrave;.</li>
+  <li>4. <b>Nome = sempre il cognome</b> (<code>.cn</code>/<code>.rn</code>). Mai la lettera-ruolo al suo posto.</li>
+  <li>5. <b>Ruolo = SOLO colore</b> (anello del chip / sfondo della riga). <b>Nessuna lettera-ruolo sul badge</b> (sarebbe il ruolo detto due volte). La lettera resta solo come etichetta di posizione nello slot VUOTO, dove non c'&egrave; n&eacute; giocatore n&eacute; colore-pieno.</li>
+  <li>6. <b>Oro solo</b> su capitano (<code>.cap</code>) e anello del mister. Modulo <b>verde</b>.</li>
+  <li>7. <b>Slot vuoto</b> (nessun giocatore assegnato) = stato neutro legittimo, tratteggiato + lettera-posizione. Diverso da &quot;logo mancante&quot;.</li>
+  <li>8. <b>Se non &egrave; qui, non si aggiunge</b> (niente lettera al centro, niente selettore-giornate, niente &quot;AREA TECNICA&quot;).</li>
+  <li>9. <b>Pin voto (<code>.vt</code>) = SEMPRE presente</b> (uniformit&agrave; del chip su tutte le schermate), su <code>.chip</code> (MAI dentro <code>.av</code>, che ha overflow:hidden e lo taglia), in alto a destra. Scuro, NON oro (il voto non &egrave; denaro). <b>Contenuto per contesto</b>: dove c'&egrave; il voto di giornata (Partita) mostra quel voto; su una giornata APERTA (Formazione) non c'&egrave; ancora voto &rarr; mostra la <b>media voto</b> del giocatore.</li>
+</ul>
+
+<h2>Chip di campo</h2>
+<div class="demo pitch">
+  <div class="chip P"><span class="cap">C</span><span class="vt">6.5</span><div class="av"><div class="ph"><img src="data:image/svg+xml;utf8,&lt;svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 44 44'&gt;&lt;circle cx='22' cy='22' r='22' fill='%23f0c9a0'/&gt;&lt;path d='M11 13h22v7a11 9 0 0 1-22 0z' fill='%231f4733'/&gt;&lt;circle cx='22' cy='25' r='8' fill='%23caa078'/&gt;&lt;circle cx='18' cy='24' r='1.4' fill='%233a2a1e'/&gt;&lt;circle cx='26' cy='24' r='1.4' fill='%233a2a1e'/&gt;&lt;path d='M18 29q4 3 8 0' stroke='%233a2a1e' fill='none' stroke-width='1.4'/&gt;&lt;rect x='9' y='36' width='26' height='10' rx='5' fill='%23234c5e'/&gt;&lt;/svg&gt;"></div></div><div class="cr"><img src="data:image/svg+xml;utf8,&lt;svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 22'&gt;&lt;rect width='20' height='22' rx='3' fill='%230a0f1a'/&gt;&lt;circle cx='10' cy='11' r='5' fill='%230a63b0'/&gt;&lt;/svg&gt;"></div><span class="cn">Donnarumma</span></div>
+  <div class="chip D"><div class="av"><div class="ph"><svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="22" fill="#e7dcc4"/><circle cx="22" cy="18" r="7" fill="#b8ad92"/><path d="M9 40c0-7 6-11 13-11s13 4 13 11z" fill="#b8ad92"/></svg></div></div><div class="cr"><img src="data:image/svg+xml;utf8,&lt;svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 22'&gt;&lt;rect width='20' height='22' rx='3' fill='%23c8102e'/&gt;&lt;circle cx='10' cy='11' r='5' fill='%23fff'/&gt;&lt;/svg&gt;"></div><span class="cn">Bastoni</span></div>
+  <div class="chip C"><div class="av"><div class="ph"><img src="data:image/svg+xml;utf8,&lt;svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 44 44'&gt;&lt;circle cx='22' cy='22' r='22' fill='%23e0b48a'/&gt;&lt;path d='M11 13h22v7a11 9 0 0 1-22 0z' fill='%233a2a1e'/&gt;&lt;circle cx='22' cy='25' r='8' fill='%23caa078'/&gt;&lt;circle cx='18' cy='24' r='1.4' fill='%233a2a1e'/&gt;&lt;circle cx='26' cy='24' r='1.4' fill='%233a2a1e'/&gt;&lt;path d='M18 29q4 3 8 0' stroke='%233a2a1e' fill='none' stroke-width='1.4'/&gt;&lt;rect x='9' y='36' width='26' height='10' rx='5' fill='%236e1f2b'/&gt;&lt;/svg&gt;"></div></div><div class="cr"><span class="miss">?</span></div><span class="cn">Locatelli</span></div>
+  <div class="chip A empty"><div class="av"><span class="slotlab">A</span></div><span class="cn">&nbsp;</span></div>
+</div>
+<div class="note">Da sx: <b>completo</b> (volto toy + logo + capitano) · <b>volto MANCANTE</b> (danger, logo c'&egrave;) · <b>logo MANCANTE</b> (danger, volto c'&egrave;) · <b>slot vuoto</b> (neutro, nessun giocatore). Il danger NON &egrave; uno stile finito: &egrave; un problema da chiudere.</div>
+<pre><span class="k">// player = { cognome, ruolo, faceToyUrl(da anagrafica)?, clubCrestUrl?, capitano }</span>
+&lt;div class="chip {ruolo}"&gt;
+  {capitano &amp;&amp; &lt;span class="cap"&gt;C&lt;/span&gt;}
+  &lt;div class="av"&gt;&lt;div class="ph"&gt;
+    {faceToyUrl ? &lt;img src={faceToyUrl}&gt; : &lt;faccina/&gt;}        <span class="k">// toy da anagrafica, altrimenti faccina neutra</span>
+  &lt;/div&gt;&lt;/div&gt;
+  &lt;div class="cr"&gt;
+    {clubCrestUrl ? &lt;img src={clubCrestUrl}&gt; : &lt;span class="miss"&gt;?&lt;/span&gt;}  <span class="k">// club REALE: logo o MANCANTE (no barra-colori)</span>
+  &lt;/div&gt;
+  &lt;span class="cn"&gt;{cognome}&lt;/span&gt;
+&lt;/div&gt;
+<span class="k">// slot vuoto (nessun giocatore): &lt;div class="chip {ruolo} empty"&gt;…&lt;span class="slotlab"&gt;{ruolo}&lt;/span&gt;…</span>
+</pre>
+
+<h2>Riga panchina — mobile</h2>
+<div class="demo cream">
+  <div class="rr P"><span class="cr"><img src="data:image/svg+xml;utf8,&lt;svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 18 20'&gt;&lt;rect width='18' height='20' rx='2' fill='%230c2340'/&gt;&lt;circle cx='9' cy='10' r='4' fill='%231278c8'/&gt;&lt;/svg&gt;"></span><span class="face"><img src="data:image/svg+xml;utf8,&lt;svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'&gt;&lt;circle cx='12' cy='12' r='12' fill='%23e0b48a'/&gt;&lt;circle cx='12' cy='13' r='5' fill='%23caa078'/&gt;&lt;path d='M6 8h12v3a6 5 0 0 1-12 0z' fill='%233a2a1e'/&gt;&lt;/svg&gt;"></span><span class="rn">Meret</span><span class="act">scambia</span></div>
+  <div class="rr A"><span class="cr"><span class="miss">?</span></span><span class="face"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="12" fill="#e7dcc4"/><circle cx="12" cy="10" r="4" fill="#b8ad92"/><path d="M5 22c0-4 3-6 7-6s7 2 7 6z" fill="#b8ad92"/></svg></span><span class="rn">Zapata</span><span class="act">scambia</span></div>
+</div>
+<div class="note">Seconda riga: <b>logo club mancante</b> (danger, da sistemare) ma <b>volto assente</b> &rarr; faccina neutra (lecita).</div>
+
+<h2>Riga Rosa &mdash; coda media + prezzo</h2>
+<div class="demo cream">
+  <div class="rr D"><span class="cr"><img src="data:image/svg+xml;utf8,&lt;svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 18 18'&gt;&lt;circle cx='9' cy='9' r='8' fill='%236aa07f'/&gt;&lt;/svg&gt;"></span><span class="face"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="12" fill="#e0b48a"/><circle cx="12" cy="13" r="5" fill="#caa078"/><path d="M6 8h12v3a6 5 0 0 1-12 0z" fill="#3a2a1e"/></svg></span><span class="rn">Bremer</span><span class="rv">6.2</span><span class="vsep"></span><span class="rpr">28</span></div>
+  <div class="rr A"><span class="cr"><img src="data:image/svg+xml;utf8,&lt;svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 18 18'&gt;&lt;circle cx='9' cy='9' r='8' fill='%23cf8a6a'/&gt;&lt;/svg&gt;"></span><span class="face"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="12" fill="#e7dcc4"/><circle cx="12" cy="10" r="4" fill="#b8ad92"/><path d="M5 22c0-4 3-6 7-6s7 2 7 6z" fill="#b8ad92"/></svg></span><span class="rn">Colombo</span><span class="rv">&mdash;</span><span class="vsep"></span><span class="rpr">6</span></div>
+</div>
+<div class="note">Stessa <b>identit&agrave;</b> della riga panchina; cambia solo la <b>coda</b>: <b>media voto</b> (chiaro/mono) + <b>prezzo</b> (oro = denaro, R-oro). Media assente (mai sceso in campo) &rarr; &quot;&mdash;&quot;, non un numero finto. Seconda riga: volto assente &rarr; faccina.</div>
+
+<h2>Box allenatore</h2>
+<div class="coachwrap"><div class="coach"><div class="fm">4-3-3</div><img class="mister" src="data:image/svg+xml;utf8,&lt;svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'&gt;&lt;circle cx='24' cy='24' r='24' fill='%23e7dcc4'/&gt;&lt;path d='M15 11h18v6a9 7 0 0 1-18 0z' fill='%231f4733'/&gt;&lt;circle cx='24' cy='26' r='7' fill='%239a9078'/&gt;&lt;rect x='13' y='34' width='22' height='14' rx='7' fill='%239a9078'/&gt;&lt;/svg&gt;"><div class="cn">Allegri</div></div></div>
+<div class="note">SOLO: modulo (<b>verde</b>) + volto allenatore toy (anello oro = R-mister-toy) + nome. Niente scritte.</div>
+
+<h2>Mappa ruolo &rarr; token</h2>
+<table class="tbl">
+  <tr><th>Ruolo</th><th>Anello chip / sfondo riga (unico indicatore del ruolo)</th></tr>
+  <tr><td>P — Portiere</td><td><span class="sw" style="background:var(--ringP)"></span>--ringP &middot; <span class="sw" style="background:var(--rP)"></span>--rP</td></tr>
+  <tr><td>D — Difensore</td><td><span class="sw" style="background:var(--ringD)"></span>--ringD &middot; <span class="sw" style="background:var(--rD)"></span>--rD</td></tr>
+  <tr><td>C — Centrocampista</td><td><span class="sw" style="background:var(--ringC)"></span>--ringC &middot; <span class="sw" style="background:var(--rC)"></span>--rC</td></tr>
+  <tr><td>A — Attaccante</td><td><span class="sw" style="background:var(--ringA)"></span>--ringA &middot; <span class="sw" style="background:var(--rA)"></span>--rA</td></tr>
+</table>
+<h2>Propagazione &mdash; un solo componente, dove va cosa</h2>
+<div class="note"><b>I chip dentro i vecchi mockup</b> (lega_rosa.html, lega_partita.html) <b>sono OBSOLETI: non si copiano.</b> Il chip ha una sola fonte: questo file. Quei mockup servono solo per il <b>contorno</b> (tabellone-punteggio in Partita, struttura-lista in Rosa), mai per il giocatore.</div>
+<table class="tbl">
+  <tr><th>Schermata</th><th>Variante</th><th>Coda</th></tr>
+  <tr><td>Formazione &mdash; campo</td><td>Chip di campo (.chip)</td><td>pin .vt = <b>media voto</b></td></tr>
+  <tr><td>Formazione &mdash; panca/sidebar</td><td>Riga (.rr)</td><td>azione/grip (nessun numero)</td></tr>
+  <tr><td>Partita</td><td>Chip di campo (.chip)</td><td>pin .vt = <b>voto di giornata</b></td></tr>
+  <tr><td>Rosa</td><td>Riga (.rr)</td><td>.rv <b>media</b> + .rpr <b>prezzo</b> (oro)</td></tr>
+  <tr><td>Tabellone (asta) / Scheda</td><td>&mdash; (milestone dedicate)</td><td>&mdash;</td></tr>
+</table>
+<div class="note"><b>Identit&agrave; identica ovunque</b>: crest tondo su coin scuro + avatar con anello-ruolo (toy o faccina) + cognome + colore-ruolo + capitano. Cambia <b>solo la coda</b>.</div>
+</body></html>
