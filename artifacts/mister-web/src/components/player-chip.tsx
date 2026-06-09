@@ -88,18 +88,18 @@ export function PlayerFieldChip({
         <span className="vt">{avgScore != null ? avgScore.toFixed(1) : "—"}</span>
       )}
 
+      {/* .rm — bottone rimozione: SIBLING di .av (MAI dentro .av che ha overflow:hidden) */}
+      {player && !isLocked && onRemove && (
+        <button
+          className="rm"
+          onClick={(e) => { e.stopPropagation(); onRemove(); }}
+        >
+          <X size={7} />
+        </button>
+      )}
+
       {/* .av — cerchio colorato per ruolo + overflow:hidden */}
       <div className="av" style={!player ? { borderStyle: "dashed" } : undefined}>
-        {/* .rm — bottone rimozione (desktop, solo se onRemove fornito) */}
-        {player && !isLocked && onRemove && (
-          <button
-            className="rm"
-            onClick={(e) => { e.stopPropagation(); onRemove(); }}
-          >
-            <X size={7} />
-          </button>
-        )}
-
         {player ? (
           /* .ph — volto toy (o faccina neutra se assente dall'anagrafica) */
           <div className="ph">
