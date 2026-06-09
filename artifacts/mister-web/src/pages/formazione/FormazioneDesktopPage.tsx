@@ -250,11 +250,24 @@ export default function FormazioneDesktopPage() {
         for (let j = 0; j < c; j++) { siToSlot.set(si, `${ri}-${j}`); si++; }
       });
       const newField: Record<string, number> = {};
-      const newRoster: number[] = [];
       lineupData.players.forEach(p => {
         if (p.isStarter) { const sid = siToSlot.get(p.slotIndex); if (sid) newField[sid] = p.playerId; }
-        else newRoster.push(p.playerId);
       });
+
+      // Invariante: roster = TUTTA la rosa meno gli XI in campo.
+      // L'ordine salvato della panca viene mantenuto; i giocatori della rosa
+      // non presenti nel salvataggio (aggiunti dopo, o mai salvati) finiscono in coda.
+      const fieldSet = new Set(Object.values(newField));
+      const savedBench = lineupData.players
+        .filter(p => !p.isStarter)
+        .sort((a, b) => ((a as { benchOrder?: number }).benchOrder ?? 999) - ((b as { benchOrder?: number }).benchOrder ?? 999))
+        .map(p => p.playerId);
+      const savedBenchSet = new Set(savedBench);
+      const extraBench = allPlayers
+        .filter(p => !fieldSet.has(p.id) && !savedBenchSet.has(p.id))
+        .map(p => p.id);
+      const newRoster = [...savedBench, ...extraBench];
+
       setFieldSlots(newField);
       setRoster(newRoster);
       setSavedSnapshot({ field: newField, roster: newRoster, captain: lineupData.captainPlayerId ?? null });
