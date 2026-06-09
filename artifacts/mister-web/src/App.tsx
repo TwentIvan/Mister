@@ -27,6 +27,7 @@ import RosaPage from "@/pages/rosa/RosaPage";
 import SchedaPage from "@/pages/scheda/SchedaPage";
 import FormazioneMobilePage from "@/pages/formazione/FormazioneMobilePage";
 import FormazioneDesktopPage from "@/pages/formazione/FormazioneDesktopPage";
+import DevPage from "@/pages/DevPage";
 import { Switch, Route, Router as WouterRouter } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -75,6 +76,9 @@ function Router() {
 
       {/* ── Invito lega — accessibile senza autenticazione ──── */}
       <Route path="/join/:leagueId/:code" component={JoinLegaPage} />
+
+      {/* ── Indice dev — utility di verifica, grezza ─────────── */}
+      <Route path="/dev" component={DevPage} />
 
       {/* ── Tutte le altre pagine con sidebar ───────────────── */}
       <Route>
