@@ -16,6 +16,7 @@ import { useRouteId } from "@/hooks/useRouteId";
 import { ChevronLeft, Lock, Home as HomeIcon, Plane, Trophy } from "lucide-react";
 import { TEAM_CODE } from "./team-constants";
 import { PlayerFieldChip, PlayerBenchRow, MisterToyAvatar } from "@/components/player-chip";
+import { useFormazioneRosa } from "./useFormazioneRosa";
 
 // ── Tipi ──────────────────────────────────────────────────────────────────────
 
@@ -294,6 +295,14 @@ export default function FormazioneMobilePage() {
     (selection?.kind === "field" || selection?.kind === "field-empty")
       ? getSlotRole(selection.slotId, formation)
       : null;
+
+  // Hook condiviso — fieldIds usato per coerenza; filteredPlayers non serve qui (panchina = roster)
+  const { fieldIds } = useFormazioneRosa({
+    allPlayers,
+    filterRoles: new Set<Role>(),
+    filterTeam: null,
+    fieldSlots,
+  });
 
   // ── Handlers ────────────────────────────────────────────────────────────────
 

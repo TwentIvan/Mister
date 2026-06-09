@@ -16,6 +16,7 @@ import { useRouteId } from "@/hooks/useRouteId";
 import { ChevronLeft, Lock, Home as HomeIcon, Plane } from "lucide-react";
 import { TEAM_CODE } from "./team-constants";
 import { PlayerFieldChip, PlayerBenchRow, MisterToyAvatar } from "@/components/player-chip";
+import { useFormazioneRosa } from "./useFormazioneRosa";
 
 // ── Tipi ──────────────────────────────────────────────────────────────────────
 
@@ -274,13 +275,20 @@ export default function FormazioneDesktopPage() {
 
   const formation    = useMemo(() => parseFormation(modulo), [modulo]);
   const starterCount = Object.keys(fieldSlots).length;
-  const fieldIds     = useMemo(() => new Set(Object.values(fieldSlots)), [fieldSlots]);
 
   // Ruolo del campo attualmente selezionato
   const selectedFieldRole: Role | null =
     selection?.kind === "field"       ? getSlotRole(selection.slotId, formation) :
     selection?.kind === "field-empty" ? getSlotRole(selection.slotId, formation) :
     null;
+
+  // ── Hook condiviso: fieldIds + filteredPlayers (P→D→C→A) ─────────────────────
+  const { fieldIds, filteredPlayers } = useFormazioneRosa({
+    allPlayers,
+    filterRoles,
+    filterTeam,
+    fieldSlots,
+  });
 
   // Club in rosa
   const clubs = useMemo(() => {
@@ -301,12 +309,7 @@ export default function FormazioneDesktopPage() {
     return c;
   }, [allPlayers]);
 
-  const filteredPlayers = useMemo((): LocalPlayer[] => {
-    let list = allPlayers;
-    if (filterRoles.size > 0) list = list.filter(p => filterRoles.has(p.role));
-    if (filterTeam)           list = list.filter(p => p.realTeam === filterTeam);
-    return list;
-  }, [allPlayers, filterRoles, filterTeam]);
+  // filteredPlayers e fieldIds vengono dal hook useFormazioneRosa (sopra)
 
   // ── Handlers Svuota / Reset ───────────────────────────────────────────────────
   function handleClear() {
@@ -707,42 +710,50 @@ export default function FormazioneDesktopPage() {
           {/* Lista giocatori — unica parte che scrolla */}
           <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "10px 14px 14px", display: "flex", flexDirection: "column", gap: 3 }}>
             {filteredPlayers.map(p => {
-              const inField  = fieldIds.has(p.id);
-              const isSel    = selection?.kind === "bench" && selection.playerId === p.id;
-              const isComp   = selectedFieldRole !== null ? (p.role === selectedFieldRole ? true : false) : null;
+              const inField = fieldIds.has(p.id);
+              const isSel   = selection?.kind === "bench" && selection.playerId === p.id;
+              const isComp  = selectedFieldRole !== null ? p.role === selectedFieldRole : null;
               return (
-                <PlayerBenchRow
+                /* Giocatore già in campo: opacità ridotta + click disabilitato (come mobile) */
+                <div
                   key={p.id}
-                  player={p}
-                  isInField={inField}
-                  isSelected={isSel}
-                  isCompatible={isComp}
-                  isCaptain={p.id === captainId}
-                  isLocked={roundLocked}
-                  faceSmall
-                  onTap={() => handleSidebarClick(p.id)}
-                  onCaptainToggle={() => setCaptainId(prev => prev === p.id ? null : p.id)}
-                />
+                  style={inField ? { opacity: 0.45, pointerEvents: "none" } : undefined}
+                >
+                  <PlayerBenchRow
+                    player={p}
+                    isInField={inField}
+                    isSelected={isSel}
+                    isCompatible={isComp}
+                    isCaptain={p.id === captainId}
+                    isLocked={roundLocked}
+                    faceSmall
+                    onTap={() => handleSidebarClick(p.id)}
+                    onCaptainToggle={() => setCaptainId(prev => prev === p.id ? null : p.id)}
+                  />
+                </div>
               );
             })}
           </div>
         </div>
 
         {/* ── CAMPO ────────────────────────────────────────────────────────── */}
-        <div style={{ display: "flex", overflow: "hidden" }}>
+        {/* alignItems:flex-start + aspectRatio sul figlio: altezza = larghezza × 640/440, non stirata */}
+        <div style={{ display: "flex", alignItems: "flex-start", overflow: "hidden", minHeight: 0 }}>
           <div style={{
             position: "relative",
             background: "repeating-linear-gradient(0deg, #173a27 0px 48px, #1a402b 48px 96px)",
             borderLeft: "1px solid #15301f",
-            flex: 1,
+            width: "100%",
+            aspectRatio: "440 / 640",
+            maxHeight: "100%",
             display: "flex",
             flexDirection: "column",
             padding: "22px 26px 20px 134px",
             overflow: "hidden",
           }}>
 
-            {/* pitch_desktop.svg VERBATIM — lunette area + calci d'angolo */}
-            <svg viewBox="0 0 440 640" preserveAspectRatio="none" fill="none" stroke="#efe6d3" strokeOpacity="0.14" strokeWidth="1.4" style={{ position: "absolute", left: 134, top: 0, bottom: 0, width: "calc(100% - 160px)", height: "100%", pointerEvents: "none" }}>
+            {/* pitch_desktop.svg — preserveAspectRatio meet: cerchio rimane tondo */}
+            <svg viewBox="0 0 440 640" preserveAspectRatio="xMidYMid meet" fill="none" stroke="#efe6d3" strokeOpacity="0.14" strokeWidth="1.4" style={{ position: "absolute", left: 134, top: 0, bottom: 0, width: "calc(100% - 160px)", height: "100%", pointerEvents: "none" }}>
               <rect x="8" y="8" width="424" height="624" rx="6"/>
               <line x1="8" y1="320" x2="432" y2="320"/>
               <circle cx="220" cy="320" r="54"/>
