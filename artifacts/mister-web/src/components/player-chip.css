@@ -89,5 +89,12 @@
 .rr .grip{flex:none;display:flex;align-items:center;color:rgba(239,230,211,.28);cursor:grab;touch-action:none}
 .rr .grip:active{cursor:grabbing}
 
+/* ── Slot libero (riga rosa vuota) ──────────────────────────────────────── */
+.rr.empty{background:transparent;border:1.5px dashed var(--line);color:var(--muted);cursor:default}
+.rr.empty:hover{opacity:1}
+.rr.empty .pos{width:18px;height:18px;border-radius:50%;border:1.5px dashed currentColor;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;flex:none;font-family:var(--mono)}
+.rr.empty .rn{font-style:italic;color:var(--muted)}
+.rr.empty .rpr-dash{font-family:var(--mono);font-size:12px;color:var(--muted);flex:none}
+
 /* ── Utility condivisa ──────────────────────────────────────────────────── */
 .miss{width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:rgba(191,59,48,.18);color:var(--danger);font-weight:700;font-size:10px;line-height:1}

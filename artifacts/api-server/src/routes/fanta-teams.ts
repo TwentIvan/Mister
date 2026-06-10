@@ -2,7 +2,7 @@ import { Router, type IRouter } from "express";
 import { eq, and, or, inArray, sql, isNull } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { db } from "@workspace/db";
-import { fantaTeams, societa, players, contracts, teamColors, serieAFixtures, coaches, leagues, users } from "@workspace/db";
+import { fantaTeams, societa, players, contracts, teamColors, serieAFixtures, coaches, leagues, users, playerGiornataStats } from "@workspace/db";
 import { computeCoachVoto } from "@workspace/scoring";
 import {
   ListFantaTeamsParams,
@@ -396,6 +396,8 @@ router.get("/fanta-teams/:fantaTeamId/rosa", async (req, res): Promise<void> => 
       name: players.name,
       roleClassic: players.roleClassic,
       realTeam: players.realTeam,
+      photoUrl: players.photoUrl,
+      photoCartoonUrl: players.photoCartoonUrl,
       quotazione: contracts.purchasePrice,
       purchasePriceFm: contracts.purchasePriceFm,
     })
@@ -403,14 +405,50 @@ router.get("/fanta-teams/:fantaTeamId/rosa", async (req, res): Promise<void> => 
     .innerJoin(players, eq(players.id, contracts.playerId))
     .where(and(eq(contracts.fantaTeamId, fantaTeamId), eq(contracts.seasonStart, season)));
 
-  const mappedPlayers = playerRows.map((p) => ({
-    id: p.id,
-    name: p.name,
-    roleClassic: ROLE_MAP[p.roleClassic ?? ""] ?? "C",
-    realTeam: p.realTeam ?? "",
-    quotazione: p.quotazione ?? null,
-    purchasePriceFm: p.purchasePriceFm ?? null,
-  }));
+  const playerIds = playerRows.map(r => r.id);
+
+  const [statsAgg, teamColorRows] = await Promise.all([
+    playerIds.length > 0
+      ? db
+          .select({
+            playerId: playerGiornataStats.playerId,
+            avgVoto: sql<string | null>`avg(${playerGiornataStats.votoMister})`,
+          })
+          .from(playerGiornataStats)
+          .where(inArray(playerGiornataStats.playerId, playerIds))
+          .groupBy(playerGiornataStats.playerId)
+      : Promise.resolve([]),
+    playerRows.length > 0
+      ? db
+          .select()
+          .from(teamColors)
+          .where(inArray(teamColors.teamName, [...new Set(playerRows.map(r => r.realTeam ?? ""))]))
+      : Promise.resolve([]),
+  ]);
+
+  const votoMap = new Map(
+    statsAgg.map(r => [
+      r.playerId,
+      r.avgVoto != null ? Math.round(Number(r.avgVoto) * 100) / 100 : null,
+    ]),
+  );
+  const colorMap = Object.fromEntries(teamColorRows.map(c => [c.teamName, c]));
+
+  const mappedPlayers = playerRows.map((p) => {
+    const tc = colorMap[p.realTeam ?? ""];
+    return {
+      id: p.id,
+      name: p.name,
+      roleClassic: ROLE_MAP[p.roleClassic ?? ""] ?? "C",
+      realTeam: p.realTeam ?? "",
+      quotazione: p.quotazione ?? null,
+      purchasePriceFm: p.purchasePriceFm ?? null,
+      photoUrl: p.photoUrl ?? null,
+      photoCartoonUrl: p.photoCartoonUrl ?? null,
+      logoUrl: tc != null ? `https://media.api-sports.io/football/teams/${tc.teamId}.png` : null,
+      votoMister: votoMap.get(p.id) ?? null,
+    };
+  });
 
   // Ordine ruolo canonico P→D→C→A
   const ROLE_ORDER: Record<string, number> = { P: 0, D: 1, C: 2, A: 3 };

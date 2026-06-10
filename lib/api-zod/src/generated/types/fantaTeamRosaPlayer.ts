@@ -16,4 +16,9 @@ export interface FantaTeamRosaPlayer {
   quotazione?: number | null;
   /** Prezzo d'asta FM (null se non ancora valorizzato) */
   purchasePriceFm?: number | null;
+  photoUrl?: string | null;
+  photoCartoonUrl?: string | null;
+  logoUrl?: string | null;
+  /** Media voto Mister calcolata su tutte le giornate disputate */
+  votoMister?: number | null;
 }

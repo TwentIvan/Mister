@@ -1973,7 +1973,11 @@ export const GetFantaTeamRosaResponse = zod.object({
   "roleClassic": zod.enum(['P', 'D', 'C', 'A']),
   "realTeam": zod.string(),
   "quotazione": zod.number().nullish().describe('Quotazione Serie A classica al momento dell\'acquisto'),
-  "purchasePriceFm": zod.number().nullish().describe('Prezzo d\'asta FM (null se non ancora valorizzato)')
+  "purchasePriceFm": zod.number().nullish().describe('Prezzo d\'asta FM (null se non ancora valorizzato)'),
+  "photoUrl": zod.string().nullish(),
+  "photoCartoonUrl": zod.string().nullish(),
+  "logoUrl": zod.string().nullish(),
+  "votoMister": zod.number().nullish().describe('Media voto Mister calcolata su tutte le giornate disputate')
 })),
   "totals": zod.object({
   "P": zod.number(),

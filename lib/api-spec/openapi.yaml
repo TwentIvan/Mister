@@ -3643,6 +3643,19 @@ components:
           type: integer
           nullable: true
           description: Prezzo d'asta FM (null se non ancora valorizzato)
+        photoUrl:
+          type: string
+          nullable: true
+        photoCartoonUrl:
+          type: string
+          nullable: true
+        logoUrl:
+          type: string
+          nullable: true
+        votoMister:
+          type: number
+          nullable: true
+          description: Media voto Mister calcolata su tutte le giornate disputate
 
     FantaTeamRosaJersey:
       type: object

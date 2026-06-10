@@ -169,13 +169,14 @@ export interface PlayerBenchRowProps {
   faceSmall?: boolean;
   showGrip?: boolean;
   voto?: number | null;
+  prezzo?: number | null;
   onTap?: () => void;
   onCaptainToggle?: () => void;
 }
 
 export function PlayerBenchRow({
   player, priority, isInField, isSelected, isCompatible, isCaptain, isLocked,
-  faceSmall, showGrip, voto, onTap, onCaptainToggle,
+  faceSmall, showGrip, voto, prezzo, onTap, onCaptainToggle,
 }: PlayerBenchRowProps) {
   const rl = CHIP_ROLE_LETTER[player.role];
   const faceUrl = player.cartoonUrl ?? player.photoUrl ?? null;
@@ -254,11 +255,19 @@ export function PlayerBenchRow({
       {/* .rn — cognome */}
       <span className="rn">{chipLastName(player.name)}</span>
 
-      {/* .rv — voto (mostrato solo se prop voto fornita: contesto Partita) */}
+      {/* .rv — media voto (mostrato solo se prop voto fornita) */}
       {voto !== undefined && (
         <span className="rv" style={{ color: voto !== null ? "rgba(239,230,211,.82)" : "rgba(239,230,211,.3)" }}>
           {voto !== null ? voto.toFixed(1) : "—"}
         </span>
+      )}
+
+      {/* .vsep + .rpr — prezzo d'acquisto FM (opzionale: solo RosaPage) */}
+      {prezzo !== undefined && (
+        <>
+          <span className="vsep" />
+          <span className="rpr">{prezzo !== null ? prezzo : "—"}</span>
+        </>
       )}
 
       {/* Azione: XI badge (desktop in campo) oppure capitano toggle (solo se handler presente) */}
