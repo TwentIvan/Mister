@@ -14,10 +14,9 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouteId } from "@/hooks/useRouteId";
 import { ChevronLeft, Lock, Home as HomeIcon, Plane } from "lucide-react";
-import type { DragEvent } from "react";
 import { TEAM_CODE } from "./team-constants";
-import { PlayerFieldChip, PlayerBenchRow, MisterToyAvatar } from "@/components/player-chip";
-import { useFormazioneRosa } from "./useFormazioneRosa";
+import { PlayerFieldChip, PlayerBenchRow, MisterToyAvatar, chipLastName } from "@/components/player-chip";
+import { useFormazioneRosa, ROLE_ORDER } from "./useFormazioneRosa";
 
 // ── Tipi ──────────────────────────────────────────────────────────────────────
 
@@ -287,9 +286,6 @@ export default function FormazioneDesktopPage() {
   const [saveOk, setSaveOk]           = useState(false);
   const [roleError, setRoleError]     = useState<string | null>(null);
 
-  // ── Stato drag & drop panchina ────────────────────────────────────────────────
-  const [dragId,     setDragId]     = useState<number | null>(null);
-  const [dragOverId, setDragOverId] = useState<number | null>(null);
 
   const formation    = useMemo(() => parseFormation(modulo), [modulo]);
   const starterCount = Object.keys(fieldSlots).length;
@@ -477,39 +473,6 @@ export default function FormazioneDesktopPage() {
     }
 
     setSelection({ kind: "bench", playerId: pid });
-  }
-
-  // ── Handler drag & drop panchina ─────────────────────────────────────────────
-  function handleBenchDragStart(pid: number) {
-    if (roundLocked) return;
-    setDragId(pid);
-    setSelection(null);
-  }
-
-  function handleBenchDragOver(e: DragEvent, pid: number) {
-    e.preventDefault();
-    if (dragId === null || dragId === pid) return;
-    setDragOverId(pid);
-  }
-
-  function handleBenchDrop(pid: number) {
-    if (dragId === null || dragId === pid) { setDragId(null); setDragOverId(null); return; }
-    const a = roster.indexOf(dragId);
-    const b = roster.indexOf(pid);
-    if (a === -1 || b === -1) { setDragId(null); setDragOverId(null); return; }
-    setRoster(prev => {
-      const n = [...prev];
-      n.splice(a, 1);
-      n.splice(b, 0, dragId);
-      return n;
-    });
-    setDragId(null);
-    setDragOverId(null);
-  }
-
-  function handleBenchDragEnd() {
-    setDragId(null);
-    setDragOverId(null);
   }
 
   // ── Salva ─────────────────────────────────────────────────────────────────────
@@ -771,6 +734,11 @@ export default function FormazioneDesktopPage() {
                 if (filterRoles.size > 0 && !filterRoles.has(p.role)) return false;
                 if (filterTeam && p.realTeam !== filterTeam) return false;
                 return true;
+              })
+              .sort((a, b) => {
+                const rd = ROLE_ORDER[a.role] - ROLE_ORDER[b.role];
+                if (rd !== 0) return rd;
+                return (b.votoMister ?? 0) - (a.votoMister ?? 0);
               });
             const ROW: React.CSSProperties = {
               flex: "1 1 0",
@@ -814,39 +782,21 @@ export default function FormazioneDesktopPage() {
                   ) : (
                     <>
                       <div style={{ ...LABEL, paddingTop: inCampoList.length > 0 ? 6 : 2 }}>
-                        Panchina — trascina per priorità
+                        Panchina — ruolo · media voto
                       </div>
                       {benchList.map(p => {
-                        const isSel      = selection?.kind === "bench" && selection.playerId === p.id;
-                        const isComp     = selectedFieldRole !== null ? p.role === selectedFieldRole : null;
-                        const isDragging = dragId === p.id;
-                        const isDragOver = dragOverId === p.id && dragId !== null && dragId !== p.id;
+                        const isSel  = selection?.kind === "bench" && selection.playerId === p.id;
+                        const isComp = selectedFieldRole !== null ? p.role === selectedFieldRole : null;
                         return (
-                          <div
-                            key={p.id}
-                            draggable={!roundLocked}
-                            onDragStart={() => handleBenchDragStart(p.id)}
-                            onDragOver={(e) => handleBenchDragOver(e, p.id)}
-                            onDrop={() => handleBenchDrop(p.id)}
-                            onDragEnd={handleBenchDragEnd}
-                            style={{
-                              ...ROW,
-                              opacity: isDragging ? 0.35 : 1,
-                              outline: isDragOver ? "1px dashed rgba(106,160,127,0.7)" : "none",
-                              borderRadius: 9,
-                              transition: "opacity 0.1s",
-                            }}
-                          >
+                          <div key={p.id} style={ROW}>
                             <PlayerBenchRow
                               player={p}
                               isSelected={isSel}
                               isCompatible={isComp}
-                              isCaptain={p.id === captainId}
                               isLocked={roundLocked}
                               faceSmall
-                              showGrip={!roundLocked}
+                              voto={p.votoMister}
                               onTap={() => handleSidebarClick(p.id)}
-                              onCaptainToggle={() => setCaptainId(prev => prev === p.id ? null : p.id)}
                             />
                           </div>
                         );
@@ -934,6 +884,37 @@ export default function FormazioneDesktopPage() {
               </div>
               <div className="mister"><MisterToyAvatar /></div>
               <div className="cn">{rosaData?.managerName ?? teamName}</div>
+              {/* Capitano — select tra gli XI in campo */}
+              <div style={{ marginTop: 8, textAlign: "center" }}>
+                <div style={{ fontSize: 8, textTransform: "uppercase" as const, letterSpacing: "0.1em", color: "rgba(239,230,211,0.45)", marginBottom: 3 }}>
+                  Capitano
+                </div>
+                <select
+                  value={captainId ?? ""}
+                  disabled={roundLocked}
+                  onChange={e => setCaptainId(e.target.value ? Number(e.target.value) : null)}
+                  style={{
+                    fontFamily: "var(--font-mono)", fontSize: 10, fontWeight: 700,
+                    color: captainId ? "var(--gold-l)" : "rgba(239,230,211,0.35)",
+                    background: "rgba(0,0,0,0.3)", border: "1px solid rgba(239,230,211,0.18)",
+                    borderRadius: 5, padding: "2px 4px", width: "100%",
+                    cursor: roundLocked ? "default" : "pointer",
+                    outline: "none", appearance: "none" as const,
+                    textAlign: "center",
+                  }}
+                >
+                  <option value="" style={{ background: "#0d1f1a" }}>— nessuno —</option>
+                  {Object.values(fieldSlots).map(pid => {
+                    const p = playerById.get(pid);
+                    if (!p) return null;
+                    return (
+                      <option key={pid} value={pid} style={{ background: "#0d1f1a" }}>
+                        {chipLastName(p.name)}
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
             </div>
 
             {/* Righe giocatori: ATT in cima → GK in fondo */}

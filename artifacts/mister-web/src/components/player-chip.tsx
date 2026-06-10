@@ -261,12 +261,12 @@ export function PlayerBenchRow({
         </span>
       )}
 
-      {/* Azione: XI badge (desktop in campo) oppure capitano toggle */}
+      {/* Azione: XI badge (desktop in campo) oppure capitano toggle (solo se handler presente) */}
       {isInField ? (
         <span className="mk pl">XI</span>
-      ) : !isLocked ? (
+      ) : onCaptainToggle && !isLocked ? (
         <button
-          onClick={(e) => { e.stopPropagation(); onCaptainToggle?.(); }}
+          onClick={(e) => { e.stopPropagation(); onCaptainToggle(); }}
           style={{
             width: capBtnSize, height: capBtnSize,
             borderRadius: "50%", flexShrink: 0, padding: 0,
