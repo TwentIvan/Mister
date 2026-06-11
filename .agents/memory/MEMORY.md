@@ -6,3 +6,4 @@
 - [CurrentUser shape](auth-current-user.md) — frontend CurrentUser ha id/email/display_name (non sub); server JWT payload usa sub; confronti ownership devono usare user.id nel client
 - [Fase 2 Inviti — architettura slot](fase2-inviti.md) — slot vuoti al setup; join/claim atomici; zod come dipendenza diretta api-server
 - [Wouter v3 SPA param bug](wouter-v3-param-bug.md) — component= prop ritorna ":paramName" come stringa truthy al primo render; usare useRouteId hook
+- [DB pool Replit](db-pool-replit.md) — DATABASE_URL ha sslmode=disable; usare PG* vars con max:3 + idleTimeoutMillis:10000; seed in background, porta aperta prima
