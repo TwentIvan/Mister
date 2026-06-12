@@ -71,12 +71,17 @@ export default function LeagueDetail() {
       });
       navigate(`/asta/${result.auction.id}`);
     } catch (err: unknown) {
-      const body = (err as { data?: { existing_auction_id?: string; error?: string } })?.data;
-      if (body?.existing_auction_id) {
-        navigate(`/asta/${body.existing_auction_id}`);
+      const e = err as { data?: { existing_auction_id?: string; error?: unknown }; status?: number };
+      if (e?.data?.existing_auction_id) {
+        navigate(`/asta/${e.data.existing_auction_id}`);
         return;
       }
-      setAstaError(body?.error ?? "Impossibile avviare l'asta.");
+      const msg =
+        typeof e?.data?.error === "string" ? e.data.error
+        : e?.data?.error ? "Dati non validi: controlla la configurazione dell'asta."
+        : e?.status ? `Errore server (${e.status}).`
+        : "Server non raggiungibile: verifica che l'API sia avviata.";
+      setAstaError(msg);
     }
   };
 

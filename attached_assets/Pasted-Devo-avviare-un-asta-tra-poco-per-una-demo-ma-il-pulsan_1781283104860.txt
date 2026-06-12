@@ -1,0 +1,38 @@
+Devo avviare un'asta tra poco per una demo ma il pulsante "Avvia asta" mostra l'errore generico "Impossibile avviare l'asta." Esegui questi 3 step in ordine e riportami l'output di ciascuno.
+
+STEP 1 — Verifica che l'API risponda
+Esegui dalla shell (adatta la porta se diversa da 5000):
+curl -i -X POST http://localhost:5000/api/auctions -H "Content-Type: application/json" -d '{"league_id":"league-juve"}'
+Nota: il campo è league_id in snake_case. Riportami status code e body completo della risposta.
+- Se la risposta è HTML o "connection refused": il server API non è attivo → riavvia il workflow e ripeti il curl.
+- Se è 401/403: è un problema di autenticazione/admin della lega.
+- Se è 409: c'è un'asta già attiva → vai allo STEP 2.
+- Se è 400 con un oggetto "error" complesso: è la validazione Zod → dimmi quali campi falliscono.
+
+STEP 2 — Controlla e chiudi eventuali aste bloccate
+Esegui sul database:
+SELECT id, status, started_at FROM auctions WHERE league_id = 'league-juve' AND status IN ('running','paused');
+Se esiste una riga, chiudi l'asta bloccata con:
+UPDATE auctions SET status = 'completed' WHERE id = '<ID_TROVATO>';
+Poi riprova il curl dello STEP 1: deve restituire 201.
+
+STEP 3 — Migliora la gestione errori nel frontend
+Nel file artifacts/mister-web/src/pages/league-detail.tsx, nella funzione handleAvviaAsta (circa righe 73-80), sostituisci il blocco catch attuale con questo, così gli errori reali diventano visibili invece del messaggio generico:
+
+} catch (err: unknown) {
+  const e = err as { data?: { existing_auction_id?: string; error?: unknown }; status?: number };
+  if (e?.data?.existing_auction_id) {
+    navigate(`/asta/${e.data.existing_auction_id}`);
+    return;
+  }
+  const msg =
+    typeof e?.data?.error === "string" ? e.data.error
+    : e?.data?.error ? "Dati non validi: controlla la configurazione dell'asta."
+    : e?.status ? `Errore server (${e.status}).`
+    : "Server non raggiungibile: verifica che l'API sia avviata.";
+  setAstaError(msg);
+}
+
+Motivazione: il server in caso di validazione Zod fallita risponde { error: parsed.error.flatten() } che è un oggetto, non una stringa, e il catch attuale lo ignora mostrando il messaggio generico. Lo stesso accade se la risposta non è JSON (es. pagina HTML 502 del proxy).
+
+ALLA FINE: riprova "Avvia asta" dall'interfaccia e confermami che funziona. Non modificare nient'altro oltre a quanto indicato.
