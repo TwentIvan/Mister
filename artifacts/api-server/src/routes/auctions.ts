@@ -326,7 +326,9 @@ router.post("/auctions", async (req, res): Promise<void> => {
   // Aggiorna nome_asta della società se forniti nella config
   if (Object.keys(team_names).length > 0) {
     await Promise.all(
-      Object.entries(team_names).map(async ([teamId, nameAuction]) => {
+      Object.entries(team_names)
+        .filter(([, nameAuction]) => typeof nameAuction === "string" && nameAuction.trim() !== "")
+        .map(async ([teamId, nameAuction]) => {
         const [ft] = await db
           .select({ societaId: fantaTeams.societaId })
           .from(fantaTeams)

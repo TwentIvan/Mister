@@ -249,14 +249,14 @@ export default function AstaLivePage() {
   const squadreForVoice = (data?.squadre ?? []).map((t) => ({
     id: t.id,
     name: t.name ?? "",
-    name_auction: t.name_auction ?? null,
+    name_auction: t.name_auction?.trim() ? t.name_auction : null,
   }));
 
   // Mappa player_id → nome squadra fantalega per etichetta "già di [squadra]" (C1)
   const playerTeamMap = new Map<number, string>(
     (data?.assignments ?? []).map((a) => {
       const team = data?.squadre.find((s) => s.id === a.fanta_team_id);
-      return [a.player_id, team?.name_auction ?? team?.name ?? ""];
+      return [a.player_id, (team?.name_auction?.trim() || team?.name) ?? ""];
     }),
   );
 
@@ -373,7 +373,7 @@ export default function AstaLivePage() {
   const squadreForComponents = data.squadre.map((t) => ({
     id: t.id,
     name: t.name ?? "",
-    name_auction: t.name_auction ?? null,
+    name_auction: t.name_auction?.trim() ? t.name_auction : null,
     credits_remaining: t.credits_remaining,
   }));
 

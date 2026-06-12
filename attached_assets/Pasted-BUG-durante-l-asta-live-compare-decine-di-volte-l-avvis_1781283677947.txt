@@ -1,0 +1,34 @@
+BUG: durante l'asta live compare decine di volte l'avviso "Nomi voce troppo simili — «» e «»" e il riconoscimento vocale non riconosce i comandi "nome squadra + cifra".
+
+CAUSA: i nomi voce (name_auction nella tabella societa) sono stati salvati come stringa vuota "" per tutte le squadre. Il codice usa ovunque `name_auction ?? name`, ma l'operatore ?? non scatta sulle stringhe vuote, quindi tutti i nomi voce risultano "" e: 1) checkVoiceNameConflicts segnala ogni coppia come identica, 2) fuzzyMatchTeam non matcha mai nulla. Esegui questi 3 fix in ordine.
+
+FIX 1 — Pulizia dati (immediato, sblocca subito l'asta)
+Esegui sul database:
+UPDATE societa SET name_auction = NULL WHERE name_auction IS NOT NULL AND trim(name_auction) = '';
+Verifica con:
+SELECT id, name_auction FROM societa;
+Tutti i valori vuoti devono essere diventati NULL.
+
+FIX 2 — Server: non salvare mai stringhe vuote
+Nel file artifacts/api-server/src/routes/auctions.ts, nella route POST /auctions, c'è il blocco che aggiorna nome_asta della società (commento "Aggiorna nome_asta della società se forniti nella config", circa riga 327). Dentro il map su Object.entries(team_names), prima dell'update aggiungi un guard per saltare i valori vuoti:
+
+Object.entries(team_names)
+  .filter(([, nameAuction]) => typeof nameAuction === "string" && nameAuction.trim() !== "")
+  .map(async ([teamId, nameAuction]) => { ...resto invariato... })
+
+FIX 3 — Frontend: tratta la stringa vuota come assente
+Nel file artifacts/mister-web/src/pages/AstaLivePage.tsx, alle righe ~252 e ~376 dove si costruisce l'array squadre con:
+  name_auction: t.name_auction ?? null,
+sostituisci con:
+  name_auction: t.name_auction?.trim() ? t.name_auction : null,
+
+Inoltre nel file artifacts/mister-web/src/hooks/useVoiceBidder.ts, nella funzione checkVoiceNameConflicts (~riga 135), aggiungi all'inizio del map/loop l'esclusione delle voci senza nome valido, così l'avviso non può mai confrontare stringhe vuote:
+  const entries = squadre
+    .map((s) => ({ display: (s.name_auction?.trim() || s.name), key: norm(s.name_auction?.trim() || s.name) }))
+    .filter((e) => e.key !== "");
+
+E sempre in useVoiceBidder.ts sostituisci le occorrenze di `s.name_auction ?? s.name` e `team.name_auction ?? team.name` (righe ~125 e ~247) con la variante `||` su trim:
+  (s.name_auction?.trim() || s.name)
+  (team.name_auction?.trim() || team.name)
+
+VERIFICA FINALE: riavvia, apri l'asta live, attiva il microfono e verifica che: 1) non compaia più nessun avviso "nomi troppo simili", 2) pronunciando "nome squadra + numero" il campo in ascolto si valorizzi e l'offerta venga registrata. Non modificare nient'altro.

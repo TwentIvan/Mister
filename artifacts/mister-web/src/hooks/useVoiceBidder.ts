@@ -122,7 +122,7 @@ export function fuzzyMatchTeam(fragment: string, squadre: Squadra[]): Squadra | 
   if (!fragment || squadre.length === 0) return null;
   const frag = norm(fragment);
   const ranked = squadre
-    .map((s) => ({ s, d: bestTokenDist(frag, norm(s.name_auction ?? s.name)) }))
+    .map((s) => ({ s, d: bestTokenDist(frag, norm(s.name_auction?.trim() || s.name)) }))
     .sort((a, b) => a.d - b.d);
   const best = ranked[0];
   if (best.d > TEAM_MAX_DIST) return null;
@@ -136,10 +136,12 @@ export function checkVoiceNameConflicts(
   squadre: Squadra[],
   threshold = 0.35,
 ): Array<{ a: string; b: string }> {
-  const entries = squadre.map((s) => ({
-    display: s.name_auction ?? s.name,
-    key: norm(s.name_auction ?? s.name),
-  }));
+  const entries = squadre
+    .map((s) => ({
+      display: s.name_auction?.trim() || s.name,
+      key: norm(s.name_auction?.trim() || s.name),
+    }))
+    .filter((e) => e.key !== "");
   const conflicts: Array<{ a: string; b: string }> = [];
   for (let i = 0; i < entries.length; i++) {
     for (let j = i + 1; j < entries.length; j++) {
@@ -244,7 +246,7 @@ export function parseIntent(
       const frag = tokens.slice(0, tokens.length - offset).join(" ");
       const team = fuzzyMatchTeam(frag, squadre);
       if (team) {
-        return { type: "bid", teamId: team.id, teamName: team.name_auction ?? team.name, amount };
+        return { type: "bid", teamId: team.id, teamName: team.name_auction?.trim() || team.name, amount };
       }
     }
   }
