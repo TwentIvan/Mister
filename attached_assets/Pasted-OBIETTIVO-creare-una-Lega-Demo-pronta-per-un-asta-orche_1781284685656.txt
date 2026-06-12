@@ -1,0 +1,43 @@
+OBIETTIVO: creare una "Lega Demo" pronta per un'asta orchestrata interamente dall'admin (nessun invito, nessun altro utente), e correggere il bug per cui i nomi voce digitati nel modal di avvio asta vengono scartati quando lo slot non ha una società.
+
+CONTESTO: nella lega attuale gli slot hanno societa_id = NULL, quindi in POST /auctions il blocco "Aggiorna nome_asta della società" salta gli update (if ft?.societaId). Risultato: squadre senza nome → il riconoscimento vocale non matcha → nessuna offerta inviata → "ultima offerta" mai aggiornata.
+
+STEP 1 — Crea la lega demo
+Recupera l'id dell'utente admin (lo stesso della lega esistente):
+SELECT admin_user_id FROM leagues WHERE id = 'league-juve';
+Poi crea una nuova lega chiamata "Lega Demo" con 6 squadre usando la stessa logica di POST /api/leagues (puoi farlo via API autenticato come admin, oppure via script/SQL replicando la transazione: lega + federazione auto + league_members admin + 6 slot fanta_teams). Annota il nuovo league_id.
+
+STEP 2 — Popola gli slot con società demo
+Per ciascuno dei 6 slot vuoti della Lega Demo, crea una società e collegala. Usa questi nomi, scelti per essere foneticamente ben distinti per il riconoscimento vocale:
+Mario, Luca, Anna, Paolo, Sara, Gigi
+Per ogni slot esegui (con id generati nel formato soc-XXXXXXXX):
+INSERT INTO societa (id, owner_user_id, name, name_auction) VALUES ('soc-...', '<ADMIN_USER_ID>', 'Team Mario', 'Mario');
+UPDATE fanta_teams SET societa_id = 'soc-...' WHERE id = '<SLOT_ID>' AND league_id = '<DEMO_LEAGUE_ID>';
+Lascia manager_user_id = NULL: l'admin può fare offerte per qualsiasi squadra (è già previsto nella route bid come "banditore live").
+NOTA: rispetta le colonne NOT NULL della tabella societa (es. jersey) usando gli stessi default della route POST /leagues/:leagueId/teams in artifacts/api-server/src/routes/fanta-teams.ts.
+
+STEP 3 — Fix del bug "nomi voce scartati" (vale anche per le leghe a inviti)
+In artifacts/api-server/src/routes/auctions.ts, route POST /auctions, blocco "Aggiorna nome_asta della società": quando lo slot NON ha società, invece di scartare il nome crea una società minimale al volo e collegala allo slot. Sostituisci la logica interna del map con:
+
+if (ft) {
+  if (ft.societaId) {
+    await db.update(societa).set({ nameAuction }).where(eq(societa.id, ft.societaId));
+  } else {
+    const socId = `soc-${nanoid(8)}`;
+    await db.insert(societa).values({
+      id: socId,
+      ownerUserId: req.user!.sub,
+      name: nameAuction,
+      nameAuction,
+    });
+    await db.update(fantaTeams).set({ societaId: socId }).where(eq(fantaTeams.id, teamId));
+  }
+}
+(mantieni il filter già presente che esclude i nomi vuoti)
+
+STEP 4 — Verifica end-to-end
+1. GET /api/leagues/<DEMO_LEAGUE_ID>/teams deve restituire 6 squadre con name e name_auction valorizzati.
+2. Avvia l'asta sulla Lega Demo dall'interfaccia.
+3. Verifica che il tabellone mostri i 6 nomi, che pronunciando "Mario venti" il campo in ascolto si valorizzi, l'offerta venga registrata e "ultima offerta" mostri Mario con 20.
+4. Verifica anche un'offerta via tasti +N per una squadra qualsiasi.
+Riportami l'esito di ogni punto. Non modificare nient'altro.

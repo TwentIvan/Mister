@@ -333,8 +333,19 @@ router.post("/auctions", async (req, res): Promise<void> => {
           .select({ societaId: fantaTeams.societaId })
           .from(fantaTeams)
           .where(and(eq(fantaTeams.id, teamId), eq(fantaTeams.leagueId, leagueId)));
-        if (ft?.societaId) {
-          await db.update(societa).set({ nameAuction }).where(eq(societa.id, ft.societaId));
+        if (ft) {
+          if (ft.societaId) {
+            await db.update(societa).set({ nameAuction }).where(eq(societa.id, ft.societaId));
+          } else {
+            const socId = `soc-${nanoid(8)}`;
+            await db.insert(societa).values({
+              id: socId,
+              ownerUserId: req.user!.sub,
+              name: nameAuction,
+              nameAuction,
+            });
+            await db.update(fantaTeams).set({ societaId: socId }).where(eq(fantaTeams.id, teamId));
+          }
         }
       })
     );
