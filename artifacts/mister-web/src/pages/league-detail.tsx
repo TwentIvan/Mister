@@ -8,6 +8,7 @@ import {
   useGetLeagueInvite, getGetLeagueInviteQueryKey,
 } from "@workspace/api-client-react";
 import { useCurrentUser } from "@/contexts/AuthContext";
+import { useEconomyConfig } from "@/lib/economy-api";
 import { useState, useMemo } from "react";
 import { AstaConfigModal } from "@/components/asta/AstaConfigModal";
 import { useParams, Link, useLocation } from "wouter";
@@ -23,10 +24,11 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
-import { Trophy, Users, Calendar, Activity, BookOpen, Gavel, ArrowLeft, Settings, Plus, Copy, Link2 } from "lucide-react";
+import { Trophy, Users, Calendar, Activity, BookOpen, Gavel, ArrowLeft, Settings, Plus, Copy, Link2, Wallet } from "lucide-react";
 
 export default function LeagueDetail() {
   const { id } = useParams<{ id: string }>();
+  const { data: economyConfig } = useEconomyConfig(id!);
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -200,6 +202,14 @@ export default function LeagueDetail() {
               Tutte le leghe
             </Button>
           </Link>
+          {economyConfig?.realMoneyEnabled && (
+            <Link href={`/leagues/${league.id}/cassa`}>
+              <Button variant="outline" className="gap-2 border-primary/20 text-primary">
+                <Wallet className="h-4 w-4" />
+                Cassa
+              </Button>
+            </Link>
+          )}
           {league.admin_user_id === "demo-user" && (
             <>
               <Link href={`/leagues/${league.id}/config`}>
