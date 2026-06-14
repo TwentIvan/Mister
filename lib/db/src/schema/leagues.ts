@@ -94,17 +94,64 @@ export interface PostAcquisitionWindow {
   defaultClauseAction: "leave_default" | "decline";
 }
 
+// ── Economy ──────────────────────────────────────────────────────────────────
+
+/**
+ * Regola di arrotondamento applicata ai calcoli della cassa.
+ * `precision` = numero di decimali (0 = solo interi).
+ */
+export interface RoundingRule {
+  mode: "floor" | "ceil" | "round";
+  precision: number;
+}
+
+/**
+ * Valvola di conversione crediti ↔ euro reale.
+ * Attiva solo se `realMoneyEnabled: true` e `enabled: true`.
+ */
+export interface ConversionValve {
+  enabled: boolean;
+  /** Quanti crediti FM equivalgono a 1 euro reale. */
+  rateCreditsPerEuro: number;
+  /** Tetto crediti acquistabili con euro reale per stagione. null = illimitato. */
+  maxCreditsPerSeason: number | null;
+}
+
+/** Configurazione del sottosistema cassa per una lega. */
+export interface EconomyConfig {
+  /** Se false, tutto il sottosistema è disabilitato (default). */
+  realMoneyEnabled: boolean;
+  /** Valuta predefinita per le transazioni della lega. */
+  defaultCurrency: "credits" | "euro";
+  roundingRule: RoundingRule;
+  conversionValve: ConversionValve;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 /** Aggregato di tutte le config "League-level" serializzate in JSONB. */
 export interface LeagueConfig {
   squad: SquadComposition;
   captain: CaptainRules;
   budget: BudgetRules;
   postAcquisitionWindow: PostAcquisitionWindow;
+  economy: EconomyConfig;
 }
 
 // ============================================================
 // DEFAULTS
 // ============================================================
+
+export const DEFAULT_ECONOMY_CONFIG: EconomyConfig = {
+  realMoneyEnabled: false,
+  defaultCurrency: "credits",
+  roundingRule: { mode: "floor", precision: 0 },
+  conversionValve: {
+    enabled: false,
+    rateCreditsPerEuro: 1,
+    maxCreditsPerSeason: null,
+  },
+};
 
 export const DEFAULT_LEAGUE_CONFIG: LeagueConfig = {
   squad: {
@@ -136,6 +183,7 @@ export const DEFAULT_LEAGUE_CONFIG: LeagueConfig = {
     defaultContractYears: 1,
     defaultClauseAction: "leave_default",
   },
+  economy: DEFAULT_ECONOMY_CONFIG,
 };
 
 // ============================================================

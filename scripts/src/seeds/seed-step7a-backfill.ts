@@ -20,6 +20,7 @@ import {
   auctions,
   contracts,
   DEFAULT_RULES,
+  DEFAULT_ECONOMY_CONFIG,
 } from "@workspace/db/schema";
 import { eq, count, isNotNull } from "drizzle-orm";
 import { randomBytes } from "crypto";
@@ -51,6 +52,7 @@ const MVP_CONFIG: LeagueConfig = {
     defaultContractYears: 1,
     defaultClauseAction: "leave_default",
   },
+  economy: DEFAULT_ECONOMY_CONFIG,
 };
 
 // Nome corto in asta per ogni fanta-team
