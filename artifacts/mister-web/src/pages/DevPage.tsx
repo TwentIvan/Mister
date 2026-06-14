@@ -32,6 +32,7 @@ const GROUPS: Group[] = [
       { path: `/leagues/${L}/config`,               label: `/leagues/${L}/config — Config lega` },
       { path: `/leagues/${L}/federation`,           label: `/leagues/${L}/federation — Federation rules` },
       { path: `/leagues/${L}/markets`,              label: `/leagues/${L}/markets — Mercati` },
+      { path: `/leagues/${L}/cassa`,                label: `/leagues/${L}/cassa — Cassa` },
     ],
   },
   {
