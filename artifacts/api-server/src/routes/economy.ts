@@ -248,6 +248,18 @@ const BalanceQuery = z.object({
   currency: z.enum(["fm", "eur"]),
 });
 
+// ── Lettura: config economy della lega (per gating e limiti UI) ───────────────
+
+router.get(
+  "/leagues/:leagueId/economy/config",
+  async (req, res): Promise<void> => {
+    const leagueId = req.params.leagueId;
+    if (!(await guardLeagueMember(req, res, leagueId))) return;
+    const econ = await getLeagueEconomy(leagueId);
+    res.json(econ);
+  },
+);
+
 router.get(
   "/leagues/:leagueId/economy/balance",
   async (req, res): Promise<void> => {

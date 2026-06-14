@@ -4,6 +4,7 @@ import { PlayersList } from "@/pages/players-list";
 import SetupLegaPage from "@/pages/SetupLegaPage";
 import LeagueDetail from "@/pages/league-detail";
 import LeagueConfig from "@/pages/league-config";
+import CassaPage from "@/pages/CassaPage";
 import FederationRules from "@/pages/federation";
 import CompetitionDetail from "@/pages/competition-detail";
 import MarketList from "@/pages/market-list";
@@ -89,6 +90,7 @@ function Router() {
               <Route path="/lega/nuova" component={SetupLegaPage} />
               <Route path="/leagues/:id" component={LeagueDetail} />
               <Route path="/leagues/:id/config" component={LeagueConfig} />
+              <Route path="/leagues/:id/cassa" component={CassaPage} />
               <Route path="/leagues/:id/federation" component={FederationRules} />
               <Route path="/leagues/:leagueId/competitions/:id" component={CompetitionDetail} />
               <Route path="/leagues/:id/markets" component={MarketList} />
