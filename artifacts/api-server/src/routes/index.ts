@@ -16,6 +16,7 @@ import matchesRouter from "./matches";
 import competitionMatchesRouter from "./competition-matches";
 import auctionsRouter from "./auctions";
 import feedRouter from "./feed";
+import economyRouter from "./economy";
 
 const router: IRouter = Router();
 
@@ -36,5 +37,6 @@ router.use(matchesRouter);
 router.use(competitionMatchesRouter);
 router.use(auctionsRouter);
 router.use(feedRouter);
+router.use(economyRouter);
 
 export default router;
