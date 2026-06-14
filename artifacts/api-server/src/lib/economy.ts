@@ -8,7 +8,7 @@
  * conversioni richiedono anche conversion.<valvola>.enabled.
  */
 
-import { and, eq, or } from "drizzle-orm";
+import { and, eq, or, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import {
   db,
@@ -50,6 +50,24 @@ export async function getLeagueEconomy(
     .where(eq(leagues.id, leagueId));
   const cfg = (lg?.config as Partial<LeagueConfig> | null) ?? null;
   return cfg?.economy ?? DEFAULT_ECONOMY_CONFIG;
+}
+
+/**
+ * Scrive la config economy di una lega, fondendola nel JSONB `config`
+ * (sostituisce solo la chiave `economy`, preserva squad/captain/budget/…).
+ */
+export async function updateLeagueEconomy(
+  leagueId: string,
+  economy: EconomyConfig,
+): Promise<EconomyConfig> {
+  const json = JSON.stringify({ economy });
+  await db
+    .update(leagues)
+    .set({
+      config: sql`COALESCE(${leagues.config}, '{}'::jsonb) || ${json}::jsonb`,
+    })
+    .where(eq(leagues.id, leagueId));
+  return economy;
 }
 
 // ── Saldi (derivati) ─────────────────────────────────────────────────────────

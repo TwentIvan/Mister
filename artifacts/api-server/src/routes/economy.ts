@@ -18,6 +18,7 @@ import { guardLeagueAdmin, guardLeagueMember } from "../lib/auth";
 import {
   acc,
   getLeagueEconomy,
+  updateLeagueEconomy,
   getAccountBalance,
   recordTransaction,
   setTransactionStatus,
@@ -257,6 +258,58 @@ router.get(
     if (!(await guardLeagueMember(req, res, leagueId))) return;
     const econ = await getLeagueEconomy(leagueId);
     res.json(econ);
+  },
+);
+
+const RoundingRuleSchema = z.enum(["round5_first_decimal", "standard", "none"]);
+const ConversionValveSchema = z.object({
+  enabled: z.boolean(),
+  fmToEur: z.number().positive(),
+  min: z.number().nonnegative(),
+  max: z.number().nullable(),
+  requiresApproval: z.boolean(),
+  rounding: RoundingRuleSchema,
+});
+const EconomyConfigSchema = z.object({
+  realMoneyEnabled: z.boolean(),
+  conversion: z.object({
+    depositIn: ConversionValveSchema,
+    cashOut: ConversionValveSchema,
+  }),
+  realAmounts: z.object({
+    initialFund: z.number(),
+    entryFees: z.object({
+      league: z.number(),
+      cup: z.number(),
+      supercup: z.number(),
+    }),
+    missedLineupFine: z.object({
+      amount: z.number(),
+      freeCount: z.number(),
+    }),
+    freeAgentCardCost: z.number(),
+    semiOwnerFee: z.number(),
+  }),
+  fmRules: z.object({
+    lostPlayerRefundFraction: z.number(),
+    rounding: RoundingRuleSchema,
+  }),
+});
+
+// ── Admin: salva la config economy della lega (attiva/configura la cassa) ──────
+
+router.put(
+  "/leagues/:leagueId/economy/config",
+  async (req, res): Promise<void> => {
+    const leagueId = req.params.leagueId;
+    if (!(await guardLeagueAdmin(req, res, leagueId))) return;
+    const body = EconomyConfigSchema.safeParse(req.body);
+    if (!body.success) {
+      res.status(400).json({ error: body.error.message });
+      return;
+    }
+    const updated = await updateLeagueEconomy(leagueId, body.data);
+    res.json(updated);
   },
 );
 

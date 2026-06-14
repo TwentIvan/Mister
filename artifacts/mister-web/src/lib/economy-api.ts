@@ -109,6 +109,21 @@ export function useRequestDeposit(leagueId: string) {
   });
 }
 
+export function useUpdateEconomyConfig(leagueId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (cfg: EconomyConfig) =>
+      customFetch<EconomyConfig>(`${apiBase(leagueId)}/config`, {
+        method: "PUT",
+        body: JSON.stringify(cfg),
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["economy", "config", leagueId] });
+      qc.invalidateQueries({ queryKey: ["economy", "balance", leagueId] });
+    },
+  });
+}
+
 export function useResolveTransaction(leagueId: string) {
   const qc = useQueryClient();
   return useMutation({

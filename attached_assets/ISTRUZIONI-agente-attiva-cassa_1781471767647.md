@@ -1,3 +1,144 @@
+# Istruzioni per l'agente Replit — attivazione cassa (impostazioni + endpoint)
+
+Aggiunge il comando per ATTIVARE e configurare la cassa: un endpoint admin per
+salvare la config economy, e un pannello "Impostazioni cassa" sulla pagina Cassa
+(visibile all'admin anche quando la cassa è spenta). Tutte aggiunte/edit; NIENTE
+modifiche al DB. Backend già typecheckato fuori dal repo; frontend da verificare
+col typecheck del progetto. Non committare/pushare: lascia nel working tree.
+
+---
+
+## 1) BACKEND — `artifacts/api-server/src/lib/economy.ts`
+
+### 1a) Import: aggiungi `sql`
+Sostituisci:
+```ts
+import { and, eq, or } from "drizzle-orm";
+```
+con:
+```ts
+import { and, eq, or, sql } from "drizzle-orm";
+```
+
+### 1b) Nuova funzione `updateLeagueEconomy`
+Individua la fine della funzione `getLeagueEconomy` (la riga `return cfg?.economy ?? DEFAULT_ECONOMY_CONFIG;` seguita da `}`). IMMEDIATAMENTE DOPO quella `}` di chiusura, inserisci:
+
+```ts
+/**
+ * Scrive la config economy di una lega, fondendola nel JSONB `config`
+ * (sostituisce solo la chiave `economy`, preserva squad/captain/budget/…).
+ */
+export async function updateLeagueEconomy(
+  leagueId: string,
+  economy: EconomyConfig,
+): Promise<EconomyConfig> {
+  const json = JSON.stringify({ economy });
+  await db
+    .update(leagues)
+    .set({
+      config: sql`COALESCE(${leagues.config}, '{}'::jsonb) || ${json}::jsonb`,
+    })
+    .where(eq(leagues.id, leagueId));
+  return economy;
+}
+```
+
+---
+
+## 2) BACKEND — `artifacts/api-server/src/routes/economy.ts`
+
+### 2a) Import: aggiungi `updateLeagueEconomy`
+Nel blocco di import da `"../lib/economy"`, dopo la riga `  getLeagueEconomy,` aggiungi una riga `  updateLeagueEconomy,` (subito prima di `  getAccountBalance,`).
+
+### 2b) Schema + endpoint PUT
+Individua l'handler GET della config (il blocco `router.get("/leagues/:leagueId/economy/config", ...)`). IMMEDIATAMENTE DOPO quel blocco (dopo la sua riga `);`), inserisci:
+
+```ts
+const RoundingRuleSchema = z.enum(["round5_first_decimal", "standard", "none"]);
+const ConversionValveSchema = z.object({
+  enabled: z.boolean(),
+  fmToEur: z.number().positive(),
+  min: z.number().nonnegative(),
+  max: z.number().nullable(),
+  requiresApproval: z.boolean(),
+  rounding: RoundingRuleSchema,
+});
+const EconomyConfigSchema = z.object({
+  realMoneyEnabled: z.boolean(),
+  conversion: z.object({
+    depositIn: ConversionValveSchema,
+    cashOut: ConversionValveSchema,
+  }),
+  realAmounts: z.object({
+    initialFund: z.number(),
+    entryFees: z.object({
+      league: z.number(),
+      cup: z.number(),
+      supercup: z.number(),
+    }),
+    missedLineupFine: z.object({
+      amount: z.number(),
+      freeCount: z.number(),
+    }),
+    freeAgentCardCost: z.number(),
+    semiOwnerFee: z.number(),
+  }),
+  fmRules: z.object({
+    lostPlayerRefundFraction: z.number(),
+    rounding: RoundingRuleSchema,
+  }),
+});
+
+// ── Admin: salva la config economy della lega (attiva/configura la cassa) ──────
+
+router.put(
+  "/leagues/:leagueId/economy/config",
+  async (req, res): Promise<void> => {
+    const leagueId = req.params.leagueId;
+    if (!(await guardLeagueAdmin(req, res, leagueId))) return;
+    const body = EconomyConfigSchema.safeParse(req.body);
+    if (!body.success) {
+      res.status(400).json({ error: body.error.message });
+      return;
+    }
+    const updated = await updateLeagueEconomy(leagueId, body.data);
+    res.json(updated);
+  },
+);
+```
+
+---
+
+## 3) FRONTEND — `artifacts/mister-web/src/lib/economy-api.ts`
+
+Aggiungi in fondo al file questo hook:
+
+```ts
+export function useUpdateEconomyConfig(leagueId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (cfg: EconomyConfig) =>
+      customFetch<EconomyConfig>(`${apiBase(leagueId)}/config`, {
+        method: "PUT",
+        body: JSON.stringify(cfg),
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["economy", "config", leagueId] });
+      qc.invalidateQueries({ queryKey: ["economy", "balance", leagueId] });
+    },
+  });
+}
+```
+
+---
+
+## 4) FRONTEND — sostituisci `artifacts/mister-web/src/pages/CassaPage.tsx`
+
+Sostituisci l'INTERO contenuto del file con esattamente questo (è la pagina
+attuale più il pannello "Impostazioni cassa" per l'admin e la ristrutturazione
+del gating perché l'admin veda le impostazioni anche a cassa spenta):
+
+```tsx
 import { useState, useEffect } from "react";
 import { useParams, Link } from "wouter";
 import { useGetLeague, useListFantaTeams } from "@workspace/api-client-react";
@@ -118,6 +259,7 @@ export default function CassaPage() {
     }
   }
 
+  // Aggiorna un campo della valvola depositIn nel draft.
   function patchDeposit(patch: Partial<EconomyConfig["conversion"]["depositIn"]>) {
     if (!draft) return;
     setDraft({
@@ -400,3 +542,14 @@ export default function CassaPage() {
     </div>
   );
 }
+```
+
+---
+
+## 5) Verifica
+- Typecheck/build di `@workspace/api-server` e `mister-web`: 0 errori.
+- Nessuna modifica al DB.
+- Aprendo `/leagues/<ID>/cassa` come admin compare il pannello "Impostazioni
+  cassa" con il toggle "Cassa reale attiva"; attivandolo e salvando, la cassa
+  diventa operativa per la lega.
+- NON committare e NON fare push.
