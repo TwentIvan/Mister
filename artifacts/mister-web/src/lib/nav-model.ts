@@ -1,11 +1,11 @@
 /**
- * Sorgente unica della navigazione (Stadio 1).
+ * Sorgente unica della navigazione.
  *
  * Definisce le voci di menu organizzate per "altitudine" (globale, federazione,
  * lega), filtrate per ruolo e per flag, con href costruiti dagli id reali.
- * NIENTE id cablati. Questo modulo non disegna nulla: gli stadi successivi
- * (sidebar desktop, bottom-bar mobile) consumano `useNavModel` per renderlo —
- * così una voce si aggiunge in un solo posto e compare ovunque.
+ * NIENTE id cablati. Questo modulo non disegna nulla: il guscio (sidebar
+ * desktop, bottom-bar mobile) consuma `useNavModel` per renderlo — così una
+ * voce si aggiunge in un solo posto e compare ovunque.
  *
  * Voci con route non ancora esistenti (es. Albo d'oro, Notifiche, Profilo,
  * Classifica di lega) NON sono incluse qui: si aggiungono quando avranno una
@@ -41,6 +41,7 @@ export interface NavContext {
   userId?: string | null;
   leagueId?: string | null;
   leagueAdminUserId?: string | null;
+  leagueName?: string | null;
   realMoneyEnabled?: boolean;
 }
 
@@ -48,6 +49,8 @@ export interface NavModel {
   global: NavItem[];
   federation: NavItem[];
   league: NavItem[];
+  /** Nome della lega corrente, per l'intestazione contestuale (null se fuori da una lega). */
+  leagueName: string | null;
 }
 
 /**
@@ -128,7 +131,12 @@ export function buildNavModel(ctx: NavContext): NavModel {
     }
   }
 
-  return { global, federation, league };
+  return {
+    global,
+    federation,
+    league,
+    leagueName: lid ? (ctx.leagueName ?? null) : null,
+  };
 }
 
 /**
@@ -147,6 +155,7 @@ export function useNavModel(leagueId?: string): NavModel {
     userId: user?.id ?? null,
     leagueId: leagueId ?? null,
     leagueAdminUserId: league?.admin_user_id ?? null,
+    leagueName: league?.name ?? null,
     realMoneyEnabled: econ?.realMoneyEnabled ?? false,
   });
 }
