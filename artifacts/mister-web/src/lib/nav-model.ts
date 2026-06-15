@@ -21,7 +21,7 @@ import {
   Settings,
   Shield,
 } from "lucide-react";
-import { useGetLeague } from "@workspace/api-client-react";
+import { useGetLeague, getGetLeagueQueryKey } from "@workspace/api-client-react";
 import { useCurrentUser } from "@/contexts/AuthContext";
 import { useEconomyConfig } from "@/lib/economy-api";
 
@@ -138,7 +138,9 @@ export function buildNavModel(ctx: NavContext): NavModel {
  */
 export function useNavModel(leagueId?: string): NavModel {
   const { user } = useCurrentUser();
-  const { data: league } = useGetLeague(leagueId ?? "");
+  const { data: league } = useGetLeague(leagueId ?? "", {
+    query: { enabled: !!leagueId, queryKey: getGetLeagueQueryKey(leagueId ?? "") },
+  });
   const { data: econ } = useEconomyConfig(leagueId ?? "");
 
   return buildNavModel({
