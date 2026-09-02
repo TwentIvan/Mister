@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { vlog } from "@/lib/voiceDebug";
 
 // ── Minimal Web Speech API types ─────────────────────────────────────────────
 interface SRAlternative { readonly transcript: string; readonly confidence: number; }
@@ -301,6 +302,9 @@ export function useVoiceBidder({
   const recRef          = useRef<SRRecognition | null>(null);
   const debounceRef     = useRef<{ key: string; ts: number } | null>(null);
   const interimTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // T131: testo interim in attesa del timer — serve solo a loggare COSA viene
+  // scartato quando il timer è cancellato (final/onend/stop/new_interim)
+  const pendingInterimRef = useRef<string | null>(null);
   const cbRef       = useRef({ onPlaceBid, onAggiudica, onSalta, onPausa, onRiprendi, squadre, svincolati, onChiama, onChiamaAmbiguous, onChiamaNotFound, onSeleziona });
 
   useEffect(() => {
@@ -318,11 +322,19 @@ export function useVoiceBidder({
     (text: string) => {
       const now  = Date.now();
       const nKey = norm(text);
+      vlog("dispatch_in", { text });
 
-      if (debounceRef.current?.key === nKey && now - debounceRef.current.ts < 1500) return;
+      if (debounceRef.current?.key === nKey && now - debounceRef.current.ts < 1500) {
+        vlog("drop_debounce", { text, msSincePrev: now - debounceRef.current.ts });
+        return;
+      }
 
       const intent = parseIntent(text, cbRef.current.squadre, cbRef.current.svincolati);
-      if (!intent) return;
+      if (!intent) {
+        vlog("drop_parse_null", { text });
+        return;
+      }
+      vlog("intent", intent);
 
       // Debounce key per evitare doppi dispatch
       debounceRef.current = { key: nKey, ts: now };
@@ -331,42 +343,57 @@ export function useVoiceBidder({
         case "chiama":
           if (cbRef.current.onChiama) {
             flash(`Chiamata: ${intent.playerName}`);
+            vlog("cb_fired", { type: "chiama" });
             cbRef.current.onChiama(intent.playerId);
+          } else {
+            vlog("drop_no_callback", { type: "chiama" });
           }
           break;
         case "chiama_ambiguous":
           if (cbRef.current.onChiamaAmbiguous) {
             flash(`Disambiguazione: ${intent.candidates.length} giocatori`);
+            vlog("cb_fired", { type: "chiama_ambiguous" });
             cbRef.current.onChiamaAmbiguous(intent.candidates);
+          } else {
+            vlog("drop_no_callback", { type: "chiama_ambiguous" });
           }
           break;
         case "chiama_notfound":
+          vlog(cbRef.current.onChiamaNotFound ? "cb_fired" : "drop_no_callback", { type: "chiama_notfound" });
           cbRef.current.onChiamaNotFound?.(intent.fragment);
           break;
         case "seleziona":
           if (cbRef.current.onSeleziona) {
             flash(`Selezione: ${intent.n}`);
+            vlog("cb_fired", { type: "seleziona" });
             cbRef.current.onSeleziona(intent.n);
+          } else {
+            vlog("drop_no_callback", { type: "seleziona" });
           }
           break;
         case "aggiudica":
           flash("Comando: aggiudicato");
+          vlog("cb_fired", { type: "aggiudica" });
           cbRef.current.onAggiudica();
           break;
         case "salta":
           flash("Comando: salta");
+          vlog("cb_fired", { type: "salta" });
           cbRef.current.onSalta();
           break;
         case "pausa":
           flash("Comando: pausa");
+          vlog("cb_fired", { type: "pausa" });
           cbRef.current.onPausa();
           break;
         case "riprendi":
           flash("Comando: riprendi");
+          vlog("cb_fired", { type: "riprendi" });
           cbRef.current.onRiprendi();
           break;
         case "bid":
           flash(`Offerta: ${intent.teamName} ${intent.amount}`);
+          vlog("cb_fired", { type: "bid", teamName: intent.teamName, amount: intent.amount });
           cbRef.current.onPlaceBid(intent.teamId, intent.amount);
           break;
       }
@@ -387,9 +414,14 @@ export function useVoiceBidder({
       let interim = "";
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const r = event.results[i];
+        vlog("sr_result", { transcript: r[0]?.transcript, isFinal: r.isFinal, confidence: r[0]?.confidence ?? null });
         if (r.isFinal) {
           // Risultato definitivo: cancella il timer interim e processa subito
-          if (interimTimerRef.current) { clearTimeout(interimTimerRef.current); interimTimerRef.current = null; }
+          if (interimTimerRef.current) {
+            clearTimeout(interimTimerRef.current); interimTimerRef.current = null;
+            vlog("interim_cleared", { by: "final", pendingText: pendingInterimRef.current });
+            pendingInterimRef.current = null;
+          }
           dispatch(r[0].transcript);
           setTranscript("");
         } else {
@@ -400,9 +432,16 @@ export function useVoiceBidder({
         setTranscript(interim);
         // Fallback: se isFinal non scatta mai (comportamento Replit preview),
         // processiamo il testo interim come finale dopo 600 ms di silenzio.
-        if (interimTimerRef.current) clearTimeout(interimTimerRef.current);
+        if (interimTimerRef.current) {
+          clearTimeout(interimTimerRef.current);
+          vlog("interim_cleared", { by: "new_interim", pendingText: pendingInterimRef.current });
+        }
+        pendingInterimRef.current = interim;
+        vlog("interim_timer_set", { text: interim });
         interimTimerRef.current = setTimeout(() => {
           interimTimerRef.current = null;
+          pendingInterimRef.current = null;
+          vlog("interim_timer_fired", { text: interim });
           dispatch(interim);
           setTranscript("");
         }, 600);
@@ -410,16 +449,26 @@ export function useVoiceBidder({
     };
 
     rec.onend = () => {
-      if (interimTimerRef.current) { clearTimeout(interimTimerRef.current); interimTimerRef.current = null; }
+      vlog("sr_end", { willRestart: isActiveRef.current });
+      if (interimTimerRef.current) {
+        clearTimeout(interimTimerRef.current); interimTimerRef.current = null;
+        // ⚠ Punto chiave H1: qui il testo interim pendente viene scartato senza dispatch
+        vlog("interim_cleared", { by: "onend", pendingText: pendingInterimRef.current });
+        pendingInterimRef.current = null;
+      }
       setTranscript("");
       if (isActiveRef.current) {
         setTimeout(() => {
-          if (isActiveRef.current) { try { rec.start(); } catch { /* già avviato */ } }
+          if (isActiveRef.current) {
+            try { rec.start(); vlog("sr_restart_ok"); }
+            catch (e) { vlog("sr_restart_err", { err: String(e) }); /* già avviato */ }
+          }
         }, 150);
       }
     };
 
     rec.onerror = (event: SRErrorEvent) => {
+      vlog("sr_error", { error: event.error });
       if (event.error === "not-allowed" || event.error === "service-not-allowed") {
         isActiveRef.current = false;
         setIsActive(false);
@@ -427,17 +476,31 @@ export function useVoiceBidder({
     };
 
     recRef.current = rec;
-    rec.start();
+    try { rec.start(); vlog("sr_start_ok"); }
+    catch (e) { vlog("sr_start_err", { err: String(e) }); throw e; }
   }, [dispatch]);
+
+  // T131: log di supporto una volta al mount
+  useEffect(() => {
+    vlog("sr_supported", { supported, userAgent: typeof navigator !== "undefined" ? navigator.userAgent : "?" });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const toggle = useCallback(() => {
     if (!supported) return;
     if (isActiveRef.current) {
+      vlog("toggle_off");
       isActiveRef.current = false;
       setIsActive(false);
       setTranscript("");
+      if (interimTimerRef.current) {
+        clearTimeout(interimTimerRef.current); interimTimerRef.current = null;
+        vlog("interim_cleared", { by: "stop", pendingText: pendingInterimRef.current });
+        pendingInterimRef.current = null;
+      }
       try { recRef.current?.stop(); } catch { /* ignore */ }
     } else {
+      vlog("toggle_on");
       isActiveRef.current = true;
       setIsActive(true);
       startRec();

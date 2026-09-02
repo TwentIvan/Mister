@@ -20,6 +20,8 @@ import { AstaHero } from "@/components/asta/AstaHero";
 import { TabelloneSquadre } from "@/components/asta/TabelloneSquadre";
 import { CorreggiPanel } from "@/components/asta/CorreggiPanel";
 import { useVoiceBidder } from "@/hooks/useVoiceBidder";
+import { vlog, vdebugEnabled } from "@/lib/voiceDebug";
+import { VoiceDebugPanel } from "@/components/asta/VoiceDebugPanel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -121,10 +123,12 @@ export default function AstaLivePage() {
         id: auctionId,
         data: { player_id: targetPlayerId, fanta_team_id: fantaTeamId, amount_fm: amountAbsoluto },
       });
+      vlog("api_ok", { teamId: fantaTeamId, amount: amountAbsoluto });
       // deadline_ts aggiornato via SSE; refetch come fallback
       refetch();
     } catch (err: unknown) {
       const body = (err as { data?: { error?: string } })?.data;
+      vlog("api_err", { status: (err as { status?: number })?.status ?? null, message: body?.error ?? String(err) });
       setBidError(body?.error ?? "Offerta non registrata. Riprova.");
     }
   };
@@ -689,6 +693,9 @@ export default function AstaLivePage() {
           onRefetch={() => void refetch()}
         />
       )}
+
+      {/* ── T131: pannello diagnostico voce (solo ?vdebug=1) ─────── */}
+      {vdebugEnabled() && <VoiceDebugPanel />}
     </div>
   );
 }
