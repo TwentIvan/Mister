@@ -21,6 +21,15 @@ export interface ParsedListoneRow {
   qtA: number | null;
   qtI: number | null;
   fvm: number | null;
+  /** "Fuori lista" (leghe.fantacalcio.it): giocatore uscito dalla Serie A */
+  fuoriLista: boolean;
+  /** Presenze a voto, media voto, fantamedia (se presenti nel file) */
+  pgv: number | null;
+  mv: number | null;
+  fm: number | null;
+  /** Stato rosa (leghe.fantacalcio.it): fantasquadra proprietaria e costo pagato */
+  rawFantaSquadra: string | null;
+  costo: number | null;
 }
 
 export interface ParseOutcome {
@@ -32,7 +41,14 @@ export interface ParseOutcome {
 }
 
 const clean = (c: Cell): string => String(c ?? "").trim();
-const lower = (c: Cell): string => clean(c).toLowerCase();
+
+/**
+ * Forma canonica di una cella header: minuscole, senza punti/spazi/slash.
+ * Copre le varianti reali: "Sq." → "sq", "R.MANTRA" → "rmantra",
+ * "Qt.A" → "qta", "FVM/1000" → "fvm1000", "QUOT." → "quot".
+ */
+const canonHeader = (c: Cell): string =>
+  clean(c).toLowerCase().replace(/[.\s/]/g, "");
 
 function toNum(c: Cell): number | null {
   if (c === null || c === undefined || c === "") return null;
@@ -41,15 +57,10 @@ function toNum(c: Cell): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-/** Individua l'indice di colonna per un campo, provando più intestazioni note. */
+/** Individua l'indice di colonna per un campo tra le intestazioni canoniche note. */
 function findCol(header: string[], names: string[]): number {
   for (const n of names) {
     const i = header.findIndex((h) => h === n);
-    if (i >= 0) return i;
-  }
-  // fallback: prefisso (copre "qt.a", "qt.a." e simili)
-  for (const n of names) {
-    const i = header.findIndex((h) => h.startsWith(n));
     if (i >= 0) return i;
   }
   return -1;
@@ -57,32 +68,42 @@ function findCol(header: string[], names: string[]): number {
 
 /**
  * Parsea la matrice di celle. Ritorna righe valide + scarti motivati.
- * Requisiti minimi per considerare una riga header: contiene "nome" e "squadra".
+ * Riconosce sia il formato "Quotazioni" di fantacalcio.it (Id|R|RM|Nome|
+ * Squadra|Qt.A|Qt.I|FVM) sia quello di leghe.fantacalcio.it
+ * (#|Nome|Fuori lista|Sq.|Under|R.|R.MANTRA|PGv|MV|FM|FVM/1000|QUOT.|
+ * FantaSquadra|Costo). Requisito minimo per la riga header: "nome" +
+ * una colonna squadra ("squadra" o "sq").
  */
 export function parseListoneRows(cells: readonly Cell[][]): ParseOutcome {
   // 1) trova la riga header
   let headerRowIndex = -1;
   for (let i = 0; i < Math.min(cells.length, 10); i++) {
-    const row = (cells[i] ?? []).map(lower);
-    if (row.includes("nome") && row.includes("squadra")) {
+    const row = (cells[i] ?? []).map(canonHeader);
+    if (row.includes("nome") && (row.includes("squadra") || row.includes("sq"))) {
       headerRowIndex = i;
       break;
     }
   }
   if (headerRowIndex < 0) {
-    return { rows: [], skipped: [{ rowIndex: -1, reason: "header non trovato (attese colonne Nome e Squadra)" }], headerRowIndex: null };
+    return { rows: [], skipped: [{ rowIndex: -1, reason: "header non trovato (attese colonne Nome e Squadra/Sq.)" }], headerRowIndex: null };
   }
 
-  const header = (cells[headerRowIndex] ?? []).map(lower);
+  const header = (cells[headerRowIndex] ?? []).map(canonHeader);
   const col = {
-    id:     findCol(header, ["id"]),
-    role:   findCol(header, ["r", "ruolo"]),
-    roleM:  findCol(header, ["rm", "ruolo mantra"]),
-    name:   findCol(header, ["nome"]),
-    team:   findCol(header, ["squadra"]),
-    qtA:    findCol(header, ["qt.a", "qt a", "qta", "qt. a"]),
-    qtI:    findCol(header, ["qt.i", "qt i", "qti", "qt. i"]),
-    fvm:    findCol(header, ["fvm"]),
+    id:       findCol(header, ["id", "#"]),
+    role:     findCol(header, ["r", "ruolo"]),
+    roleM:    findCol(header, ["rm", "rmantra", "ruolomantra"]),
+    name:     findCol(header, ["nome"]),
+    team:     findCol(header, ["squadra", "sq"]),
+    qtA:      findCol(header, ["qta", "quot", "quotazione"]),
+    qtI:      findCol(header, ["qti"]),
+    fvm:      findCol(header, ["fvm", "fvm1000"]),
+    fuori:    findCol(header, ["fuorilista"]),
+    pgv:      findCol(header, ["pgv"]),
+    mv:       findCol(header, ["mv"]),
+    fm:       findCol(header, ["fm"]),
+    fantaSq:  findCol(header, ["fantasquadra"]),
+    costo:    findCol(header, ["costo"]),
   };
 
   const rows: ParsedListoneRow[] = [];
@@ -102,6 +123,8 @@ export function parseListoneRows(cells: readonly Cell[][]): ParseOutcome {
       continue;
     }
 
+    const fuoriCell = col.fuori >= 0 ? clean(r[col.fuori]).toLowerCase() : "";
+
     rows.push({
       sourcePlayerId: col.id >= 0 ? toNum(r[col.id]) : null,
       rawName,
@@ -111,6 +134,12 @@ export function parseListoneRows(cells: readonly Cell[][]): ParseOutcome {
       qtA: col.qtA >= 0 ? toNum(r[col.qtA]) : null,
       qtI: col.qtI >= 0 ? toNum(r[col.qtI]) : null,
       fvm: col.fvm >= 0 ? toNum(r[col.fvm]) : null,
+      fuoriLista: fuoriCell !== "" && fuoriCell !== "no" && fuoriCell !== "0" && fuoriCell !== "false",
+      pgv: col.pgv >= 0 ? toNum(r[col.pgv]) : null,
+      mv: col.mv >= 0 ? toNum(r[col.mv]) : null,
+      fm: col.fm >= 0 ? toNum(r[col.fm]) : null,
+      rawFantaSquadra: col.fantaSq >= 0 && clean(r[col.fantaSq]) ? clean(r[col.fantaSq]) : null,
+      costo: col.costo >= 0 ? toNum(r[col.costo]) : null,
     });
   }
 

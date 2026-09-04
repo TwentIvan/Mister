@@ -21,6 +21,7 @@ import {
   text,
   integer,
   real,
+  boolean,
   serial,
   timestamp,
   uniqueIndex,
@@ -108,12 +109,23 @@ export const listoneEntries = pgTable(
     /** Ruoli Mantra della fonte, stringa grezza es. "Dd;E" o "W/T" */
     rawRolesMantra: text("raw_roles_mantra"),
 
-    /** Quotazione attuale (Qt.A) — la colonna usata come prezzo base d'asta */
+    /** Quotazione attuale (Qt.A / QUOT.) — la colonna usata come prezzo base d'asta */
     qtA: real("qt_a"),
-    /** Quotazione iniziale di stagione (Qt.I) */
+    /** Quotazione iniziale di stagione (Qt.I), assente nel formato leghe */
     qtI: real("qt_i"),
     /** FVM (Fantavalore di mercato), scala /1000 della fonte */
     fvm: real("fvm"),
+
+    /** "Fuori lista": giocatore uscito dalla Serie A ma ancora nel file */
+    fuoriLista: boolean("fuori_lista").notNull().default(false),
+    /** Presenze a voto / media voto / fantamedia (formato leghe) */
+    pgv: real("pgv"),
+    mv: real("mv"),
+    fm: real("fm"),
+    /** Stato rosa nella lega di origine: nome fantasquadra e costo pagato.
+     *  È il ponte per l'import rose (T152): qui restano dati GREZZI. */
+    rawFantaSquadra: text("raw_fanta_squadra"),
+    costo: real("costo"),
 
     // ── Esito matching ──────────────────────────────────────
     matchedPlayerId: integer("matched_player_id").references(() => players.id),

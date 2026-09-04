@@ -1780,6 +1780,20 @@ components:
         fvm:
           type: number
           nullable: true
+        fuori_lista:
+          type: boolean
+        mv:
+          type: number
+          nullable: true
+        fm:
+          type: number
+          nullable: true
+        fanta_squadra:
+          type: string
+          nullable: true
+        costo:
+          type: number
+          nullable: true
         matched_player_id:
           type: integer
           nullable: true

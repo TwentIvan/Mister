@@ -159,4 +159,44 @@ describe("parseListoneRows", () => {
     expect(out.rows).toHaveLength(0);
     expect(out.headerRowIndex).toBeNull();
   });
+
+  it("formato leghe.fantacalcio.it: header reale con #, Sq., R., R.MANTRA, QUOT., FVM/1000, FantaSquadra, Costo", () => {
+    const out = parseListoneRows([
+      ["#", "Nome", "Fuori lista", "Sq.", "Under", "R.", "R.MANTRA", "PGv", "MV", "FM", "FVM/1000", "QUOT.", "FantaSquadra", "Costo"],
+      [2764, "Martinez L.", null, "Inter", 29, "A", "Pc", 2, 5.75, 5.5, 144, 33, null, null],
+      [6875, "Paz N.", null, "Como", 22, "C", "T/A", 2, 5.75, 5.75, 98, 29, "Ardilio's", 45],
+    ]);
+    expect(out.headerRowIndex).toBe(0);
+    expect(out.rows).toHaveLength(2);
+    expect(out.rows[0]).toMatchObject({
+      sourcePlayerId: 2764,
+      rawName: "Martinez L.",
+      rawTeam: "Inter",
+      rawRoleClassic: "A",
+      rawRolesMantra: "Pc",
+      qtA: 33,
+      qtI: null,
+      fvm: 144,
+      fuoriLista: false,
+      mv: 5.75,
+      fm: 5.5,
+      rawFantaSquadra: null,
+      costo: null,
+    });
+    expect(out.rows[1]).toMatchObject({
+      rawFantaSquadra: "Ardilio's",
+      costo: 45,
+      rawRolesMantra: "T/A",
+    });
+  });
+
+  it("'Fuori lista' valorizzato → flag true", () => {
+    const out = parseListoneRows([
+      ["#", "Nome", "Fuori lista", "Sq.", "R.", "QUOT."],
+      [1, "Partente", "*", "Roma", "D", 5],
+      [2, "Restante", null, "Roma", "D", 5],
+    ]);
+    expect(out.rows[0]!.fuoriLista).toBe(true);
+    expect(out.rows[1]!.fuoriLista).toBe(false);
+  });
 });

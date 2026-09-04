@@ -61,6 +61,11 @@ export interface ListoneEntry {
   qt_a?: number | null;
   qt_i?: number | null;
   fvm?: number | null;
+  fuori_lista?: boolean;
+  mv?: number | null;
+  fm?: number | null;
+  fanta_squadra?: string | null;
+  costo?: number | null;
   matched_player_id?: number | null;
   matched_player_name?: string | null;
   match_method: ListoneEntryMatchMethod;
