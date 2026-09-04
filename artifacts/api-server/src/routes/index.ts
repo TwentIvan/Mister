@@ -17,6 +17,7 @@ import competitionMatchesRouter from "./competition-matches";
 import auctionsRouter from "./auctions";
 import feedRouter from "./feed";
 import economyRouter from "./economy";
+import listoniRouter from "./listoni";
 
 const router: IRouter = Router();
 
@@ -38,5 +39,6 @@ router.use(competitionMatchesRouter);
 router.use(auctionsRouter);
 router.use(feedRouter);
 router.use(economyRouter);
+router.use(listoniRouter);
 
 export default router;

@@ -61,6 +61,7 @@ import type {
   GetPlayerSchedaParams,
   GetRosterParams,
   HealthStatus,
+  ImportListoneParams,
   JoinLeagueRequest,
   JoinLeagueResponse,
   League,
@@ -74,9 +75,13 @@ import type {
   LineupInput,
   ListFederationsParams,
   ListLeaguesParams,
+  ListListoneEntriesParams,
   ListPlayersParams,
   ListTemplatesParams,
   ListVotoAlgorithmConfigsParams,
+  ListoneEntryList,
+  ListoneImportResult,
+  ListoneList,
   ManualAddBody,
   ManualChangeResponse,
   ManualRemoveBody,
@@ -113,6 +118,251 @@ type AwaitedInput<T> = PromiseLike<T> | T;
 
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
+
+
+
+export const getImportListoneUrl = (params: ImportListoneParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/listoni/import?${stringifiedParams}` : `/api/listoni/import`
+}
+
+/**
+ * @summary Importa un listone quotazioni (xlsx fantacalcio.it) e lancia il matching
+ */
+export const importListone = async (importListoneBody: Blob,
+    params: ImportListoneParams, options?: RequestInit): Promise<ListoneImportResult> => {
+
+  return customFetch<ListoneImportResult>(getImportListoneUrl(params),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/octet-stream', ...options?.headers },
+    body: JSON.stringify(
+      importListoneBody,)
+  }
+);}
+
+
+
+
+export const getImportListoneMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof importListone>>, TError,{data: BodyType<Blob>;params: ImportListoneParams}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof importListone>>, TError,{data: BodyType<Blob>;params: ImportListoneParams}, TContext> => {
+
+const mutationKey = ['importListone'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof importListone>>, {data: BodyType<Blob>;params: ImportListoneParams}> = (props) => {
+          const {data,params} = props ?? {};
+
+          return  importListone(data,params,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ImportListoneMutationResult = NonNullable<Awaited<ReturnType<typeof importListone>>>
+    export type ImportListoneMutationBody = BodyType<Blob>
+    export type ImportListoneMutationError = ErrorType<void>
+
+    /**
+ * @summary Importa un listone quotazioni (xlsx fantacalcio.it) e lancia il matching
+ */
+export const useImportListone = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof importListone>>, TError,{data: BodyType<Blob>;params: ImportListoneParams}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof importListone>>,
+        TError,
+        {data: BodyType<Blob>;params: ImportListoneParams},
+        TContext
+      > => {
+      return useMutation(getImportListoneMutationOptions(options));
+    }
+
+export const getListListoniUrl = () => {
+
+
+
+
+  return `/api/listoni`
+}
+
+/**
+ * @summary Elenco dei listoni importati con conteggi di matching
+ */
+export const listListoni = async ( options?: RequestInit): Promise<ListoneList> => {
+
+  return customFetch<ListoneList>(getListListoniUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListListoniQueryKey = () => {
+    return [
+    `/api/listoni`
+    ] as const;
+    }
+
+
+export const getListListoniQueryOptions = <TData = Awaited<ReturnType<typeof listListoni>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listListoni>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListListoniQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listListoni>>> = ({ signal }) => listListoni({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listListoni>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListListoniQueryResult = NonNullable<Awaited<ReturnType<typeof listListoni>>>
+export type ListListoniQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Elenco dei listoni importati con conteggi di matching
+ */
+
+export function useListListoni<TData = Awaited<ReturnType<typeof listListoni>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listListoni>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListListoniQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getListListoneEntriesUrl = (id: number,
+    params?: ListListoneEntriesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/listoni/${id}/entries?${stringifiedParams}` : `/api/listoni/${id}/entries`
+}
+
+/**
+ * @summary Entry di un listone, filtrabili per metodo di match (riconciliazione)
+ */
+export const listListoneEntries = async (id: number,
+    params?: ListListoneEntriesParams, options?: RequestInit): Promise<ListoneEntryList> => {
+
+  return customFetch<ListoneEntryList>(getListListoneEntriesUrl(id,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListListoneEntriesQueryKey = (id: number,
+    params?: ListListoneEntriesParams,) => {
+    return [
+    `/api/listoni/${id}/entries`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListListoneEntriesQueryOptions = <TData = Awaited<ReturnType<typeof listListoneEntries>>, TError = ErrorType<void>>(id: number,
+    params?: ListListoneEntriesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listListoneEntries>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListListoneEntriesQueryKey(id,params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listListoneEntries>>> = ({ signal }) => listListoneEntries(id,params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listListoneEntries>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListListoneEntriesQueryResult = NonNullable<Awaited<ReturnType<typeof listListoneEntries>>>
+export type ListListoneEntriesQueryError = ErrorType<void>
+
+
+/**
+ * @summary Entry di un listone, filtrabili per metodo di match (riconciliazione)
+ */
+
+export function useListListoneEntries<TData = Awaited<ReturnType<typeof listListoneEntries>>, TError = ErrorType<void>>(
+ id: number,
+    params?: ListListoneEntriesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listListoneEntries>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListListoneEntriesQueryOptions(id,params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
 
 
 

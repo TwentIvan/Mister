@@ -36,6 +36,99 @@ tags:
     description: Aste live
 
 paths:
+  # ─── LISTONI (quotazioni importate) ──────────────────────────────────────
+  /listoni/import:
+    post:
+      operationId: importListone
+      tags: [listoni]
+      summary: Importa un listone quotazioni (xlsx fantacalcio.it) e lancia il matching
+      parameters:
+        - in: query
+          name: season
+          schema:
+            type: string
+          required: true
+          description: Stagione, es. "2026-27"
+        - in: query
+          name: label
+          schema:
+            type: string
+          required: true
+          description: Etichetta del batch, es. "Quotazioni 4 agosto"
+        - in: query
+          name: fileName
+          schema:
+            type: string
+          required: false
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+      responses:
+        "201":
+          description: Listone importato con report di matching
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListoneImportResult"
+        "400":
+          description: File non parsabile o parametri mancanti
+
+  /listoni:
+    get:
+      operationId: listListoni
+      tags: [listoni]
+      summary: Elenco dei listoni importati con conteggi di matching
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListoneList"
+
+  /listoni/{id}/entries:
+    get:
+      operationId: listListoneEntries
+      tags: [listoni]
+      summary: Entry di un listone, filtrabili per metodo di match (riconciliazione)
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
+        - in: query
+          name: method
+          schema:
+            type: string
+            enum: [exact, normalized, fuzzy, manual, none, excluded]
+          required: false
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 100
+          required: false
+        - in: query
+          name: offset
+          schema:
+            type: integer
+            default: 0
+          required: false
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListoneEntryList"
+        "404":
+          description: Listone inesistente
+
   # ─── FEED ─────────────────────────────────────────────────────────────────
   /feed:
     get:
@@ -1599,6 +1692,120 @@ components:
         type: string
 
   schemas:
+    ListoneImportResult:
+      type: object
+      required: [listone_id, report, skipped]
+      properties:
+        listone_id:
+          type: integer
+        report:
+          $ref: "#/components/schemas/ListoneMatchReport"
+        skipped:
+          type: array
+          items:
+            type: object
+            required: [rowIndex, reason]
+            properties:
+              rowIndex:
+                type: integer
+              reason:
+                type: string
+    ListoneMatchReport:
+      type: object
+      required: [total, exact, normalized, fuzzy, none]
+      properties:
+        total:
+          type: integer
+        exact:
+          type: integer
+        normalized:
+          type: integer
+        fuzzy:
+          type: integer
+        none:
+          type: integer
+    ListoneSummary:
+      type: object
+      required: [id, season, source, label, created_at, report]
+      properties:
+        id:
+          type: integer
+        season:
+          type: string
+        source:
+          type: string
+        label:
+          type: string
+        file_name:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+        report:
+          $ref: "#/components/schemas/ListoneMatchReport"
+    ListoneList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ListoneSummary"
+    ListoneEntry:
+      type: object
+      required: [id, listone_id, raw_name, raw_team, raw_role_classic, match_method]
+      properties:
+        id:
+          type: integer
+        listone_id:
+          type: integer
+        source_player_id:
+          type: integer
+          nullable: true
+        raw_name:
+          type: string
+        raw_team:
+          type: string
+        raw_role_classic:
+          type: string
+        raw_roles_mantra:
+          type: string
+          nullable: true
+        qt_a:
+          type: number
+          nullable: true
+        qt_i:
+          type: number
+          nullable: true
+        fvm:
+          type: number
+          nullable: true
+        matched_player_id:
+          type: integer
+          nullable: true
+        matched_player_name:
+          type: string
+          nullable: true
+        match_method:
+          type: string
+          enum: [exact, normalized, fuzzy, manual, none, excluded]
+        match_confidence:
+          type: number
+          nullable: true
+    ListoneEntryList:
+      type: object
+      required: [items, total, limit, offset]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ListoneEntry"
+        total:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
     HealthStatus:
       type: object
       required: [status]

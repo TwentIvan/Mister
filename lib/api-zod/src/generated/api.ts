@@ -9,6 +9,77 @@ import * as zod from 'zod';
 
 
 /**
+ * @summary Importa un listone quotazioni (xlsx fantacalcio.it) e lancia il matching
+ */
+export const ImportListoneQueryParams = zod.object({
+  "season": zod.coerce.string().describe('Stagione, es. \"2026-27\"'),
+  "label": zod.coerce.string().describe('Etichetta del batch, es. \"Quotazioni 4 agosto\"'),
+  "fileName": zod.coerce.string().optional()
+})
+
+
+/**
+ * @summary Elenco dei listoni importati con conteggi di matching
+ */
+export const ListListoniResponse = zod.object({
+  "items": zod.array(zod.object({
+  "id": zod.number(),
+  "season": zod.string(),
+  "source": zod.string(),
+  "label": zod.string(),
+  "file_name": zod.string().nullish(),
+  "created_at": zod.string(),
+  "report": zod.object({
+  "total": zod.number(),
+  "exact": zod.number(),
+  "normalized": zod.number(),
+  "fuzzy": zod.number(),
+  "none": zod.number()
+})
+}))
+})
+
+
+/**
+ * @summary Entry di un listone, filtrabili per metodo di match (riconciliazione)
+ */
+export const ListListoneEntriesParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const listListoneEntriesQueryLimitDefault = 100;
+export const listListoneEntriesQueryOffsetDefault = 0;
+
+export const ListListoneEntriesQueryParams = zod.object({
+  "method": zod.enum(['exact', 'normalized', 'fuzzy', 'manual', 'none', 'excluded']).optional(),
+  "limit": zod.coerce.number().default(listListoneEntriesQueryLimitDefault),
+  "offset": zod.coerce.number().default(listListoneEntriesQueryOffsetDefault)
+})
+
+export const ListListoneEntriesResponse = zod.object({
+  "items": zod.array(zod.object({
+  "id": zod.number(),
+  "listone_id": zod.number(),
+  "source_player_id": zod.number().nullish(),
+  "raw_name": zod.string(),
+  "raw_team": zod.string(),
+  "raw_role_classic": zod.string(),
+  "raw_roles_mantra": zod.string().nullish(),
+  "qt_a": zod.number().nullish(),
+  "qt_i": zod.number().nullish(),
+  "fvm": zod.number().nullish(),
+  "matched_player_id": zod.number().nullish(),
+  "matched_player_name": zod.string().nullish(),
+  "match_method": zod.enum(['exact', 'normalized', 'fuzzy', 'manual', 'none', 'excluded']),
+  "match_confidence": zod.number().nullish()
+})),
+  "total": zod.number(),
+  "limit": zod.number(),
+  "offset": zod.number()
+})
+
+
+/**
  * @summary Feed eventi della lega (risultati, colpi, ecc.)
  */
 export const getFeedQueryLimitDefault = 20;

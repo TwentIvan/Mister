@@ -5,6 +5,75 @@
  * Mister — il fantacalcio manageriale
  * OpenAPI spec version: 0.1.0
  */
+export type ListoneImportResultSkippedItem = {
+  rowIndex: number;
+  reason: string;
+};
+
+export interface ListoneMatchReport {
+  total: number;
+  exact: number;
+  normalized: number;
+  fuzzy: number;
+  none: number;
+}
+
+export interface ListoneImportResult {
+  listone_id: number;
+  report: ListoneMatchReport;
+  skipped: ListoneImportResultSkippedItem[];
+}
+
+export interface ListoneSummary {
+  id: number;
+  season: string;
+  source: string;
+  label: string;
+  file_name?: string | null;
+  created_at: string;
+  report: ListoneMatchReport;
+}
+
+export interface ListoneList {
+  items: ListoneSummary[];
+}
+
+export type ListoneEntryMatchMethod = typeof ListoneEntryMatchMethod[keyof typeof ListoneEntryMatchMethod];
+
+
+export const ListoneEntryMatchMethod = {
+  exact: 'exact',
+  normalized: 'normalized',
+  fuzzy: 'fuzzy',
+  manual: 'manual',
+  none: 'none',
+  excluded: 'excluded',
+} as const;
+
+export interface ListoneEntry {
+  id: number;
+  listone_id: number;
+  source_player_id?: number | null;
+  raw_name: string;
+  raw_team: string;
+  raw_role_classic: string;
+  raw_roles_mantra?: string | null;
+  qt_a?: number | null;
+  qt_i?: number | null;
+  fvm?: number | null;
+  matched_player_id?: number | null;
+  matched_player_name?: string | null;
+  match_method: ListoneEntryMatchMethod;
+  match_confidence?: number | null;
+}
+
+export interface ListoneEntryList {
+  items: ListoneEntry[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
 export interface HealthStatus {
   status: string;
 }
@@ -1856,6 +1925,36 @@ export interface PlayerScheda {
   storicoLega: PlayerSchedaStorico[];
   noteDataset?: string | null;
 }
+
+export type ImportListoneParams = {
+/**
+ * Stagione, es. "2026-27"
+ */
+season: string;
+/**
+ * Etichetta del batch, es. "Quotazioni 4 agosto"
+ */
+label: string;
+fileName?: string;
+};
+
+export type ListListoneEntriesParams = {
+method?: ListListoneEntriesMethod;
+limit?: number;
+offset?: number;
+};
+
+export type ListListoneEntriesMethod = typeof ListListoneEntriesMethod[keyof typeof ListListoneEntriesMethod];
+
+
+export const ListListoneEntriesMethod = {
+  exact: 'exact',
+  normalized: 'normalized',
+  fuzzy: 'fuzzy',
+  manual: 'manual',
+  none: 'none',
+  excluded: 'excluded',
+} as const;
 
 export type GetFeedParams = {
 /**
