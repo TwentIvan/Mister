@@ -122,7 +122,7 @@ export default function ListoniPage() {
     setFile(f);
     if (f && !label) {
       // etichetta di default dal nome file, senza estensione
-      setLabel(f.name.replace(/\.(xlsx|xls)$/i, "").slice(0, 80));
+      setLabel(f.name.replace(/\.(xlsx|xls|csv)$/i, "").slice(0, 80));
     }
   };
 
@@ -155,7 +155,7 @@ export default function ListoniPage() {
       <div>
         <h1 className="font-serif text-2xl font-bold">Listoni</h1>
         <p className="text-sm text-muted-foreground">
-          Importa le quotazioni esportate da leghe.fantacalcio.it (lista calciatori) o da fantacalcio.it (quotazioni).
+          Importa le quotazioni esportate da leghe.fantacalcio.it (lista calciatori xlsx o csv fantaasta) o da fantacalcio.it (quotazioni).
         </p>
       </div>
 
@@ -181,13 +181,13 @@ export default function ListoniPage() {
               <p className="font-medium">{file.name}</p>
             ) : (
               <p className="text-sm text-muted-foreground">
-                Trascina qui il file xlsx, o clicca per sceglierlo
+                Trascina qui il file (xlsx o csv), o clicca per sceglierlo
               </p>
             )}
             <input
               ref={inputRef}
               type="file"
-              accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+              accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv"
               className="hidden"
               onChange={(e) => pickFile(e.target.files?.[0] ?? null)}
             />

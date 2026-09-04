@@ -20,7 +20,8 @@ import ExcelJS from "exceljs";
 import { db } from "@workspace/db";
 import { listoni, listoneEntries, playersTable } from "@workspace/db";
 import {
-  parseListoneRows,
+  parseAnyListone,
+  csvToCells,
   matchBatch,
   type Cell,
   type CandidatePlayer,
@@ -85,24 +86,36 @@ router.post(
       return;
     }
 
-    // 1) Parsing del file
+    // 1) Parsing del file — sniffing del formato: un xlsx è uno zip e inizia
+    //    con i byte "PK"; tutto il resto è trattato come CSV testuale.
+    const body = req.body as Buffer;
+    const isXlsx = body.length > 1 && body[0] === 0x50 && body[1] === 0x4b;
+
     let cells: Cell[][];
-    try {
-      const wb = new ExcelJS.Workbook();
-      await wb.xlsx.load(req.body as unknown as ArrayBuffer);
-      const ws = wb.worksheets[0];
-      if (!ws) {
-        res.status(400).json({ error: "Il file non contiene fogli" });
+    if (isXlsx) {
+      try {
+        const wb = new ExcelJS.Workbook();
+        await wb.xlsx.load(body as unknown as ArrayBuffer);
+        const ws = wb.worksheets[0];
+        if (!ws) {
+          res.status(400).json({ error: "Il file non contiene fogli" });
+          return;
+        }
+        cells = worksheetToCells(ws);
+      } catch (e) {
+        req.log.warn({ err: String(e) }, "listone: xlsx non parsabile");
+        res.status(400).json({ error: "File non parsabile: atteso un xlsx valido" });
         return;
       }
-      cells = worksheetToCells(ws);
-    } catch (e) {
-      req.log.warn({ err: String(e) }, "listone: xlsx non parsabile");
-      res.status(400).json({ error: "File non parsabile: atteso un xlsx valido" });
-      return;
+    } else {
+      const text = body.toString("utf8");
+      // separatore: virgola di default, punto e virgola se domina la prima riga
+      const firstLine = text.slice(0, text.indexOf("\n") + 1 || text.length);
+      const sep = (firstLine.match(/;/g)?.length ?? 0) > (firstLine.match(/,/g)?.length ?? 0) ? ";" : ",";
+      cells = csvToCells(text, sep);
     }
 
-    const outcome = parseListoneRows(cells);
+    const outcome = parseAnyListone(cells);
     if (outcome.rows.length === 0) {
       res.status(400).json({
         error: "Nessuna riga valida nel file",
@@ -168,7 +181,7 @@ router.post(
       return batch!.id;
     });
 
-    req.log.info({ listoneId, report }, "listone importato");
+    req.log.info({ listoneId, report, format: outcome.format }, "listone importato");
     // Convenzione della casa: le 201 rispondono senza zod-parse (orval genera
     // gli schemi zod solo per le 200); la shape è comunque quella della spec.
     res.status(201).json({

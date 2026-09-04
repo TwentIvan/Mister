@@ -200,3 +200,37 @@ describe("parseListoneRows", () => {
     expect(out.rows[1]!.fuoriLista).toBe(false);
   });
 });
+
+describe("parseFantaastaRows / parseAnyListone", () => {
+  it("tracciato fantaasta reale (posizionale, senza header)", async () => {
+    const { parseAnyListone, csvToCells } = await import("../fantaasta");
+    const csv = [
+      "3,Radunovic,Radunovic,P,POR,1,1,1,1,Cagliari,3,3,,,,https://x/3.png,0,0,0,0,30,21",
+      "133,Skorupski,Skorupski,P,POR,10,10,10,10,Bologna,33,33,,,,https://x/133.png,0,5.5,4.5,2,35,21",
+    ].join("\n");
+    const out = parseAnyListone(csvToCells(csv));
+    expect(out.format).toBe("fantaasta");
+    expect(out.rows).toHaveLength(2);
+    expect(out.rows[1]).toMatchObject({
+      sourcePlayerId: 133,
+      rawName: "Skorupski",
+      rawTeam: "Bologna",
+      rawRoleClassic: "P",
+      rawRolesMantra: "POR",
+      qtA: 10,
+      qtI: 10,
+      fvm: 33,
+      mv: 5.5,
+      fm: 4.5,
+      pgv: 2,
+    });
+  });
+
+  it("csv CON header → passa dal parser a intestazioni", async () => {
+    const { parseAnyListone, csvToCells } = await import("../fantaasta");
+    const csv = ["#,Nome,Sq.,R.,QUOT.", "1,Svilar,Roma,P,18"].join("\n");
+    const out = parseAnyListone(csvToCells(csv));
+    expect(out.format).toBe("header");
+    expect(out.rows[0]).toMatchObject({ rawName: "Svilar", qtA: 18 });
+  });
+});
