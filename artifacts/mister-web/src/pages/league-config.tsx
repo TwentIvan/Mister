@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useListListoni } from "@workspace/api-client-react";
 import { Badge } from "@/components/ui/badge";
 import {
   Settings, Users, Eye, Bell, Clock, Gavel, Shield,
@@ -298,6 +299,7 @@ export default function LeagueConfig() {
       roster_c: league.roster_c ?? undefined,
       roster_a: league.roster_a ?? undefined,
       auction_mode: (league.auction_mode as LeagueUpdate["auction_mode"]) ?? undefined,
+      price_source_listone_id: league.price_source_listone_id ?? null,
       post_acquisition_window: league.post_acquisition_window
         ? {
             enabled: league.post_acquisition_window.enabled,
@@ -486,6 +488,16 @@ export default function LeagueConfig() {
                   min={3} max={30}
                   data-testid="input-config-timer"
                 />
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground mb-2 block">Sorgente prezzi asta</Label>
+                <PriceSourceSelect
+                  value={formData.price_source_listone_id ?? null}
+                  onChange={v => patch("price_source_listone_id", v)}
+                />
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Con un listone selezionato, il pool d'asta sono i suoi giocatori matchati e la base d'asta è la quotazione (Qt.A).
+                </p>
               </div>
               <div>
                 <Label className="text-xs text-muted-foreground mb-2 block">Composizione rosa</Label>
@@ -799,5 +811,32 @@ export default function LeagueConfig() {
         </TabsContent>
       </Tabs>
     </div>
+  );
+}
+
+
+// ─── Sorgente prezzi asta (T151): anagrafica o listone importato ──────────────
+
+function PriceSourceSelect({ value, onChange }: { value: number | null; onChange: (v: number | null) => void }) {
+  const { data, isLoading } = useListListoni();
+  const items = data?.items ?? [];
+  return (
+    <Select
+      value={value === null ? "anagrafica" : String(value)}
+      onValueChange={v => onChange(v === "anagrafica" ? null : Number(v))}
+      disabled={isLoading}
+    >
+      <SelectTrigger data-testid="select-price-source">
+        <SelectValue placeholder="Anagrafica completa" />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="anagrafica">Anagrafica completa (storico)</SelectItem>
+        {items.map(l => (
+          <SelectItem key={l.id} value={String(l.id)}>
+            {l.label} — {l.season} ({l.report.total - l.report.none} matchati)
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }

@@ -169,6 +169,13 @@ export interface LeagueConfig {
   budget: BudgetRules;
   postAcquisitionWindow: PostAcquisitionWindow;
   economy: EconomyConfig;
+  /**
+   * Sorgente dei prezzi base d'asta e del pool giocatori (T151):
+   * null/assente = anagrafica completa (comportamento storico);
+   * valorizzato = id del listone importato da cui derivano pool
+   * (solo entry matchate e non fuori lista) e basi d'asta (Qt.A).
+   */
+  priceSourceListoneId?: number | null;
 }
 
 // ============================================================

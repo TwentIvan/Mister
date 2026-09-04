@@ -386,6 +386,11 @@ export interface League {
      * @nullable
      */
   auction_mode?: LeagueAuctionMode;
+  /**
+     * Sorgente prezzi/pool asta: id del listone importato; null = anagrafica completa
+     * @nullable
+     */
+  price_source_listone_id?: number | null;
   /** Finestra temporale post-acquisto */
   post_acquisition_window?: PostAcquisitionWindow;
   /**
@@ -662,6 +667,8 @@ export interface LeagueUpdate {
   roster_a?: number;
   /** GUARDED: non modificabile durante un'asta in corso */
   auction_mode?: LeagueUpdateAuctionMode;
+  /** GUARDED: sorgente prezzi asta (listone importato); null = anagrafica */
+  price_source_listone_id?: number | null;
   /** Finestra post-acquisto (aggiornabile anche con asta in corso) */
   post_acquisition_window?: PostAcquisitionWindow;
 }
@@ -1542,6 +1549,11 @@ export interface AuctionPlayerEntry {
   real_team: string;
   /** @nullable */
   photo_url?: string | null;
+  /**
+     * Base d'asta in FM dal listone (Qt.A); null = floor storico 1
+     * @nullable
+     */
+  base_price?: number | null;
 }
 
 export interface AuctionBidItem {

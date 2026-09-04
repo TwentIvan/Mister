@@ -18,6 +18,7 @@ interface AstaHeroProps {
     full_name: string;
     role_classic: string;
     real_team: string;
+    base_price?: number | null;
   } | null;
   currentBid: {
     id: string;
@@ -157,6 +158,10 @@ export function AstaHero({
                 da <span className="font-bold text-amber-700">{leadingTeam}</span>
               </p>
             </>
+          ) : currentPlayer?.base_price ? (
+            <p className="text-sm text-muted-foreground font-mono">
+              Base d'asta <span className="font-bold text-foreground">{currentPlayer.base_price} FM</span>
+            </p>
           ) : (
             <p className="text-sm text-muted-foreground font-mono">Nessuna offerta</p>
           )}

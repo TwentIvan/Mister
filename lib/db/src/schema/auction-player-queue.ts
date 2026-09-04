@@ -40,6 +40,9 @@ export const auctionPlayerQueue = pgTable(
 
     /** pending → sold (aggiudicato) | skipped (saltato) */
     status: text("status").notNull().default("pending"),
+
+    /** Base d'asta in FM (dal listone, Qt.A). Null = floor storico (1). */
+    basePrice: integer("base_price"),
   },
   (t) => [
     check(

@@ -1,8 +1,8 @@
 import { Router, type IRouter, type Response } from "express";
-import { eq, and, asc, desc, count, sql } from "drizzle-orm";
+import { eq, and, asc, desc, count, notInArray, sql } from "drizzle-orm";
 import { guardLeagueAdmin, isLeagueAdmin } from "../lib/auth";
 import { nanoid } from "nanoid";
-import { db } from "@workspace/db";
+import { db, listoneEntries } from "@workspace/db";
 import {
   auctions,
   auctionBids,
@@ -146,6 +146,7 @@ async function getCurrentQueuePlayer(auctionId: string, callMode = "listone") {
       playerRole: players.roleClassic,
       playerTeam: players.realTeam,
       playerPhotoUrl: players.photoUrl,
+      basePrice: auctionPlayerQueue.basePrice,
     })
     .from(auctionPlayerQueue)
     .innerJoin(players, eq(auctionPlayerQueue.playerId, players.id))
@@ -175,6 +176,7 @@ function mapPlayerEntry(row: PlayerRow) {
     role_classic: row.playerRole,
     real_team: row.playerTeam,
     photo_url: row.playerPhotoUrl ?? null,
+    base_price: row.basePrice ?? null,
   };
 }
 
@@ -314,14 +316,43 @@ router.post("/auctions", async (req, res): Promise<void> => {
     return;
   }
 
-  const playerPool = await db
-    .select()
-    .from(players)
-    .orderBy(
-      sql`CASE ${players.roleClassic} WHEN 'GK' THEN 1 WHEN 'DEF' THEN 2 WHEN 'MID' THEN 3 WHEN 'ATT' THEN 4 ELSE 5 END`,
-      asc(players.name),
-      asc(players.fullName),
-    );
+  // ── Pool giocatori: anagrafica completa (storico) o listone di lega (T151) ──
+  // Con priceSourceListoneId in config, il pool sono le entry del listone
+  // matchate (no orfani/escluse) e non "fuori lista"; la base d'asta è Qt.A.
+  const roleOrderSql = sql`CASE ${players.roleClassic} WHEN 'GK' THEN 1 WHEN 'DEF' THEN 2 WHEN 'MID' THEN 3 WHEN 'ATT' THEN 4 ELSE 5 END`;
+  const priceListoneId = league.config?.priceSourceListoneId ?? null;
+
+  let playerPool: Array<{ id: number; basePrice: number | null }>;
+  if (priceListoneId != null) {
+    const rows = await db
+      .select({ id: players.id, qtA: listoneEntries.qtA })
+      .from(listoneEntries)
+      .innerJoin(players, eq(listoneEntries.matchedPlayerId, players.id))
+      .where(
+        and(
+          eq(listoneEntries.listoneId, priceListoneId),
+          eq(listoneEntries.fuoriLista, false),
+          notInArray(listoneEntries.matchMethod, ["none", "excluded"]),
+        ),
+      )
+      .orderBy(roleOrderSql, asc(players.name), asc(players.fullName));
+    playerPool = rows.map((r) => ({
+      id: r.id,
+      basePrice: r.qtA != null ? Math.max(1, Math.round(r.qtA)) : null,
+    }));
+    if (playerPool.length === 0) {
+      res.status(400).json({
+        error: "Il listone configurato come sorgente prezzi non ha giocatori matchati: importa un listone o risolvi la riconciliazione, oppure rimuovi la sorgente dalla config di lega",
+      });
+      return;
+    }
+  } else {
+    const rows = await db
+      .select({ id: players.id })
+      .from(players)
+      .orderBy(roleOrderSql, asc(players.name), asc(players.fullName));
+    playerPool = rows.map((r) => ({ id: r.id, basePrice: null }));
+  }
 
   // Aggiorna nome_asta della società se forniti nella config
   if (Object.keys(team_names).length > 0) {
@@ -401,6 +432,7 @@ router.post("/auctions", async (req, res): Promise<void> => {
           playerId: p.id,
           position: idx,
           status: "pending" as const,
+          basePrice: p.basePrice,
         }));
         const chunkSize = 500;
         for (let i = 0; i < queueRows.length; i += chunkSize) {
@@ -641,7 +673,8 @@ router.post("/auctions/:id/bid", async (req, res): Promise<void> => {
         .orderBy(desc(auctionBids.amountFm))
         .limit(1);
 
-      const txMinBid = txTopBid ? txTopBid.amountFm + 1 : 1;
+      // Floor prima offerta: base d'asta dal listone se presente, altrimenti 1
+      const txMinBid = txTopBid ? txTopBid.amountFm + 1 : (currentPlayer.basePrice ?? 1);
       if (amountFm < txMinBid) {
         const err: BidError = { httpStatus: 409, message: `L'offerta deve essere almeno ${txMinBid} FM` };
         throw err;

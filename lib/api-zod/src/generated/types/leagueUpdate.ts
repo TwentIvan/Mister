@@ -58,6 +58,8 @@ export interface LeagueUpdate {
   roster_a?: number;
   /** GUARDED: non modificabile durante un'asta in corso */
   auction_mode?: LeagueUpdateAuctionMode;
+  /** GUARDED: sorgente prezzi asta (listone importato); null = anagrafica */
+  price_source_listone_id?: number | null;
   /** Finestra post-acquisto (aggiornabile anche con asta in corso) */
   post_acquisition_window?: PostAcquisitionWindow;
 }

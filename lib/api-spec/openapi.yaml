@@ -2089,6 +2089,9 @@ components:
           type: ["string", "null"]
           enum: [classico, manageriale, manageriale_pro, null]
           description: Modalità asta
+        price_source_listone_id:
+          type: ["integer", "null"]
+          description: "Sorgente prezzi/pool asta: id del listone importato; null = anagrafica completa"
         post_acquisition_window:
           $ref: "#/components/schemas/PostAcquisitionWindow"
           description: Finestra temporale post-acquisto
@@ -2361,6 +2364,10 @@ components:
           enum: [classico, manageriale, manageriale_pro]
           nullable: true
           description: "GUARDED: non modificabile durante un'asta in corso"
+        price_source_listone_id:
+          type: integer
+          nullable: true
+          description: "GUARDED: sorgente prezzi asta (listone importato); null = anagrafica"
         post_acquisition_window:
           $ref: "#/components/schemas/PostAcquisitionWindow"
           description: Finestra post-acquisto (aggiornabile anche con asta in corso)
@@ -3535,6 +3542,9 @@ components:
           type: string
         photo_url:
           type: ["string", "null"]
+        base_price:
+          type: ["integer", "null"]
+          description: "Base d'asta in FM dal listone (Qt.A); null = floor storico 1"
 
     AuctionBidItem:
       type: object

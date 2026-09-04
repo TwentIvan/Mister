@@ -517,7 +517,8 @@ router.patch("/leagues/:id", async (req, res): Promise<void> => {
     d.roster_d !== undefined ||
     d.roster_c !== undefined ||
     d.roster_a !== undefined ||
-    d.auction_mode !== undefined;
+    d.auction_mode !== undefined ||
+    d.price_source_listone_id !== undefined;
 
   if (hasGuardedChange) {
     const [runningAuction] = await db
@@ -536,6 +537,10 @@ router.patch("/leagues/:id", async (req, res): Promise<void> => {
   }
 
   let configExpr: ReturnType<typeof sql> | undefined;
+  if (d.price_source_listone_id !== undefined) {
+    const patchJson = JSON.stringify({ priceSourceListoneId: d.price_source_listone_id });
+    configExpr = sql`COALESCE(${leagues.config}, '{}'::jsonb) || ${patchJson}::jsonb`;
+  }
   if (d.post_acquisition_window) {
     const paw = d.post_acquisition_window;
     const pawPatch: Record<string, unknown> = {};
@@ -547,7 +552,8 @@ router.patch("/leagues/:id", async (req, res): Promise<void> => {
     if (paw.default_contract_years !== undefined)
       pawPatch.defaultContractYears = paw.default_contract_years;
     const pawJson = JSON.stringify({ postAcquisitionWindow: pawPatch });
-    configExpr = sql`COALESCE(${leagues.config}, '{}'::jsonb) || ${pawJson}::jsonb`;
+    const base = configExpr ?? sql`COALESCE(${leagues.config}, '{}'::jsonb)`;
+    configExpr = sql`${base} || ${pawJson}::jsonb`;
   }
 
   const [row] = await db

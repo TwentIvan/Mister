@@ -37,6 +37,8 @@ export function mapLeague(l: League) {
     roster_c: l.rosterC ?? null,
     roster_a: l.rosterA ?? null,
     auction_mode: l.auctionMode ?? null,
+    price_source_listone_id:
+      typeof cfg?.priceSourceListoneId === "number" ? (cfg.priceSourceListoneId as number) : null,
     post_acquisition_window: paw
       ? {
           enabled: Boolean(paw.enabled ?? true),

@@ -18,4 +18,9 @@ export interface AuctionPlayerEntry {
   real_team: string;
   /** @nullable */
   photo_url?: string | null;
+  /**
+     * Base d'asta in FM dal listone (Qt.A); null = floor storico 1
+     * @nullable
+     */
+  base_price?: number | null;
 }

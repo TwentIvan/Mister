@@ -63,6 +63,11 @@ export interface League {
      * @nullable
      */
   auction_mode?: LeagueAuctionMode;
+  /**
+     * Sorgente prezzi/pool asta: id del listone importato; null = anagrafica completa
+     * @nullable
+     */
+  price_source_listone_id?: number | null;
   /** Finestra temporale post-acquisto */
   post_acquisition_window?: PostAcquisitionWindow;
   /**

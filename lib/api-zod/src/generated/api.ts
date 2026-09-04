@@ -504,6 +504,7 @@ export const ListLeaguesResponseItem = zod.object({
   "roster_c": zod.number().nullish().describe('Centrocampisti per squadra'),
   "roster_a": zod.number().nullish().describe('Attaccanti per squadra'),
   "auction_mode": zod.union([zod.literal('classico'),zod.literal('manageriale'),zod.literal('manageriale_pro'),zod.literal(null)]).nullish().describe('Modalità asta'),
+  "price_source_listone_id": zod.number().nullish().describe('Sorgente prezzi\/pool asta: id del listone importato; null = anagrafica completa'),
   "post_acquisition_window": zod.object({
   "enabled": zod.boolean().optional(),
   "async_hours": zod.number().optional().describe('Ore di finestra per reclamare in modalità asincrona'),
@@ -604,6 +605,7 @@ export const GetLeagueResponse = zod.object({
   "roster_c": zod.number().nullish().describe('Centrocampisti per squadra'),
   "roster_a": zod.number().nullish().describe('Attaccanti per squadra'),
   "auction_mode": zod.union([zod.literal('classico'),zod.literal('manageriale'),zod.literal('manageriale_pro'),zod.literal(null)]).nullish().describe('Modalità asta'),
+  "price_source_listone_id": zod.number().nullish().describe('Sorgente prezzi\/pool asta: id del listone importato; null = anagrafica completa'),
   "post_acquisition_window": zod.object({
   "enabled": zod.boolean().optional(),
   "async_hours": zod.number().optional().describe('Ore di finestra per reclamare in modalità asincrona'),
@@ -675,6 +677,7 @@ export const UpdateLeagueBody = zod.object({
   "roster_c": zod.number().min(1).max(updateLeagueBodyRosterCMax).optional().describe('GUARDED: non modificabile durante un\'asta in corso'),
   "roster_a": zod.number().min(1).max(updateLeagueBodyRosterAMax).optional().describe('GUARDED: non modificabile durante un\'asta in corso'),
   "auction_mode": zod.enum(['classico', 'manageriale', 'manageriale_pro']).nullish().describe('GUARDED: non modificabile durante un\'asta in corso'),
+  "price_source_listone_id": zod.number().nullish().describe('GUARDED: sorgente prezzi asta (listone importato); null = anagrafica'),
   "post_acquisition_window": zod.object({
   "enabled": zod.boolean().optional(),
   "async_hours": zod.number().optional().describe('Ore di finestra per reclamare in modalità asincrona'),
@@ -707,6 +710,7 @@ export const UpdateLeagueResponse = zod.object({
   "roster_c": zod.number().nullish().describe('Centrocampisti per squadra'),
   "roster_a": zod.number().nullish().describe('Attaccanti per squadra'),
   "auction_mode": zod.union([zod.literal('classico'),zod.literal('manageriale'),zod.literal('manageriale_pro'),zod.literal(null)]).nullish().describe('Modalità asta'),
+  "price_source_listone_id": zod.number().nullish().describe('Sorgente prezzi\/pool asta: id del listone importato; null = anagrafica completa'),
   "post_acquisition_window": zod.object({
   "enabled": zod.boolean().optional(),
   "async_hours": zod.number().optional().describe('Ore di finestra per reclamare in modalità asincrona'),
@@ -801,6 +805,7 @@ export const JoinLeagueResponse = zod.object({
   "roster_c": zod.number().nullish().describe('Centrocampisti per squadra'),
   "roster_a": zod.number().nullish().describe('Attaccanti per squadra'),
   "auction_mode": zod.union([zod.literal('classico'),zod.literal('manageriale'),zod.literal('manageriale_pro'),zod.literal(null)]).nullish().describe('Modalità asta'),
+  "price_source_listone_id": zod.number().nullish().describe('Sorgente prezzi\/pool asta: id del listone importato; null = anagrafica completa'),
   "post_acquisition_window": zod.object({
   "enabled": zod.boolean().optional(),
   "async_hours": zod.number().optional().describe('Ore di finestra per reclamare in modalità asincrona'),
@@ -1748,6 +1753,7 @@ export const GetDashboardResponse = zod.object({
   "roster_c": zod.number().nullish().describe('Centrocampisti per squadra'),
   "roster_a": zod.number().nullish().describe('Attaccanti per squadra'),
   "auction_mode": zod.union([zod.literal('classico'),zod.literal('manageriale'),zod.literal('manageriale_pro'),zod.literal(null)]).nullish().describe('Modalità asta'),
+  "price_source_listone_id": zod.number().nullish().describe('Sorgente prezzi\/pool asta: id del listone importato; null = anagrafica completa'),
   "post_acquisition_window": zod.object({
   "enabled": zod.boolean().optional(),
   "async_hours": zod.number().optional().describe('Ore di finestra per reclamare in modalità asincrona'),
@@ -2305,7 +2311,8 @@ export const GetAuctionResponse = zod.object({
   "full_name": zod.string(),
   "role_classic": zod.enum(['GK', 'DEF', 'MID', 'ATT']),
   "real_team": zod.string(),
-  "photo_url": zod.string().nullish()
+  "photo_url": zod.string().nullish(),
+  "base_price": zod.number().nullish().describe('Base d\'asta in FM dal listone (Qt.A); null = floor storico 1')
 }),zod.null()]).optional(),
   "current_bid": zod.union([zod.object({
   "id": zod.string(),

@@ -135,7 +135,10 @@ export default function AstaLivePage() {
 
   // handleBid: wrapper usato dai tasti +N del tabellone
   const handleBid = async (fantaTeamId: string, delta: number) => {
-    const currentAmount = data?.current_bid?.amount_fm ?? 0;
+    // Senza offerte, il primo tasto +N parte dalla base d'asta del listone
+    // (se configurata): base + delta - 1 così "+1" = esattamente la base.
+    const base = data?.current_player?.base_price ?? 1;
+    const currentAmount = data?.current_bid?.amount_fm ?? (base - 1);
     await placeBid(fantaTeamId, currentAmount + delta);
   };
 
