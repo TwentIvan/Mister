@@ -210,7 +210,7 @@ export default function LeagueDetail() {
               </Button>
             </Link>
           )}
-          {league.admin_user_id === "demo-user" && (
+          {(user?.id === league.admin_user_id || (league.co_admin_user_ids ?? []).includes(user?.id ?? "")) && (
             <>
               <Link href={`/leagues/${league.id}/config`}>
                 <Button variant="outline" className="gap-2 border-primary/20 text-primary">
