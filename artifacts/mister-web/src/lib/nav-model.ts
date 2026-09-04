@@ -14,6 +14,7 @@
 import {
   type LucideIcon,
   Home,
+  FileSpreadsheet,
   Trophy,
   Users,
   Store,
@@ -67,6 +68,7 @@ export function buildNavModel(ctx: NavContext): NavModel {
   // ── Globale: la home è il feed ───────────────────────────────────────────
   const global: NavItem[] = [
     { id: "home", label: "Home", icon: Home, href: "/feed", level: "global" },
+    { id: "listoni", label: "Listoni", icon: FileSpreadsheet, href: "/listoni", level: "global" },
     {
       id: "leagues",
       label: "Le mie leghe",

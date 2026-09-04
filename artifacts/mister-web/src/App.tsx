@@ -1,6 +1,7 @@
 import Dashboard from "@/pages/dashboard";
 import LeaguesList from "@/pages/leagues-list";
 import { PlayersList } from "@/pages/players-list";
+import ListoniPage from "@/pages/ListoniPage";
 import SetupLegaPage from "@/pages/SetupLegaPage";
 import LeagueDetail from "@/pages/league-detail";
 import LeagueConfig from "@/pages/league-config";
@@ -99,6 +100,7 @@ function Router() {
               <Route path="/partita/:matchId" component={MatchDetailPage} />
               <Route path="/asta/:auctionId" component={AstaLivePage} />
               <Route path="/players" component={PlayersList} />
+              <Route path="/listoni" component={ListoniPage} />
               <Route path="/superadmin/templates" component={TemplatesManager} />
               <Route path="/superadmin/algoritmo-voto" component={VotoAlgorithm} />
               <Route path="/brand" component={BrandPage} />
