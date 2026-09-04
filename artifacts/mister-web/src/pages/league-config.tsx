@@ -299,7 +299,9 @@ export default function LeagueConfig() {
       roster_c: league.roster_c ?? undefined,
       roster_a: league.roster_a ?? undefined,
       auction_mode: (league.auction_mode as LeagueUpdate["auction_mode"]) ?? undefined,
-      price_source_listone_id: league.price_source_listone_id ?? null,
+      // price_source_listone_id NON inizializzato: entra nel PATCH solo se
+      // l'utente cambia il selettore, altrimenti ogni save diventerebbe 'guarded'
+      price_source_listone_id: undefined,
       post_acquisition_window: league.post_acquisition_window
         ? {
             enabled: league.post_acquisition_window.enabled,
@@ -492,7 +494,7 @@ export default function LeagueConfig() {
               <div>
                 <Label className="text-xs text-muted-foreground mb-2 block">Sorgente prezzi asta</Label>
                 <PriceSourceSelect
-                  value={formData.price_source_listone_id ?? null}
+                  value={formData.price_source_listone_id !== undefined ? formData.price_source_listone_id : (league?.price_source_listone_id ?? null)}
                   onChange={v => patch("price_source_listone_id", v)}
                 />
                 <p className="mt-1 text-xs text-muted-foreground">
