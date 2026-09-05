@@ -155,6 +155,10 @@ export default function AstaLivePage() {
       setAggiudicatoVisible(true);
       await refetch();
       setTimeout(() => setAggiudicatoVisible(false), 1500);
+    } catch (err: unknown) {
+      const e = err as { data?: { error?: string; detail?: string }; status?: number };
+      const base = e?.data?.error ?? `Aggiudicazione fallita${e?.status ? ` (${e.status})` : ""}`;
+      setBidError(e?.data?.detail ? `${base} — ${e.data.detail}` : base);
     } finally {
       isTransitioningRef.current = false;
       setIsTransitioning(false);

@@ -819,7 +819,10 @@ router.post("/auctions/:id/assign", async (req, res): Promise<void> => {
       }
     }
     req.log.error({ err }, "Errore aggiudicazione");
-    res.status(500).json({ error: "Errore interno" });
+    res.status(500).json({
+      error: "Errore interno",
+      detail: err instanceof Error ? `${err.name}: ${err.message}` : String(err),
+    });
   }
 });
 
@@ -1118,7 +1121,10 @@ router.post("/auctions/:id/undo", async (req, res): Promise<void> => {
     notifyAuction(id);
   } catch (err) {
     req.log.error({ err }, "Errore undo asta");
-    res.status(500).json({ error: "Errore interno" });
+    res.status(500).json({
+      error: "Errore interno",
+      detail: err instanceof Error ? `${err.name}: ${err.message}` : String(err),
+    });
   }
 });
 
@@ -1190,7 +1196,10 @@ router.post("/auctions/:id/manual/add", async (req, res): Promise<void> => {
     notifyAuction(id);
   } catch (err) {
     req.log.error({ err }, "Errore manual add");
-    res.status(500).json({ error: "Errore interno" });
+    res.status(500).json({
+      error: "Errore interno",
+      detail: err instanceof Error ? `${err.name}: ${err.message}` : String(err),
+    });
   }
 });
 
@@ -1249,7 +1258,10 @@ router.post("/auctions/:id/manual/remove", async (req, res): Promise<void> => {
     notifyAuction(id);
   } catch (err) {
     req.log.error({ err }, "Errore manual remove");
-    res.status(500).json({ error: "Errore interno" });
+    res.status(500).json({
+      error: "Errore interno",
+      detail: err instanceof Error ? `${err.name}: ${err.message}` : String(err),
+    });
   }
 });
 
@@ -1327,7 +1339,10 @@ router.post("/auctions/:id/manual/update-price", async (req, res): Promise<void>
     notifyAuction(id);
   } catch (err) {
     req.log.error({ err }, "Errore manual update-price");
-    res.status(500).json({ error: "Errore interno" });
+    res.status(500).json({
+      error: "Errore interno",
+      detail: err instanceof Error ? `${err.name}: ${err.message}` : String(err),
+    });
   }
 });
 
