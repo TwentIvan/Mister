@@ -1,6 +1,6 @@
 import { Router, type IRouter, type Response } from "express";
 import { eq, and, asc, desc, count, notInArray, sql } from "drizzle-orm";
-import { guardLeagueAdmin, isLeagueAdmin } from "../lib/auth";
+import { guardLeagueAdmin, guardLeagueMember, isLeagueAdmin } from "../lib/auth";
 import { nanoid } from "nanoid";
 import { db, listoneEntries } from "@workspace/db";
 import { normalize as normalizeName } from "@workspace/listone-matcher";
@@ -1427,7 +1427,9 @@ router.post("/auctions/:id/call", async (req, res): Promise<void> => {
     res.status(403).json({ error: "L'asta non è in corso" });
     return;
   }
-  if (!await guardLeagueAdmin(req, res, auction.leagueId)) return;
+  // Regola del tavolo (T170): in modalità chiamata, chiamare spetta a chi ha
+  // il turno — quindi a qualunque MEMBRO della lega, non solo all'admin.
+  if (!await guardLeagueMember(req, res, auction.leagueId)) return;
 
   const body = CallPlayerBody.safeParse(req.body);
   if (!body.success) { res.status(400).json({ error: body.error.flatten() }); return; }

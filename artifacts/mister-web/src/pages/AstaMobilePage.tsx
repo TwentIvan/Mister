@@ -8,6 +8,7 @@ import {
 } from "@workspace/api-client-react";
 import { useCurrentUser } from "@/contexts/AuthContext";
 import { usePushToTalkNumber } from "@/hooks/usePushToTalkNumber";
+import { useGetAuctionQueue, getGetAuctionQueueQueryKey, useCallPlayer } from "@workspace/api-client-react";
 import { Mic } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -79,6 +80,30 @@ export default function AstaMobilePage() {
   const [bidError, setBidError] = useState<string | null>(null);
   const [manualAmount, setManualAmount] = useState("");
   const ptt = usePushToTalkNumber();
+
+  // ── T170: chiamata dal telefono (banco libero, modalità chiamata) ──────────
+  const [callSearch, setCallSearch] = useState("");
+  const bancoLibero = !!data && !data.current_player && data.auction.status === "running";
+  const canCallHere = bancoLibero && data?.auction.call_mode === "chiamata";
+  const { data: queueData } = useGetAuctionQueue(
+    auctionId!,
+    { search: callSearch || undefined },
+    { query: { enabled: !!auctionId && canCallHere && callSearch.length >= 2,
+               queryKey: getGetAuctionQueueQueryKey(auctionId!, { search: callSearch || undefined }) } },
+  );
+  const callMutation = useCallPlayer();
+  const doCall = async (playerId: number) => {
+    if (!auctionId) return;
+    setBidError(null);
+    try {
+      await callMutation.mutateAsync({ id: auctionId, data: { player_id: playerId } });
+      setCallSearch("");
+      await queryClient.invalidateQueries({ queryKey: getGetAuctionQueryKey(auctionId) });
+    } catch (err: unknown) {
+      const e = err as { data?: { error?: string } };
+      setBidError(e?.data?.error ?? "Chiamata non riuscita");
+    }
+  };
   const [isTransitioning, setIsTransitioning] = useState(false);
   const isTransitioningRef = useRef(false);
 
@@ -425,8 +450,39 @@ export default function AstaMobilePage() {
             <p className="text-xs text-[#efe6d3]/40 font-mono mt-1">{data.progress.sold} aggiudicati</p>
           </div>
         ) : (
-          <div className="rounded-xl bg-[#1f4733]/30 border border-dashed border-[#1f4733] p-6 text-center">
-            <p className="text-[#efe6d3]/40 font-mono text-sm">Nessun giocatore in asta</p>
+          <div className="rounded-xl bg-[#1f4733]/30 border border-dashed border-[#1f4733] p-4 space-y-3">
+            <p className="text-[#efe6d3]/40 font-mono text-sm text-center">Nessun giocatore in asta</p>
+            {canCallHere && (
+              <div className="space-y-2">
+                <input
+                  type="text"
+                  placeholder="Chiama un giocatore… (nome o squadra)"
+                  value={callSearch}
+                  onChange={(e) => setCallSearch(e.target.value)}
+                  className="w-full rounded-lg border border-[#1f4733] bg-transparent px-3 py-3 font-mono text-sm text-[#efe6d3] placeholder:text-[#efe6d3]/25"
+                />
+                {bidError && <p className="text-red-400 text-xs font-mono text-center">{bidError}</p>}
+                {(queueData?.players ?? []).slice(0, 8).map((p) => (
+                  <button
+                    key={p.id}
+                    onClick={() => void doCall(p.id)}
+                    disabled={callMutation.isPending}
+                    className="w-full flex items-center justify-between rounded-lg border border-[#1f4733] bg-[#1f4733]/40 px-3 py-3 text-left active:scale-[0.99] disabled:opacity-40"
+                  >
+                    <span className="min-w-0">
+                      <span className="font-serif font-bold text-[#efe6d3] block truncate">{p.full_name}</span>
+                      <span className="text-[10px] font-mono text-[#efe6d3]/40">{p.real_team}</span>
+                    </span>
+                    <span className="shrink-0 ml-2 rounded-md bg-[#1f4733] border border-[#efe6d3]/20 w-7 h-7 inline-flex items-center justify-center text-xs font-bold font-mono text-[#efe6d3]/80">
+                      {roleBadge(p.role_classic)}
+                    </span>
+                  </button>
+                ))}
+                {callSearch.length >= 2 && (queueData?.players ?? []).length === 0 && (
+                  <p className="text-[#efe6d3]/30 font-mono text-xs text-center">Nessun risultato</p>
+                )}
+              </div>
+            )}
           </div>
         )}
 
