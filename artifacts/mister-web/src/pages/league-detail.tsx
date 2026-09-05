@@ -8,6 +8,7 @@ import {
   useGetLeagueInvite, getGetLeagueInviteQueryKey,
 } from "@workspace/api-client-react";
 import { useCurrentUser } from "@/contexts/AuthContext";
+import { isDevSuperadmin } from "@/lib/dev-superadmin";
 import { useEconomyConfig } from "@/lib/economy-api";
 import { useState, useMemo } from "react";
 import { AstaConfigModal } from "@/components/asta/AstaConfigModal";
@@ -131,7 +132,8 @@ export default function LeagueDetail() {
   );
 
   const { user } = useCurrentUser();
-  const isAdmin = !!league && !!user && league.admin_user_id === user.id;
+  // ⚠️ TEMPORANEO: isDevSuperadmin — vedi lib/dev-superadmin.ts e TECH_DEBT.md
+  const isAdmin = !!league && !!user && (league.admin_user_id === user.id || isDevSuperadmin(user.email));
 
   const { data: inviteInfo } = useGetLeagueInvite(
     id!,
@@ -210,7 +212,7 @@ export default function LeagueDetail() {
               </Button>
             </Link>
           )}
-          {(user?.id === league.admin_user_id || (league.co_admin_user_ids ?? []).includes(user?.id ?? "")) && (
+          {(user?.id === league.admin_user_id || (league.co_admin_user_ids ?? []).includes(user?.id ?? "") || isDevSuperadmin(user?.email)) && (
             <>
               <Link href={`/leagues/${league.id}/config`}>
                 <Button variant="outline" className="gap-2 border-primary/20 text-primary">

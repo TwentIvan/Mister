@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { useGetLeague, getGetLeagueQueryKey } from "@workspace/api-client-react";
 import { useCurrentUser } from "@/contexts/AuthContext";
+import { isDevSuperadmin } from "@/lib/dev-superadmin";
 import { useEconomyConfig } from "@/lib/economy-api";
 
 export type NavLevel = "global" | "federation" | "league";
@@ -40,6 +41,7 @@ export interface NavItem {
 /** Contesto puro da cui derivare il modello (niente hook qui). */
 export interface NavContext {
   userId?: string | null;
+  userEmail?: string | null;
   leagueId?: string | null;
   leagueAdminUserId?: string | null;
   leagueName?: string | null;
@@ -60,9 +62,11 @@ export interface NavModel {
  */
 export function buildNavModel(ctx: NavContext): NavModel {
   const isAdmin =
-    !!ctx.userId &&
-    !!ctx.leagueAdminUserId &&
-    ctx.userId === ctx.leagueAdminUserId;
+    (!!ctx.userId &&
+      !!ctx.leagueAdminUserId &&
+      ctx.userId === ctx.leagueAdminUserId) ||
+    // ⚠️ TEMPORANEO: bypass dev — vedi lib/dev-superadmin.ts e TECH_DEBT.md
+    isDevSuperadmin(ctx.userEmail);
   const lid = ctx.leagueId ?? undefined;
 
   // ── Globale: la home è il feed ───────────────────────────────────────────
@@ -155,6 +159,7 @@ export function useNavModel(leagueId?: string): NavModel {
 
   return buildNavModel({
     userId: user?.id ?? null,
+    userEmail: user?.email ?? null,
     leagueId: leagueId ?? null,
     leagueAdminUserId: league?.admin_user_id ?? null,
     leagueName: league?.name ?? null,
