@@ -1973,6 +1973,13 @@ export const ListListoneEntriesMethod = {
   excluded: 'excluded',
 } as const;
 
+export type ResetLeagueRosters200 = {
+  contracts_deleted: number;
+  lineups_deleted: number;
+  teams_reset: number;
+  budget_restored: number;
+};
+
 export type GetFeedParams = {
 /**
  * Filtra per lega specifica

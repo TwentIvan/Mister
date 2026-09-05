@@ -17,7 +17,18 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useListListoni } from "@workspace/api-client-react";
+import { useListListoni, useResetLeagueRosters } from "@workspace/api-client-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import {
   Settings, Users, Eye, Bell, Clock, Gavel, Shield,
@@ -768,6 +779,23 @@ export default function LeagueConfig() {
               <Save className="ml-2 h-4 w-4" />
             </Button>
           </div>
+
+          {/* ─── ZONA PERICOLOSA (T163) ─────────────────────── */}
+          <Card className="border-destructive/40">
+            <CardHeader>
+              <CardTitle className="text-base text-destructive">Zona pericolosa</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-medium">Azzera rose e budget</p>
+                <p className="text-xs text-muted-foreground">
+                  Svuota le rose di tutte le squadre, cancella le formazioni e ripristina il budget iniziale
+                  ({league.budget_initial ?? 500} FM). Le aste concluse e il loro storico restano.
+                </p>
+              </div>
+              <ResetRosterButton leagueId={id} onDone={handleTeamSaved} />
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* ─── TAB SQUADRE ──────────────────────────────────── */}
@@ -840,5 +868,58 @@ function PriceSourceSelect({ value, onChange }: { value: number | null; onChange
         ))}
       </SelectContent>
     </Select>
+  );
+}
+
+
+// ─── Reset rose e budget (T163): azione distruttiva con conferma ─────────────
+
+function ResetRosterButton({ leagueId, onDone }: { leagueId: string; onDone: () => void }) {
+  const { toast } = useToast();
+  const reset = useResetLeagueRosters();
+  return (
+    <AlertDialog>
+      <AlertDialogTrigger asChild>
+        <Button variant="destructive" disabled={reset.isPending} data-testid="button-reset-rosters">
+          {reset.isPending ? "Azzeramento…" : "Azzera rose e budget"}
+        </Button>
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Azzerare rose e budget?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Questa azione svuota le rose di TUTTE le squadre della lega, cancella le formazioni
+            e ripristina i budget iniziali. Non si può annullare. Le aste già concluse e le loro
+            assegnazioni restano nello storico.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Annulla</AlertDialogCancel>
+          <AlertDialogAction
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            onClick={() => {
+              reset.mutate(
+                { id: leagueId },
+                {
+                  onSuccess: r => {
+                    toast({
+                      title: "Rose azzerate",
+                      description: `${r.contracts_deleted} contratti e ${r.lineups_deleted} formazioni rimossi, ${r.teams_reset} squadre a ${r.budget_restored} FM`,
+                    });
+                    onDone();
+                  },
+                  onError: (e: unknown) => {
+                    const msg = (e as { data?: { error?: string } })?.data?.error ?? "Reset fallito";
+                    toast({ title: "Errore", description: msg, variant: "destructive" });
+                  },
+                },
+              );
+            }}
+          >
+            Sì, azzera tutto
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }

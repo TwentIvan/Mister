@@ -85,6 +85,21 @@ export const ListListoneEntriesResponse = zod.object({
 
 
 /**
+ * @summary AZIONE DISTRUTTIVA: svuota le rose, cancella le formazioni e ripristina i budget iniziali di tutte le squadre della lega
+ */
+export const ResetLeagueRostersParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const ResetLeagueRostersResponse = zod.object({
+  "contracts_deleted": zod.number(),
+  "lineups_deleted": zod.number(),
+  "teams_reset": zod.number(),
+  "budget_restored": zod.number()
+})
+
+
+/**
  * @summary Feed eventi della lega (risultati, colpi, ecc.)
  */
 export const getFeedQueryLimitDefault = 20;

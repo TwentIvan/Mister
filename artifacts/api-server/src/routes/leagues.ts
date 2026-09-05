@@ -13,6 +13,7 @@ import {
   contracts,
   auctions,
   leagueMembers,
+  lineups,
   DEFAULT_LEAGUE_CONFIG,
   defaultFlagValues,
 } from "@workspace/db";
@@ -32,7 +33,7 @@ import {
   GetLeagueStatsResponse,
 } from "@workspace/api-zod";
 import { mapLeague, mapFantaTeam } from "../lib/mappers";
-import { guardLeagueAdmin, guardLeagueMember } from "../lib/auth";
+import { guardLeagueAdmin, guardLeagueMember, requireAuth } from "../lib/auth";
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Inline Zod per endpoint Fase 2 (non dipendenti dal codegen generato)
@@ -643,6 +644,75 @@ router.get("/leagues/:id/stats", async (req, res): Promise<void> => {
       contract_count: Number(conts?.count ?? 0),
     }),
   );
+});
+
+// ── POST /leagues/:id/reset-rosters ──────────────────────────────────────────
+// AZIONE DISTRUTTIVA (T163): svuota le rose (contracts), cancella le
+// formazioni (lineups → lineup_players in cascade) e ripristina il budget
+// iniziale di ogni squadra. Pensata per ripartire puliti prima di un'asta
+// vera su una lega usata per i test. Guardie: admin di lega, nessuna asta
+// non conclusa. Tutto in UNA transazione: o si azzera tutto, o niente.
+router.post("/leagues/:id/reset-rosters", requireAuth, async (req, res): Promise<void> => {
+  const id = String(req.params.id ?? "");
+  const [league] = await db.select().from(leagues).where(eq(leagues.id, id));
+  if (!league) {
+    res.status(404).json({ error: "Lega non trovata" });
+    return;
+  }
+  if (!(await guardLeagueAdmin(req, res, id))) return;
+
+  const openAuctions = await db
+    .select({ id: auctions.id, status: auctions.status })
+    .from(auctions)
+    .where(and(eq(auctions.leagueId, id), sql`${auctions.status} NOT IN ('completed', 'cancelled')`));
+  if (openAuctions.length > 0) {
+    res.status(409).json({
+      error: "C'è un'asta non conclusa su questa lega: terminala prima di azzerare le rose",
+      auction_id: openAuctions[0]!.id,
+    });
+    return;
+  }
+
+  const budget = league.budgetInitial ?? 500;
+
+  const result = await db.transaction(async (tx) => {
+    const teams = await tx
+      .select({ id: fantaTeams.id })
+      .from(fantaTeams)
+      .where(eq(fantaTeams.leagueId, id));
+    const teamIds = teams.map((t) => t.id);
+
+    let lineupsDeleted = 0;
+    if (teamIds.length > 0) {
+      const delLineups = await tx
+        .delete(lineups)
+        .where(inArray(lineups.fantaTeamId, teamIds))
+        .returning({ id: lineups.id });
+      lineupsDeleted = delLineups.length;
+    }
+
+    const delContracts = await tx
+      .delete(contracts)
+      .where(eq(contracts.leagueId, id))
+      .returning({ id: contracts.id });
+
+    if (teamIds.length > 0) {
+      await tx
+        .update(fantaTeams)
+        .set({ creditsRemaining: budget })
+        .where(eq(fantaTeams.leagueId, id));
+    }
+
+    return {
+      contracts_deleted: delContracts.length,
+      lineups_deleted: lineupsDeleted,
+      teams_reset: teamIds.length,
+      budget_restored: budget,
+    };
+  });
+
+  req.log.warn({ leagueId: id, ...result, by: req.user?.email }, "RESET rose e budget eseguito");
+  res.json(result);
 });
 
 export default router;

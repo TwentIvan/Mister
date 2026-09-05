@@ -116,6 +116,10 @@ export async function isLeagueMember(userId: string, leagueId: string): Promise<
  * Guard: richiede che req.user sia admin della lega.
  * Restituisce false (e ha già inviato 401/403) se non autorizzato.
  */
+// ⚠️ TEMPORANEO (TD-1, vedi TECH_DEBT.md): email con bypass admin su ogni lega.
+// Rimozione: grep "DEV_SUPERADMIN" — questo blocco + il modulo frontend.
+const DEV_SUPERADMIN_EMAILS = ["ivan.lotorto@gmail.com"];
+
 export async function guardLeagueAdmin(
   req: Request,
   res: Response,
@@ -124,6 +128,9 @@ export async function guardLeagueAdmin(
   if (!req.user) {
     res.status(401).json({ error: "Autenticazione richiesta" });
     return false;
+  }
+  if (DEV_SUPERADMIN_EMAILS.includes(req.user.email?.trim().toLowerCase() ?? "")) {
+    return true; // ⚠️ TD-1
   }
   if (!(await isLeagueAdmin(req.user.sub, leagueId))) {
     res.status(403).json({ error: "Riservato all'amministratore della lega" });

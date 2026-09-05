@@ -96,6 +96,7 @@ import type {
   PlayerList,
   PlayerScheda,
   RecalculateVotoMisterParams,
+  ResetLeagueRosters200,
   RosterPlayer,
   StandingsResponse,
   TemplateInput,
@@ -365,6 +366,76 @@ export function useListListoneEntries<TData = Awaited<ReturnType<typeof listList
 
 
 
+
+export const getResetLeagueRostersUrl = (id: string,) => {
+
+
+
+
+  return `/api/leagues/${id}/reset-rosters`
+}
+
+/**
+ * @summary AZIONE DISTRUTTIVA: svuota le rose, cancella le formazioni e ripristina i budget iniziali di tutte le squadre della lega
+ */
+export const resetLeagueRosters = async (id: string, options?: RequestInit): Promise<ResetLeagueRosters200> => {
+
+  return customFetch<ResetLeagueRosters200>(getResetLeagueRostersUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getResetLeagueRostersMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof resetLeagueRosters>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof resetLeagueRosters>>, TError,{id: string}, TContext> => {
+
+const mutationKey = ['resetLeagueRosters'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof resetLeagueRosters>>, {id: string}> = (props) => {
+          const {id} = props ?? {};
+
+          return  resetLeagueRosters(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ResetLeagueRostersMutationResult = NonNullable<Awaited<ReturnType<typeof resetLeagueRosters>>>
+
+    export type ResetLeagueRostersMutationError = ErrorType<void>
+
+    /**
+ * @summary AZIONE DISTRUTTIVA: svuota le rose, cancella le formazioni e ripristina i budget iniziali di tutte le squadre della lega
+ */
+export const useResetLeagueRosters = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof resetLeagueRosters>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof resetLeagueRosters>>,
+        TError,
+        {id: string},
+        TContext
+      > => {
+      return useMutation(getResetLeagueRostersMutationOptions(options));
+    }
 
 export const getGetFeedUrl = (params?: GetFeedParams,) => {
   const normalizedParams = new URLSearchParams();

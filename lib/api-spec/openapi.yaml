@@ -129,6 +129,35 @@ paths:
         "404":
           description: Listone inesistente
 
+  /leagues/{id}/reset-rosters:
+    post:
+      operationId: resetLeagueRosters
+      tags: [leagues]
+      summary: "AZIONE DISTRUTTIVA: svuota le rose, cancella le formazioni e ripristina i budget iniziali di tutte le squadre della lega"
+      parameters:
+        - $ref: "#/components/parameters/StringId"
+      responses:
+        "200":
+          description: Reset eseguito
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [contracts_deleted, lineups_deleted, teams_reset, budget_restored]
+                properties:
+                  contracts_deleted:
+                    type: integer
+                  lineups_deleted:
+                    type: integer
+                  teams_reset:
+                    type: integer
+                  budget_restored:
+                    type: integer
+        "403":
+          description: Riservato all'admin di lega
+        "409":
+          description: Asta in corso — terminare prima l'asta
+
   # ─── FEED ─────────────────────────────────────────────────────────────────
   /feed:
     get:
@@ -3835,7 +3864,7 @@ components:
         message:
           type: string
 
-    # ─── FEED ──────────────────────────────────────────────────────────────────
+  # ─── FEED ──────────────────────────────────────────────────────────────────
 
     FeedTeamInfo:
       type: object

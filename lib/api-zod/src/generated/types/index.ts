@@ -189,6 +189,7 @@ export * from './playerSchedaStorico';
 export * from './postAcquisitionWindow';
 export * from './postAcquisitionWindowDefaultClauseAction';
 export * from './recalculateVotoMisterParams';
+export * from './resetLeagueRosters200';
 export * from './rosterPlayer';
 export * from './rosterPlayerRoleClassic';
 export * from './societaInput';
