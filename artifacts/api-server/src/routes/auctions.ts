@@ -453,7 +453,12 @@ router.post("/auctions", async (req, res): Promise<void> => {
     });
   } catch (err) {
     req.log.error({ err }, "Errore creazione asta");
-    res.status(500).json({ error: "Errore interno" });
+    // Dettaglio nel body: in questa fase (pre gating "Passo B") la diagnosi
+    // senza accesso comodo ai log vale più dell'opacità del 500.
+    res.status(500).json({
+      error: "Errore interno alla creazione dell'asta",
+      detail: err instanceof Error ? `${err.name}: ${err.message}` : String(err),
+    });
   }
 });
 
