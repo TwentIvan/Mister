@@ -7,6 +7,8 @@ import {
   useCreateAuctionBid,
 } from "@workspace/api-client-react";
 import { useCurrentUser } from "@/contexts/AuthContext";
+import { usePushToTalkNumber } from "@/hooks/usePushToTalkNumber";
+import { Mic } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────
@@ -75,6 +77,8 @@ export default function AstaMobilePage() {
   // 5. Bid mutation
   const bidMutation = useCreateAuctionBid();
   const [bidError, setBidError] = useState<string | null>(null);
+  const [manualAmount, setManualAmount] = useState("");
+  const ptt = usePushToTalkNumber();
   const [isTransitioning, setIsTransitioning] = useState(false);
   const isTransitioningRef = useRef(false);
 
@@ -103,6 +107,26 @@ export default function AstaMobilePage() {
   // Chi è in testa
   const leadingTeam = data?.squadre.find((t) => t.id === currentBid?.fanta_team_id);
   const imInLead    = !!currentBid && currentBid.fanta_team_id === myTeamId;
+
+  async function placeBidAbsolute(amount: number) {
+    if (!auctionId || !myTeamId || !currentPlayer || isTransitioningRef.current) return;
+    isTransitioningRef.current = true;
+    setIsTransitioning(true);
+    setBidError(null);
+    try {
+      await bidMutation.mutateAsync({
+        id: auctionId,
+        data: { player_id: currentPlayer.player_id, fanta_team_id: myTeamId, amount_fm: amount },
+      });
+      await queryClient.invalidateQueries({ queryKey: getGetAuctionQueryKey(auctionId) });
+    } catch (err: unknown) {
+      const e = err as { data?: { error?: string; detail?: string } };
+      setBidError(e?.data?.error ?? "Offerta non registrata");
+    } finally {
+      isTransitioningRef.current = false;
+      setIsTransitioning(false);
+    }
+  }
 
   async function placeBid(delta: number) {
     if (!auctionId || !myTeamId || !currentPlayer || isTransitioningRef.current) return;
@@ -320,6 +344,80 @@ export default function AstaMobilePage() {
                 );
               })}
             </div>
+
+            {/* ── T170: offerta a importo secco ─────────────────────────── */}
+            <div className="flex gap-2 pt-2">
+              <input
+                type="number"
+                inputMode="numeric"
+                min={1}
+                max={myCredits}
+                placeholder="Importo FM"
+                value={manualAmount}
+                onChange={(e) => setManualAmount(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    const n = parseInt(manualAmount, 10);
+                    if (n >= 1 && n <= myCredits) { void placeBidAbsolute(n); setManualAmount(""); }
+                  }
+                }}
+                className="flex-1 min-w-0 rounded-lg border border-[#1f4733] bg-transparent px-3 py-3 font-mono text-base text-[#efe6d3] placeholder:text-[#efe6d3]/25 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              />
+              <button
+                disabled={!(parseInt(manualAmount, 10) >= 1) || parseInt(manualAmount, 10) > myCredits || isTransitioning}
+                onClick={() => { const n = parseInt(manualAmount, 10); void placeBidAbsolute(n); setManualAmount(""); }}
+                className="shrink-0 rounded-lg border border-[#1f4733] bg-[#1f4733] px-5 font-mono font-bold text-[#efe6d3] disabled:opacity-25 active:scale-95"
+              >
+                OFFRI
+              </button>
+            </div>
+
+            {/* ── T170: push-to-talk (tieni premuto, dì la cifra, conferma) ── */}
+            {ptt.supported && (
+              <div className="pt-2 space-y-2">
+                {ptt.candidates.length === 0 ? (
+                  <button
+                    onPointerDown={(e) => { e.preventDefault(); ptt.start(); }}
+                    onPointerUp={() => ptt.stop()}
+                    onPointerLeave={() => ptt.stop()}
+                    onContextMenu={(e) => e.preventDefault()}
+                    className={`w-full flex items-center justify-center gap-2 rounded-lg py-4 font-mono font-bold border select-none touch-none transition-all
+                      ${ptt.listening
+                        ? "border-red-500 bg-red-900/40 text-red-300 animate-pulse"
+                        : "border-[#1f4733] bg-transparent text-[#efe6d3]/70 active:bg-[#1f4733]/40"}`}
+                  >
+                    <Mic className="h-5 w-5" />
+                    {ptt.listening
+                      ? (ptt.transcript ? `"${ptt.transcript.slice(-24)}"` : "Ascolto… dì la cifra")
+                      : "Tieni premuto e dì la cifra"}
+                  </button>
+                ) : (
+                  <div className="rounded-lg border border-amber-500/50 bg-amber-900/20 p-3 space-y-2">
+                    <p className="text-center text-xs font-mono text-[#efe6d3]/60">
+                      Confermi l'offerta?
+                    </p>
+                    <div className="flex gap-2 justify-center flex-wrap">
+                      {ptt.candidates.slice(0, 3).map((n) => (
+                        <button
+                          key={n}
+                          disabled={n > myCredits || isTransitioning}
+                          onClick={() => { void placeBidAbsolute(n); ptt.reset(); }}
+                          className="rounded-lg border border-[#1f4733] bg-[#1f4733] px-6 py-3 font-mono font-bold text-2xl text-[#efe6d3] disabled:opacity-25 active:scale-95"
+                        >
+                          {n} FM
+                        </button>
+                      ))}
+                      <button
+                        onClick={() => ptt.reset()}
+                        className="rounded-lg border border-[#efe6d3]/20 px-4 py-3 font-mono text-sm text-[#efe6d3]/50 active:scale-95"
+                      >
+                        Annulla
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         ) : isCompleted ? (
           <div className="rounded-xl bg-green-900/30 border border-green-700/40 p-4 text-center">
