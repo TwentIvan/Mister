@@ -23,6 +23,7 @@ import {
   parseAnyListone,
   csvToCells,
   matchBatch,
+  roleFromSource,
   type Cell,
   type CandidatePlayer,
 } from "@workspace/listone-matcher";
@@ -307,6 +308,81 @@ router.get("/listoni/:id/entries", async (req, res): Promise<void> => {
       offset: off,
     }),
   );
+});
+
+// ── POST /listoni/:id/materialize-orphans ────────────────────────────────────
+// Crea in anagrafica un giocatore SINTETICO per ogni entry orfana (method =
+// none, non fuori lista) e la aggancia. ID NEGATIVI (-sourcePlayerId, o
+// -(9000000+entryId) se manca): mai in collisione con gli ID API-Football,
+// riconoscibili e ripulibili (WHERE id < 0). Compromesso consapevole: i
+// sintetici NON hanno aggancio API-Football ⇒ niente voti finché non
+// verranno riconciliati/deduplicati. Scelta dell'admin per andare in asta
+// con il listone completo. Idempotente: rilanciarla non duplica nulla.
+router.post("/listoni/:id/materialize-orphans", requireAuth, async (req, res): Promise<void> => {
+  const listoneId = Number(req.params.id);
+  if (!Number.isInteger(listoneId)) {
+    res.status(400).json({ error: "id listone invalido" });
+    return;
+  }
+  const [batch] = await db.select().from(listoni).where(eq(listoni.id, listoneId)).limit(1);
+  if (!batch) {
+    res.status(404).json({ error: "Listone inesistente" });
+    return;
+  }
+
+  const orphans = await db
+    .select()
+    .from(listoneEntries)
+    .where(
+      and(
+        eq(listoneEntries.listoneId, listoneId),
+        eq(listoneEntries.matchMethod, "none"),
+        eq(listoneEntries.fuoriLista, false),
+      ),
+    );
+
+  if (orphans.length === 0) {
+    res.json({ created: 0, linked: 0 });
+    return;
+  }
+
+  const now = new Date();
+  let created = 0;
+
+  await db.transaction(async (tx) => {
+    for (const e of orphans) {
+      const role = roleFromSource(e.rawRoleClassic);
+      if (!role) continue;
+      const syntheticId = e.sourcePlayerId != null ? -e.sourcePlayerId : -(9_000_000 + e.id);
+
+      // upsert-like: se esiste già (rilancio dell'azione), non duplicare
+      await tx
+        .insert(playersTable)
+        .values({
+          id: syntheticId,
+          name: e.rawName,
+          fullName: e.rawName,
+          realTeam: e.rawTeam,
+          roleClassic: role as "GK" | "DEF" | "MID" | "ATT",
+        })
+        .onConflictDoNothing();
+
+      await tx
+        .update(listoneEntries)
+        .set({
+          matchedPlayerId: syntheticId,
+          matchMethod: "manual",
+          matchConfidence: 1,
+          matchedAt: now,
+        })
+        .where(eq(listoneEntries.id, e.id));
+
+      created++;
+    }
+  });
+
+  req.log.warn({ listoneId, created, by: req.user?.email }, "orfani materializzati in anagrafica (id sintetici)");
+  res.json({ created, linked: created });
 });
 
 export default router;

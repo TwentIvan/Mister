@@ -19,6 +19,7 @@ import {
   getListListoniQueryKey,
   useListListoneEntries,
 } from "@workspace/api-client-react";
+import { useQueryClient as useQC } from "@tanstack/react-query";
 import type { ListoneImportResult, ListoneSummary } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -46,13 +47,43 @@ function ReportBadges({ report }: { report: ListoneSummary["report"] }) {
 
 function OrphanList({ listoneId }: { listoneId: number }) {
   const { data, isLoading } = useListListoneEntries(listoneId, { method: "none", limit: 100 });
+  const { toast } = useToast();
+  const qc = useQC();
+  const [busy, setBusy] = useState(false);
+
+  const materialize = async () => {
+    setBusy(true);
+    try {
+      const r = await customFetch<{ created: number }>(`/api/listoni/${listoneId}/materialize-orphans`, { method: "POST" });
+      toast({
+        title: "Orfani sbloccati",
+        description: `${r.created} giocatori creati in anagrafica e agganciati al listone`,
+      });
+      void qc.invalidateQueries();
+    } catch (e: unknown) {
+      const msg = (e as { data?: { error?: string } })?.data?.error ?? "Operazione fallita";
+      toast({ title: "Errore", description: msg, variant: "destructive" });
+    } finally {
+      setBusy(false);
+    }
+  };
+
   if (isLoading) return <Skeleton className="h-16 w-full" />;
   const items = data?.items ?? [];
   if (items.length === 0) {
     return <p className="text-sm text-muted-foreground">Nessun orfano: tutte le righe sono state matchate.</p>;
   }
   return (
-    <div className="space-y-1">
+    <div className="space-y-2">
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded border border-amber-600/40 bg-amber-600/10 p-2">
+        <p className="text-xs">
+          Per usare in asta anche questi {data?.total} giocatori: creali in anagrafica come sintetici
+          (senza aggancio API-Football → niente voti finché non riconciliati).
+        </p>
+        <Button size="sm" variant="secondary" disabled={busy} onClick={() => void materialize()} data-testid="button-materialize-orphans">
+          {busy ? "Creazione…" : "Crea e aggancia orfani"}
+        </Button>
+      </div>
       <p className="text-xs text-muted-foreground">
         {data?.total} righe senza match (prime {items.length}) — la risoluzione manuale arriva con la riconciliazione (T151)
       </p>
