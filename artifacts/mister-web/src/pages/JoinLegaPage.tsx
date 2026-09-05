@@ -201,10 +201,14 @@ export default function JoinLegaPage() {
                   className="w-full text-left px-4 py-3 rounded-lg border border-dashed border-border/60 hover:border-[#1f4733]/60 hover:bg-[#1f4733]/5 transition-colors"
                   data-testid={`slot-choice-${i}`}
                 >
-                  <span className="font-mono text-sm">Slot #{i + 1}</span>
-                  <span className="ml-2 text-[10px] font-mono text-muted-foreground opacity-50">
-                    {slot.id}
+                  <span className="font-serif font-bold text-base text-[#1f4733]">
+                    {slot.name ?? `Slot #${i + 1}`}
                   </span>
+                  {slot.name_auction && slot.name_auction !== slot.name && (
+                    <span className="ml-2 text-xs font-mono text-muted-foreground">
+                      voce asta: {slot.name_auction}
+                    </span>
+                  )}
                 </button>
               ))
             )}
