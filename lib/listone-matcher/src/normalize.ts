@@ -7,10 +7,18 @@
  * porta tutto a una forma canonica confrontabile SENZA perdere i token.
  */
 
-/** Minuscole, senza accenti, senza punteggiatura, spazi singoli. */
+/** Lettere speciali NON decomponibili via NFD: vanno piegate a mano. */
+const SPECIAL_FOLD: Record<string, string> = {
+  "ø": "o", "Ø": "o", "æ": "ae", "Æ": "ae", "œ": "oe", "Œ": "oe",
+  "ß": "ss", "ł": "l", "Ł": "l", "đ": "d", "Đ": "d", "ð": "d",
+  "þ": "th", "Þ": "th", "ı": "i", "ħ": "h",
+};
+
+/** Minuscole, senza accenti né lettere speciali, senza punteggiatura, spazi singoli. */
 export function normalize(s: string): string {
   return s
     .toLowerCase()
+    .replace(/[øØæÆœŒßłŁđĐðþÞıħ]/g, (c) => SPECIAL_FOLD[c] ?? c)
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "") // accenti
     .replace(/['’`´\-.]/g, " ") // apostrofi, trattini, punti (iniziali) → spazio

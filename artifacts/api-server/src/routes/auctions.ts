@@ -3,6 +3,7 @@ import { eq, and, asc, desc, count, notInArray, sql } from "drizzle-orm";
 import { guardLeagueAdmin, isLeagueAdmin } from "../lib/auth";
 import { nanoid } from "nanoid";
 import { db, listoneEntries } from "@workspace/db";
+import { normalize as normalizeName } from "@workspace/listone-matcher";
 import {
   auctions,
   auctionBids,
@@ -1544,11 +1545,14 @@ router.get("/auctions/:id/queue", async (req, res): Promise<void> => {
     )
     .orderBy(auctionPlayerQueue.position);
 
-  const filtered = search
+  // Ricerca accent/case-insensitive: "hojlund" trova "Højlund",
+  // "sorloth" trova "Sørloth" — normalize piega ø, æ, ß, accenti, ecc.
+  const nSearch = search ? normalizeName(search) : undefined;
+  const filtered = nSearch
     ? rows.filter((r) =>
-        r.name.toLowerCase().includes(search) ||
-        r.fullName.toLowerCase().includes(search) ||
-        r.realTeam.toLowerCase().includes(search),
+        normalizeName(r.name).includes(nSearch) ||
+        normalizeName(r.fullName).includes(nSearch) ||
+        normalizeName(r.realTeam).includes(nSearch),
       )
     : rows;
 
