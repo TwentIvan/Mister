@@ -191,15 +191,19 @@ function errDetail(err: unknown): string {
   let depth = 0;
   while (cur && depth < 5) {
     if (cur instanceof Error) {
-      parts.push(`${cur.name}: ${cur.message}`);
+      // Tronca ogni livello: le query Drizzle includono migliaia di parametri
+      // e seppelliscono la causa vera (l'errore Postgres, l'ULTIMO anello).
+      const msg = cur.message.length > 160 ? cur.message.slice(0, 160) + "…" : cur.message;
+      parts.push(`${cur.name}: ${msg}`);
       cur = (cur as { cause?: unknown }).cause;
     } else {
-      parts.push(String(cur));
+      parts.push(String(cur).slice(0, 300));
       break;
     }
     depth++;
   }
-  return parts.join(" ← ");
+  // La causa profonda per prima: è quella che serve leggere
+  return parts.reverse().join(" ⟵ causata da ⟵ ");
 }
 
 const sseClients = new Map<string, Set<Response>>();
