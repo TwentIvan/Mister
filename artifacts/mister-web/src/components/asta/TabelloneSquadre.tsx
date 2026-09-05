@@ -1,3 +1,4 @@
+import { useState } from "react";
 interface AssignmentItem {
   player_id: number;
   player_name: string;
@@ -26,6 +27,8 @@ interface TabelloneSquadreProps {
   isPaused: boolean;
   isLoading: boolean;
   onBid: (fantaTeamId: string, delta: number) => void;
+  /** Offerta a importo assoluto (campo manuale) */
+  onBidAbsolute: (fantaTeamId: string, amount: number) => void;
 }
 
 type RoleKey = "GK" | "DEF" | "MID" | "ATT";
@@ -51,7 +54,16 @@ export function TabelloneSquadre({
   isPaused,
   isLoading,
   onBid,
+  onBidAbsolute,
 }: TabelloneSquadreProps) {
+  // importi digitati nel campo manuale, per squadra
+  const [manualAmounts, setManualAmounts] = useState<Record<string, string>>({});
+  const submitManual = (teamId: string, max: number) => {
+    const n = parseInt(manualAmounts[teamId] ?? "", 10);
+    if (!Number.isFinite(n) || n < 1 || n > max) return;
+    onBidAbsolute(teamId, n);
+    setManualAmounts((m) => ({ ...m, [teamId]: "" }));
+  };
   const rosterByRole: Record<RoleKey, number> = {
     GK: rosterP, DEF: rosterD, MID: rosterC, ATT: rosterA,
   };
@@ -212,6 +224,29 @@ export function TabelloneSquadre({
                       </button>
                     );
                   })}
+                </div>
+
+                {/* Offerta manuale: importo assoluto */}
+                <div className="flex gap-1 mt-1">
+                  <input
+                    type="number"
+                    min={1}
+                    max={offertaMassima}
+                    inputMode="numeric"
+                    placeholder="FM"
+                    value={manualAmounts[team.id] ?? ""}
+                    disabled={!teamCanBid}
+                    onChange={(e) => setManualAmounts((m) => ({ ...m, [team.id]: e.target.value }))}
+                    onKeyDown={(e) => { if (e.key === "Enter") submitManual(team.id, offertaMassima); }}
+                    className="w-full min-w-0 border border-border rounded-md py-1 px-1.5 font-mono text-[10px] bg-card text-primary/90 disabled:opacity-25 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  />
+                  <button
+                    onClick={() => submitManual(team.id, offertaMassima)}
+                    disabled={!teamCanBid || !(parseInt(manualAmounts[team.id] ?? "", 10) >= 1)}
+                    className="shrink-0 border border-border rounded-md py-1 px-2 font-mono font-bold text-[10px] text-primary/80 bg-card hover:bg-muted/30 disabled:opacity-25 disabled:cursor-not-allowed transition-colors"
+                  >
+                    OK
+                  </button>
                 </div>
 
                 {/* Blocking reason (role full or budget cap) */}

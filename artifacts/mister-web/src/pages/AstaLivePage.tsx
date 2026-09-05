@@ -134,6 +134,10 @@ export default function AstaLivePage() {
   };
 
   // handleBid: wrapper usato dai tasti +N del tabellone
+  const handleBidAbsolute = async (fantaTeamId: string, amount: number) => {
+    await placeBid(fantaTeamId, amount);
+  };
+
   const handleBid = async (fantaTeamId: string, delta: number) => {
     // Senza offerte, il primo tasto +N parte dalla base d'asta del listone
     // (se configurata): base + delta - 1 così "+1" = esattamente la base.
@@ -594,6 +598,7 @@ export default function AstaLivePage() {
 
       {/* ── TABELLONE ────────────────────────────────────────────── */}
       <TabelloneSquadre
+        onBidAbsolute={(id, n) => void handleBidAbsolute(id, n)}
         squadre={squadreForComponents}
         assignments={(data.assignments ?? []).map((a) => ({
           player_id:      a.player_id,
