@@ -360,10 +360,23 @@ router.post("/auctions", async (req, res): Promise<void> => {
         ),
       )
       .orderBy(roleOrderSql, asc(players.name), asc(players.fullName));
-    playerPool = rows.map((r) => ({
-      id: r.id,
-      basePrice: r.qtA != null ? Math.max(1, Math.round(r.qtA)) : null,
-    }));
+    // DEDUPE: due entry del listone possono essere matchate allo STESSO
+    // giocatore (doppioni della fonte, riconciliazioni, re-match): in coda
+    // ogni giocatore va una volta sola (vincolo uq_apq_auction_player).
+    // Si tiene la quotazione più alta.
+    const byPlayer = new Map<number, number | null>();
+    for (const r of rows) {
+      const price = r.qtA != null ? Math.max(1, Math.round(r.qtA)) : null;
+      const prev = byPlayer.get(r.id);
+      if (prev === undefined || (price ?? 0) > (prev ?? 0)) byPlayer.set(r.id, price);
+    }
+    if (byPlayer.size < rows.length) {
+      req.log.warn(
+        { listoneId: priceListoneId, rows: rows.length, unique: byPlayer.size },
+        "pool listone: giocatori duplicati deduplicati",
+      );
+    }
+    playerPool = [...byPlayer.entries()].map(([id, basePrice]) => ({ id, basePrice }));
     if (playerPool.length === 0) {
       res.status(400).json({
         error: "Il listone configurato come sorgente prezzi non ha giocatori matchati: importa un listone o risolvi la riconciliazione, oppure rimuovi la sorgente dalla config di lega",
