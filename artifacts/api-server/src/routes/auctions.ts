@@ -182,6 +182,26 @@ function mapPlayerEntry(row: PlayerRow) {
 
 // ── SSE subscribers + buildAuctionState + notifyAuction ──────────────────────
 
+
+// Estrae il messaggio più profondo dalla catena err.cause (Drizzle incapsula
+// l'errore Postgres in cause: senza questo il "perché" resta invisibile).
+function errDetail(err: unknown): string {
+  const parts: string[] = [];
+  let cur: unknown = err;
+  let depth = 0;
+  while (cur && depth < 5) {
+    if (cur instanceof Error) {
+      parts.push(`${cur.name}: ${cur.message}`);
+      cur = (cur as { cause?: unknown }).cause;
+    } else {
+      parts.push(String(cur));
+      break;
+    }
+    depth++;
+  }
+  return parts.join(" ← ");
+}
+
 const sseClients = new Map<string, Set<Response>>();
 
 async function buildAuctionState(id: string) {
@@ -457,7 +477,7 @@ router.post("/auctions", async (req, res): Promise<void> => {
     // senza accesso comodo ai log vale più dell'opacità del 500.
     res.status(500).json({
       error: "Errore interno alla creazione dell'asta",
-      detail: err instanceof Error ? `${err.name}: ${err.message}` : String(err),
+      detail: errDetail(err),
     });
   }
 });
@@ -821,7 +841,7 @@ router.post("/auctions/:id/assign", async (req, res): Promise<void> => {
     req.log.error({ err }, "Errore aggiudicazione");
     res.status(500).json({
       error: "Errore interno",
-      detail: err instanceof Error ? `${err.name}: ${err.message}` : String(err),
+      detail: errDetail(err),
     });
   }
 });
@@ -1123,7 +1143,7 @@ router.post("/auctions/:id/undo", async (req, res): Promise<void> => {
     req.log.error({ err }, "Errore undo asta");
     res.status(500).json({
       error: "Errore interno",
-      detail: err instanceof Error ? `${err.name}: ${err.message}` : String(err),
+      detail: errDetail(err),
     });
   }
 });
@@ -1198,7 +1218,7 @@ router.post("/auctions/:id/manual/add", async (req, res): Promise<void> => {
     req.log.error({ err }, "Errore manual add");
     res.status(500).json({
       error: "Errore interno",
-      detail: err instanceof Error ? `${err.name}: ${err.message}` : String(err),
+      detail: errDetail(err),
     });
   }
 });
@@ -1260,7 +1280,7 @@ router.post("/auctions/:id/manual/remove", async (req, res): Promise<void> => {
     req.log.error({ err }, "Errore manual remove");
     res.status(500).json({
       error: "Errore interno",
-      detail: err instanceof Error ? `${err.name}: ${err.message}` : String(err),
+      detail: errDetail(err),
     });
   }
 });
@@ -1341,7 +1361,7 @@ router.post("/auctions/:id/manual/update-price", async (req, res): Promise<void>
     req.log.error({ err }, "Errore manual update-price");
     res.status(500).json({
       error: "Errore interno",
-      detail: err instanceof Error ? `${err.name}: ${err.message}` : String(err),
+      detail: errDetail(err),
     });
   }
 });
