@@ -890,7 +890,7 @@ router.post("/auctions/:id/skip", async (req, res): Promise<void> => {
 
   await db
     .update(auctionPlayerQueue)
-    .set({ status: "skipped" })
+    .set({ status: auction.callMode === "chiamata" ? "pending" : "skipped" })
     .where(and(eq(auctionPlayerQueue.auctionId, id), eq(auctionPlayerQueue.playerId, playerId)));
 
   // In chiamata: no auto-avanzamento
