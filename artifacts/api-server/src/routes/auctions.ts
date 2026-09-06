@@ -290,6 +290,31 @@ function notifyAuction(id: string): void {
 
 // ─── POST /auctions ───────────────────────────────────────
 
+// ── GET /leagues/:id/auctions — elenco aste della lega ───────────────────────
+router.get("/leagues/:id/auctions", async (req, res): Promise<void> => {
+  const leagueId = String(req.params.id ?? "");
+  const rows = await db
+    .select({
+      id: auctions.id,
+      status: auctions.status,
+      callMode: auctions.callMode,
+      startedAt: auctions.startedAt,
+      completedAt: auctions.completedAt,
+    })
+    .from(auctions)
+    .where(eq(auctions.leagueId, leagueId))
+    .orderBy(desc(auctions.startedAt));
+  res.json({
+    items: rows.map((a) => ({
+      id: a.id,
+      status: a.status,
+      call_mode: a.callMode ?? null,
+      started_at: a.startedAt?.toISOString() ?? null,
+      completed_at: a.completedAt?.toISOString() ?? null,
+    })),
+  });
+});
+
 router.post("/auctions", async (req, res): Promise<void> => {
   const parsed = CreateAuctionBody.safeParse(req.body);
   if (!parsed.success) {

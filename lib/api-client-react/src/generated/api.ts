@@ -74,6 +74,7 @@ import type {
   Lineup,
   LineupInput,
   ListFederationsParams,
+  ListLeagueAuctions200,
   ListLeaguesParams,
   ListListoneEntriesParams,
   ListPlayersParams,
@@ -4754,6 +4755,83 @@ export function useGetMatches<TData = Awaited<ReturnType<typeof getMatches>>, TE
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetMatchesQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getListLeagueAuctionsUrl = (id: string,) => {
+
+
+
+
+  return `/api/leagues/${id}/auctions`
+}
+
+/**
+ * @summary Aste della lega (più recente per prima)
+ */
+export const listLeagueAuctions = async (id: string, options?: RequestInit): Promise<ListLeagueAuctions200> => {
+
+  return customFetch<ListLeagueAuctions200>(getListLeagueAuctionsUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListLeagueAuctionsQueryKey = (id: string,) => {
+    return [
+    `/api/leagues/${id}/auctions`
+    ] as const;
+    }
+
+
+export const getListLeagueAuctionsQueryOptions = <TData = Awaited<ReturnType<typeof listLeagueAuctions>>, TError = ErrorType<unknown>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listLeagueAuctions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListLeagueAuctionsQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listLeagueAuctions>>> = ({ signal }) => listLeagueAuctions(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listLeagueAuctions>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListLeagueAuctionsQueryResult = NonNullable<Awaited<ReturnType<typeof listLeagueAuctions>>>
+export type ListLeagueAuctionsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Aste della lega (più recente per prima)
+ */
+
+export function useListLeagueAuctions<TData = Awaited<ReturnType<typeof listLeagueAuctions>>, TError = ErrorType<unknown>>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listLeagueAuctions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListLeagueAuctionsQueryOptions(id,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

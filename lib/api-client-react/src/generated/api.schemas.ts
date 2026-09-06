@@ -2073,6 +2073,21 @@ competitionId: string;
 giornata: number;
 };
 
+export type ListLeagueAuctions200ItemsItem = {
+  id: string;
+  status: string;
+  /** @nullable */
+  call_mode?: string | null;
+  /** @nullable */
+  started_at?: string | null;
+  /** @nullable */
+  completed_at?: string | null;
+};
+
+export type ListLeagueAuctions200 = {
+  items: ListLeagueAuctions200ItemsItem[];
+};
+
 export type GetAuctionQueueParams = {
 /**
  * Filtra per nome o squadra reale

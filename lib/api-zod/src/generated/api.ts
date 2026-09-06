@@ -2246,6 +2246,24 @@ export const GetMatchesResponse = zod.array(GetMatchesResponseItem)
 
 
 /**
+ * @summary Aste della lega (più recente per prima)
+ */
+export const ListLeagueAuctionsParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const ListLeagueAuctionsResponse = zod.object({
+  "items": zod.array(zod.object({
+  "id": zod.string(),
+  "status": zod.string(),
+  "call_mode": zod.string().nullish(),
+  "started_at": zod.coerce.date().nullish(),
+  "completed_at": zod.coerce.date().nullish()
+}))
+})
+
+
+/**
  * @summary Avvia una nuova asta live per una lega
  */
 export const createAuctionBodyTimerSecondsDefault = 8;

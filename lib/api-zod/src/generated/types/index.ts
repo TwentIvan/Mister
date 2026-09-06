@@ -140,6 +140,8 @@ export * from './lineupInput';
 export * from './lineupPlayer';
 export * from './lineupPlayerSlotPosition';
 export * from './listFederationsParams';
+export * from './listLeagueAuctions200';
+export * from './listLeagueAuctions200ItemsItem';
 export * from './listLeaguesParams';
 export * from './listListoneEntriesMethod';
 export * from './listListoneEntriesParams';

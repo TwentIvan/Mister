@@ -8,6 +8,7 @@ import {
   useGetLeagueInvite, getGetLeagueInviteQueryKey,
 } from "@workspace/api-client-react";
 import { useCurrentUser } from "@/contexts/AuthContext";
+import { useListLeagueAuctions, getListLeagueAuctionsQueryKey } from "@workspace/api-client-react";
 import { isDevSuperadmin } from "@/lib/dev-superadmin";
 import { useEconomyConfig } from "@/lib/economy-api";
 import { useState, useMemo } from "react";
@@ -133,6 +134,11 @@ export default function LeagueDetail() {
   );
 
   const { user } = useCurrentUser();
+  // asta esistente? (running/paused → "Vai all'asta")
+  const { data: auctionsList } = useListLeagueAuctions(id ?? "", {
+    query: { enabled: !!id, queryKey: getListLeagueAuctionsQueryKey(id ?? "") },
+  });
+  const liveAuction = (auctionsList?.items ?? []).find((a) => a.status === "running" || a.status === "paused") ?? null;
   // ⚠️ TEMPORANEO: isDevSuperadmin — vedi lib/dev-superadmin.ts e TECH_DEBT.md
   const isAdmin = !!league && !!user && (league.admin_user_id === user.id || isDevSuperadmin(user.email));
 
@@ -229,7 +235,14 @@ export default function LeagueDetail() {
               </Link>
             </>
           )}
-          {isReadyForAuction ? (
+          {liveAuction ? (
+            <Link href={`/asta/${liveAuction.id}`}>
+              <Button className="gap-2 bg-[#1f4733] text-[#efe6d3] hover:bg-[#1f4733]/90">
+                <Gavel className="h-4 w-4" />
+                Vai all'asta in corso
+              </Button>
+            </Link>
+          ) : isReadyForAuction ? (
             <Button
               className="gap-2 bg-[#1f4733] text-[#efe6d3] hover:bg-[#1f4733]/90"
               onClick={() => setIsConfigOpen(true)}

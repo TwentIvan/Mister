@@ -1355,6 +1355,41 @@ paths:
           description: Parametri non validi
 
   # ─── AUCTIONS ─────────────────────────────────────────────
+  /leagues/{id}/auctions:
+    get:
+      operationId: listLeagueAuctions
+      tags: [auctions]
+      summary: Aste della lega (più recente per prima)
+      parameters:
+        - $ref: "#/components/parameters/StringId"
+      responses:
+        "200":
+          description: Elenco aste
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      required: [id, status]
+                      properties:
+                        id:
+                          type: string
+                        status:
+                          type: string
+                        call_mode:
+                          type: ["string", "null"]
+                        started_at:
+                          type: ["string", "null"]
+                          format: date-time
+                        completed_at:
+                          type: ["string", "null"]
+                          format: date-time
+
   /auctions:
     post:
       operationId: createAuction
