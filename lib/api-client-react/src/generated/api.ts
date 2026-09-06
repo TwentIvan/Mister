@@ -27,6 +27,7 @@ import type {
   AuctionState,
   CallPlayerBody,
   CallPlayerResponse,
+  ClaimSlotInvite200,
   ClaimSlotRequest,
   ClaimSlotResponse,
   Competition,
@@ -43,6 +44,7 @@ import type {
   CreateAuctionBidResponse,
   CreateAuctionBody,
   CreateAuctionResponse,
+  CreateSlotInvite200,
   DashboardSummary,
   FantaTeam,
   FantaTeamInput,
@@ -60,6 +62,7 @@ import type {
   GetMatchesParams,
   GetPlayerSchedaParams,
   GetRosterParams,
+  GetSlotInvite200,
   HealthStatus,
   ImportListoneParams,
   JoinLeagueRequest,
@@ -4766,6 +4769,225 @@ export function useGetMatches<TData = Awaited<ReturnType<typeof getMatches>>, TE
 
 
 
+
+export const getCreateSlotInviteUrl = (id: string,
+    slotId: string,) => {
+
+
+
+
+  return `/api/leagues/${id}/slots/${slotId}/invite`
+}
+
+/**
+ * @summary T171: genera (o rigenera, invalidando il precedente) il link d'invito nominale per uno slot libero
+ */
+export const createSlotInvite = async (id: string,
+    slotId: string, options?: RequestInit): Promise<CreateSlotInvite200> => {
+
+  return customFetch<CreateSlotInvite200>(getCreateSlotInviteUrl(id,slotId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getCreateSlotInviteMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createSlotInvite>>, TError,{id: string;slotId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createSlotInvite>>, TError,{id: string;slotId: string}, TContext> => {
+
+const mutationKey = ['createSlotInvite'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createSlotInvite>>, {id: string;slotId: string}> = (props) => {
+          const {id,slotId} = props ?? {};
+
+          return  createSlotInvite(id,slotId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateSlotInviteMutationResult = NonNullable<Awaited<ReturnType<typeof createSlotInvite>>>
+
+    export type CreateSlotInviteMutationError = ErrorType<void>
+
+    /**
+ * @summary T171: genera (o rigenera, invalidando il precedente) il link d'invito nominale per uno slot libero
+ */
+export const useCreateSlotInvite = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createSlotInvite>>, TError,{id: string;slotId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createSlotInvite>>,
+        TError,
+        {id: string;slotId: string},
+        TContext
+      > => {
+      return useMutation(getCreateSlotInviteMutationOptions(options));
+    }
+
+export const getGetSlotInviteUrl = (token: string,) => {
+
+
+
+
+  return `/api/join-slot/${token}`
+}
+
+/**
+ * @summary T171: info pubbliche dell'invito nominale (per la pagina di atterraggio)
+ */
+export const getSlotInvite = async (token: string, options?: RequestInit): Promise<GetSlotInvite200> => {
+
+  return customFetch<GetSlotInvite200>(getGetSlotInviteUrl(token),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetSlotInviteQueryKey = (token: string,) => {
+    return [
+    `/api/join-slot/${token}`
+    ] as const;
+    }
+
+
+export const getGetSlotInviteQueryOptions = <TData = Awaited<ReturnType<typeof getSlotInvite>>, TError = ErrorType<void>>(token: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSlotInvite>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetSlotInviteQueryKey(token);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getSlotInvite>>> = ({ signal }) => getSlotInvite(token, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(token), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getSlotInvite>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetSlotInviteQueryResult = NonNullable<Awaited<ReturnType<typeof getSlotInvite>>>
+export type GetSlotInviteQueryError = ErrorType<void>
+
+
+/**
+ * @summary T171: info pubbliche dell'invito nominale (per la pagina di atterraggio)
+ */
+
+export function useGetSlotInvite<TData = Awaited<ReturnType<typeof getSlotInvite>>, TError = ErrorType<void>>(
+ token: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSlotInvite>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetSlotInviteQueryOptions(token,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getClaimSlotInviteUrl = (token: string,) => {
+
+
+
+
+  return `/api/join-slot/${token}/claim`
+}
+
+/**
+ * @summary T171: rivendica lo slot dell'invito (atomico; consuma il token)
+ */
+export const claimSlotInvite = async (token: string, options?: RequestInit): Promise<ClaimSlotInvite200> => {
+
+  return customFetch<ClaimSlotInvite200>(getClaimSlotInviteUrl(token),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getClaimSlotInviteMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof claimSlotInvite>>, TError,{token: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof claimSlotInvite>>, TError,{token: string}, TContext> => {
+
+const mutationKey = ['claimSlotInvite'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof claimSlotInvite>>, {token: string}> = (props) => {
+          const {token} = props ?? {};
+
+          return  claimSlotInvite(token,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ClaimSlotInviteMutationResult = NonNullable<Awaited<ReturnType<typeof claimSlotInvite>>>
+
+    export type ClaimSlotInviteMutationError = ErrorType<void>
+
+    /**
+ * @summary T171: rivendica lo slot dell'invito (atomico; consuma il token)
+ */
+export const useClaimSlotInvite = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof claimSlotInvite>>, TError,{token: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof claimSlotInvite>>,
+        TError,
+        {token: string},
+        TContext
+      > => {
+      return useMutation(getClaimSlotInviteMutationOptions(options));
+    }
 
 export const getListLeagueAuctionsUrl = (id: string,) => {
 

@@ -8,7 +8,7 @@ import {
   useGetLeagueInvite, getGetLeagueInviteQueryKey,
 } from "@workspace/api-client-react";
 import { useCurrentUser } from "@/contexts/AuthContext";
-import { useListLeagueAuctions, getListLeagueAuctionsQueryKey } from "@workspace/api-client-react";
+import { useListLeagueAuctions, getListLeagueAuctionsQueryKey, useCreateSlotInvite } from "@workspace/api-client-react";
 import { isDevSuperadmin } from "@/lib/dev-superadmin";
 import { useEconomyConfig } from "@/lib/economy-api";
 import { useState, useMemo } from "react";
@@ -140,6 +140,29 @@ export default function LeagueDetail() {
   });
   const liveAuction = (auctionsList?.items ?? []).find((a) => a.status === "running" || a.status === "paused") ?? null;
   const lastCompleted = (auctionsList?.items ?? []).find((a) => a.status === "completed") ?? null;
+
+  // T171: invito nominale per slot — genera link e copia messaggio pronto
+  const createSlotInvite = useCreateSlotInvite();
+  const handleSlotInvite = (slotId: string) => {
+    if (!id) return;
+    createSlotInvite.mutate(
+      { id, slotId },
+      {
+        onSuccess: (r) => {
+          const nome = r.team_name ?? "la tua squadra";
+          const msg = `⚽ Sei stato invitato a guidare ${nome} in "${league?.name ?? "Mister"}"!\n` +
+                      `Apri questo link personale (registrati se non hai un account) e la squadra è tua:\n${r.invite_link}\n` +
+                      `⏳ Il link scade tra 14 giorni ed è solo per te.`;
+          void navigator.clipboard.writeText(msg);
+          toast({ title: `Invito per ${nome} copiato`, description: "Incolla il messaggio su WhatsApp al manager giusto" });
+        },
+        onError: (e: unknown) => {
+          const err = e as { data?: { error?: string } };
+          toast({ title: "Errore", description: err?.data?.error ?? "Generazione invito fallita", variant: "destructive" });
+        },
+      },
+    );
+  };
   // ⚠️ TEMPORANEO: isDevSuperadmin — vedi lib/dev-superadmin.ts e TECH_DEBT.md
   const isAdmin = !!league && !!user && (league.admin_user_id === user.id || isDevSuperadmin(user.email));
 
@@ -564,19 +587,32 @@ export default function LeagueDetail() {
                         ].join(" ")}
                         data-testid={`slot-row-${slot.id}`}
                       >
-                        <span className={slot.is_claimed ? "font-medium" : "text-muted-foreground text-xs"}>
-                          {slot.is_claimed
-                            ? (slot.name ?? slot.name_auction ?? "Slot occupato")
-                            : "Slot libero"}
+                        <span className={slot.is_claimed ? "font-medium" : "text-muted-foreground"}>
+                          {slot.name ?? slot.name_auction ?? (slot.is_claimed ? "Slot occupato" : "Slot libero")}
                         </span>
-                        <Badge
-                          variant={slot.is_claimed ? "default" : "outline"}
-                          className={slot.is_claimed
-                            ? "bg-[#1f4733] text-[#efe6d3] text-[10px]"
-                            : "text-[10px]"}
-                        >
-                          {slot.is_claimed ? "occupato" : "libero"}
-                        </Badge>
+                        <span className="flex items-center gap-1.5">
+                          {!slot.is_claimed && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-6 px-2 text-[10px] gap-1"
+                              disabled={createSlotInvite.isPending}
+                              onClick={() => handleSlotInvite(slot.id)}
+                              data-testid={`button-slot-invite-${slot.id}`}
+                            >
+                              <Copy className="h-3 w-3" />
+                              Invito personale
+                            </Button>
+                          )}
+                          <Badge
+                            variant={slot.is_claimed ? "default" : "outline"}
+                            className={slot.is_claimed
+                              ? "bg-[#1f4733] text-[#efe6d3] text-[10px]"
+                              : "text-[10px]"}
+                          >
+                            {slot.is_claimed ? "occupato" : "libero"}
+                          </Badge>
+                        </span>
                       </div>
                     ))}
                   </div>

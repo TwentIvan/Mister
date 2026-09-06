@@ -6,6 +6,9 @@ import { Link } from "wouter";
 export default function LoginPage() {
   const { login } = useCurrentUser();
   const [, navigate] = useLocation();
+  // T171: dopo login/registrazione si torna dove si stava andando (es. invito nominale)
+  const nextParam = new URLSearchParams(window.location.search).get("next");
+  const nextSafe = nextParam && nextParam.startsWith("/") ? nextParam : null;
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -17,7 +20,7 @@ export default function LoginPage() {
     setIsPending(true);
     try {
       await login(email, password);
-      navigate("/");
+      navigate(nextSafe ?? "/");
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -137,7 +140,7 @@ export default function LoginPage() {
 
         <p style={{ textAlign: "center", fontSize: 13, color: "var(--muted)", margin: 0 }}>
           Non hai un account?{" "}
-          <Link href="/register" style={{ color: "var(--green)", fontWeight: 600 }}>
+          <Link href={nextSafe ? `/register?next=${encodeURIComponent(nextSafe)}` : "/register"} style={{ color: "var(--green)", fontWeight: 600 }}>
             Registrati
           </Link>
         </p>

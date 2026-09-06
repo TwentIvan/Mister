@@ -2073,6 +2073,28 @@ competitionId: string;
 giornata: number;
 };
 
+export type CreateSlotInvite200 = {
+  invite_link: string;
+  token: string;
+  expires_at: string;
+  /** @nullable */
+  team_name: string | null;
+};
+
+export type GetSlotInvite200 = {
+  league_id: string;
+  league_name: string;
+  /** @nullable */
+  team_name: string | null;
+  claimed: boolean;
+  expired: boolean;
+};
+
+export type ClaimSlotInvite200 = {
+  league_id: string;
+  fanta_team_id: string;
+};
+
 export type ListLeagueAuctions200ItemsItem = {
   id: string;
   status: string;

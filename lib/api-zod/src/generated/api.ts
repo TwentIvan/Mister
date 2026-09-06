@@ -2246,6 +2246,51 @@ export const GetMatchesResponse = zod.array(GetMatchesResponseItem)
 
 
 /**
+ * @summary T171: genera (o rigenera, invalidando il precedente) il link d'invito nominale per uno slot libero
+ */
+export const CreateSlotInviteParams = zod.object({
+  "id": zod.coerce.string(),
+  "slotId": zod.coerce.string()
+})
+
+export const CreateSlotInviteResponse = zod.object({
+  "invite_link": zod.string(),
+  "token": zod.string(),
+  "expires_at": zod.coerce.date(),
+  "team_name": zod.string().nullable()
+})
+
+
+/**
+ * @summary T171: info pubbliche dell'invito nominale (per la pagina di atterraggio)
+ */
+export const GetSlotInviteParams = zod.object({
+  "token": zod.coerce.string()
+})
+
+export const GetSlotInviteResponse = zod.object({
+  "league_id": zod.string(),
+  "league_name": zod.string(),
+  "team_name": zod.string().nullable(),
+  "claimed": zod.boolean(),
+  "expired": zod.boolean()
+})
+
+
+/**
+ * @summary T171: rivendica lo slot dell'invito (atomico; consuma il token)
+ */
+export const ClaimSlotInviteParams = zod.object({
+  "token": zod.coerce.string()
+})
+
+export const ClaimSlotInviteResponse = zod.object({
+  "league_id": zod.string(),
+  "fanta_team_id": zod.string()
+})
+
+
+/**
  * @summary Aste della lega (più recente per prima)
  */
 export const ListLeagueAuctionsParams = zod.object({

@@ -53,6 +53,11 @@ export const fantaTeams = pgTable("fanta_teams", {
    */
   societaId: text("societa_id").references(() => societa.id, { onDelete: "set null" }),
 
+  /** T171 — invito nominale: token monouso che aggancia la registrazione
+   *  a QUESTO slot. Rigenerarlo invalida il precedente; il claim lo consuma. */
+  inviteToken: text("invite_token").unique(),
+  inviteTokenExpiresAt: timestamp("invite_token_expires_at", { withTimezone: true }),
+
   /** Crediti disponibili in questa lega (per-lega, MAI sulla società). */
   creditsRemaining: integer("credits_remaining").notNull().default(0),
 

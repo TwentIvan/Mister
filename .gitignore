@@ -50,3 +50,8 @@ Thumbs.db
 
 # Sync checkpoint
 scripts/sync/.checkpoint.json
+
+# dump e export locali (mai su git)
+*.sql
+rose_export.csv
+backup_*.sql

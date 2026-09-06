@@ -715,4 +715,121 @@ router.post("/leagues/:id/reset-rosters", requireAuth, async (req, res): Promise
   res.json(result);
 });
 
+// ═══ T171 — INVITI NOMINALI PER SLOT ═════════════════════════════════════════
+// Best practice incorporate: token crypto-random monouso (nanoid 24) legato
+// allo slot; rigenerazione = revoca del precedente; scadenza 14 giorni; claim
+// atomico (WHERE manager_user_id IS NULL) che CONSUMA il token; il claim NON
+// tocca nome/società dello slot (lezione del 5/9: rivendicare ≠ ribattezzare);
+// audit log con esecutore.
+
+const INVITE_TTL_DAYS = 14;
+
+// POST /leagues/:id/slots/:slotId/invite — genera/rigenera (solo admin)
+router.post("/leagues/:id/slots/:slotId/invite", requireAuth, async (req, res): Promise<void> => {
+  const leagueId = String(req.params.id ?? "");
+  const slotId = String(req.params.slotId ?? "");
+  if (!(await guardLeagueAdmin(req, res, leagueId))) return;
+
+  const [slot] = await db
+    .select({ id: fantaTeams.id, managerUserId: fantaTeams.managerUserId, societaId: fantaTeams.societaId })
+    .from(fantaTeams)
+    .where(and(eq(fantaTeams.id, slotId), eq(fantaTeams.leagueId, leagueId)));
+  if (!slot) { res.status(404).json({ error: "Slot inesistente in questa lega" }); return; }
+  if (slot.managerUserId) { res.status(409).json({ error: "Slot già rivendicato" }); return; }
+
+  const token = nanoid(24);
+  const expiresAt = new Date(Date.now() + INVITE_TTL_DAYS * 24 * 3600 * 1000);
+  await db.update(fantaTeams)
+    .set({ inviteToken: token, inviteTokenExpiresAt: expiresAt })
+    .where(eq(fantaTeams.id, slotId));
+
+  let teamName: string | null = null;
+  if (slot.societaId) {
+    const [soc] = await db.select({ name: societa.name }).from(societa).where(eq(societa.id, slot.societaId));
+    teamName = soc?.name ?? null;
+  }
+  const domain = process.env.REPLIT_DOMAINS?.split(",")[0] ?? "localhost";
+  req.log.info({ leagueId, slotId, by: req.user?.email }, "T171: invito nominale generato");
+  res.json({
+    invite_link: `https://${domain}/js/${token}`,
+    token,
+    expires_at: expiresAt.toISOString(),
+    team_name: teamName,
+  });
+});
+
+// GET /join-slot/:token — info pubbliche per la landing
+router.get("/join-slot/:token", async (req, res): Promise<void> => {
+  const token = String(req.params.token ?? "");
+  const [slot] = await db
+    .select({
+      id: fantaTeams.id, leagueId: fantaTeams.leagueId,
+      managerUserId: fantaTeams.managerUserId, societaId: fantaTeams.societaId,
+      exp: fantaTeams.inviteTokenExpiresAt,
+    })
+    .from(fantaTeams)
+    .where(eq(fantaTeams.inviteToken, token));
+  if (!slot) { res.status(404).json({ error: "Invito inesistente o revocato" }); return; }
+
+  const [lg] = await db.select({ name: leagues.name }).from(leagues).where(eq(leagues.id, slot.leagueId));
+  let teamName: string | null = null;
+  if (slot.societaId) {
+    const [soc] = await db.select({ name: societa.name }).from(societa).where(eq(societa.id, slot.societaId));
+    teamName = soc?.name ?? null;
+  }
+  res.json({
+    league_id: slot.leagueId,
+    league_name: lg?.name ?? "",
+    team_name: teamName,
+    claimed: slot.managerUserId !== null,
+    expired: slot.exp !== null && slot.exp < new Date(),
+  });
+});
+
+// POST /join-slot/:token/claim — rivendica e consuma (autenticato, atomico)
+router.post("/join-slot/:token/claim", requireAuth, async (req, res): Promise<void> => {
+  const token = String(req.params.token ?? "");
+  const userId = req.user!.sub;
+
+  const [slot] = await db
+    .select({ id: fantaTeams.id, leagueId: fantaTeams.leagueId, exp: fantaTeams.inviteTokenExpiresAt })
+    .from(fantaTeams)
+    .where(eq(fantaTeams.inviteToken, token));
+  if (!slot) { res.status(404).json({ error: "Invito inesistente o revocato" }); return; }
+  if (slot.exp !== null && slot.exp < new Date()) {
+    res.status(409).json({ error: "Invito scaduto: chiedi all'admin di rigenerarlo" });
+    return;
+  }
+
+  // un utente = una squadra per lega
+  const [existing] = await db
+    .select({ id: fantaTeams.id })
+    .from(fantaTeams)
+    .where(and(eq(fantaTeams.leagueId, slot.leagueId), eq(fantaTeams.managerUserId, userId)));
+  if (existing) {
+    res.status(409).json({ error: "Hai già una squadra in questa lega", existing_slot_id: existing.id });
+    return;
+  }
+
+  // claim atomico: solo se ancora libero; consuma il token. NON tocca società/nome.
+  const updated = await db
+    .update(fantaTeams)
+    .set({ managerUserId: userId, inviteToken: null, inviteTokenExpiresAt: null })
+    .where(and(eq(fantaTeams.id, slot.id), isNull(fantaTeams.managerUserId)))
+    .returning({ id: fantaTeams.id });
+  if (updated.length === 0) {
+    res.status(409).json({ error: "Slot già rivendicato da qualcun altro" });
+    return;
+  }
+
+  // membership di lega (se non già presente)
+  await db.execute(sql`
+    INSERT INTO league_members (league_id, user_id, role)
+    VALUES (${slot.leagueId}, ${userId}, 'member')
+    ON CONFLICT DO NOTHING`);
+
+  req.log.info({ leagueId: slot.leagueId, slotId: slot.id, by: req.user?.email }, "T171: slot rivendicato via invito nominale");
+  res.json({ league_id: slot.leagueId, fanta_team_id: slot.id });
+});
+
 export default router;

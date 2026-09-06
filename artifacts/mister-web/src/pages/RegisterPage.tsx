@@ -10,6 +10,9 @@ import { Link } from "wouter";
 export default function RegisterPage() {
   const { register } = useCurrentUser();
   const [, navigate] = useLocation();
+  // T171: dopo login/registrazione si torna dove si stava andando (es. invito nominale)
+  const nextParam = new URLSearchParams(window.location.search).get("next");
+  const nextSafe = nextParam && nextParam.startsWith("/") ? nextParam : null;
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
@@ -22,7 +25,7 @@ export default function RegisterPage() {
     setIsPending(true);
     try {
       await register(email, password, displayName);
-      navigate("/");
+      navigate(nextSafe ?? "/");
     } catch (err) {
       setError((err as Error).message);
     } finally {

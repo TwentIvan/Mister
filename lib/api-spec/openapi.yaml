@@ -1355,6 +1355,105 @@ paths:
           description: Parametri non validi
 
   # ─── AUCTIONS ─────────────────────────────────────────────
+  /leagues/{id}/slots/{slotId}/invite:
+    post:
+      operationId: createSlotInvite
+      tags: [leagues]
+      summary: "T171: genera (o rigenera, invalidando il precedente) il link d'invito nominale per uno slot libero"
+      parameters:
+        - $ref: "#/components/parameters/StringId"
+        - name: slotId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Invito generato
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [invite_link, token, expires_at, team_name]
+                properties:
+                  invite_link:
+                    type: string
+                  token:
+                    type: string
+                  expires_at:
+                    type: string
+                    format: date-time
+                  team_name:
+                    type: ["string", "null"]
+        "403":
+          description: Riservato all'admin di lega
+        "409":
+          description: Slot già rivendicato
+
+  /join-slot/{token}:
+    get:
+      operationId: getSlotInvite
+      tags: [leagues]
+      summary: "T171: info pubbliche dell'invito nominale (per la pagina di atterraggio)"
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Dettagli invito
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [league_id, league_name, team_name, claimed, expired]
+                properties:
+                  league_id:
+                    type: string
+                  league_name:
+                    type: string
+                  team_name:
+                    type: ["string", "null"]
+                  claimed:
+                    type: boolean
+                  expired:
+                    type: boolean
+        "404":
+          description: Invito inesistente
+
+  /join-slot/{token}/claim:
+    post:
+      operationId: claimSlotInvite
+      tags: [leagues]
+      summary: "T171: rivendica lo slot dell'invito (atomico; consuma il token)"
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Slot rivendicato
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [league_id, fanta_team_id]
+                properties:
+                  league_id:
+                    type: string
+                  fanta_team_id:
+                    type: string
+        "401":
+          description: Autenticazione richiesta
+        "409":
+          description: Slot già rivendicato, invito scaduto, o utente già membro
+        "404":
+          description: Invito inesistente
+
   /leagues/{id}/auctions:
     get:
       operationId: listLeagueAuctions

@@ -20,6 +20,7 @@ import MatchDetailPage from "@/pages/competizione/MatchDetailPage";
 import AstaLivePage from "@/pages/AstaLivePage";
 import AstaMobilePage from "@/pages/AstaMobilePage";
 import JoinLegaPage from "@/pages/JoinLegaPage";
+import JoinSlotPage from "@/pages/JoinSlotPage";
 import BrandPage from "@/pages/brand";
 import ClassificaPage from "@/pages/classifica/ClassificaPage";
 import HubPage from "@/pages/hub/HubPage";
@@ -78,6 +79,7 @@ function Router() {
 
       {/* ── Invito lega — accessibile senza autenticazione ──── */}
       <Route path="/join/:leagueId/:code" component={JoinLegaPage} />
+      <Route path="/js/:token" component={JoinSlotPage} />
 
       {/* ── Tutte le altre pagine con sidebar ───────────────── */}
       <Route>
