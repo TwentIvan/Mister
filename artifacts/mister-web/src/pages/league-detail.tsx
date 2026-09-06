@@ -139,6 +139,7 @@ export default function LeagueDetail() {
     query: { enabled: !!id, queryKey: getListLeagueAuctionsQueryKey(id ?? "") },
   });
   const liveAuction = (auctionsList?.items ?? []).find((a) => a.status === "running" || a.status === "paused") ?? null;
+  const lastCompleted = (auctionsList?.items ?? []).find((a) => a.status === "completed") ?? null;
   // ⚠️ TEMPORANEO: isDevSuperadmin — vedi lib/dev-superadmin.ts e TECH_DEBT.md
   const isAdmin = !!league && !!user && (league.admin_user_id === user.id || isDevSuperadmin(user.email));
 
@@ -234,6 +235,14 @@ export default function LeagueDetail() {
                 </Button>
               </Link>
             </>
+          )}
+          {!liveAuction && lastCompleted && (
+            <Link href={`/asta/${lastCompleted.id}`}>
+              <Button variant="outline" className="gap-2 border-primary/20 text-primary">
+                <Gavel className="h-4 w-4" />
+                Rivedi ultima asta
+              </Button>
+            </Link>
           )}
           {liveAuction ? (
             <Link href={`/asta/${liveAuction.id}`}>
