@@ -1560,7 +1560,7 @@ export const UpdateFantaTeamBody = zod.object({
   "coach_name": zod.string().nullish().describe('Nome dell\'allenatore (visualizzato nel dettaglio squadra)'),
   "color_tertiary": zod.string().nullish().describe('T173.b: terzo colore maglia (hex)'),
   "color_quaternary": zod.string().nullish().describe('T173.b: quarto colore maglia (hex)'),
-  "jersey_pattern": zod.union([zod.literal('solid'),zod.literal('stripes_vertical'),zod.literal('stripes_horizontal'),zod.literal('halved'),zod.literal('checkered'),zod.literal('sash'),zod.literal('quarters'),zod.literal(null)]).nullish().describe('T173.b: fantasia della maglia'),
+  "jersey_pattern": zod.union([zod.literal('solid'),zod.literal('stripes_vertical'),zod.literal('pinstripes'),zod.literal('stripes_horizontal'),zod.literal('chest_band'),zod.literal('halved'),zod.literal('quarters'),zod.literal('sash'),zod.literal('chevron'),zod.literal('sleeves'),zod.literal('checkered'),zod.literal('cross'),zod.literal(null)]).nullish().describe('T173.b: fantasia della maglia'),
   "credits_remaining": zod.number().optional(),
   "roster": zod.array(zod.number()).optional()
 })

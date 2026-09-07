@@ -15,9 +15,14 @@ export type FantaTeamUpdateJerseyPattern = typeof FantaTeamUpdateJerseyPattern[k
 export const FantaTeamUpdateJerseyPattern = {
   solid: 'solid',
   stripes_vertical: 'stripes_vertical',
+  pinstripes: 'pinstripes',
   stripes_horizontal: 'stripes_horizontal',
+  chest_band: 'chest_band',
   halved: 'halved',
-  checkered: 'checkered',
-  sash: 'sash',
   quarters: 'quarters',
+  sash: 'sash',
+  chevron: 'chevron',
+  sleeves: 'sleeves',
+  checkered: 'checkered',
+  cross: 'cross',
 } as const;

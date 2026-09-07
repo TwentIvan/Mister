@@ -2993,7 +2993,7 @@ components:
         jersey_pattern:
           type: string
           nullable: true
-          enum: [solid, stripes_vertical, stripes_horizontal, halved, checkered, sash, quarters, null]
+          enum: [solid, stripes_vertical, pinstripes, stripes_horizontal, chest_band, halved, quarters, sash, chevron, sleeves, checkered, cross, null]
           description: "T173.b: fantasia della maglia"
         credits_remaining:
           type: integer

@@ -24,7 +24,7 @@ export interface JerseyConfig {
   /** T173.b: terzo e quarto colore (bordi, dettagli, banda) */
   tertiaryColor?: string;
   quaternaryColor?: string;
-  pattern: "solid" | "stripes_vertical" | "stripes_horizontal" | "halved" | "checkered" | "sash" | "quarters";
+  pattern: "solid" | "stripes_vertical" | "pinstripes" | "stripes_horizontal" | "chest_band" | "halved" | "quarters" | "sash" | "chevron" | "sleeves" | "checkered" | "cross";
   /** Sponsor testuale opzionale sul petto */
   sponsor?: string;
 }
