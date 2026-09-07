@@ -42,13 +42,13 @@ export function Maglia({ c1, c2, c3, c4, pattern, size = 112, shape }: {
   const OUT = "rgba(20,25,20,0.55)";  // contorno NEUTRO fisso (mai un colore sociale)
   const clip = useMemo(() => `jb-${Math.random().toString(36).slice(2, 8)}`, []);
 
-  const BODY = "M24 14 L76 14 L76 87 L24 87 Z";
+  const BODY = "M24 16 Q24 14 26 14 L74 14 Q76 14 76 16 Q77.5 50 76 83 Q76 87 72 87 L28 87 Q24 87 24 83 Q22.5 50 24 16 Z";
   const SLEEVE_L = "M24 15 L5 29 L16 46 L24 40 Z";
   const SLEEVE_R = "M76 15 L95 29 L84 46 L76 40 Z";
   const sleeveFill = pattern === "sleeves" ? c2 : c1;
 
-  // palato a doghe UGUALI: corpo 24..76 diviso in 6 (8.667 l'una)
-  const W = 52 / 6;
+  // palato SIMMETRICO: 7 doghe uguali, base c1 ai due bordi (mai contro le maniche)
+  const W = 52 / 7;
   const palato = [1, 3, 5].map((i) => 24 + i * W);
 
   return (
@@ -89,8 +89,8 @@ export function Maglia({ c1, c2, c3, c4, pattern, size = 112, shape }: {
           <path d="M24 30 L50 52 L76 30 L76 44 L50 66 L24 44 Z" fill={c2} />
           <path d="M24 26 L50 48 L76 26" fill="none" stroke={t} strokeWidth="3" />
         </>)}
-        {pattern === "checkered" && [0,1,2,3,4].flatMap((r) => [0,1,2,3].map((c) => (
-          (r + c) % 2 === 0 ? <rect key={`${r}-${c}`} x={24 + c*13} y={r*16} width={13} height={16} fill={c2} /> : null
+        {pattern === "checkered" && [0,1,2,3,4,5].flatMap((r) => [0,1,2,3,4].map((c) => (
+          (r + c) % 2 === 0 ? <rect key={`${r}-${c}`} x={24 + c*10.4} y={r*14} width={10.4} height={14} fill={c2} /> : null
         )))}
         {pattern === "cross" && (<>
           <rect x={43} y={0} width={14} height={100} fill={c2} />
@@ -100,6 +100,9 @@ export function Maglia({ c1, c2, c3, c4, pattern, size = 112, shape }: {
         </>)}
       </g>
       <path d={BODY} fill="none" stroke={OUT} strokeWidth="1.6" />
+
+      {/* retro-collo: fondo c1 bordato del 4º colore (il colletto "gira" dietro) */}
+      <path d="M41.5 14 Q50 8.5 58.5 14 Z" fill={c1} stroke={q} strokeWidth="1.6" />
 
       {/* colletto (4º colore): rotondo stretto o a V, con lembi opzionali */}
       {collar === "round" ? (
