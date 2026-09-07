@@ -7,6 +7,8 @@ import SetupLegaPage from "@/pages/SetupLegaPage";
 import LeagueDetail from "@/pages/league-detail";
 import LeagueConfig from "@/pages/league-config";
 import MiaSocietaPage from "@/pages/MiaSocietaPage";
+import MagliaEditPage from "@/pages/MagliaEditPage";
+import StemmaEditPage from "@/pages/StemmaEditPage";
 import CassaPage from "@/pages/CassaPage";
 import FederationRules from "@/pages/federation";
 import CompetitionDetail from "@/pages/competition-detail";
@@ -96,6 +98,8 @@ function Router() {
               <Route path="/leagues/:id" component={LeagueDetail} />
               <Route path="/leagues/:id/config" component={LeagueConfig} />
               <Route path="/leagues/:id/societa" component={MiaSocietaPage} />
+              <Route path="/leagues/:id/societa/maglia" component={MagliaEditPage} />
+              <Route path="/leagues/:id/societa/stemma" component={StemmaEditPage} />
               <Route path="/leagues/:id/cassa" component={CassaPage} />
               <Route path="/leagues/:id/federation" component={FederationRules} />
               <Route path="/leagues/:leagueId/competitions/:id" component={CompetitionDetail} />
