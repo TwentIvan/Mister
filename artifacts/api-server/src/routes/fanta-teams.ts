@@ -101,7 +101,22 @@ router.patch("/leagues/:leagueId/teams/:id", async (req, res): Promise<void> => 
     res.status(400).json({ error: p.error.message });
     return;
   }
-  if (!await guardLeagueAdmin(req, res, p.data.leagueId)) return;
+  // T173: l'admin può tutto; il MANAGER proprietario può curare la propria
+  // società (campi cosmetici) ma MAI crediti o rosa.
+  const [ownTeam] = await db
+    .select({ managerUserId: fantaTeams.managerUserId })
+    .from(fantaTeams)
+    .where(and(eq(fantaTeams.id, p.data.id), eq(fantaTeams.leagueId, p.data.leagueId)));
+  const isOwner = !!req.user && !!ownTeam?.managerUserId && ownTeam.managerUserId === req.user.sub;
+  if (!isOwner) {
+    if (!await guardLeagueAdmin(req, res, p.data.leagueId)) return;
+  } else {
+    const bodyRaw = req.body as Record<string, unknown>;
+    if (bodyRaw.credits_remaining !== undefined || bodyRaw.roster !== undefined) {
+      res.status(403).json({ error: "Crediti e rosa sono riservati all'admin di lega" });
+      return;
+    }
+  }
   const parsed = UpdateFantaTeamBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });

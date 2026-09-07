@@ -15,6 +15,7 @@ import {
   type LucideIcon,
   Home,
   FileSpreadsheet,
+  Shirt,
   Trophy,
   Users,
   Store,
@@ -126,6 +127,13 @@ export function buildNavModel(ctx: NavContext): NavModel {
         level: "league",
       });
     }
+    league.push({
+      id: "lg-societa",
+      label: "La mia società",
+      icon: Shirt,
+      href: `/leagues/${lid}/societa`,
+      level: "league",
+    });
     if (isAdmin) {
       league.push({
         id: "lg-settings",
