@@ -21,7 +21,10 @@ import { users } from "./users";
 export interface JerseyConfig {
   primaryColor: string;
   secondaryColor: string;
-  pattern: "solid" | "stripes_vertical" | "stripes_horizontal" | "halved" | "checkered";
+  /** T173.b: terzo e quarto colore (bordi, dettagli, banda) */
+  tertiaryColor?: string;
+  quaternaryColor?: string;
+  pattern: "solid" | "stripes_vertical" | "stripes_horizontal" | "halved" | "checkered" | "sash" | "quarters";
   /** Sponsor testuale opzionale sul petto */
   sponsor?: string;
 }

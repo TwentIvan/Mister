@@ -913,6 +913,22 @@ export interface FantaTeamInput {
   color_secondary?: string;
 }
 
+/**
+ * T173.b: fantasia della maglia
+ */
+export type FantaTeamUpdateJerseyPattern = typeof FantaTeamUpdateJerseyPattern[keyof typeof FantaTeamUpdateJerseyPattern] | null;
+
+
+export const FantaTeamUpdateJerseyPattern = {
+  solid: 'solid',
+  stripes_vertical: 'stripes_vertical',
+  stripes_horizontal: 'stripes_horizontal',
+  halved: 'halved',
+  checkered: 'checkered',
+  sash: 'sash',
+  quarters: 'quarters',
+} as const;
+
 export interface FantaTeamUpdate {
   name?: string;
   name_auction?: string;
@@ -923,6 +939,12 @@ export interface FantaTeamUpdate {
   color_secondary?: string;
   /** Nome dell'allenatore (visualizzato nel dettaglio squadra) */
   coach_name?: string | null;
+  /** T173.b: terzo colore maglia (hex) */
+  color_tertiary?: string | null;
+  /** T173.b: quarto colore maglia (hex) */
+  color_quaternary?: string | null;
+  /** T173.b: fantasia della maglia */
+  jersey_pattern?: FantaTeamUpdateJerseyPattern;
   credits_remaining?: number;
   roster?: number[];
 }
@@ -2071,6 +2093,39 @@ round?: number;
 export type GetMatchesParams = {
 competitionId: string;
 giornata: number;
+};
+
+export type UpdateMeBody = {
+  first_name?: string | null;
+  last_name?: string | null;
+  display_name?: string;
+};
+
+export type UpdateMe200 = {
+  id: string;
+  email: string;
+  display_name: string;
+  /** @nullable */
+  first_name?: string | null;
+  /** @nullable */
+  last_name?: string | null;
+};
+
+export type ListMySocieta200ItemsItem = {
+  league_id: string;
+  league_name: string;
+  fanta_team_id: string;
+  /** @nullable */
+  societa_name?: string | null;
+  credits_remaining?: number;
+  /** @nullable */
+  color_primary?: string | null;
+  /** @nullable */
+  color_secondary?: string | null;
+};
+
+export type ListMySocieta200 = {
+  items: ListMySocieta200ItemsItem[];
 };
 
 export type CreateSlotInvite200 = {

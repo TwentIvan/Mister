@@ -82,6 +82,7 @@ import type {
   ListLeagueAuctions200,
   ListLeaguesParams,
   ListListoneEntriesParams,
+  ListMySocieta200,
   ListPlayersParams,
   ListTemplatesParams,
   ListVotoAlgorithmConfigsParams,
@@ -109,6 +110,8 @@ import type {
   TemplateProfile,
   TemplateUpdate,
   UndoAuctionResponse,
+  UpdateMe200,
+  UpdateMeBody,
   ValidationErrors,
   VotoAlgorithmConfig,
   VotoAlgorithmConfigCreate,
@@ -4760,6 +4763,154 @@ export function useGetMatches<TData = Awaited<ReturnType<typeof getMatches>>, TE
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetMatchesQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getUpdateMeUrl = () => {
+
+
+
+
+  return `/api/auth/me`
+}
+
+/**
+ * @summary T173.b: aggiorna il proprio profilo (nome, cognome, display name)
+ */
+export const updateMe = async (updateMeBody: UpdateMeBody, options?: RequestInit): Promise<UpdateMe200> => {
+
+  return customFetch<UpdateMe200>(getUpdateMeUrl(),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      updateMeBody,)
+  }
+);}
+
+
+
+
+export const getUpdateMeMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateMe>>, TError,{data: BodyType<UpdateMeBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateMe>>, TError,{data: BodyType<UpdateMeBody>}, TContext> => {
+
+const mutationKey = ['updateMe'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateMe>>, {data: BodyType<UpdateMeBody>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  updateMe(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateMeMutationResult = NonNullable<Awaited<ReturnType<typeof updateMe>>>
+    export type UpdateMeMutationBody = BodyType<UpdateMeBody>
+    export type UpdateMeMutationError = ErrorType<unknown>
+
+    /**
+ * @summary T173.b: aggiorna il proprio profilo (nome, cognome, display name)
+ */
+export const useUpdateMe = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateMe>>, TError,{data: BodyType<UpdateMeBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateMe>>,
+        TError,
+        {data: BodyType<UpdateMeBody>},
+        TContext
+      > => {
+      return useMutation(getUpdateMeMutationOptions(options));
+    }
+
+export const getListMySocietaUrl = () => {
+
+
+
+
+  return `/api/me/societa`
+}
+
+/**
+ * @summary T173.b: tutte le società dell'utente, in ogni lega
+ */
+export const listMySocieta = async ( options?: RequestInit): Promise<ListMySocieta200> => {
+
+  return customFetch<ListMySocieta200>(getListMySocietaUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListMySocietaQueryKey = () => {
+    return [
+    `/api/me/societa`
+    ] as const;
+    }
+
+
+export const getListMySocietaQueryOptions = <TData = Awaited<ReturnType<typeof listMySocieta>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMySocieta>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListMySocietaQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listMySocieta>>> = ({ signal }) => listMySocieta({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listMySocieta>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListMySocietaQueryResult = NonNullable<Awaited<ReturnType<typeof listMySocieta>>>
+export type ListMySocietaQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary T173.b: tutte le società dell'utente, in ogni lega
+ */
+
+export function useListMySocieta<TData = Awaited<ReturnType<typeof listMySocieta>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMySocieta>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListMySocietaQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

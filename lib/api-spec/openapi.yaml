@@ -1355,6 +1355,81 @@ paths:
           description: Parametri non validi
 
   # ─── AUCTIONS ─────────────────────────────────────────────
+  /auth/me:
+    patch:
+      operationId: updateMe
+      tags: [auth]
+      summary: "T173.b: aggiorna il proprio profilo (nome, cognome, display name)"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                first_name:
+                  type: string
+                  nullable: true
+                last_name:
+                  type: string
+                  nullable: true
+                display_name:
+                  type: string
+      responses:
+        "200":
+          description: Profilo aggiornato
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id, email, display_name]
+                properties:
+                  id:
+                    type: string
+                  email:
+                    type: string
+                  display_name:
+                    type: string
+                  first_name:
+                    type: ["string", "null"]
+                  last_name:
+                    type: ["string", "null"]
+
+  /me/societa:
+    get:
+      operationId: listMySocieta
+      tags: [leagues]
+      summary: "T173.b: tutte le società dell'utente, in ogni lega"
+      responses:
+        "200":
+          description: Elenco società
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      required: [league_id, league_name, fanta_team_id]
+                      properties:
+                        league_id:
+                          type: string
+                        league_name:
+                          type: string
+                        fanta_team_id:
+                          type: string
+                        societa_name:
+                          type: ["string", "null"]
+                        credits_remaining:
+                          type: integer
+                        color_primary:
+                          type: ["string", "null"]
+                        color_secondary:
+                          type: ["string", "null"]
+
   /leagues/{id}/slots/{slotId}/invite:
     post:
       operationId: createSlotInvite
@@ -2907,6 +2982,19 @@ components:
           type: string
           nullable: true
           description: Nome dell'allenatore (visualizzato nel dettaglio squadra)
+        color_tertiary:
+          type: string
+          nullable: true
+          description: "T173.b: terzo colore maglia (hex)"
+        color_quaternary:
+          type: string
+          nullable: true
+          description: "T173.b: quarto colore maglia (hex)"
+        jersey_pattern:
+          type: string
+          nullable: true
+          enum: [solid, stripes_vertical, stripes_horizontal, halved, checkered, sash, quarters, null]
+          description: "T173.b: fantasia della maglia"
         credits_remaining:
           type: integer
         roster:

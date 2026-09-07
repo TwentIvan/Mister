@@ -146,6 +146,9 @@ router.patch("/leagues/:leagueId/teams/:id", async (req, res): Promise<void> => 
       const jerseyPatch: Record<string, string> = {};
       if (d.color_primary !== undefined) jerseyPatch.primaryColor = d.color_primary;
       if (d.color_secondary !== undefined) jerseyPatch.secondaryColor = d.color_secondary;
+      if (d.color_tertiary != null) jerseyPatch.tertiaryColor = d.color_tertiary;
+      if (d.color_quaternary != null) jerseyPatch.quaternaryColor = d.color_quaternary;
+      if (d.jersey_pattern != null) jerseyPatch.pattern = d.jersey_pattern;
       const hasJerseyUpdate = Object.keys(jerseyPatch).length > 0;
       const jerseyJson = hasJerseyUpdate ? JSON.stringify(jerseyPatch) : undefined;
 

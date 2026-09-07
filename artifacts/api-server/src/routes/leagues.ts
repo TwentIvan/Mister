@@ -865,4 +865,22 @@ router.post("/leagues/:id/slots/:slotId/assign", requireAuth, async (req, res): 
   res.json({ fanta_team_id: updated[0]!.id, user_email: u.email });
 });
 
+// ── GET /me/societa — T173.b: le società dell'utente in tutte le leghe ───────
+router.get("/me/societa", requireAuth, async (req, res): Promise<void> => {
+  const rows = await db.execute(sql`
+    SELECT ft.id AS fanta_team_id, ft.league_id, l.name AS league_name,
+           s.name AS societa_name, ft.credits_remaining,
+           s.jersey->>'primaryColor' AS color_primary, s.jersey->>'secondaryColor' AS color_secondary
+    FROM fanta_teams ft
+    JOIN leagues l ON l.id = ft.league_id
+    LEFT JOIN societa s ON s.id = ft.societa_id
+    WHERE ft.manager_user_id = ${req.user!.sub}
+    ORDER BY l.name`);
+  res.json({ items: (rows.rows as Array<Record<string, unknown>>).map(r => ({
+    league_id: r.league_id, league_name: r.league_name, fanta_team_id: r.fanta_team_id,
+    societa_name: r.societa_name ?? null, credits_remaining: Number(r.credits_remaining ?? 0),
+    color_primary: r.color_primary ?? null, color_secondary: r.color_secondary ?? null,
+  })) });
+});
+
 export default router;

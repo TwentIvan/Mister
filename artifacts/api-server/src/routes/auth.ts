@@ -142,4 +142,19 @@ router.get("/auth/me", optionalAuth, (req, res): void => {
   });
 });
 
+
+// ── PATCH /auth/me — T173.b: profilo (nome, cognome, display name) ───────────
+router.patch("/auth/me", async (req, res): Promise<void> => {
+  if (!req.user) { res.status(401).json({ error: "Autenticazione richiesta" }); return; }
+  const b = req.body as { first_name?: string | null; last_name?: string | null; display_name?: string };
+  const set: Record<string, unknown> = {};
+  if (b.first_name !== undefined) set.firstName = b.first_name;
+  if (b.last_name !== undefined) set.lastName = b.last_name;
+  if (b.display_name !== undefined && b.display_name.trim()) set.displayName = b.display_name.trim();
+  if (Object.keys(set).length === 0) { res.status(400).json({ error: "Nessun campo da aggiornare" }); return; }
+  const [u] = await db.update(users).set(set).where(eq(users.id, req.user.sub))
+    .returning({ id: users.id, email: users.email, displayName: users.displayName, firstName: users.firstName, lastName: users.lastName });
+  res.json({ id: u!.id, email: u!.email, display_name: u!.displayName, first_name: u!.firstName ?? null, last_name: u!.lastName ?? null });
+});
+
 export default router;

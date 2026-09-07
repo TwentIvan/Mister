@@ -1558,6 +1558,9 @@ export const UpdateFantaTeamBody = zod.object({
   "color_primary": zod.string().optional().describe('Colore primario maglia (hex)'),
   "color_secondary": zod.string().optional().describe('Colore secondario maglia (hex)'),
   "coach_name": zod.string().nullish().describe('Nome dell\'allenatore (visualizzato nel dettaglio squadra)'),
+  "color_tertiary": zod.string().nullish().describe('T173.b: terzo colore maglia (hex)'),
+  "color_quaternary": zod.string().nullish().describe('T173.b: quarto colore maglia (hex)'),
+  "jersey_pattern": zod.union([zod.literal('solid'),zod.literal('stripes_vertical'),zod.literal('stripes_horizontal'),zod.literal('halved'),zod.literal('checkered'),zod.literal('sash'),zod.literal('quarters'),zod.literal(null)]).nullish().describe('T173.b: fantasia della maglia'),
   "credits_remaining": zod.number().optional(),
   "roster": zod.array(zod.number()).optional()
 })
@@ -2243,6 +2246,40 @@ export const GetMatchesResponseItem = zod.object({
   "playedAt": zod.coerce.date().nullish()
 })
 export const GetMatchesResponse = zod.array(GetMatchesResponseItem)
+
+
+/**
+ * @summary T173.b: aggiorna il proprio profilo (nome, cognome, display name)
+ */
+export const UpdateMeBody = zod.object({
+  "first_name": zod.string().nullish(),
+  "last_name": zod.string().nullish(),
+  "display_name": zod.string().optional()
+})
+
+export const UpdateMeResponse = zod.object({
+  "id": zod.string(),
+  "email": zod.string(),
+  "display_name": zod.string(),
+  "first_name": zod.string().nullish(),
+  "last_name": zod.string().nullish()
+})
+
+
+/**
+ * @summary T173.b: tutte le società dell'utente, in ogni lega
+ */
+export const ListMySocietaResponse = zod.object({
+  "items": zod.array(zod.object({
+  "league_id": zod.string(),
+  "league_name": zod.string(),
+  "fanta_team_id": zod.string(),
+  "societa_name": zod.string().nullish(),
+  "credits_remaining": zod.number().optional(),
+  "color_primary": zod.string().nullish(),
+  "color_secondary": zod.string().nullish()
+}))
+})
 
 
 /**
