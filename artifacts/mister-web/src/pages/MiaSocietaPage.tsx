@@ -26,6 +26,8 @@ import { Maglia, Stemma, type JerseyPattern } from "@/components/societa/jersey"
 
 const ROLE_ORDER = ["P", "D", "C", "A"] as const;
 const ROLE_LABEL: Record<string, string> = { P: "Portieri", D: "Difensori", C: "Centrocampisti", A: "Attaccanti" };
+const ROLE_COLOR: Record<string, string> = { P: "#d97706", D: "#16a34a", C: "#2563eb", A: "#dc2626" };
+const fmtN = (v: number | null | undefined, dec = 2) => (v == null ? "—" : Number(v).toFixed(dec).replace(/\.00$/, ""));
 
 export default function MiaSocietaPage() {
   const [, params] = useRoute("/leagues/:id/societa");
@@ -44,6 +46,7 @@ export default function MiaSocietaPage() {
 
   const update = useUpdateFantaTeam();
   const [form, setForm] = useState({ name: "", name_auction: "", coach_name: "" });
+  const [roleFilter, setRoleFilter] = useState<"ALL" | "P" | "D" | "C" | "A">("ALL");
   const [profilo, setProfilo] = useState({ first_name: "", last_name: "" });
 
   useEffect(() => {
@@ -173,28 +176,74 @@ export default function MiaSocietaPage() {
 
         <TabsContent value="rosa">
           <Card>
-            <CardHeader className="pb-2"><CardTitle className="text-base">La rosa</CardTitle></CardHeader>
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <CardTitle className="text-base">La rosa</CardTitle>
+                <div className="flex gap-1.5">
+                  {(["ALL", ...ROLE_ORDER] as const).map((r) => (
+                    <button key={r} type="button" onClick={() => setRoleFilter(r)}
+                      className={`px-2.5 py-1 rounded-full border text-xs font-mono font-bold transition-colors ${roleFilter === r ? "bg-[#1f4733] text-[#efe6d3] border-[#1f4733]" : "border-border hover:border-[#1f4733]/40"}`}
+                      style={roleFilter !== r && r !== "ALL" ? { color: ROLE_COLOR[r] } : undefined}>
+                      {r === "ALL" ? "Tutti" : r}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </CardHeader>
             <CardContent>
               {rosaLoading ? <Skeleton className="h-40 w-full" /> : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                  {ROLE_ORDER.map((role) => {
-                    const players = (rosa?.players ?? []).filter((p) => p.roleClassic === role);
-                    return (
-                      <div key={role}>
-                        <p className="text-xs font-mono font-bold text-muted-foreground uppercase mb-1">
-                          {ROLE_LABEL[role]} <span className="opacity-60">{players.length}</span>
-                        </p>
-                        <div className="space-y-0.5">
-                          {players.map((p) => (
-                            <div key={p.id} className="flex items-center justify-between text-sm border-b border-dashed border-border/40 py-0.5">
-                              <span className="truncate">{p.name}</span>
-                              <span className="font-mono text-xs text-muted-foreground shrink-0 ml-2">{p.purchasePriceFm ?? "—"} FM</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    );
-                  })}
+                <div className="overflow-x-auto -mx-2 px-2">
+                  {/* intestazione colonne (desktop) */}
+                  <div className="hidden lg:grid items-center gap-2 px-2 py-1 text-[10px] font-mono uppercase text-muted-foreground"
+                    style={{ gridTemplateColumns: "minmax(180px,2fr) 44px repeat(8, minmax(52px,1fr))" }}>
+                    <span>Giocatore</span><span className="text-center">Sq.</span>
+                    <span className="text-right">PGv</span><span className="text-right">MV</span>
+                    <span className="text-right">FM</span><span className="text-right">Val.</span>
+                    <span className="text-right">Val. iniz.</span><span className="text-right">Cartellino</span>
+                    <span className="text-right">Anni</span><span className="text-right">Costo/anno</span>
+                  </div>
+                  <div className="divide-y divide-border/40">
+                    {(rosa?.players ?? [])
+                      .filter((p) => roleFilter === "ALL" || p.roleClassic === roleFilter)
+                      .map((p) => {
+                        const pp = p as typeof p & { logoUrl?: string | null; photoCartoonUrl?: string | null; pgv?: number | null; mv?: number | null; fm?: number | null; qtA?: number | null; qtI?: number | null; durationSeasons?: number | null };
+                        const face = pp.photoCartoonUrl ?? p.photoUrl ?? null;
+                        const anni = pp.durationSeasons ?? 1;
+                        const cart = p.purchasePriceFm ?? p.quotazione ?? null;
+                        return (
+                          <div key={p.id} className="grid items-center gap-2 px-2 py-1.5 text-sm"
+                            style={{ gridTemplateColumns: "minmax(180px,2fr) 44px repeat(8, minmax(52px,1fr))" }}>
+                            {/* giocatore: foto + ruolo + nome (stile chip formazione) */}
+                            <span className="flex items-center gap-2 min-w-0">
+                              <span className="relative shrink-0">
+                                <span className="block w-8 h-8 rounded-full overflow-hidden bg-[#1f4733]/10 border border-border">
+                                  {face
+                                    ? <img src={face} alt="" className="w-full h-full object-cover object-top" />
+                                    : <span className="w-full h-full flex items-center justify-center text-xs font-bold text-[#1f4733]/60">{p.name[0]}</span>}
+                                </span>
+                                <span className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full text-[9px] font-bold font-mono text-white flex items-center justify-center border border-white"
+                                  style={{ background: ROLE_COLOR[p.roleClassic] }}>{p.roleClassic}</span>
+                              </span>
+                              <span className="truncate font-medium">{p.name}</span>
+                            </span>
+                            {/* squadra reale: solo logo */}
+                            <span className="flex justify-center">
+                              {pp.logoUrl
+                                ? <img src={pp.logoUrl} alt={p.realTeam} title={p.realTeam} className="w-6 h-6 object-contain" />
+                                : <span className="text-[10px] font-mono text-muted-foreground">{p.realTeam.slice(0, 3).toUpperCase()}</span>}
+                            </span>
+                            <span className="text-right font-mono text-xs">{fmtN(pp.pgv, 0)}</span>
+                            <span className="text-right font-mono text-xs">{fmtN(pp.mv)}</span>
+                            <span className="text-right font-mono text-xs font-bold">{fmtN(pp.fm)}</span>
+                            <span className="text-right font-mono text-xs">{fmtN(pp.qtA, 0)}</span>
+                            <span className="text-right font-mono text-xs text-muted-foreground">{fmtN(pp.qtI, 0)}</span>
+                            <span className="text-right font-mono text-xs font-bold">{cart != null ? `${cart} FM` : "—"}</span>
+                            <span className="text-right font-mono text-xs">{anni}</span>
+                            <span className="text-right font-mono text-xs">{cart != null ? `${Math.round(cart / anni)} FM` : "—"}</span>
+                          </div>
+                        );
+                      })}
+                  </div>
                 </div>
               )}
             </CardContent>

@@ -4181,6 +4181,24 @@ components:
           type: integer
           nullable: true
           description: Prezzo d'asta FM (null se non ancora valorizzato)
+        pgv:
+          type: number
+          nullable: true
+        mv:
+          type: number
+          nullable: true
+        fm:
+          type: number
+          nullable: true
+        qtA:
+          type: number
+          nullable: true
+        qtI:
+          type: number
+          nullable: true
+        durationSeasons:
+          type: integer
+          nullable: true
         photoUrl:
           type: string
           nullable: true

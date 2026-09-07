@@ -1844,6 +1844,12 @@ export interface FantaTeamRosaPlayer {
   quotazione?: number | null;
   /** Prezzo d'asta FM (null se non ancora valorizzato) */
   purchasePriceFm?: number | null;
+  pgv?: number | null;
+  mv?: number | null;
+  fm?: number | null;
+  qtA?: number | null;
+  qtI?: number | null;
+  durationSeasons?: number | null;
   photoUrl?: string | null;
   photoCartoonUrl?: string | null;
   logoUrl?: string | null;

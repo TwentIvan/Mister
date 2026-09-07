@@ -421,6 +421,7 @@ router.get("/fanta-teams/:fantaTeamId/rosa", async (req, res): Promise<void> => 
       photoCartoonUrl: players.photoCartoonUrl,
       quotazione: contracts.purchasePrice,
       purchasePriceFm: contracts.purchasePriceFm,
+      durationSeasons: contracts.durationSeasons,
     })
     .from(contracts)
     .innerJoin(players, eq(players.id, contracts.playerId))
@@ -447,6 +448,20 @@ router.get("/fanta-teams/:fantaTeamId/rosa", async (req, res): Promise<void> => 
       : Promise.resolve([]),
   ]);
 
+  // T173.f: statistiche dal listone (PGv, MV, FM, quotazioni)
+  const listoneStats = playerIds.length > 0
+    ? await db.execute(sql`
+        SELECT DISTINCT ON (matched_player_id)
+          matched_player_id AS pid, pgv, mv, fm, qt_a, qt_i
+        FROM listone_entries
+        WHERE matched_player_id = ANY(${sql.raw(`ARRAY[${playerIds.join(",")}]::int[]`)})
+        ORDER BY matched_player_id, id DESC`)
+    : { rows: [] as Array<Record<string, unknown>> };
+  const lsMap = new Map(
+    (listoneStats.rows as Array<{pid: number; pgv: number|null; mv: number|null; fm: number|null; qt_a: number|null; qt_i: number|null}>)
+      .map(r => [Number(r.pid), r]),
+  );
+
   const votoMap = new Map(
     statsAgg.map(r => [
       r.playerId,
@@ -468,6 +483,12 @@ router.get("/fanta-teams/:fantaTeamId/rosa", async (req, res): Promise<void> => 
       photoCartoonUrl: p.photoCartoonUrl ?? null,
       logoUrl: tc != null ? `https://media.api-sports.io/football/teams/${tc.teamId}.png` : null,
       votoMister: votoMap.get(p.id) ?? null,
+      pgv: lsMap.get(p.id)?.pgv ?? null,
+      mv: lsMap.get(p.id)?.mv ?? null,
+      fm: lsMap.get(p.id)?.fm ?? null,
+      qtA: lsMap.get(p.id)?.qt_a ?? null,
+      qtI: lsMap.get(p.id)?.qt_i ?? null,
+      durationSeasons: p.durationSeasons ?? 1,
     };
   });
 
