@@ -3,6 +3,7 @@ import LeaguesList from "@/pages/leagues-list";
 import { PlayersList } from "@/pages/players-list";
 import ListoniPage from "@/pages/ListoniPage";
 import MieSocietaPage from "@/pages/MieSocietaPage";
+import GiocatoreSchedaPage from "@/pages/GiocatoreSchedaPage";
 import SetupLegaPage from "@/pages/SetupLegaPage";
 import LeagueDetail from "@/pages/league-detail";
 import LeagueConfig from "@/pages/league-config";
@@ -111,6 +112,7 @@ function Router() {
               <Route path="/players" component={PlayersList} />
               <Route path="/listoni" component={ListoniPage} />
               <Route path="/societa" component={MieSocietaPage} />
+              <Route path="/giocatori/:id" component={GiocatoreSchedaPage} />
               <Route path="/superadmin/templates" component={TemplatesManager} />
               <Route path="/superadmin/algoritmo-voto" component={VotoAlgorithm} />
               <Route path="/brand" component={BrandPage} />

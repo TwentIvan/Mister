@@ -207,11 +207,12 @@ export default function MiaSocietaPage() {
                       .filter((p) => roleFilter === "ALL" || p.roleClassic === roleFilter)
                       .map((p) => {
                         const pp = p as typeof p & { logoUrl?: string | null; photoCartoonUrl?: string | null; pgv?: number | null; mv?: number | null; fm?: number | null; qtA?: number | null; qtI?: number | null; durationSeasons?: number | null };
-                        const face = pp.photoCartoonUrl ?? p.photoUrl ?? null;
+                        const face = pp.photoCartoonUrl ?? null; // solo toy: senza cartoon → iniziale
                         const anni = pp.durationSeasons ?? 1;
                         const cart = p.purchasePriceFm ?? p.quotazione ?? null;
                         return (
-                          <div key={p.id} className="grid items-center gap-2 px-2 py-1.5 text-sm"
+                          <Link key={p.id} href={`/giocatori/${p.id}`}>
+                          <div className="grid items-center gap-2 px-2 py-1.5 text-sm cursor-pointer hover:bg-[#1f4733]/5 rounded"
                             style={{ gridTemplateColumns: "minmax(180px,2fr) 44px repeat(8, minmax(52px,1fr))" }}>
                             {/* giocatore: foto + ruolo + nome (stile chip formazione) */}
                             <span className="flex items-center gap-2 min-w-0">
@@ -241,6 +242,7 @@ export default function MiaSocietaPage() {
                             <span className="text-right font-mono text-xs">{anni}</span>
                             <span className="text-right font-mono text-xs">{cart != null ? `${Math.round(cart / anni)} FM` : "—"}</span>
                           </div>
+                          </Link>
                         );
                       })}
                   </div>
