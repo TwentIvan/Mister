@@ -20,6 +20,8 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  AssignSlotToUser200,
+  AssignSlotToUserBody,
   Auction,
   AuctionActionResponse,
   AuctionPlayerActionBody,
@@ -4840,6 +4842,80 @@ export const useCreateSlotInvite = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getCreateSlotInviteMutationOptions(options));
+    }
+
+export const getAssignSlotToUserUrl = (id: string,
+    slotId: string,) => {
+
+
+
+
+  return `/api/leagues/${id}/slots/${slotId}/assign`
+}
+
+/**
+ * @summary T171.b: l'admin assegna uno slot libero a un utente GIA' registrato, per email
+ */
+export const assignSlotToUser = async (id: string,
+    slotId: string,
+    assignSlotToUserBody: AssignSlotToUserBody, options?: RequestInit): Promise<AssignSlotToUser200> => {
+
+  return customFetch<AssignSlotToUser200>(getAssignSlotToUserUrl(id,slotId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      assignSlotToUserBody,)
+  }
+);}
+
+
+
+
+export const getAssignSlotToUserMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof assignSlotToUser>>, TError,{id: string;slotId: string;data: BodyType<AssignSlotToUserBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof assignSlotToUser>>, TError,{id: string;slotId: string;data: BodyType<AssignSlotToUserBody>}, TContext> => {
+
+const mutationKey = ['assignSlotToUser'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof assignSlotToUser>>, {id: string;slotId: string;data: BodyType<AssignSlotToUserBody>}> = (props) => {
+          const {id,slotId,data} = props ?? {};
+
+          return  assignSlotToUser(id,slotId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AssignSlotToUserMutationResult = NonNullable<Awaited<ReturnType<typeof assignSlotToUser>>>
+    export type AssignSlotToUserMutationBody = BodyType<AssignSlotToUserBody>
+    export type AssignSlotToUserMutationError = ErrorType<void>
+
+    /**
+ * @summary T171.b: l'admin assegna uno slot libero a un utente GIA' registrato, per email
+ */
+export const useAssignSlotToUser = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof assignSlotToUser>>, TError,{id: string;slotId: string;data: BodyType<AssignSlotToUserBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof assignSlotToUser>>,
+        TError,
+        {id: string;slotId: string;data: BodyType<AssignSlotToUserBody>},
+        TContext
+      > => {
+      return useMutation(getAssignSlotToUserMutationOptions(options));
     }
 
 export const getGetSlotInviteUrl = (token: string,) => {

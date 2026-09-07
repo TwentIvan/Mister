@@ -8,7 +8,7 @@ import {
   useGetLeagueInvite, getGetLeagueInviteQueryKey,
 } from "@workspace/api-client-react";
 import { useCurrentUser } from "@/contexts/AuthContext";
-import { useListLeagueAuctions, getListLeagueAuctionsQueryKey, useCreateSlotInvite } from "@workspace/api-client-react";
+import { useListLeagueAuctions, getListLeagueAuctionsQueryKey, useCreateSlotInvite, useAssignSlotToUser, getGetLeagueInviteQueryKey as inviteQK } from "@workspace/api-client-react";
 import { isDevSuperadmin } from "@/lib/dev-superadmin";
 import { useEconomyConfig } from "@/lib/economy-api";
 import { useState, useMemo } from "react";
@@ -140,6 +140,27 @@ export default function LeagueDetail() {
   });
   const liveAuction = (auctionsList?.items ?? []).find((a) => a.status === "running" || a.status === "paused") ?? null;
   const lastCompleted = (auctionsList?.items ?? []).find((a) => a.status === "completed") ?? null;
+
+  // T171.b: assegnazione diretta a utente registrato (per email)
+  const assignSlot = useAssignSlotToUser();
+  const handleAssignSlot = (slotId: string) => {
+    if (!id) return;
+    const email = window.prompt("Email dell'utente registrato a cui assegnare questo slot:");
+    if (!email) return;
+    assignSlot.mutate(
+      { id, slotId, data: { email } },
+      {
+        onSuccess: (r) => {
+          toast({ title: "Slot assegnato", description: `Squadra assegnata a ${r.user_email}` });
+          void queryClient.invalidateQueries({ queryKey: inviteQK(id) });
+        },
+        onError: (e: unknown) => {
+          const err = e as { data?: { error?: string } };
+          toast({ title: "Assegnazione fallita", description: err?.data?.error ?? "Errore", variant: "destructive" });
+        },
+      },
+    );
+  };
 
   // T171: invito nominale per slot — genera link e copia messaggio pronto
   const createSlotInvite = useCreateSlotInvite();
@@ -602,6 +623,18 @@ export default function LeagueDetail() {
                             >
                               <Copy className="h-3 w-3" />
                               Invito personale
+                            </Button>
+                          )}
+                          {!slot.is_claimed && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 px-2 text-[10px]"
+                              disabled={assignSlot.isPending}
+                              onClick={() => handleAssignSlot(slot.id)}
+                              data-testid={`button-slot-assign-${slot.id}`}
+                            >
+                              Assegna a email
                             </Button>
                           )}
                           <Badge

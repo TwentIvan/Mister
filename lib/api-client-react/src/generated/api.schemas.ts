@@ -2081,6 +2081,15 @@ export type CreateSlotInvite200 = {
   team_name: string | null;
 };
 
+export type AssignSlotToUserBody = {
+  email: string;
+};
+
+export type AssignSlotToUser200 = {
+  fanta_team_id: string;
+  user_email: string;
+};
+
 export type GetSlotInvite200 = {
   league_id: string;
   league_name: string;

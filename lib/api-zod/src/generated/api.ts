@@ -2262,6 +2262,24 @@ export const CreateSlotInviteResponse = zod.object({
 
 
 /**
+ * @summary T171.b: l'admin assegna uno slot libero a un utente GIA' registrato, per email
+ */
+export const AssignSlotToUserParams = zod.object({
+  "id": zod.coerce.string(),
+  "slotId": zod.coerce.string()
+})
+
+export const AssignSlotToUserBody = zod.object({
+  "email": zod.string()
+})
+
+export const AssignSlotToUserResponse = zod.object({
+  "fanta_team_id": zod.string(),
+  "user_email": zod.string()
+})
+
+
+/**
  * @summary T171: info pubbliche dell'invito nominale (per la pagina di atterraggio)
  */
 export const GetSlotInviteParams = zod.object({

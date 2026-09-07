@@ -1390,6 +1390,48 @@ paths:
         "409":
           description: Slot già rivendicato
 
+  /leagues/{id}/slots/{slotId}/assign:
+    post:
+      operationId: assignSlotToUser
+      tags: [leagues]
+      summary: "T171.b: l'admin assegna uno slot libero a un utente GIA' registrato, per email"
+      parameters:
+        - $ref: "#/components/parameters/StringId"
+        - name: slotId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email:
+                  type: string
+      responses:
+        "200":
+          description: Slot assegnato
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [fanta_team_id, user_email]
+                properties:
+                  fanta_team_id:
+                    type: string
+                  user_email:
+                    type: string
+        "403":
+          description: Riservato all'admin di lega
+        "404":
+          description: Utente non registrato con questa email
+        "409":
+          description: Slot occupato o utente già con squadra in lega
+
   /join-slot/{token}:
     get:
       operationId: getSlotInvite

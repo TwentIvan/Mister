@@ -832,4 +832,37 @@ router.post("/join-slot/:token/claim", requireAuth, async (req, res): Promise<vo
   res.json({ league_id: slot.leagueId, fanta_team_id: slot.id });
 });
 
+// POST /leagues/:id/slots/:slotId/assign — T171.b: assegnazione diretta per email
+router.post("/leagues/:id/slots/:slotId/assign", requireAuth, async (req, res): Promise<void> => {
+  const leagueId = String(req.params.id ?? "");
+  const slotId = String(req.params.slotId ?? "");
+  if (!(await guardLeagueAdmin(req, res, leagueId))) return;
+
+  const email = String((req.body as { email?: string })?.email ?? "").trim().toLowerCase();
+  if (!email) { res.status(400).json({ error: "Email mancante" }); return; }
+
+  const [u] = await db.execute(sql`SELECT id, email FROM users WHERE lower(email) = ${email}`).then(r => r.rows) as Array<{ id: string; email: string }>;
+  if (!u) { res.status(404).json({ error: `Nessun utente registrato con ${email}: usa l'invito personale` }); return; }
+
+  const [already] = await db
+    .select({ id: fantaTeams.id })
+    .from(fantaTeams)
+    .where(and(eq(fantaTeams.leagueId, leagueId), eq(fantaTeams.managerUserId, u.id)));
+  if (already) { res.status(409).json({ error: "Questo utente ha già una squadra nella lega" }); return; }
+
+  const updated = await db
+    .update(fantaTeams)
+    .set({ managerUserId: u.id, inviteToken: null, inviteTokenExpiresAt: null })
+    .where(and(eq(fantaTeams.id, slotId), eq(fantaTeams.leagueId, leagueId), isNull(fantaTeams.managerUserId)))
+    .returning({ id: fantaTeams.id });
+  if (updated.length === 0) { res.status(409).json({ error: "Slot inesistente o già rivendicato" }); return; }
+
+  await db.execute(sql`
+    INSERT INTO league_members (league_id, user_id, role)
+    VALUES (${leagueId}, ${u.id}, 'member') ON CONFLICT DO NOTHING`);
+
+  req.log.info({ leagueId, slotId, assignee: u.email, by: req.user?.email }, "T171.b: slot assegnato direttamente");
+  res.json({ fanta_team_id: updated[0]!.id, user_email: u.email });
+});
+
 export default router;

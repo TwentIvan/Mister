@@ -6,6 +6,8 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from './assignSlotToUser200';
+export * from './assignSlotToUserBody';
 export * from './auction';
 export * from './auctionActionResponse';
 export * from './auctionAssignmentItem';
