@@ -10,8 +10,8 @@ export const PATTERNS: Array<{ id: JerseyPattern; label: string }> = [
   { id: "solid", label: "Tinta unita" },
   { id: "stripes_vertical", label: "Palato" },
   { id: "pinstripes", label: "Gessato" },
-  { id: "stripes_horizontal", label: "Cerchiato" },
-  { id: "chest_band", label: "Blucerchiata" },
+  { id: "stripes_horizontal", label: "Fasce" },
+  { id: "chest_band", label: "Cerchiato" },
   { id: "halved", label: "Metà" },
   { id: "quarters", label: "Quarti" },
   { id: "sash", label: "Banda" },
@@ -24,7 +24,7 @@ export const PATTERNS: Array<{ id: JerseyPattern; label: string }> = [
 export const COLOR_KEYS = ["color_primary", "color_secondary", "color_tertiary", "color_quaternary"] as const;
 export type ColorKey = (typeof COLOR_KEYS)[number];
 
-const SHIRT = "M30 12 L42 6 Q50 12 58 6 L70 12 L84 24 L74 36 L70 32 L70 90 L30 90 L30 32 L26 36 L16 24 Z";
+const SHIRT = "M22 14 L38 7 Q50 15 62 7 L78 14 L95 30 L83 46 L76 39 L76 87 L24 87 L24 39 L17 46 L5 30 Z";
 
 export function Maglia({ c1, c2, c3, c4, pattern, size = 112 }: {
   c1: string; c2: string; c3?: string; c4?: string; pattern: JerseyPattern; size?: number;
@@ -37,19 +37,19 @@ export function Maglia({ c1, c2, c3, c4, pattern, size = 112 }: {
       <defs><clipPath id={clip}><path d={SHIRT} /></clipPath></defs>
       <path d={SHIRT} fill={c1} />
       <g clipPath={`url(#${clip})`}>
-        {pattern === "stripes_vertical" && [30, 42, 54, 66].map((x, i) => (
-          <rect key={x} x={x} y={0} width={7} height={100} fill={i % 2 ? t : c2} />
+        {pattern === "stripes_vertical" && [26, 38, 50, 62, 74].map((x, i) => (
+          <rect key={x} x={x} y={0} width={8} height={100} fill={i % 2 ? t : c2} />
         ))}
-        {pattern === "pinstripes" && [30, 37, 44, 51, 58, 65, 72].map((x) => (
+        {pattern === "pinstripes" && [26, 33, 40, 47, 54, 61, 68, 75].map((x) => (
           <rect key={x} x={x} y={0} width={2} height={100} fill={c2} />
         ))}
-        {pattern === "stripes_horizontal" && [20, 36, 52, 68, 84].map((y, i) => (
-          <rect key={y} x={0} y={y} width={100} height={8} fill={i % 2 ? t : c2} />
+        {pattern === "stripes_horizontal" && [22, 37, 52, 67, 82].map((y, i) => (
+          <rect key={y} x={0} y={y} width={100} height={9} fill={i % 2 ? t : c2} />
         ))}
         {pattern === "chest_band" && (<>
-          <rect x={0} y={38} width={100} height={5} fill={t} />
-          <rect x={0} y={43} width={100} height={7} fill={c2} />
-          <rect x={0} y={50} width={100} height={5} fill={q} />
+          <rect x={0} y={36} width={100} height={6} fill={t} />
+          <rect x={0} y={42} width={100} height={9} fill={c2} />
+          <rect x={0} y={51} width={100} height={6} fill={q} />
         </>)}
         {pattern === "halved" && <rect x={50} y={0} width={50} height={100} fill={c2} />}
         {pattern === "quarters" && (<>
@@ -57,27 +57,27 @@ export function Maglia({ c1, c2, c3, c4, pattern, size = 112 }: {
           <rect x={0} y={50} width={50} height={50} fill={t} />
           <rect x={50} y={50} width={50} height={50} fill={q} />
         </>)}
-        {pattern === "sash" && <path d="M12 0 L34 0 L88 100 L66 100 Z" fill={c2} stroke={t} strokeWidth="2" />}
+        {pattern === "sash" && <path d="M8 0 L32 0 L92 100 L68 100 Z" fill={c2} stroke={t} strokeWidth="2" />}
         {pattern === "chevron" && (<>
-          <path d="M20 30 L50 52 L80 30 L80 42 L50 64 L20 42 Z" fill={c2} />
-          <path d="M20 26 L50 48 L80 26" fill="none" stroke={t} strokeWidth="3" />
+          <path d="M24 30 L50 52 L76 30 L76 44 L50 66 L24 44 Z" fill={c2} />
+          <path d="M24 26 L50 48 L76 26" fill="none" stroke={t} strokeWidth="3" />
         </>)}
         {pattern === "sleeves" && (<>
-          <path d="M30 12 L16 24 L26 36 L30 32 Z" fill={c2} />
-          <path d="M70 12 L84 24 L74 36 L70 32 Z" fill={c2} />
+          <path d="M22 14 L5 30 L17 46 L24 39 L24 22 Z" fill={c2} />
+          <path d="M78 14 L95 30 L83 46 L76 39 L76 22 Z" fill={c2} />
         </>)}
         {pattern === "checkered" && [0,1,2,3,4].flatMap((r) => [0,1,2,3,4].map((c) => (
           (r + c) % 2 === 0 ? <rect key={`${r}-${c}`} x={c*20} y={r*20} width={20} height={20} fill={c2} /> : null
         )))}
         {pattern === "cross" && (<>
-          <rect x={44} y={0} width={12} height={100} fill={c2} />
-          <rect x={0} y={34} width={100} height={12} fill={c2} />
-          <rect x={47} y={0} width={6} height={100} fill={t} />
-          <rect x={0} y={37} width={100} height={6} fill={t} />
+          <rect x={43} y={0} width={14} height={100} fill={c2} />
+          <rect x={0} y={32} width={100} height={14} fill={c2} />
+          <rect x={46} y={0} width={8} height={100} fill={t} />
+          <rect x={0} y={35} width={100} height={8} fill={t} />
         </>)}
       </g>
       <path d={SHIRT} fill="none" stroke={t} strokeWidth="2.5" />
-      <path d="M42 6 Q50 12 58 6 L56 14 Q50 18 44 14 Z" fill={q} />
+      <path d="M38 7 Q50 15 62 7 L58 18 Q50 24 42 18 Z" fill={q} />
     </svg>
   );
 }
