@@ -934,6 +934,29 @@ export const FantaTeamUpdateJerseyPattern = {
   cross: 'cross',
 } as const;
 
+/**
+ * T173.e: colletto
+ */
+export type FantaTeamUpdateJerseyCollar = typeof FantaTeamUpdateJerseyCollar[keyof typeof FantaTeamUpdateJerseyCollar] | null;
+
+
+export const FantaTeamUpdateJerseyCollar = {
+  round: 'round',
+  v: 'v',
+} as const;
+
+/**
+ * T173.e: allacciatura
+ */
+export type FantaTeamUpdateJerseyClosure = typeof FantaTeamUpdateJerseyClosure[keyof typeof FantaTeamUpdateJerseyClosure] | null;
+
+
+export const FantaTeamUpdateJerseyClosure = {
+  none: 'none',
+  buttons: 'buttons',
+  laces: 'laces',
+} as const;
+
 export interface FantaTeamUpdate {
   name?: string;
   name_auction?: string;
@@ -950,6 +973,12 @@ export interface FantaTeamUpdate {
   color_quaternary?: string | null;
   /** T173.b: fantasia della maglia */
   jersey_pattern?: FantaTeamUpdateJerseyPattern;
+  /** T173.e: colletto */
+  jersey_collar?: FantaTeamUpdateJerseyCollar;
+  /** T173.e: lembi camicia (polo) */
+  jersey_polo?: boolean | null;
+  /** T173.e: allacciatura */
+  jersey_closure?: FantaTeamUpdateJerseyClosure;
   credits_remaining?: number;
   roster?: number[];
 }

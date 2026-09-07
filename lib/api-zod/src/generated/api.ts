@@ -1561,6 +1561,9 @@ export const UpdateFantaTeamBody = zod.object({
   "color_tertiary": zod.string().nullish().describe('T173.b: terzo colore maglia (hex)'),
   "color_quaternary": zod.string().nullish().describe('T173.b: quarto colore maglia (hex)'),
   "jersey_pattern": zod.union([zod.literal('solid'),zod.literal('stripes_vertical'),zod.literal('pinstripes'),zod.literal('stripes_horizontal'),zod.literal('chest_band'),zod.literal('halved'),zod.literal('quarters'),zod.literal('sash'),zod.literal('chevron'),zod.literal('sleeves'),zod.literal('checkered'),zod.literal('cross'),zod.literal(null)]).nullish().describe('T173.b: fantasia della maglia'),
+  "jersey_collar": zod.union([zod.literal('round'),zod.literal('v'),zod.literal(null)]).nullish().describe('T173.e: colletto'),
+  "jersey_polo": zod.boolean().nullish().describe('T173.e: lembi camicia (polo)'),
+  "jersey_closure": zod.union([zod.literal('none'),zod.literal('buttons'),zod.literal('laces'),zod.literal(null)]).nullish().describe('T173.e: allacciatura'),
   "credits_remaining": zod.number().optional(),
   "roster": zod.array(zod.number()).optional()
 })

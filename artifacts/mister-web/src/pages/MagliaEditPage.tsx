@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Save } from "lucide-react";
-import { Maglia, PATTERNS, PALETTE, COLOR_KEYS, type ColorKey, type JerseyPattern } from "@/components/societa/jersey";
+import { Maglia, PATTERNS, PALETTE, COLOR_KEYS, type ColorKey, type JerseyPattern, type CollarType, type ClosureType } from "@/components/societa/jersey";
 
 export default function MagliaEditPage() {
   const [, params] = useRoute("/leagues/:id/societa/maglia");
@@ -35,6 +35,9 @@ export default function MagliaEditPage() {
   const [c, setC] = useState({ color_primary: "#1f4733", color_secondary: "#efe6d3", color_tertiary: "#efe6d3", color_quaternary: "#1f4733" });
   const [pattern, setPattern] = useState<JerseyPattern>("solid");
   const [active, setActive] = useState<ColorKey>("color_primary");
+  const [collar, setCollar] = useState<CollarType>("round");
+  const [polo, setPolo] = useState(false);
+  const [closure, setClosure] = useState<ClosureType>("none");
 
   useEffect(() => {
     const j = rosa?.jersey as { primaryColor?: string; secondaryColor?: string; tertiaryColor?: string; quaternaryColor?: string; pattern?: JerseyPattern } | null;
@@ -46,6 +49,10 @@ export default function MagliaEditPage() {
         color_quaternary: j.quaternaryColor ?? j.primaryColor ?? "#1f4733",
       });
       setPattern(j.pattern ?? "solid");
+      const jj = j as { collar?: CollarType; polo?: boolean; closure?: ClosureType };
+      setCollar(jj.collar ?? "round");
+      setPolo(jj.polo ?? false);
+      setClosure(jj.closure ?? "none");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rosa?.fantaTeamId]);
@@ -53,7 +60,7 @@ export default function MagliaEditPage() {
   const save = () => {
     if (!mySlot?.id) return;
     update.mutate(
-      { leagueId, id: mySlot.id, data: { ...c, jersey_pattern: pattern } },
+      { leagueId, id: mySlot.id, data: { ...c, jersey_pattern: pattern, jersey_collar: collar, jersey_polo: polo, jersey_closure: closure } },
       {
         onSuccess: () => {
           toast({ title: "Maglia salvata" });
@@ -74,7 +81,8 @@ export default function MagliaEditPage() {
       <Card>
         <CardContent className="pt-6 space-y-5">
           <div className="flex justify-center">
-            <Maglia c1={c.color_primary} c2={c.color_secondary} c3={c.color_tertiary} c4={c.color_quaternary} pattern={pattern} size={190} />
+            <Maglia c1={c.color_primary} c2={c.color_secondary} c3={c.color_tertiary} c4={c.color_quaternary}
+              pattern={pattern} shape={{ collar, polo, closure }} size={190} />
           </div>
 
           <div>
@@ -83,10 +91,41 @@ export default function MagliaEditPage() {
               {PATTERNS.map((pt) => (
                 <button key={pt.id} type="button" onClick={() => setPattern(pt.id)}
                   className={`flex flex-col items-center gap-0.5 rounded-lg border p-1.5 transition-colors ${pattern === pt.id ? "border-[#1f4733] bg-[#1f4733]/10" : "border-border hover:border-[#1f4733]/40"}`}>
-                  <Maglia c1={c.color_primary} c2={c.color_secondary} c3={c.color_tertiary} c4={c.color_quaternary} pattern={pt.id} size={44} />
+                  <Maglia c1={c.color_primary} c2={c.color_secondary} c3={c.color_tertiary} c4={c.color_quaternary}
+                    pattern={pt.id} shape={{ collar, polo, closure }} size={44} />
                   <span className="text-[9px] font-mono text-muted-foreground leading-tight text-center">{pt.label}</span>
                 </button>
               ))}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <Label className="text-xs text-muted-foreground">Colletto</Label>
+              <div className="flex gap-1.5 mt-1">
+                {([["round","Rotondo"],["v","A V"]] as const).map(([v, l]) => (
+                  <button key={v} type="button" onClick={() => setCollar(v)}
+                    className={`px-2.5 py-1 rounded-md border text-xs font-mono ${collar === v ? "bg-[#1f4733] text-[#efe6d3] border-[#1f4733]" : "border-border"}`}>{l}</button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <Label className="text-xs text-muted-foreground">Lembi (camicia)</Label>
+              <div className="flex gap-1.5 mt-1">
+                {([[false,"Senza"],[true,"Con lembi"]] as const).map(([v, l]) => (
+                  <button key={String(v)} type="button" onClick={() => setPolo(v)}
+                    className={`px-2.5 py-1 rounded-md border text-xs font-mono ${polo === v ? "bg-[#1f4733] text-[#efe6d3] border-[#1f4733]" : "border-border"}`}>{l}</button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <Label className="text-xs text-muted-foreground">Allacciatura</Label>
+              <div className="flex gap-1.5 mt-1">
+                {([["none","Nessuna"],["buttons","Bottoni"],["laces","Lacci"]] as const).map(([v, l]) => (
+                  <button key={v} type="button" onClick={() => setClosure(v)}
+                    className={`px-2.5 py-1 rounded-md border text-xs font-mono ${closure === v ? "bg-[#1f4733] text-[#efe6d3] border-[#1f4733]" : "border-border"}`}>{l}</button>
+                ))}
+              </div>
             </div>
           </div>
 

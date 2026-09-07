@@ -2995,6 +2995,20 @@ components:
           nullable: true
           enum: [solid, stripes_vertical, pinstripes, stripes_horizontal, chest_band, halved, quarters, sash, chevron, sleeves, checkered, cross, null]
           description: "T173.b: fantasia della maglia"
+        jersey_collar:
+          type: string
+          nullable: true
+          enum: [round, v, null]
+          description: "T173.e: colletto"
+        jersey_polo:
+          type: boolean
+          nullable: true
+          description: "T173.e: lembi camicia (polo)"
+        jersey_closure:
+          type: string
+          nullable: true
+          enum: [none, buttons, laces, null]
+          description: "T173.e: allacciatura"
         credits_remaining:
           type: integer
         roster:

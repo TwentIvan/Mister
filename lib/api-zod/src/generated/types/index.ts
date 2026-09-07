@@ -78,6 +78,8 @@ export * from './fantaTeamRosaPlayer';
 export * from './fantaTeamRosaPlayerRoleClassic';
 export * from './fantaTeamRosaTotals';
 export * from './fantaTeamUpdate';
+export * from './fantaTeamUpdateJerseyClosure';
+export * from './fantaTeamUpdateJerseyCollar';
 export * from './fantaTeamUpdateJerseyPattern';
 export * from './fantaTeamWizardInput';
 export * from './featureFlags';

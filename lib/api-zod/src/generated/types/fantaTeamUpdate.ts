@@ -5,6 +5,8 @@
  * Mister — il fantacalcio manageriale
  * OpenAPI spec version: 0.1.0
  */
+import type { FantaTeamUpdateJerseyClosure } from './fantaTeamUpdateJerseyClosure';
+import type { FantaTeamUpdateJerseyCollar } from './fantaTeamUpdateJerseyCollar';
 import type { FantaTeamUpdateJerseyPattern } from './fantaTeamUpdateJerseyPattern';
 
 export interface FantaTeamUpdate {
@@ -23,6 +25,12 @@ export interface FantaTeamUpdate {
   color_quaternary?: string | null;
   /** T173.b: fantasia della maglia */
   jersey_pattern?: FantaTeamUpdateJerseyPattern;
+  /** T173.e: colletto */
+  jersey_collar?: FantaTeamUpdateJerseyCollar;
+  /** T173.e: lembi camicia (polo) */
+  jersey_polo?: boolean | null;
+  /** T173.e: allacciatura */
+  jersey_closure?: FantaTeamUpdateJerseyClosure;
   credits_remaining?: number;
   roster?: number[];
 }

@@ -109,7 +109,8 @@ export default function MiaSocietaPage() {
           style={{ background: `linear-gradient(120deg, ${c1}20, ${c2}40)` }}>
           <Link href={`/leagues/${leagueId}/societa/maglia`} title="Modifica la maglia">
             <span className="relative group cursor-pointer inline-block">
-              <Maglia c1={c1} c2={c2} c3={j?.tertiaryColor} c4={j?.quaternaryColor} pattern={j?.pattern ?? "solid"} size={148} />
+              <Maglia c1={c1} c2={c2} c3={j?.tertiaryColor} c4={j?.quaternaryColor} pattern={j?.pattern ?? "solid"}
+                shape={j as { collar?: "round" | "v"; polo?: boolean; closure?: "none" | "buttons" | "laces" } | undefined} size={148} />
               <span className="absolute -bottom-1 -right-1 rounded-full bg-[#1f4733] text-[#efe6d3] p-1.5 opacity-80 group-hover:opacity-100"><Pencil className="h-3.5 w-3.5" /></span>
             </span>
           </Link>

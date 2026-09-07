@@ -25,6 +25,10 @@ export interface JerseyConfig {
   tertiaryColor?: string;
   quaternaryColor?: string;
   pattern: "solid" | "stripes_vertical" | "pinstripes" | "stripes_horizontal" | "chest_band" | "halved" | "quarters" | "sash" | "chevron" | "sleeves" | "checkered" | "cross";
+  /** T173.e: forma — colletto, lembi camicia, allacciatura */
+  collar?: "round" | "v";
+  polo?: boolean;
+  closure?: "none" | "buttons" | "laces";
   /** Sponsor testuale opzionale sul petto */
   sponsor?: string;
 }
