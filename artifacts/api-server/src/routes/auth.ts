@@ -20,6 +20,7 @@ import { Router, type IRouter } from "express";
 import bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
+import { sql } from "drizzle-orm";
 import { db } from "@workspace/db";
 import { users } from "@workspace/db";
 import { setAuthCookie, clearAuthCookie, optionalAuth } from "../lib/auth";
@@ -155,6 +156,87 @@ router.patch("/auth/me", async (req, res): Promise<void> => {
   const [u] = await db.update(users).set(set).where(eq(users.id, req.user.sub))
     .returning({ id: users.id, email: users.email, displayName: users.displayName, firstName: users.firstName, lastName: users.lastName });
   res.json({ id: u!.id, email: u!.email, display_name: u!.displayName, first_name: u!.firstName ?? null, last_name: u!.lastName ?? null });
+});
+
+
+// ═══ T172 — SIGN IN WITH GOOGLE ══════════════════════════════════════════════
+// Flusso authorization-code con verifica server-side. Aggancio PER EMAIL:
+// chi esiste già entra nel proprio account (squadre incluse); chi non esiste
+// viene creato al volo. La password locale resta valida come alternativa.
+
+const GOOGLE_AUTH = "https://accounts.google.com/o/oauth2/v2/auth";
+const GOOGLE_TOKEN = "https://oauth2.googleapis.com/token";
+const GOOGLE_USERINFO = "https://www.googleapis.com/oauth2/v2/userinfo";
+const G_REDIRECT = process.env["GOOGLE_REDIRECT_URI"] ?? "https://api.fantamister.cloud/api/auth/google/callback";
+const G_FRONTEND = process.env["FRONTEND_URL"] ?? "https://app.fantamister.cloud";
+
+router.get("/auth/google", (req, res): void => {
+  const clientId = process.env["GOOGLE_CLIENT_ID"];
+  if (!clientId) { res.status(503).json({ error: "Google login non configurato" }); return; }
+  const state = nanoid(24);
+  res.cookie("g_state", state, { httpOnly: true, secure: true, sameSite: "lax", maxAge: 10 * 60_000, path: "/" });
+  const url = `${GOOGLE_AUTH}?${new URLSearchParams({
+    client_id: clientId,
+    redirect_uri: G_REDIRECT,
+    response_type: "code",
+    scope: "openid email profile",
+    state,
+    prompt: "select_account",
+  }).toString()}`;
+  res.redirect(url);
+});
+
+router.get("/auth/google/callback", async (req, res): Promise<void> => {
+  try {
+    const { code, state } = req.query as { code?: string; state?: string };
+    const cookieState = (req.cookies as Record<string, string> | undefined)?.["g_state"];
+    if (!code || !state || !cookieState || state !== cookieState) {
+      res.redirect(`${G_FRONTEND}/login?error=google`);
+      return;
+    }
+    res.clearCookie("g_state", { path: "/" });
+
+    const tokenResp = await fetch(GOOGLE_TOKEN, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        code,
+        client_id: process.env["GOOGLE_CLIENT_ID"] ?? "",
+        client_secret: process.env["GOOGLE_CLIENT_SECRET"] ?? "",
+        redirect_uri: G_REDIRECT,
+        grant_type: "authorization_code",
+      }),
+    });
+    if (!tokenResp.ok) { res.redirect(`${G_FRONTEND}/login?error=google`); return; }
+    const tokens = (await tokenResp.json()) as { access_token?: string };
+    if (!tokens.access_token) { res.redirect(`${G_FRONTEND}/login?error=google`); return; }
+
+    const infoResp = await fetch(GOOGLE_USERINFO, {
+      headers: { Authorization: `Bearer ${tokens.access_token}` },
+    });
+    const info = (await infoResp.json()) as { email?: string; verified_email?: boolean; name?: string };
+    const email = info.email?.trim().toLowerCase();
+    if (!email || info.verified_email === false) { res.redirect(`${G_FRONTEND}/login?error=google`); return; }
+
+    // aggancio per email o creazione
+    let [user] = await db.select().from(users).where(sql`lower(${users.email}) = ${email}`);
+    if (!user) {
+      const randomPw = await bcrypt.hash(nanoid(32), 10);
+      const inserted = await db.insert(users).values({
+        id: `usr-${nanoid(8)}`,
+        email,
+        passwordHash: randomPw,
+        displayName: info.name?.trim() || email.split("@")[0]!,
+      }).returning();
+      user = inserted[0]!;
+      req.log.info({ email }, "T172: utente creato via Google");
+    }
+    setAuthCookie(res, { sub: user.id, email: user.email, displayName: user.displayName });
+    res.redirect(G_FRONTEND);
+  } catch (e) {
+    req.log.error({ err: e }, "T172: errore callback Google");
+    res.redirect(`${G_FRONTEND}/login?error=google`);
+  }
 });
 
 export default router;
