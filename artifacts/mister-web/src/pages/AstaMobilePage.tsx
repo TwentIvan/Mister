@@ -6,6 +6,7 @@ import {
   getGetAuctionQueryKey,
   useCreateAuctionBid,
 } from "@workspace/api-client-react";
+import { apiUrl } from "@workspace/api-client-react";
 import { useCurrentUser } from "@/contexts/AuthContext";
 import { usePushToTalkNumber } from "@/hooks/usePushToTalkNumber";
 import { useGetAuctionQueue, getGetAuctionQueueQueryKey, useCallPlayer } from "@workspace/api-client-react";
@@ -47,7 +48,7 @@ export default function AstaMobilePage() {
   // 3. SSE — real-time
   useEffect(() => {
     if (!auctionId) return;
-    const es = new EventSource(`/api/auctions/${auctionId}/stream`);
+    const es = new EventSource(apiUrl(`/api/auctions/${auctionId}/stream`), { withCredentials: true });
     es.onmessage = (e: MessageEvent<string>) => {
       try {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any

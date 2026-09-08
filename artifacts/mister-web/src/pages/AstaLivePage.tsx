@@ -15,6 +15,7 @@ import {
   useGetAuctionQueue,
   getGetAuctionQueueQueryKey,
 } from "@workspace/api-client-react";
+import { apiUrl } from "@workspace/api-client-react";
 import type { PlayerVoice } from "@/hooks/useVoiceBidder";
 import { AstaHero } from "@/components/asta/AstaHero";
 import { TabelloneSquadre } from "@/components/asta/TabelloneSquadre";
@@ -101,7 +102,7 @@ export default function AstaLivePage() {
   // ── SSE — aggiornamenti real-time ────────────────────────────────────────
   useEffect(() => {
     if (!auctionId) return;
-    const es = new EventSource(`/api/auctions/${auctionId}/stream`);
+    const es = new EventSource(apiUrl(`/api/auctions/${auctionId}/stream`), { withCredentials: true });
     es.onmessage = (e: MessageEvent<string>) => {
       try {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any

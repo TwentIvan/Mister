@@ -29,6 +29,11 @@ export function setBaseUrl(url: string | null): void {
   _baseUrl = url ? url.replace(/\/+$/, "") : null;
 }
 
+/** URL assoluto per percorsi /api quando è impostata una baseUrl (SSE incluso). */
+export function apiUrl(path: string): string {
+  return _baseUrl && path.startsWith("/") ? `${_baseUrl}${path}` : path;
+}
+
 /**
  * Register a getter that supplies a bearer auth token.  Before every fetch
  * the getter is invoked; when it returns a non-null string, an
@@ -360,7 +365,13 @@ export async function customFetch<T = unknown>(
 
   const requestInfo = { method, url: resolveUrl(input) };
 
-  const response = await fetch(input, { ...init, method, headers });
+  const response = await fetch(input, {
+    // con una baseUrl esterna i cookie di sessione viaggiano solo con "include"
+    credentials: _baseUrl ? "include" : (init.credentials ?? "same-origin"),
+    ...init,
+    method,
+    headers,
+  });
 
   if (!response.ok) {
     const errorData = await parseErrorBody(response, method);
