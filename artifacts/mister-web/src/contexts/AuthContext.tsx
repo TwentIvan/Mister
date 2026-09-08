@@ -10,6 +10,7 @@
  */
 
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from "react";
+import { apiUrl } from "@workspace/api-client-react";
 
 export interface CurrentUser {
   id: string;
@@ -33,7 +34,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Idrata lo stato al mount
   useEffect(() => {
-    fetch("/api/auth/me", { credentials: "include" })
+    fetch(apiUrl("/api/auth/me"), { credentials: "include" })
       .then(r => (r.ok ? r.json() : null))
       .then((data: CurrentUser | null) => setUser(data))
       .catch(() => setUser(null))
@@ -41,7 +42,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = useCallback(async (email: string, password: string) => {
-    const r = await fetch("/api/auth/login", {
+    const r = await fetch(apiUrl("/api/auth/login"), {
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
@@ -56,7 +57,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const register = useCallback(async (email: string, password: string, displayName: string) => {
-    const r = await fetch("/api/auth/register", {
+    const r = await fetch(apiUrl("/api/auth/register"), {
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
@@ -71,7 +72,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = useCallback(async () => {
-    await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
+    await fetch(apiUrl("/api/auth/logout"), { method: "POST", credentials: "include" });
     setUser(null);
   }, []);
 

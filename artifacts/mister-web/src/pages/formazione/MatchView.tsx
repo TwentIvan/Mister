@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useGetLineups, useGetRoster, type RosterPlayer as ApiRosterPlayer } from "@workspace/api-client-react";
+import { apiUrl } from "@workspace/api-client-react";
 import { computeFantaTeamScore, type SlotPosition } from "@workspace/scoring";
 import { PlayerFieldChip, PlayerBenchRow, type ChipRole } from "@/components/player-chip";
 import "./match-view.css";
@@ -100,7 +101,7 @@ function useCoachVoto(fantaTeamId: string, season: number, round: number) {
   return useQuery<CoachVotoData>({
     queryKey: ["coach-voto", fantaTeamId, season, round],
     queryFn: async () => {
-      const r = await fetch(`/api/coach-voto?fantaTeamId=${fantaTeamId}&season=${season}&round=${round}`);
+      const r = await fetch(apiUrl(`/api/coach-voto?fantaTeamId=${fantaTeamId}&season=${season}&round=${round}`));
       if (!r.ok) throw new Error("coach-voto fetch failed");
       return r.json() as Promise<CoachVotoData>;
     },
