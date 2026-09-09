@@ -29,6 +29,9 @@ app.use(
 );
 app.use(cors({ origin: true, credentials: true }));
 app.use(cookieParser());
+
+// T178: healthcheck — risposta immediata, zero DB (per Coolify/monitoring)
+app.get("/health", (_req, res) => { res.json({ ok: true }); });
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(optionalAuth);
