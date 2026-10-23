@@ -61,9 +61,9 @@ jobs:
     steps:
       - name: Deploy API
         run: |
-          curl -fsS -H "Authorization: Bearer ${{ secrets.COOLIFY_TOKEN }}" \
+          curl -fsS -X POST -H "Authorization: Bearer ${{ secrets.COOLIFY_TOKEN }}" \
             "${{ secrets.COOLIFY_WEBHOOK_API }}"
       - name: Deploy web
         run: |
-          curl -fsS -H "Authorization: Bearer ${{ secrets.COOLIFY_TOKEN }}" \
+          curl -fsS -X POST -H "Authorization: Bearer ${{ secrets.COOLIFY_TOKEN }}" \
             "${{ secrets.COOLIFY_WEBHOOK_WEB }}"
