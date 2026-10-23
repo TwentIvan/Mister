@@ -2,7 +2,7 @@
 # Mister API — build su GitHub Actions, run su Coolify (immagine ghcr.io/twentivan/mister-api)
 
 # ---------- stage 1: build ----------
-FROM node:24-alpine AS build
+FROM node:24-slim AS build
 RUN npm install -g pnpm@10
 WORKDIR /repo
 
@@ -22,7 +22,7 @@ RUN pnpm --filter @workspace/api-server --prod deploy --legacy /deploy \
  && cp -r artifacts/api-server/dist /deploy/dist
 
 # ---------- stage 2: runtime ----------
-FROM node:24-alpine AS runtime
+FROM node:24-slim AS runtime
 ENV NODE_ENV=production
 WORKDIR /app
 COPY --from=build /deploy /app

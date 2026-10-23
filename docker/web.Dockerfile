@@ -1,8 +1,9 @@
 # syntax=docker/dockerfile:1
 # Mister web (SPA statica) — build su GitHub Actions, run su Coolify (immagine ghcr.io/twentivan/mister-web)
+# NB: immagini glibc (slim), non alpine: pnpm-workspace.yaml esclude i binari *-linux-x64-musl di rollup/esbuild/tailwind
 
 # ---------- stage 1: build ----------
-FROM node:24-alpine AS build
+FROM node:24-slim AS build
 RUN npm install -g pnpm@10
 WORKDIR /repo
 
